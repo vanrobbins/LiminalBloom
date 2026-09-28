@@ -15,6 +15,13 @@
       "when": 1790619383109,
       "tag": "0001_sleepy_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790619732093,
+      "tag": "0002_mute_prima",
+      "breakpoints": true
     }
   ]
 }

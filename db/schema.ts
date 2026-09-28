@@ -8,6 +8,8 @@
 
 import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import { organization } from "./auth-schema";
+
 /**
  * A product's current state on the floor. Postgres enforces that a row can
  * only hold one of these three values, so a typo can never reach the table.
@@ -22,14 +24,17 @@ export const productStatus = pgEnum("product_status", [
 /**
  * The product catalog. One row per style the store carries.
  *
- * Note: section 7 gives this table a store ID pointing at `organizations`.
- * That table is created by Better Auth's organization plugin, which is not
- * installed yet, so the column and its foreign key are added immediately
- * after authentication lands rather than hand-written here first.
+ * Every product belongs to exactly one store. `organization` is Better
+ * Auth's table for stores -- see docs/DECISIONS.md for why it owns it.
+ * Deleting a store deletes its products with it.
  */
 export const products = pgTable("products", {
   // `defaultRandom()` makes Postgres generate the id, so the app never has to.
   id: uuid("id").primaryKey().defaultRandom(),
+  // Every query for products must filter on this. Section 8.2.
+  storeId: text("store_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   styleNumber: text("style_number").notNull(),
   category: text("category").notNull(),
