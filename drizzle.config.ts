@@ -9,7 +9,9 @@ import { defineConfig } from "drizzle-kit";
 config({ path: ".env.local" });
 
 export default defineConfig({
-  schema: "./db/schema.ts",
+  // Both schema files: the tables we write by hand, and the ones Better
+  // Auth generates. Listing only one silently omits the other's tables.
+  schema: ["./db/schema.ts", "./db/auth-schema.ts"],
   out: "./db/migrations",
   dialect: "postgresql",
   dbCredentials: {

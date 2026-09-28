@@ -8,6 +8,13 @@
       "when": 1790618824886,
       "tag": "0000_skinny_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790619383109,
+      "tag": "0001_sleepy_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

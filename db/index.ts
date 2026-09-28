@@ -6,7 +6,8 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 
-import * as schema from "./schema";
+import * as authSchema from "./auth-schema";
+import * as appSchema from "./schema";
 
 // Neon gives two connection strings. The pooled one shares a small set of
 // connections between requests, which is what a serverless app needs; the
@@ -19,5 +20,9 @@ if (!connectionString) {
     "DATABASE_URL_POOLED (or DATABASE_URL) is not set. Copy it from the Neon dashboard into .env.local.",
   );
 }
+
+// Both schemas are handed to Drizzle together: the tables we wrote
+// (db/schema.ts) and the ones Better Auth generated (db/auth-schema.ts).
+export const schema = { ...appSchema, ...authSchema };
 
 export const db = drizzle(neon(connectionString), { schema });
