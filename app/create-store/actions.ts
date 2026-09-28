@@ -11,6 +11,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
+import { createStoreKey } from "@/lib/store-keys";
 
 /** "Pioneer Place" -> "pioneer-place". Organizations are addressed by slug. */
 function slugify(name: string): string {
@@ -51,10 +52,16 @@ export async function createStore(
 
   for (const slug of candidates) {
     try {
-      await auth.api.createOrganization({
+      const created = await auth.api.createOrganization({
         body: { name, slug },
         headers: requestHeaders,
       });
+
+      // Every store gets its own encryption key the moment it exists, so no
+      // store can ever hold secrets without one. Proposal 8.1.
+      if (created) {
+        await createStoreKey(created.id);
+      }
 
       // Make it the store this session is working in. Every scoped query
       // reads activeOrganizationId from the session.
