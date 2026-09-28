@@ -1,11 +1,6 @@
 # --- Liminal Bloom: local-only docs ---
 CLAUDE.md
-docs/CODESTYLE.md
-docs/DECISIONS.md
-docs/PROJECTSTRUCTURE.md
-docs/STATUS.md
-docs/projectOutline.md
-docs/Liminal Bloom, final project proposal.pdf
+docs/*
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
@@ -41,6 +36,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the example file holds variable NAMES only, no values, and is meant
+# to be committed so anyone cloning knows what .env.local must contain.
+!.env.example
 
 # vercel
 .vercel
