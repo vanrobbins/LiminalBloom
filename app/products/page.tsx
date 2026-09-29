@@ -11,8 +11,10 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { StoreSwitcher } from "@/components/store-switcher";
 import { db } from "@/db";
 import { products } from "@/db/schema";
+import { resolveActiveStore } from "@/lib/active-store";
 import { auth } from "@/lib/auth";
 
 // Without this, Next.js prerenders the page once at build time and the list
@@ -40,13 +42,23 @@ export default async function ProductsPage() {
     redirect("/sign-in");
   }
 
+  // The session's store, but only while this person still belongs to it;
+  // otherwise the same rule sign-in uses. Covers sessions opened before the
+  // active-store hook existed, and people removed from a store elsewhere.
+  // Read-only: a page cannot set cookies.
+  const storeId = await resolveActiveStore(
+    session.user.id,
+    session.session.activeOrganizationId,
+  );
+
   // A signed-in person who belongs to no store has nothing to look at yet.
-  const storeId = session.session.activeOrganizationId;
   if (!storeId) {
     redirect("/create-store");
   }
 
-  const [store] = await auth.api.listOrganizations({ headers: requestHeaders });
+  // Name the store being shown, not simply the first one they belong to.
+  const stores = await auth.api.listOrganizations({ headers: requestHeaders });
+  const store = stores.find((s) => s.id === storeId);
 
   const storeProducts = await db
     .select()
@@ -57,6 +69,12 @@ export default async function ProductsPage() {
   return (
     <main className="min-h-screen bg-surface px-6 py-16">
       <div className="mx-auto w-full max-w-2xl">
+        <div className="mb-8">
+          <StoreSwitcher
+            stores={stores.map(({ id, name }) => ({ id, name }))}
+            activeStoreId={storeId}
+          />
+        </div>
         <p className="text-sm font-medium text-brand-strong">
           {store?.name ?? "Your store"}
         </p>
