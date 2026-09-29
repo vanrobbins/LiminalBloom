@@ -9,18 +9,30 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { resolveActiveStore } from "@/lib/active-store";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
+  const requestHeaders = await headers();
+
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session) {
     redirect("/sign-in");
   }
+
+  // Every store this person belongs to, and the one they are working in --
+  // membership-checked, so a store they were removed from is never shown as
+  // theirs.
+  const stores = await auth.api.listOrganizations({ headers: requestHeaders });
+  const activeStoreId = await resolveActiveStore(
+    session.user.id,
+    session.session.activeOrganizationId,
+  );
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface px-6">
@@ -52,10 +64,44 @@ export default async function AccountPage() {
           </div>
         </dl>
 
-        <p className="text-sm text-ink-muted">
-          No store yet. Creating one, and assigning roles within it, is the next
-          step.
-        </p>
+        {stores.length === 0 ? (
+          <p className="text-sm text-ink-muted">
+            You are not in a store yet.{" "}
+            <a href="/create-store" className="text-brand-strong underline">
+              Create one
+            </a>
+            , or ask an Admin to invite you.
+          </p>
+        ) : (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-medium text-ink">
+              {stores.length === 1 ? "Your store" : "Your stores"}
+            </h2>
+            <ul className="flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle text-sm">
+              {stores.map((store) => {
+                const isActive = store.id === activeStoreId;
+
+                return (
+                  <li
+                    key={store.id}
+                    aria-current={isActive ? "true" : undefined}
+                    className="flex justify-between gap-4 bg-raised px-4 py-3"
+                  >
+                    <span className="text-ink">{store.name}</span>
+                    {isActive ? (
+                      <span className="font-medium text-brand-strong">
+                        Working in
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+            <a href="/products" className="text-sm text-brand-strong underline">
+              Go to products
+            </a>
+          </section>
+        )}
       </div>
     </main>
   );

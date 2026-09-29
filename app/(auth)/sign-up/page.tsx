@@ -36,7 +36,7 @@ export default function SignUpPage() {
       return;
     }
 
-    router.push("/account");
+    router.push("/products");
     router.refresh();
   }
 

@@ -33,7 +33,7 @@ export default function SignInPage() {
       return;
     }
 
-    router.push("/account");
+    router.push("/products");
     router.refresh();
   }
 
