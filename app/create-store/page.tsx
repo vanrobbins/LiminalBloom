@@ -30,12 +30,12 @@ export default async function CreateStorePage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F7F2EA] px-6 dark:bg-[#16120F]">
+    <main className="flex min-h-screen items-center justify-center bg-surface px-6">
       <div className="flex w-full max-w-sm flex-col gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-[#231D18] dark:text-[#F7F2EA]">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
           Create your store
         </h1>
-        <p className="text-sm text-[#231D18]/70 dark:text-[#F7F2EA]/70">
+        <p className="text-sm text-ink-muted">
           Everything in Liminal Bloom belongs to a store: products, planograms,
           and the people who work there.
         </p>

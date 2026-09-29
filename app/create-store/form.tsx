@@ -13,7 +13,7 @@ export function CreateStoreForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm text-[#231D18] dark:text-[#F7F2EA]">
+      <label className="flex flex-col gap-1 text-sm text-ink">
         Store name
         <input
           name="name"
@@ -21,7 +21,7 @@ export function CreateStoreForm() {
           required
           minLength={2}
           placeholder="Pioneer Place"
-          className="min-h-11 rounded border border-[#231D18]/20 bg-white px-3 text-base text-[#231D18] dark:border-[#F7F2EA]/20 dark:bg-[#231D18] dark:text-[#F7F2EA]"
+          className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
         />
       </label>
 
@@ -34,7 +34,7 @@ export function CreateStoreForm() {
       <button
         type="submit"
         disabled={pending}
-        className="min-h-11 rounded bg-[#E8B93A] px-4 font-medium text-[#231D18] disabled:opacity-60"
+        className="min-h-11 rounded bg-brand px-4 font-medium text-on-brand disabled:opacity-60"
       >
         {pending ? "Creating store…" : "Create store"}
       </button>

@@ -23,36 +23,36 @@ export default async function AccountPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F7F2EA] px-6 dark:bg-[#16120F]">
+    <main className="flex min-h-screen items-center justify-center bg-surface px-6">
       <div className="flex w-full max-w-sm flex-col gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-[#231D18] dark:text-[#F7F2EA]">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
           Signed in
         </h1>
 
-        <dl className="flex flex-col gap-2 rounded-lg border border-[#231D18]/10 bg-[#FBF7F0] p-4 text-sm dark:border-[#F7F2EA]/10 dark:bg-[#231D18]">
+        <dl className="flex flex-col gap-2 rounded-lg border border-line-subtle bg-raised p-4 text-sm">
           <div className="flex justify-between gap-4">
-            <dt className="text-[#231D18]/60 dark:text-[#F7F2EA]/60">Name</dt>
-            <dd className="text-[#231D18] dark:text-[#F7F2EA]">
+            <dt className="text-ink-muted">Name</dt>
+            <dd className="text-ink">
               {session.user.name}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-[#231D18]/60 dark:text-[#F7F2EA]/60">Email</dt>
-            <dd className="text-[#231D18] dark:text-[#F7F2EA]">
+            <dt className="text-ink-muted">Email</dt>
+            <dd className="text-ink">
               {session.user.email}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-[#231D18]/60 dark:text-[#F7F2EA]/60">
+            <dt className="text-ink-muted">
               User id
             </dt>
-            <dd className="font-mono text-xs text-[#231D18]/80 dark:text-[#F7F2EA]/80">
+            <dd className="font-mono text-xs text-ink-muted">
               {session.user.id}
             </dd>
           </div>
         </dl>
 
-        <p className="text-sm text-[#231D18]/70 dark:text-[#F7F2EA]/70">
+        <p className="text-sm text-ink-muted">
           No store yet. Creating one, and assigning roles within it, is the next
           step.
         </p>

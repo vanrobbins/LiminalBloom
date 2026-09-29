@@ -1,26 +1,62 @@
 @import "tailwindcss";
 
+/*
+ * `dark:` means "inside an element with the .dark class", not "the device is
+ * in dark mode". next-themes puts .dark on <html>, so a person's choice wins
+ * over their device setting.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Liminal Bloom color tokens (proposal §5.5), written in OKLCH.
+ *
+ * Tokens are named for their role, not their color, and each has a light and
+ * a dark value -- so a component writes `bg-surface text-ink` once and never
+ * needs a `dark:` class for color. The hex values in §5.5 convert exactly to
+ * these; the table is in docs/DECISIONS.md.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --surface: oklch(96.3% 0.012 79.8);
+  --raised: oklch(97.7% 0.010 81.8);
+  --ink: oklch(23.6% 0.013 61.9);
+  --ink-muted: oklch(23.6% 0.013 61.9 / 0.7);
+  --line: oklch(23.6% 0.013 61.9 / 0.2);
+  --line-subtle: oklch(23.6% 0.013 61.9 / 0.1);
+  --brand: oklch(80.7% 0.147 87.4);
+  --brand-strong: oklch(45.6% 0.087 83.5);
+  --on-brand: oklch(23.6% 0.013 61.9);
+}
+
+/* Must come after :root: equal specificity, so the later block wins. */
+.dark {
+  --surface: oklch(18.6% 0.009 59.1);
+  --raised: oklch(23.6% 0.013 61.9);
+  --ink: oklch(96.3% 0.012 79.8);
+  --ink-muted: oklch(96.3% 0.012 79.8 / 0.7);
+  --line: oklch(96.3% 0.012 79.8 / 0.2);
+  --line-subtle: oklch(96.3% 0.012 79.8 / 0.1);
+  --brand: oklch(80.7% 0.147 87.4);
+  /* Brand strong is too dark to read on the dark surface; gold is not. */
+  --brand-strong: oklch(80.7% 0.147 87.4);
+  --on-brand: oklch(23.6% 0.013 61.9);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-on-brand: var(--on-brand);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-dm-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface);
+  color: var(--ink);
 }

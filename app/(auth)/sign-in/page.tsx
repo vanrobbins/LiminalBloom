@@ -38,34 +38,34 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F7F2EA] px-6 dark:bg-[#16120F]">
+    <main className="flex min-h-screen items-center justify-center bg-surface px-6">
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4"
       >
-        <h1 className="text-3xl font-semibold tracking-tight text-[#231D18] dark:text-[#F7F2EA]">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">
           Sign in
         </h1>
 
-        <label className="flex flex-col gap-1 text-sm text-[#231D18] dark:text-[#F7F2EA]">
+        <label className="flex flex-col gap-1 text-sm text-ink">
           Work email
           <input
             name="email"
             type="email"
             required
             autoComplete="email"
-            className="min-h-11 rounded border border-[#231D18]/20 bg-white px-3 text-base text-[#231D18] dark:border-[#F7F2EA]/20 dark:bg-[#231D18] dark:text-[#F7F2EA]"
+            className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-[#231D18] dark:text-[#F7F2EA]">
+        <label className="flex flex-col gap-1 text-sm text-ink">
           Password
           <input
             name="password"
             type="password"
             required
             autoComplete="current-password"
-            className="min-h-11 rounded border border-[#231D18]/20 bg-white px-3 text-base text-[#231D18] dark:border-[#F7F2EA]/20 dark:bg-[#231D18] dark:text-[#F7F2EA]"
+            className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
           />
         </label>
 
@@ -78,14 +78,14 @@ export default function SignInPage() {
         <button
           type="submit"
           disabled={pending}
-          className="min-h-11 rounded bg-[#E8B93A] px-4 font-medium text-[#231D18] disabled:opacity-60"
+          className="min-h-11 rounded bg-brand px-4 font-medium text-on-brand disabled:opacity-60"
         >
           {pending ? "Signing in…" : "Sign in"}
         </button>
 
         <a
           href="/sign-up"
-          className="text-sm text-[#6E5210] underline dark:text-[#E8B93A]"
+          className="text-sm text-brand-strong underline"
         >
           Need an account? Create one
         </a>

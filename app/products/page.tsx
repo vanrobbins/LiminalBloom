@@ -55,40 +55,40 @@ export default async function ProductsPage() {
     .orderBy(products.name);
 
   return (
-    <main className="min-h-screen bg-[#F7F2EA] px-6 py-16 dark:bg-[#16120F]">
+    <main className="min-h-screen bg-surface px-6 py-16">
       <div className="mx-auto w-full max-w-2xl">
-        <p className="text-sm font-medium text-[#6E5210] dark:text-[#E8B93A]">
+        <p className="text-sm font-medium text-brand-strong">
           {store?.name ?? "Your store"}
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#231D18] dark:text-[#F7F2EA]">
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">
           Product library
         </h1>
-        <p className="mt-2 text-[#231D18]/70 dark:text-[#F7F2EA]/70">
+        <p className="mt-2 text-ink-muted">
           {storeProducts.length}{" "}
           {storeProducts.length === 1 ? "product" : "products"} in this store.
         </p>
 
         {storeProducts.length === 0 ? (
-          <p className="mt-8 rounded-lg border border-dashed border-[#231D18]/20 p-8 text-center text-[#231D18]/60 dark:border-[#F7F2EA]/20 dark:text-[#F7F2EA]/60">
+          <p className="mt-8 rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">
             No products yet. A store starts empty, and only ever shows its own.
           </p>
         ) : (
-          <ul className="mt-8 flex flex-col gap-px overflow-hidden rounded-lg border border-[#231D18]/10 bg-[#231D18]/10 dark:border-[#F7F2EA]/10 dark:bg-[#F7F2EA]/10">
+          <ul className="mt-8 flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
             {storeProducts.map((product) => (
               <li
                 key={product.id}
-                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 bg-[#FBF7F0] px-4 py-3 dark:bg-[#231D18]"
+                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 bg-raised px-4 py-3"
               >
-                <span className="font-medium text-[#231D18] dark:text-[#F7F2EA]">
+                <span className="font-medium text-ink">
                   {product.name}
                 </span>
-                <span className="font-mono text-sm text-[#231D18]/60 dark:text-[#F7F2EA]/60">
+                <span className="font-mono text-sm text-ink-muted">
                   {product.styleNumber}
                 </span>
-                <span className="text-sm text-[#231D18]/70 dark:text-[#F7F2EA]/70">
+                <span className="text-sm text-ink-muted">
                   {product.category} &middot; {product.color}
                 </span>
-                <span className="text-sm font-medium text-[#6E5210] dark:text-[#E8B93A]">
+                <span className="text-sm font-medium text-brand-strong">
                   {statusLabel[product.status]}
                 </span>
               </li>

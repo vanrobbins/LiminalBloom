@@ -4,18 +4,18 @@
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[#F7F2EA] px-6 dark:bg-[#16120F]">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6">
       <div className="flex flex-col items-start gap-4">
         <span className="text-4xl" aria-hidden="true">
           &#10052;
         </span>
-        <h1 className="text-5xl font-semibold tracking-tight text-[#231D18] dark:text-[#F7F2EA]">
+        <h1 className="text-5xl font-semibold tracking-tight text-ink">
           liminal bloom
         </h1>
-        <p className="max-w-md text-lg text-[#231D18]/70 dark:text-[#F7F2EA]/70">
+        <p className="max-w-md text-lg text-ink-muted">
           A mobile-first visual merchandising platform for retail store teams.
         </p>
-        <p className="mt-4 rounded border border-[#E8B93A] px-3 py-1 text-sm text-[#6E5210] dark:text-[#E8B93A]">
+        <p className="mt-4 rounded border border-brand px-3 py-1 text-sm text-brand-strong">
           Week 1 &middot; foundation
         </p>
       </div>
