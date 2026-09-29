@@ -12,6 +12,7 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  lastActiveStoreId: text("last_active_store_id"),
 });
 
 export const session = pgTable(
