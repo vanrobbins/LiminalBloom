@@ -20,6 +20,7 @@ import { db } from "@/db";
 import { keyEvents, storeKeys } from "@/db/schema";
 
 import { decrypt, encrypt, generateKey } from "./crypto";
+import { requiredEnv } from "./env";
 
 /**
  * The master key, read fresh from the environment on each use.
@@ -29,15 +30,7 @@ import { decrypt, encrypt, generateKey } from "./crypto";
  * with an error far from the real cause.
  */
 function masterKey(): Buffer {
-  const encoded = process.env.MASTER_KEY;
-
-  if (!encoded) {
-    throw new Error(
-      "MASTER_KEY is not set. Without it no store's data can be read. See .env.example.",
-    );
-  }
-
-  const key = Buffer.from(encoded, "base64");
+  const key = Buffer.from(requiredEnv("MASTER_KEY"), "base64");
 
   if (key.length !== 32) {
     throw new Error(

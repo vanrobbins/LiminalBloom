@@ -12,7 +12,8 @@
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate:prod": "drizzle-kit migrate --config=drizzle.production.config.ts"
+    "db:migrate:prod": "drizzle-kit migrate --config=drizzle.production.config.ts",
+    "key:generate": "node scripts/generate-key.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.6",

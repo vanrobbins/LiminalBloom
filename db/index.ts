@@ -6,6 +6,8 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 
+import { optionalEnv, requiredEnv } from "@/lib/env";
+
 import * as authSchema from "./auth-schema";
 import * as appSchema from "./schema";
 
@@ -13,13 +15,7 @@ import * as appSchema from "./schema";
 // connections between requests, which is what a serverless app needs; the
 // direct one is used by migrations. Fall back so a single-URL setup works.
 const connectionString =
-  process.env.DATABASE_URL_POOLED ?? process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL_POOLED (or DATABASE_URL) is not set. Copy it from the Neon dashboard into .env.local.",
-  );
-}
+  optionalEnv("DATABASE_URL_POOLED") ?? requiredEnv("DATABASE_URL");
 
 // Both schemas are handed to Drizzle together: the tables we wrote
 // (db/schema.ts) and the ones Better Auth generated (db/auth-schema.ts).

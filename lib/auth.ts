@@ -14,7 +14,14 @@ import { organization } from "better-auth/plugins";
 import * as authSchema from "@/db/auth-schema";
 import { db } from "@/db";
 
+import { optionalEnv } from "./env";
+
 export const auth = betterAuth({
+  // Read through optionalEnv so a value pasted into a dashboard with a
+  // trailing newline cannot produce an "Invalid URL" build failure.
+  baseURL: optionalEnv("BETTER_AUTH_URL"),
+  secret: optionalEnv("BETTER_AUTH_SECRET"),
+
   database: drizzleAdapter(db, {
     provider: "pg",
     // Hand the adapter the generated tables explicitly, so it maps to the
