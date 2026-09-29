@@ -16,6 +16,7 @@ import { storeKeys } from "@/db/schema";
 
 import {
   createStoreKey,
+  giveStoreItsKey,
   decryptForStore,
   encryptForStore,
   getStoreKey,
@@ -150,5 +151,35 @@ describe("encryptForStore and decryptForStore", () => {
     const sealed = await encryptForStore(a, "store A's AI key");
 
     await expect(decryptForStore(b, sealed)).rejects.toThrow();
+  });
+});
+
+describe("giveStoreItsKey", () => {
+  it("gives a new store its key", async () => {
+    const storeId = await makeStore("given");
+    await giveStoreItsKey(storeId);
+
+    expect(await getStoreKey(storeId)).toHaveLength(32);
+  });
+
+  it("removes the store when its key cannot be made", async () => {
+    // A store must never exist without a key. If key creation fails -- here,
+    // a master key of the wrong length -- the store is removed and the error
+    // still reaches the caller.
+    const storeId = await makeStore("rollback");
+    const original = process.env.MASTER_KEY;
+    process.env.MASTER_KEY = Buffer.alloc(8).toString("base64");
+
+    try {
+      await expect(giveStoreItsKey(storeId)).rejects.toThrow();
+    } finally {
+      process.env.MASTER_KEY = original;
+    }
+
+    const rows = await db
+      .select()
+      .from(organization)
+      .where(eq(organization.id, storeId));
+    expect(rows).toHaveLength(0);
   });
 });

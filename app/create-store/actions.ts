@@ -11,7 +11,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { createStoreKey } from "@/lib/store-keys";
+import { isSlugTaken } from "@/lib/store-errors";
 
 /** "Pioneer Place" -> "pioneer-place". Organizations are addressed by slug. */
 function slugify(name: string): string {
@@ -52,16 +52,12 @@ export async function createStore(
 
   for (const slug of candidates) {
     try {
-      const created = await auth.api.createOrganization({
+      // Better Auth's afterCreateOrganization hook (lib/auth.ts) gives the
+      // store its encryption key, however the store was created.
+      await auth.api.createOrganization({
         body: { name, slug },
         headers: requestHeaders,
       });
-
-      // Every store gets its own encryption key the moment it exists, so no
-      // store can ever hold secrets without one. Proposal 8.1.
-      if (created) {
-        await createStoreKey(created.id);
-      }
 
       // Make it the store this session is working in. Every scoped query
       // reads activeOrganizationId from the session.
@@ -89,7 +85,13 @@ export async function createStore(
       ) {
         throw error;
       }
-      lastError = error instanceof Error ? error.message : lastError;
+      // Only a taken slug is worth another try with the suffixed slug. Any
+      // other failure would repeat, and its message (which can name server
+      // configuration) is not for the person filling in the form.
+      if (!isSlugTaken(error)) {
+        return { error: "Could not create the store. Try again." };
+      }
+      lastError = "That store name is taken. Try another.";
     }
   }
 

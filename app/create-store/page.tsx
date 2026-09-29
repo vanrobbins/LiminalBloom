@@ -1,8 +1,8 @@
-// Onboarding: a signed-in person with no store makes one here.
+// Create a store. The first-run case for someone with no store, and also how
+// an existing member adds another: a person can belong to several stores
+// (docs/DECISIONS.md, 2026-09-29), and whoever creates one becomes its owner.
 //
-// In the finished product an Admin creates the store and invites everyone
-// else (section 3.1), so this is not the path most team members take -- they
-// arrive by invitation. This is the first-run case.
+// Most team members still arrive by invitation (section 3.1).
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -19,14 +19,6 @@ export default async function CreateStorePage() {
   const session = await auth.api.getSession({ headers: requestHeaders });
   if (!session) {
     redirect("/sign-in");
-  }
-
-  // Already in a store? Then this page has nothing to offer.
-  const organizations = await auth.api.listOrganizations({
-    headers: requestHeaders,
-  });
-  if (organizations.length > 0) {
-    redirect("/products");
   }
 
   return (

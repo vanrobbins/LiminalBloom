@@ -17,6 +17,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
+import { organization } from "@/db/auth-schema";
 import { keyEvents, storeKeys } from "@/db/schema";
 
 import { decrypt, encrypt, generateKey } from "./crypto";
@@ -62,6 +63,25 @@ export async function createStoreKey(storeId: string): Promise<void> {
     event: "created",
     keyVersion: 1,
   });
+}
+
+/**
+ * Give a newly created store its key, or remove the store.
+ *
+ * Better Auth creates the store and its owner's membership before this runs,
+ * with no transaction around them. If the key cannot be made -- a missing or
+ * wrong MASTER_KEY, a database error -- the store would otherwise live on
+ * without one. Removing it (its memberships and any partial key row cascade)
+ * keeps the rule that no store ever exists without a key. The error is
+ * rethrown so the request that created the store fails visibly.
+ */
+export async function giveStoreItsKey(storeId: string): Promise<void> {
+  try {
+    await createStoreKey(storeId);
+  } catch (error) {
+    await db.delete(organization).where(eq(organization.id, storeId));
+    throw error;
+  }
 }
 
 /**
