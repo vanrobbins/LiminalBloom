@@ -17,6 +17,11 @@ docs/*
 # testing
 /coverage
 
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.auth/
+
 # next.js
 /.next/
 /out/
