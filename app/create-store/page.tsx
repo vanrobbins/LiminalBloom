@@ -7,6 +7,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { Card } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 
 import { CreateStoreForm } from "./form";
@@ -22,8 +23,8 @@ export default async function CreateStorePage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface px-6">
-      <div className="flex w-full max-w-sm flex-col gap-4">
+    <main className="flex min-h-screen items-center justify-center bg-surface px-4 py-16">
+      <Card className="flex w-full max-w-sm flex-col gap-4">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">
           Create your store
         </h1>
@@ -32,7 +33,7 @@ export default async function CreateStorePage() {
           and the people who work there.
         </p>
         <CreateStoreForm />
-      </div>
+      </Card>
     </main>
   );
 }

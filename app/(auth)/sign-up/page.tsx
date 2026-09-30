@@ -1,14 +1,14 @@
-// Create an account. Deliberately plain -- the designed version arrives with
-// the component library in Week 2. This exists to prove auth works end to end.
-//
-// "use client" because this page has state and handles a submit event.
-// Everything else in the app stays a Server Component by default.
+// Create an account. Client-side because it holds the pending and error
+// states; everything else in the app stays a Server Component by default.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { signUp } from "@/lib/auth-client";
 
 export default function SignUpPage() {
@@ -41,70 +41,40 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface px-6">
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4"
-      >
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">
-          Create account
-        </h1>
+    <main className="flex min-h-screen items-center justify-center bg-surface px-4 py-16">
+      <Card className="w-full max-w-sm">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">
+            Create account
+          </h1>
 
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          Name
-          <input
-            name="name"
-            type="text"
-            required
-            autoComplete="name"
-            className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          Work email
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          Password
-          <input
+          <Input label="Name" name="name" required autoComplete="name" />
+          <Input label="Work email" name="email" type="email" required autoComplete="email" />
+          <Input
+            label="Password"
             name="password"
             type="password"
             required
             minLength={8}
             autoComplete="new-password"
-            className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
+            hint="At least 8 characters."
           />
-        </label>
 
-        {error ? (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-            {error}
-          </p>
-        ) : null}
+          {error ? (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="min-h-11 rounded bg-brand px-4 font-medium text-on-brand disabled:opacity-60"
-        >
-          {pending ? "Creating account…" : "Create account"}
-        </button>
+          <Button type="submit" loading={pending} loadingText="Creating account…">
+            Create account
+          </Button>
 
-        <a
-          href="/sign-in"
-          className="text-sm text-brand-strong underline"
-        >
-          Already have an account? Sign in
-        </a>
-      </form>
+          <Button asChild variant="ghost">
+            <a href="/sign-in">Already have an account? Sign in</a>
+          </Button>
+        </form>
+      </Card>
     </main>
   );
 }

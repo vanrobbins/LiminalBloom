@@ -9,6 +9,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { resolveActiveStore } from "@/lib/active-store";
 import { auth } from "@/lib/auth";
 
@@ -35,71 +37,62 @@ export default async function AccountPage() {
   );
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface px-6">
+    <main className="flex min-h-screen items-center justify-center bg-surface px-4 py-16">
       <div className="flex w-full max-w-sm flex-col gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">
-          Signed in
-        </h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">Signed in</h1>
 
-        <dl className="flex flex-col gap-2 rounded-lg border border-line-subtle bg-raised p-4 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Name</dt>
-            <dd className="text-ink">
-              {session.user.name}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Email</dt>
-            <dd className="text-ink">
-              {session.user.email}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">
-              User id
-            </dt>
-            <dd className="font-mono text-xs text-ink-muted">
-              {session.user.id}
-            </dd>
-          </div>
-        </dl>
+        <Card compact>
+          <dl className="flex flex-col gap-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-muted">Name</dt>
+              <dd className="text-ink">{session.user.name}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-muted">Email</dt>
+              <dd className="break-all text-ink">{session.user.email}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-muted">User id</dt>
+              <dd className="break-all font-mono text-xs text-ink-muted">
+                {session.user.id}
+              </dd>
+            </div>
+          </dl>
+        </Card>
 
         {stores.length === 0 ? (
-          <p className="text-sm text-ink-muted">
-            You are not in a store yet.{" "}
-            <a href="/create-store" className="text-brand-strong underline">
-              Create one
-            </a>
-            , or ask an Admin to invite you.
-          </p>
+          <Card compact className="flex flex-col gap-4">
+            <p className="text-sm text-ink-muted">
+              You are not in a store yet. Create one, or ask an Admin to invite you.
+            </p>
+            <Button asChild>
+              <a href="/create-store">Create a store</a>
+            </Button>
+          </Card>
         ) : (
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-medium text-ink">
               {stores.length === 1 ? "Your store" : "Your stores"}
             </h2>
-            <ul className="flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle text-sm">
+            <ul className="flex flex-col gap-2">
               {stores.map((store) => {
                 const isActive = store.id === activeStoreId;
 
                 return (
-                  <li
-                    key={store.id}
-                    aria-current={isActive ? "true" : undefined}
-                    className="flex justify-between gap-4 bg-raised px-4 py-3"
-                  >
-                    <span className="text-ink">{store.name}</span>
-                    {isActive ? (
-                      <span className="font-medium text-brand-strong">
-                        Working in
-                      </span>
-                    ) : null}
+                  <li key={store.id} aria-current={isActive ? "true" : undefined}>
+                    <Card compact className="flex justify-between gap-4 text-sm">
+                      <span className="text-ink">{store.name}</span>
+                      {isActive ? (
+                        <span className="font-medium text-brand-strong">Working in</span>
+                      ) : null}
+                    </Card>
                   </li>
                 );
               })}
             </ul>
-            <a href="/products" className="text-sm text-brand-strong underline">
-              Go to products
-            </a>
+            <Button asChild variant="secondary">
+              <a href="/products">Go to products</a>
+            </Button>
           </section>
         )}
       </div>
