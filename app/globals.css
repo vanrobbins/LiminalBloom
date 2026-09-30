@@ -25,6 +25,17 @@
   --brand: oklch(80.7% 0.147 87.4);
   --brand-strong: oklch(45.6% 0.087 83.5);
   --on-brand: oklch(23.6% 0.013 61.9);
+
+  /* Status (§5.5): always paired with a word or icon, never gold. */
+  --ok: oklch(40% 0.08 150);
+  --ok-tint: oklch(93% 0.04 150);
+  --danger: oklch(45% 0.13 30);
+  --danger-tint: oklch(93% 0.04 30);
+  --info: oklch(42% 0.08 250);
+  --info-tint: oklch(93% 0.03 250);
+
+  /* Behind a sheet or dialog: dims the page. */
+  --scrim: oklch(23.6% 0.013 61.9 / 0.4);
 }
 
 /* Must come after :root: equal specificity, so the later block wins. */
@@ -39,6 +50,17 @@
   /* Brand strong is too dark to read on the dark surface; gold is not. */
   --brand-strong: oklch(80.7% 0.147 87.4);
   --on-brand: oklch(23.6% 0.013 61.9);
+
+  /* Swapped: light text on a dark tint. */
+  --ok: oklch(85% 0.08 150);
+  --ok-tint: oklch(30% 0.05 150);
+  --danger: oklch(85% 0.08 30);
+  --danger-tint: oklch(30% 0.07 30);
+  --info: oklch(85% 0.06 250);
+  --info-tint: oklch(30% 0.05 250);
+
+  /* Still dark: ink turns cream here and would lighten the page. */
+  --scrim: oklch(10% 0.005 59.1 / 0.6);
 }
 
 @theme inline {
@@ -51,6 +73,13 @@
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-on-brand: var(--on-brand);
+  --color-scrim: var(--scrim);
+  --color-ok: var(--ok);
+  --color-ok-tint: var(--ok-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
 
   --font-sans: var(--font-dm-sans);
   --font-mono: var(--font-dm-mono);
