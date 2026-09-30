@@ -17,6 +17,8 @@ import { products } from "@/db/schema";
 import { resolveActiveStore } from "@/lib/active-store";
 import { auth } from "@/lib/auth";
 
+import { ProductList } from "./product-list";
+
 // Without this, Next.js prerenders the page once at build time and the list
 // would be frozen at whatever the database held when `npm run build` ran.
 // Product status has to be current (section 3.2), so render on every request.
@@ -25,14 +27,6 @@ import { auth } from "@/lib/auth";
 // next.config.ts. If that is ever enabled, this moves to `use cache`
 // directives instead -- see node_modules/next/dist/docs.
 export const dynamic = "force-dynamic";
-
-// How each status should read on screen. Status is never colour alone,
-// per section 5.5 of the proposal.
-const statusLabel = {
-  in_stock: "In stock",
-  sold_out: "Sold out",
-  on_sale: "On sale",
-} as const;
 
 export default async function ProductsPage() {
   const requestHeaders = await headers();
@@ -67,7 +61,7 @@ export default async function ProductsPage() {
     .orderBy(products.name);
 
   return (
-    <main className="min-h-screen bg-surface px-6 py-16">
+    <main className="min-h-screen bg-surface px-4 py-16">
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-8">
           <StoreSwitcher
@@ -91,27 +85,18 @@ export default async function ProductsPage() {
             No products yet. A store starts empty, and only ever shows its own.
           </p>
         ) : (
-          <ul className="mt-8 flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
-            {storeProducts.map((product) => (
-              <li
-                key={product.id}
-                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 bg-raised px-4 py-3"
-              >
-                <span className="font-medium text-ink">
-                  {product.name}
-                </span>
-                <span className="font-mono text-sm text-ink-muted">
-                  {product.styleNumber}
-                </span>
-                <span className="text-sm text-ink-muted">
-                  {product.category} &middot; {product.color}
-                </span>
-                <span className="text-sm font-medium text-brand-strong">
-                  {statusLabel[product.status]}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <ProductList
+            products={storeProducts.map(
+              ({ id, name, styleNumber, category, color, status }) => ({
+                id,
+                name,
+                styleNumber,
+                category,
+                color,
+                status,
+              }),
+            )}
+          />
         )}
       </div>
     </main>
