@@ -2,6 +2,8 @@
 // this one sits at app/page.tsx, so it is the site root: "/".
 // Save this file while `npm run dev` is running and the browser updates itself.
 
+import { Button } from "@/components/ui/button";
+
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6">
@@ -18,6 +20,9 @@ export default function Home() {
         <p className="mt-4 rounded border border-brand px-3 py-1 text-sm text-brand-strong">
           Week 1 &middot; foundation
         </p>
+        <Button asChild className="mt-4">
+          <a href="/sign-in">Sign in</a>
+        </Button>
       </div>
     </main>
   );

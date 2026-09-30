@@ -6,6 +6,9 @@
 
 import { useActionState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 import { createStore } from "./actions";
 
 export function CreateStoreForm() {
@@ -13,31 +16,17 @@ export function CreateStoreForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm text-ink">
-        Store name
-        <input
-          name="name"
-          type="text"
-          required
-          minLength={2}
-          placeholder="Pioneer Place"
-          className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
-        />
-      </label>
+      <Input label="Store name" name="name" required minLength={2} placeholder="Pioneer Place" />
 
       {state?.error ? (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-11 rounded bg-brand px-4 font-medium text-on-brand disabled:opacity-60"
-      >
-        {pending ? "Creating store…" : "Create store"}
-      </button>
+      <Button type="submit" loading={pending} loadingText="Creating store…">
+        Create store
+      </Button>
     </form>
   );
 }

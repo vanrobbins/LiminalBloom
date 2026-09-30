@@ -1,10 +1,13 @@
-// Sign in. Plain by design, same as sign-up -- replaced in Week 2.
+// Sign in. Client-side because it holds the pending and error states.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth-client";
 
 export default function SignInPage() {
@@ -38,58 +41,35 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface px-6">
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4"
-      >
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">
-          Sign in
-        </h1>
+    <main className="flex min-h-screen items-center justify-center bg-surface px-4 py-16">
+      <Card className="w-full max-w-sm">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">Sign in</h1>
 
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          Work email
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          Password
-          <input
+          <Input label="Work email" name="email" type="email" required autoComplete="email" />
+          <Input
+            label="Password"
             name="password"
             type="password"
             required
             autoComplete="current-password"
-            className="min-h-11 rounded border border-line bg-raised px-3 text-base text-ink"
           />
-        </label>
 
-        {error ? (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-            {error}
-          </p>
-        ) : null}
+          {error ? (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="min-h-11 rounded bg-brand px-4 font-medium text-on-brand disabled:opacity-60"
-        >
-          {pending ? "Signing in…" : "Sign in"}
-        </button>
+          <Button type="submit" loading={pending} loadingText="Signing in…">
+            Sign in
+          </Button>
 
-        <a
-          href="/sign-up"
-          className="text-sm text-brand-strong underline"
-        >
-          Need an account? Create one
-        </a>
-      </form>
+          <Button asChild variant="ghost">
+            <a href="/sign-up">Need an account? Create one</a>
+          </Button>
+        </form>
+      </Card>
     </main>
   );
 }

@@ -3,10 +3,14 @@
 
 "use client";
 
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { AccessibleIcon } from "radix-ui";
 import { useSyncExternalStore } from "react";
 
 import { nextTheme } from "@/lib/theme";
+
+import { Button } from "./button";
 
 // Nothing to subscribe to: this only distinguishes server from browser.
 const subscribe = () => () => {};
@@ -24,18 +28,17 @@ export function ThemeToggle() {
   );
 
   if (!isMounted) {
-    return <span aria-hidden="true" className="block h-11 w-36" />;
+    return <span aria-hidden="true" className="block size-11" />;
   }
 
   const target = nextTheme(resolvedTheme);
+  const Icon = target === "dark" ? Moon : Sun;
 
   return (
-    <button
-      type="button"
-      onClick={() => setTheme(target)}
-      className="h-11 w-36 rounded border border-line bg-raised text-sm text-ink"
-    >
-      Switch to {target}
-    </button>
+    <Button variant="secondary" icon onClick={() => setTheme(target)}>
+      <AccessibleIcon.Root label={`Switch to ${target}`}>
+        <Icon strokeWidth={1.75} className="size-5" />
+      </AccessibleIcon.Root>
+    </Button>
   );
 }

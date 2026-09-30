@@ -21,8 +21,27 @@ export default defineConfig({
     },
   },
   test: {
-    // Unit tests sit beside the code they test, as lib/*.test.ts.
-    include: ["{lib,db,app}/**/*.test.ts"],
-    environment: "node",
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          // Unit tests sit beside the code they test, as lib/*.test.ts.
+          include: ["{lib,db,app}/**/*.test.ts"],
+          environment: "node",
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "dom",
+          // Components render into jsdom: real DOM and ARIA, but no layout.
+          // Sizes, colors and gestures are checked by Playwright instead.
+          include: ["{components,app}/**/*.test.tsx"],
+          environment: "jsdom",
+          setupFiles: ["./vitest.setup.ts"],
+        },
+      },
+    ],
   },
 });
