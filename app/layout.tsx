@@ -3,7 +3,6 @@ import { DM_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Toaster } from "@/components/ui/toaster";
 
 // Downloaded at build time and served from this app's own domain, so a
@@ -38,10 +37,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          {/* Temporary home until the app shell's user menu (Week 2, piece 3). */}
-          <div className="fixed right-3 top-3 z-50">
-            <ThemeToggle />
-          </div>
           {children}
           <Toaster />
         </ThemeProvider>

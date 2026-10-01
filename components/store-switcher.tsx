@@ -2,91 +2,66 @@
 // checks membership, the session's active store changes (and is remembered
 // for next sign-in), and the page re-renders on the server for the new store.
 //
-// A Radix ToggleGroup: one store is selected, arrow keys move between them,
-// and the selected one is gold (§5.5, current selection).
+// A Radix ToggleGroup: one store is selected, the up and down arrows move
+// between them, and the selected one is gold (§5.5, current selection).
 //
-// Lives at the top of /products until the app shell's user menu (piece 3).
+// Lives in the phone's store sheet (components/shell/store-menu.tsx). The
+// switching itself is in use-switch-store.ts, shared with the dropdown that
+// tablet and desktop use.
 
 "use client";
 
 import { Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { ToggleGroup } from "radix-ui";
-import { useState } from "react";
 
+import { type Store, useSwitchStore } from "@/components/shell/use-switch-store";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
-import { toast } from "@/lib/toast";
-
-type Store = { id: string; name: string };
 
 export function StoreSwitcher({
   stores,
   activeStoreId,
+  onSwitched,
+  switchingTo: parentSwitchingTo,
+  switchTo: parentSwitchTo,
 }: {
   stores: Store[];
   activeStoreId: string;
+  /** Called once a switch has gone through, so a sheet can close. */
+  onSwitched?: () => void;
+  /**
+   * A parent that outlives this component (the phone's sheet unmounts it on
+   * close) passes its own switching state, so a reopened list stays busy.
+   */
+  switchingTo?: string | null;
+  switchTo?: (storeId: string) => Promise<boolean>;
 }) {
-  const router = useRouter();
-  const [switchingTo, setSwitchingTo] = useState<string | null>(null);
+  const own = useSwitchStore(stores, activeStoreId);
+  const switchingTo = parentSwitchingTo === undefined ? own.switchingTo : parentSwitchingTo;
+  const switchTo = parentSwitchTo ?? own.switchTo;
 
-  // A switch is over when the refreshed page arrives with that store active,
-  // not when setActive answers: until then the old store is still gold, and
-  // a second tap would start a second switch. (Adjusting state during render
-  // is React's documented pattern for following a prop.)
-  if (switchingTo !== null && switchingTo === activeStoreId) {
-    setSwitchingTo(null);
-  }
-
-  async function switchTo(storeId: string) {
-    // Radix sends "" when the selected item is tapped again; that and any
-    // tap during a switch are ignored.
-    if (!storeId || storeId === activeStoreId || switchingTo !== null) {
-      return;
+  async function choose(storeId: string) {
+    if (await switchTo(storeId)) {
+      onSwitched?.();
     }
-
-    setSwitchingTo(storeId);
-
-    // Offline, the request rejects instead of returning { error }.
-    let error: unknown;
-    try {
-      ({ error } = await authClient.organization.setActive({
-        organizationId: storeId,
-      }));
-    } catch (thrown) {
-      error = thrown;
-    }
-
-    if (error) {
-      setSwitchingTo(null);
-      toast({
-        tone: "error",
-        title: "Couldn't switch stores.",
-        description: "Check your connection and try again.",
-      });
-      return;
-    }
-
-    const name = stores.find((store) => store.id === storeId)?.name;
-    toast({ tone: "success", title: `Now working in ${name}.` });
-    router.refresh();
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-3">
       <ToggleGroup.Root
         type="single"
+        orientation="vertical"
         value={activeStoreId}
-        onValueChange={switchTo}
+        onValueChange={(storeId) => void choose(storeId)}
         aria-label="Stores"
-        className="flex flex-wrap gap-2"
+        aria-orientation="vertical"
+        className="flex flex-col gap-2"
       >
         {stores.map((store) => (
           <ToggleGroup.Item
             key={store.id}
             value={store.id}
             data-store-name={store.name}
-            className="inline-flex min-h-11 max-w-full items-center rounded border border-line bg-raised px-3 py-2 text-left text-sm text-ink wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-[state=on]:border-brand data-[state=on]:bg-brand data-[state=on]:font-medium data-[state=on]:text-on-brand"
+            className="inline-flex min-h-11 w-full items-center rounded border border-line bg-raised px-3 py-2 text-left text-sm text-ink wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-[state=on]:border-brand data-[state=on]:bg-brand data-[state=on]:font-medium data-[state=on]:text-on-brand"
           >
             {switchingTo === store.id ? "Switching…" : store.name}
           </ToggleGroup.Item>

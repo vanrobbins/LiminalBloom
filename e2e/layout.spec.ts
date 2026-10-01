@@ -17,6 +17,8 @@ for (const path of PAGES) {
           elements
             // Next.js dev tools live in their own shadow root; not ours.
             .filter((element) => element.getRootNode() === document)
+            // The skip link is 1 px until focused, by design (sr-only).
+            .filter((element) => element.getBoundingClientRect().width > 1)
             .map((element) => ({
               control:
                 element.getAttribute("aria-label") ||
