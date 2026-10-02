@@ -38,6 +38,7 @@ describe("NavLinks", () => {
     render(<NavLinks variant="rail" />);
     expect(link("Products")).toHaveAttribute("href", "/products");
     expect(link("Account")).toHaveAttribute("href", "/account");
+    expect(link("Layout")).toHaveAttribute("href", "/layout");
   });
 
   it("marks only the page being shown", () => {

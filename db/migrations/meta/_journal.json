@@ -36,6 +36,13 @@
       "when": 1790710087822,
       "tag": "0004_daily_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790871567821,
+      "tag": "0005_store_map",
+      "breakpoints": true
     }
   ]
 }

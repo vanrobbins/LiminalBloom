@@ -12,6 +12,8 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync("app/globals.css", "utf8");
 
+const ZONES = ["zone-1", "zone-2", "zone-3", "zone-4", "zone-5", "zone-6", "zone-7", "zone-8"];
+
 const TOKENS = [
   "surface",
   "raised",
@@ -29,6 +31,7 @@ const TOKENS = [
   "info",
   "info-tint",
   "scrim",
+  ...ZONES,
 ];
 
 /** The custom properties declared inside the first block matching `selector`. */
@@ -134,6 +137,18 @@ describe("status colors", () => {
           `${tone} on ${background}`,
         ).toBeGreaterThanOrEqual(4.5);
       }
+    });
+  });
+});
+
+describe("zone colors", () => {
+  // Zone names are drawn in ink on the zone's fill (spec §10).
+  describe.each([
+    ["light", light],
+    ["dark", dark],
+  ])("%s theme", (_name, theme) => {
+    it.each(ZONES)("ink on %s meets 4.5:1", (zone) => {
+      expect(contrast(theme.get("ink")!, theme.get(zone)!)).toBeGreaterThanOrEqual(4.5);
     });
   });
 });
