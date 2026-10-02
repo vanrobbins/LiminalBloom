@@ -36,6 +36,15 @@
 
   /* Behind a sheet or dialog: dims the page. */
   --scrim: oklch(23.6% 0.013 61.9 / 0.4);
+  /* Zone fills on the store map (spec §10): muted, so ink labels read on all of them. */
+  --zone-1: oklch(90% 0.04 150);
+  --zone-2: oklch(90% 0.04 250);
+  --zone-3: oklch(90% 0.04 30);
+  --zone-4: oklch(90% 0.05 75);
+  --zone-5: oklch(90% 0.04 300);
+  --zone-6: oklch(90% 0.04 200);
+  --zone-7: oklch(90% 0.04 120);
+  --zone-8: oklch(90% 0.04 0);
 }
 
 /* Must come after :root: equal specificity, so the later block wins. */
@@ -61,6 +70,15 @@
 
   /* Still dark: ink turns cream here and would lighten the page. */
   --scrim: oklch(10% 0.005 59.1 / 0.6);
+  /* Dark fills: cream ink reads on all of them. */
+  --zone-1: oklch(34% 0.05 150);
+  --zone-2: oklch(34% 0.05 250);
+  --zone-3: oklch(34% 0.05 30);
+  --zone-4: oklch(34% 0.05 75);
+  --zone-5: oklch(34% 0.05 300);
+  --zone-6: oklch(34% 0.05 200);
+  --zone-7: oklch(34% 0.05 120);
+  --zone-8: oklch(34% 0.05 0);
 }
 
 @theme inline {
@@ -80,6 +98,14 @@
   --color-danger-tint: var(--danger-tint);
   --color-info: var(--info);
   --color-info-tint: var(--info-tint);
+  --color-zone-1: var(--zone-1);
+  --color-zone-2: var(--zone-2);
+  --color-zone-3: var(--zone-3);
+  --color-zone-4: var(--zone-4);
+  --color-zone-5: var(--zone-5);
+  --color-zone-6: var(--zone-6);
+  --color-zone-7: var(--zone-7);
+  --color-zone-8: var(--zone-8);
 
   --font-sans: var(--font-dm-sans);
   --font-mono: var(--font-dm-mono);
