@@ -59,7 +59,8 @@ export function AppShell({ member, children }: { member: Member; children: React
         tabIndex={-1}
         className="min-w-0 flex-1 px-4 pt-6 pb-28 outline-none md:px-8 md:py-10"
       >
-        <div className="mx-auto w-full max-w-2xl">{children}</div>
+        {/* Each page sets its own width: reading pages a column, the map the full area. */}
+        {children}
       </main>
 
       <NavLinks variant="tabs" />

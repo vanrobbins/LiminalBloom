@@ -17,7 +17,7 @@ export default async function AccountPage() {
   const { user, stores, activeStoreId } = await requireMember();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="text-3xl font-semibold tracking-tight text-ink">Account</h1>
 
       <Card compact>

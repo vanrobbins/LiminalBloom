@@ -39,7 +39,7 @@ export default async function ProductsPage() {
     .orderBy(products.name);
 
   return (
-    <>
+    <div className="mx-auto w-full max-w-2xl">
       <p className="text-sm font-medium text-brand-strong">{store?.name ?? "Your store"}</p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">Product library</h1>
       <p className="mt-2 text-ink-muted">
@@ -63,6 +63,6 @@ export default async function ProductsPage() {
           }))}
         />
       )}
-    </>
+    </div>
   );
 }
