@@ -279,7 +279,7 @@ export const fixtures = pgTable(
     id: uuid("id").primaryKey(),
     storeId: mapStoreId(),
     // Derived from the geometry on every save (spec §5); never trusted from a request.
-    zoneId: uuid("zone_id").references(() => zones.id, { onDelete: "set null" }),
+    zoneId: uuid("zone_id"),
     type: fixtureType("type").notNull(),
     name: text("name").notNull(),
     x: integer("x").notNull(),
@@ -300,6 +300,12 @@ export const fixtures = pgTable(
     index("fixtures_store_idx").on(t.storeId),
     check("fixtures_rotation_range", sql`${t.rotation} between 0 and 359`),
     check("fixtures_size_range", sql`${t.width} between 12 and 600 and ${t.depth} between 12 and 600`),
+    // Composite FK: a fixture can only reference a zone in its own store.
+    foreignKey({
+      name: "fixtures_zone_fk",
+      columns: [t.storeId, t.zoneId],
+      foreignColumns: [zones.storeId, zones.id],
+    }).onDelete("set null"),
   ],
 );
 
@@ -309,9 +315,7 @@ export const fixtureFaces = pgTable(
   {
     id: uuid("id").primaryKey(),
     storeId: mapStoreId(),
-    fixtureId: uuid("fixture_id")
-      .notNull()
-      .references(() => fixtures.id, { onDelete: "cascade" }),
+    fixtureId: uuid("fixture_id").notNull(),
     side: faceSide("side").notNull(),
     columns: integer("grid_columns").notNull(),
     rows: integer("grid_rows").notNull(),
@@ -325,6 +329,12 @@ export const fixtureFaces = pgTable(
     uniqueIndex("fixture_faces_store_id_unique").on(t.storeId, t.id),
     uniqueIndex("fixture_faces_side_unique").on(t.fixtureId, t.side),
     check("fixture_faces_grid_range", sql`${t.columns} between 1 and 24 and ${t.rows} between 1 and 24`),
+    // Composite FK: a face can only reference a fixture in its own store.
+    foreignKey({
+      name: "fixture_faces_fixture_fk",
+      columns: [t.storeId, t.fixtureId],
+      foreignColumns: [fixtures.storeId, fixtures.id],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -389,11 +399,17 @@ export const stockroomBins = pgTable(
     storeId: mapStoreId(),
     code: text("code").notNull(),
     // Optional: the stockroom zone on the map it sits in. Display only.
-    zoneId: uuid("zone_id").references(() => zones.id, { onDelete: "set null" }),
+    zoneId: uuid("zone_id"),
   },
   (t) => [
     uniqueIndex("stockroom_bins_store_id_unique").on(t.storeId, t.id),
     uniqueIndex("stockroom_bins_code_unique").on(t.storeId, sql`lower(${t.code})`),
+    // Composite FK: a bin can only reference a zone in its own store.
+    foreignKey({
+      name: "stockroom_bins_zone_fk",
+      columns: [t.storeId, t.zoneId],
+      foreignColumns: [zones.storeId, zones.id],
+    }).onDelete("set null"),
   ],
 );
 
