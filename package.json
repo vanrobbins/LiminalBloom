@@ -13,12 +13,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "db:seed:demo": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --import ./scripts/ts-paths.mjs scripts/seed-demo/index.ts",
+    "db:seed:demo:prod": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --import ./scripts/ts-paths.mjs scripts/seed-demo/index.ts --prod",
     "db:migrate:prod": "drizzle-kit migrate --config=drizzle.production.config.ts",
     "key:generate": "node scripts/generate-key.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.6",
     "@neondatabase/serverless": "^1.1.0",
+    "@vercel/blob": "^2.8.0",
     "better-auth": "^1.7.6",
     "drizzle-orm": "^0.45.3",
     "lucide-react": "^1.49.0",

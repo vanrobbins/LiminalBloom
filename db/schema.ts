@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -43,31 +44,91 @@ export const productStatus = pgEnum("product_status", [
 ]);
 
 /**
+ * A store's product categories, each with the footprint its products take by
+ * default (§3.9 item 6). Products only store an override when they differ, so
+ * a VM Lead sets a category once and adjusts the exceptions (§10 risk table).
+ * Defined above `products` because products reference it.
+ */
+export const productCategories = pgTable(
+  "product_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    hungColumns: integer("hung_columns").notNull().default(1),
+    hungRows: integer("hung_rows").notNull().default(3),
+    foldedColumns: integer("folded_columns").notNull().default(2),
+    foldedRows: integer("folded_rows").notNull().default(2),
+    stackLimit: integer("stack_limit").notNull().default(8),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // The target of products' (store_id, category_id) key: a product can only
+    // ever point at a category of its own store.
+    uniqueIndex("product_categories_store_id_unique").on(t.storeId, t.id),
+    uniqueIndex("product_categories_name_unique").on(t.storeId, sql`lower(${t.name})`),
+    index("product_categories_name_trgm").using("gin", sql`lower(${t.name}) gin_trgm_ops`),
+    check(
+      "product_categories_ranges",
+      sql`${t.hungColumns} between 1 and 24 and ${t.hungRows} between 1 and 24 and ${t.foldedColumns} between 1 and 24 and ${t.foldedRows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+    ),
+  ],
+);
+
+/**
  * The product catalog. One row per style the store carries.
  *
  * Every product belongs to exactly one store. `organization` is Better
  * Auth's table for stores -- see docs/DECISIONS.md for why it owns it.
  * Deleting a store deletes its products with it.
  */
-export const products = pgTable("products", {
-  // `defaultRandom()` makes Postgres generate the id, so the app never has to.
-  id: uuid("id").primaryKey().defaultRandom(),
-  // Every query for products must filter on this. Section 8.2.
-  storeId: text("store_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  styleNumber: text("style_number").notNull(),
-  category: text("category").notNull(),
-  color: text("color").notNull(),
-  status: productStatus("status").notNull().default("in_stock"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const products = pgTable(
+  "products",
+  {
+    // `defaultRandom()` makes Postgres generate the id, so the app never has to.
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Every query for products must filter on this. Section 8.2.
+    storeId: text("store_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    styleNumber: text("style_number").notNull(),
+    // Deleting a category deletes its products (DECISIONS 10-04); the key is
+    // (store_id, category_id) so it can only name a category of this store.
+    categoryId: uuid("category_id").notNull(),
+    color: text("color").notNull(),
+    sizeRange: text("size_range").notNull().default(""),
+    // The private Blob pathname; served only through /api/images/[productId].
+    imagePath: text("image_path"),
+    status: productStatus("status").notNull().default("in_stock"),
+    version: integer("version").notNull().default(1),
+    // What text search matches (spec §4.7), kept in step by Postgres itself.
+    searchText: text("search_text").generatedAlwaysAs(
+      sql`lower(name || ' ' || style_number || ' ' || color)`,
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("products_store_id_unique").on(t.storeId, t.id),
+    uniqueIndex("products_style_unique").on(t.storeId, sql`lower(${t.styleNumber})`),
+    index("products_category_idx").on(t.categoryId),
+    index("products_search_trgm").using("gin", sql`${t.searchText} gin_trgm_ops`),
+    foreignKey({
+      name: "products_category_fk",
+      columns: [t.storeId, t.categoryId],
+      foreignColumns: [productCategories.storeId, productCategories.id],
+    }).onDelete("cascade"),
+  ],
+);
 
 // Types derived from the table above, so the rest of the app stays in sync
 // with the schema automatically. Change a column and these change with it.
@@ -218,7 +279,7 @@ export const fixtures = pgTable(
     id: uuid("id").primaryKey(),
     storeId: mapStoreId(),
     // Derived from the geometry on every save (spec §5); never trusted from a request.
-    zoneId: uuid("zone_id").references(() => zones.id, { onDelete: "set null" }),
+    zoneId: uuid("zone_id"),
     type: fixtureType("type").notNull(),
     name: text("name").notNull(),
     x: integer("x").notNull(),
@@ -239,6 +300,12 @@ export const fixtures = pgTable(
     index("fixtures_store_idx").on(t.storeId),
     check("fixtures_rotation_range", sql`${t.rotation} between 0 and 359`),
     check("fixtures_size_range", sql`${t.width} between 12 and 600 and ${t.depth} between 12 and 600`),
+    // Composite FK: a fixture can only reference a zone in its own store.
+    foreignKey({
+      name: "fixtures_zone_fk",
+      columns: [t.storeId, t.zoneId],
+      foreignColumns: [zones.storeId, zones.id],
+    }).onDelete("set null"),
   ],
 );
 
@@ -248,9 +315,7 @@ export const fixtureFaces = pgTable(
   {
     id: uuid("id").primaryKey(),
     storeId: mapStoreId(),
-    fixtureId: uuid("fixture_id")
-      .notNull()
-      .references(() => fixtures.id, { onDelete: "cascade" }),
+    fixtureId: uuid("fixture_id").notNull(),
     side: faceSide("side").notNull(),
     columns: integer("grid_columns").notNull(),
     rows: integer("grid_rows").notNull(),
@@ -260,8 +325,16 @@ export const fixtureFaces = pgTable(
   },
   (t) => [
     index("fixture_faces_store_idx").on(t.storeId),
+    // The target of product_locations' (store_id, face_id) key.
+    uniqueIndex("fixture_faces_store_id_unique").on(t.storeId, t.id),
     uniqueIndex("fixture_faces_side_unique").on(t.fixtureId, t.side),
     check("fixture_faces_grid_range", sql`${t.columns} between 1 and 24 and ${t.rows} between 1 and 24`),
+    // Composite FK: a face can only reference a fixture in its own store.
+    foreignKey({
+      name: "fixture_faces_fixture_fk",
+      columns: [t.storeId, t.fixtureId],
+      foreignColumns: [fixtures.storeId, fixtures.id],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -280,4 +353,113 @@ export const tableSets = pgTable(
     updatedAt: mapUpdatedAt(),
   },
   (t) => [index("table_sets_store_idx").on(t.storeId)],
+);
+
+// ---------------------------------------------------------------------------
+// The product library and its places (docs/superpowers/specs/
+// 2026-10-04-product-library-search-design.md §4). Cross-table keys include
+// store_id, so a row can only point at rows of its own store. Row-level
+// security on these tables and products is added by hand in migration 0006.
+// ---------------------------------------------------------------------------
+
+export const presentation = pgEnum("presentation", ["hung", "folded"]);
+
+/** A product's own footprint where it differs from its category's. */
+export const productFootprints = pgTable(
+  "product_footprints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: mapStoreId(),
+    productId: uuid("product_id").notNull(),
+    presentation: presentation("presentation").notNull(),
+    columns: integer("grid_columns").notNull(),
+    rows: integer("grid_rows").notNull(),
+    stackLimit: integer("stack_limit").notNull(),
+  },
+  (t) => [
+    index("product_footprints_store_idx").on(t.storeId),
+    uniqueIndex("product_footprints_unique").on(t.productId, t.presentation),
+    foreignKey({
+      name: "product_footprints_product_fk",
+      columns: [t.storeId, t.productId],
+      foreignColumns: [products.storeId, products.id],
+    }).onDelete("cascade"),
+    check(
+      "product_footprints_ranges",
+      sql`${t.columns} between 1 and 24 and ${t.rows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+    ),
+  ],
+);
+
+/** A labelled place in the stockroom. */
+export const stockroomBins = pgTable(
+  "stockroom_bins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: mapStoreId(),
+    code: text("code").notNull(),
+    // Optional: the stockroom zone on the map it sits in. Display only.
+    zoneId: uuid("zone_id"),
+  },
+  (t) => [
+    uniqueIndex("stockroom_bins_store_id_unique").on(t.storeId, t.id),
+    uniqueIndex("stockroom_bins_code_unique").on(t.storeId, sql`lower(${t.code})`),
+    // Composite FK: a bin can only reference a zone in its own store.
+    foreignKey({
+      name: "stockroom_bins_zone_fk",
+      columns: [t.storeId, t.zoneId],
+      foreignColumns: [zones.storeId, zones.id],
+    }).onDelete("set null"),
+  ],
+);
+
+/**
+ * Where a product is: cells on a fixture face, or a stockroom bin (spec §4.5).
+ * The span is stored, not derived, so a footprint change never silently moves
+ * product that is already placed. Only the seed writes these until Week 5.
+ */
+export const productLocations = pgTable(
+  "product_locations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: mapStoreId(),
+    productId: uuid("product_id").notNull(),
+    presentation: presentation("presentation").notNull(),
+    faceId: uuid("face_id"),
+    col: integer("col"),
+    row: integer("row"),
+    colSpan: integer("col_span"),
+    rowSpan: integer("row_span"),
+    binId: uuid("bin_id"),
+    createdAt: mapCreatedAt(),
+  },
+  (t) => [
+    index("product_locations_store_idx").on(t.storeId),
+    index("product_locations_product_idx").on(t.productId),
+    foreignKey({
+      name: "product_locations_product_fk",
+      columns: [t.storeId, t.productId],
+      foreignColumns: [products.storeId, products.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "product_locations_face_fk",
+      columns: [t.storeId, t.faceId],
+      foreignColumns: [fixtureFaces.storeId, fixtureFaces.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "product_locations_bin_fk",
+      columns: [t.storeId, t.binId],
+      foreignColumns: [stockroomBins.storeId, stockroomBins.id],
+    }).onDelete("cascade"),
+    // Exactly one shape: every floor column set and no bin, or a bin and no floor column.
+    check(
+      "product_locations_shape",
+      sql`(${t.binId} is null and ${t.faceId} is not null and ${t.col} is not null and ${t.row} is not null and ${t.colSpan} is not null and ${t.rowSpan} is not null)
+        or (${t.binId} is not null and ${t.faceId} is null and ${t.col} is null and ${t.row} is null and ${t.colSpan} is null and ${t.rowSpan} is null)`,
+    ),
+    check(
+      "product_locations_ranges",
+      sql`${t.col} between 0 and 23 and ${t.row} between 0 and 23 and ${t.colSpan} between 1 and 24 and ${t.rowSpan} between 1 and 24`,
+    ),
+  ],
 );

@@ -1,9 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { toast } from "@/lib/toast";
+
 import { BottomSheet } from "./bottom-sheet";
+import { Toaster } from "./toaster";
 
 describe("BottomSheet", () => {
   it("opens as a dialog named by its title", () => {
@@ -176,5 +179,24 @@ describe("BottomSheet", () => {
       </BottomSheet>,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps toasts visible to assistive tech and tappable above the modal sheet", () => {
+    render(
+      <>
+        <Toaster />
+        <BottomSheet open onOpenChange={() => {}} title="Straight jean">
+          <p>Details</p>
+        </BottomSheet>
+      </>,
+    );
+    act(() => {
+      toast({ tone: "success", title: "Marked sold out", action: { label: "Undo", onSelect: () => {} } });
+    });
+    const viewport = document.querySelector("[data-toast-viewport]") as HTMLElement;
+    // The sheet is modal, but its toasts are not hidden from assistive tech or the pointer.
+    expect(viewport.closest("[aria-hidden='true']")).toBeNull();
+    expect(screen.getByRole("button", { name: "Undo" }).closest("li")).toHaveClass("pointer-events-auto");
+    expect(viewport).not.toHaveClass("pointer-events-auto");
   });
 });

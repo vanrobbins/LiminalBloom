@@ -1,67 +1,56 @@
-// The product list, scoped to the store you are working in.
-//
-// This is where section 8.2 becomes real: the query filters on the store id
-// from requireMember(), which is membership-checked on every request, so a
-// member of one store cannot see another's products even by guessing a URL.
-// The filter lives on the server; there is no request the browser can make
-// that skips it.
-//
-// Still scaffolding for the real Product Search screen in 3.2. The store
-// switcher lives in the app shell (components/shell/).
+// The product library (spec §5.1), scoped to the store you are working in.
+// The filter box is a plain GET form, so it works before any script loads;
+// it uses the same trigram search as /search.
 
-import { eq } from "drizzle-orm";
+import Link from "next/link";
 
-import { db } from "@/db";
-import { products } from "@/db/schema";
+import { ProductRows } from "@/components/products/product-rows";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { requireMember } from "@/lib/current-member";
+import { searchProducts } from "@/lib/products/queries";
+import { searchInput } from "@/lib/products/schemas";
 
-import { ProductList } from "./product-list";
-
-// Without this, Next.js prerenders the page once at build time and the list
-// would be frozen at whatever the database held when `npm run build` ran.
-// Product status has to be current (section 3.2), so render on every request.
-//
-// This option is only available because Cache Components is off in
-// next.config.ts. If that is ever enabled, this moves to `use cache`
-// directives instead -- see node_modules/next/dist/docs.
+// Status and edits from other devices must show on every visit (section 3.2).
 export const dynamic = "force-dynamic";
 
-export default async function ProductsPage() {
-  // Redirects a signed-out visitor to sign in, and someone with no store to
-  // create one.
+// The whole catalog, not search's top 30; paging waits for a store that needs it.
+const LIBRARY_LIMIT = 1000;
+
+export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
   const { stores, activeStoreId } = await requireMember();
   const store = stores.find((s) => s.id === activeStoreId);
-
-  const storeProducts = await db
-    .select()
-    .from(products)
-    .where(eq(products.storeId, activeStoreId))
-    .orderBy(products.name);
+  const { q } = await searchParams;
+  const query = typeof q === "string" ? q : "";
+  const rows = await searchProducts(activeStoreId, searchInput.parse({ q: query }), LIBRARY_LIMIT);
 
   return (
     <div className="mx-auto w-full max-w-2xl">
       <p className="text-sm font-medium text-brand-strong">{store?.name ?? "Your store"}</p>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">Product library</h1>
-      <p className="mt-2 text-ink-muted">
-        {storeProducts.length} {storeProducts.length === 1 ? "product" : "products"} in this
-        store.
+      <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">Product library</h1>
+        <div className="flex gap-2">
+          <Button variant="secondary" asChild>
+            <Link href="/products/categories">Categories</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/products/new">Add product</Link>
+          </Button>
+        </div>
+      </div>
+      <form role="search" action="/products" className="mt-6">
+        <Input label="Filter products" name="q" type="search" defaultValue={query} />
+      </form>
+      <p className="mt-4 text-ink-muted" aria-live="polite">
+        {rows.length} {rows.length === 1 ? "product" : "products"}
+        {query ? ` matching “${query}”` : " in this store"}.
       </p>
-
-      {storeProducts.length === 0 ? (
-        <p className="mt-8 rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">
-          No products yet. A store starts empty, and only ever shows its own.
+      {rows.length === 0 ? (
+        <p className="mt-6 rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">
+          {query ? "Nothing matches. Try fewer letters." : "No products yet. Add the first one, or set up categories."}
         </p>
       ) : (
-        <ProductList
-          products={storeProducts.map(({ id, name, styleNumber, category, color, status }) => ({
-            id,
-            name,
-            styleNumber,
-            category,
-            color,
-            status,
-          }))}
-        />
+        <ProductRows products={rows} />
       )}
     </div>
   );

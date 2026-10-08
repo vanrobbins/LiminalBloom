@@ -91,6 +91,10 @@ export function BottomSheet({
         <Drawer.Overlay className="fixed inset-0 z-40 bg-scrim" />
         <Drawer.Content
           aria-describedby={undefined}
+          // A tap on a toast (Undo, Dismiss) is outside the sheet but must not close it.
+          onInteractOutside={(event) => {
+            if (event.target instanceof Element && event.target.closest("[data-toast-viewport]")) event.preventDefault();
+          }}
           onOpenAutoFocus={() => {
             // Runs before focus moves in, so this is still the opener.
             returnFocusTo.current = document.activeElement as HTMLElement | null;

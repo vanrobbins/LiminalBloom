@@ -33,7 +33,7 @@ export function Toaster() {
                 dismissToast(item.id);
               }
             }}
-            className="flex items-start gap-3 rounded-lg border border-line-subtle bg-raised p-4 shadow-lg data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x) data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x)"
+            className="pointer-events-auto flex items-start gap-3 rounded-lg border border-line-subtle bg-raised p-4 shadow-lg data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x) data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x)"
           >
             <Icon
               aria-hidden="true"
@@ -47,6 +47,20 @@ export function Toaster() {
                   {item.description}
                 </Toast.Description>
               ) : null}
+              {item.action ? (
+                <Toast.Action altText={item.action.label} asChild>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      item.action?.onSelect();
+                      dismissToast(item.id);
+                    }}
+                    className="mt-1 inline-flex min-h-11 items-center self-start font-medium text-ink underline underline-offset-4"
+                  >
+                    {item.action.label}
+                  </button>
+                </Toast.Action>
+              ) : null}
             </div>
             <Toast.Close
               aria-label="Dismiss"
@@ -57,7 +71,8 @@ export function Toaster() {
           </Toast.Root>
         );
       })}
-      <Toast.Viewport className="fixed inset-x-0 bottom-16 z-60 mx-auto flex w-full max-w-sm flex-col gap-2 p-4 outline-none md:right-0 md:bottom-0 md:left-auto md:mx-0" />
+      {/* aria-live="off" is a marker: an open modal sheet aria-hides everything but live regions (and their ancestors), and toasts must stay reachable above it. each toast has pointer-events-auto to undo the sheet's body pointer lock, while the empty viewport stays click-through. */}
+      <Toast.Viewport data-toast-viewport="" aria-live="off" className="fixed inset-x-0 bottom-16 z-60 mx-auto flex w-full max-w-sm flex-col gap-2 p-4 outline-none md:right-0 md:bottom-0 md:left-auto md:mx-0" />
     </Toast.Provider>
   );
 }

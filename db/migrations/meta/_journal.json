@@ -43,6 +43,41 @@
       "when": 1790871567821,
       "tag": "0005_store_map",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791159965810,
+      "tag": "0006_product_library",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791159984709,
+      "tag": "0007_drop_product_category",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791425583393,
+      "tag": "0008_thick_thena",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791425632675,
+      "tag": "0009_tired_korg",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791425787124,
+      "tag": "0010_secret_vertigo",
+      "breakpoints": true
     }
   ]
 }

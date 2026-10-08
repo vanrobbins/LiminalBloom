@@ -13,6 +13,8 @@ export type Toast = {
   tone: ToastTone;
   title: string;
   description?: string;
+  /** One follow-up, such as Undo. Choosing it also closes the toast. */
+  action?: { label: string; onSelect: () => void };
 };
 
 /** More than this at once is noise; the oldest make way. */

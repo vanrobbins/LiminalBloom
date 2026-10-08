@@ -23,6 +23,13 @@ beforeEach(() => {
 });
 
 describe("NavLinks", () => {
+  it("puts Search first", () => {
+    render(<NavLinks variant="tabs" />);
+    const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
+    expect(links[0]).toHaveAccessibleName("Search");
+    expect(link("Search")).toHaveAttribute("href", "/search");
+  });
+
   it("is the main navigation landmark, in every form", () => {
     for (const variant of ["tabs", "rail", "sidebar"] as const) {
       const { unmount } = render(<NavLinks variant={variant} />);
