@@ -20,43 +20,22 @@ test("no status badge is gold", async ({ page }) => {
   }
 });
 
-test("tapping a product opens its details; Escape closes them", async ({ page }, testInfo) => {
+test("tapping a product opens its edit page", async ({ page }, testInfo) => {
   await page.goto("/products");
-  const row = page.getByRole("main").getByRole("list").getByRole("button").first();
-  const name = (await row.locator("span").first().textContent())!.trim();
-
-  if (testInfo.project.use.hasTouch) {
-    await row.tap();
-  } else {
-    await row.click();
-  }
-
-  const sheet = page.getByRole("dialog", { name });
-  await expect(sheet).toBeVisible();
-
-  await page.keyboard.press("Escape");
-  await expect(sheet).toBeHidden();
+  const row = page.getByRole("main").getByRole("list").getByRole("link").first();
+  if (testInfo.project.use.hasTouch) await row.tap();
+  else await row.click();
+  await expect(page).toHaveURL(/\/products\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
-test("dragging the sheet down closes it", async ({ page }) => {
+test("the filter narrows the list", async ({ page }) => {
   await page.goto("/products");
-  const row = page.getByRole("main").getByRole("list").getByRole("button").first();
-  const name = (await row.locator("span").first().textContent())!.trim();
-  await row.click();
-
-  const sheet = page.getByRole("dialog", { name });
-  await expect(sheet).toBeVisible();
-  // Let the opening slide finish before dragging.
-  await page.waitForTimeout(600);
-
-  const box = (await sheet.boundingBox())!;
-  const x = box.x + box.width / 2;
-  await page.mouse.move(x, box.y + 12);
-  await page.mouse.down();
-  await page.mouse.move(x, box.y + box.height, { steps: 12 });
-  await page.mouse.up();
-
-  await expect(sheet).toBeHidden();
+  const first = (await page.getByRole("main").getByRole("list").getByRole("link").first().locator("span span").first().textContent())!.trim();
+  await page.getByLabel("Filter products").fill(first);
+  await page.getByLabel("Filter products").press("Enter");
+  await expect(page).toHaveURL(/\?q=/);
+  await expect(page.getByRole("main").getByRole("link", { name: new RegExp(first) }).first()).toBeVisible();
 });
 
 test("long store and product names wrap instead of overflowing", async ({ page }) => {
@@ -75,7 +54,7 @@ test("long store and product names wrap instead of overflowing", async ({ page }
     for (const label of document.querySelectorAll("[data-store-label]")) {
       label.textContent = unbroken;
     }
-    const names = document.querySelectorAll("main ul button span:first-child");
+    const names = document.querySelectorAll("main ul a span.font-medium");
     names[0].textContent = unbroken;
     names[1].textContent = spaced;
   });
