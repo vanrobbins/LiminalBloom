@@ -27,7 +27,7 @@ export default defineConfig({
         test: {
           name: "node",
           // Unit tests sit beside the code they test, as lib/*.test.ts.
-          include: ["{lib,db,app}/**/*.test.ts"],
+          include: ["{lib,db,app,scripts}/**/*.test.ts"],
           environment: "node",
         },
       },
