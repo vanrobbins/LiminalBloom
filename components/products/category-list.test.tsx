@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({ removeCategory: vi.fn(), saveCategory: vi.fn() }));
 vi.mock("@/app/(app)/products/categories/actions", () => actions);
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const routerMock = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => routerMock }));
 const toastMock = vi.hoisted(() => ({ toast: vi.fn() }));
 vi.mock("@/lib/toast", () => toastMock);
 
@@ -170,6 +171,28 @@ describe("CategoryList", () => {
       expect(dialog).toBeInTheDocument();
       // Dialog should show the delete button with product count
       expect(within(dialog).getByRole("button", { name: /Delete category and 3 products/ })).toBeInTheDocument();
+    });
+
+    it("calls router.refresh() after successful delete and shows success toast", async () => {
+      const user = userEvent.setup();
+      actions.removeCategory.mockResolvedValueOnce({ status: "deleted" });
+      render(<CategoryList categories={[mockCategory({ id: "cat-1", name: "Scarves", productCount: 3 })]} />);
+
+      await user.click(screen.getByLabelText("Delete Scarves"));
+      const dialog = screen.getByRole("dialog", { name: /Delete Scarves/ });
+      await user.click(within(dialog).getByRole("button", { name: /Delete category and 3 products/ }));
+
+      // Verify success toast was shown
+      expect(toastMock.toast).toHaveBeenCalledWith({
+        tone: "success",
+        title: "Deleted Scarves",
+      });
+
+      // Verify router.refresh() was called to update the list
+      expect(routerMock.refresh).toHaveBeenCalled();
+
+      // Verify dialog closed
+      expect(screen.queryByRole("dialog", { name: /Delete Scarves/ })).not.toBeInTheDocument();
     });
   });
 });

@@ -4,7 +4,7 @@
 "use client";
 
 import { ImageUp } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { ProductImage } from "./product-image";
 import { resizeImage } from "./resize-image";
@@ -24,6 +24,7 @@ export function ImagePicker({ productId, name, categoryName, imageKey, onChange 
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function take(file: File | undefined) {
     if (!file) return;
@@ -38,6 +39,8 @@ export function ImagePicker({ productId, name, categoryName, imageKey, onChange 
       if (preview) URL.revokeObjectURL(preview);
       setPreview(URL.createObjectURL(small));
       onChange(small);
+      // Reset input so the same file can be re-picked
+      if (inputRef.current) inputRef.current.value = "";
     } catch {
       setError("That image couldn't be read. Try another.");
     } finally {
@@ -71,7 +74,7 @@ export function ImagePicker({ productId, name, categoryName, imageKey, onChange 
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-line bg-raised px-4 text-ink focus-within:outline-2 focus-within:outline-ink">
             <ImageUp aria-hidden="true" strokeWidth={1.75} className="size-5" />
             <span>{isWorking ? "Preparing…" : "Choose image"}</span>
-            <input type="file" accept={ACCEPTED.join(",")} className="sr-only" aria-label="Choose image" onChange={(event) => void take(event.target.files?.[0])} />
+            <input ref={inputRef} type="file" accept={ACCEPTED.join(",")} className="sr-only" aria-label="Choose image" onChange={(event) => void take(event.target.files?.[0])} />
           </label>
           <p className="hidden text-sm text-ink-muted md:block">or drop a photo here</p>
         </div>
