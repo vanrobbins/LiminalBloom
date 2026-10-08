@@ -6,6 +6,7 @@
 // keyboard and screen readers only ever meet one.
 
 import type { Member } from "@/lib/current-member";
+import { Input } from "@/components/ui/input";
 
 import { NavLinks } from "./nav-links";
 import { StoreMenu } from "./store-menu";
@@ -47,6 +48,10 @@ export function AppShell({ member, children }: { member: Member; children: React
           liminal bloom
         </p>
         <StoreMenu variant="name" stores={stores} activeStoreId={activeStoreId} />
+        {/* A plain GET form: works from any page, before any script loads (spec §7.1). */}
+        <form role="search" action="/search" className="px-1">
+          <Input label="Search products" name="q" type="search" enterKeyHint="search" />
+        </form>
         <NavLinks variant="sidebar" />
         <div className="mt-auto">
           <UserMenu variant="sidebar" user={user} />
