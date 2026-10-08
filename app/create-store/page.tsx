@@ -4,6 +4,7 @@
 //
 // Most team members still arrive by invitation (section 3.1).
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CornerThemeToggle } from "@/components/corner-theme-toggle";
@@ -37,7 +38,7 @@ export default async function CreateStorePage() {
             no store has nowhere to go back to. */}
         {member.kind === "member" ? (
           <Button asChild variant="ghost">
-            <a href="/products">Back to products</a>
+            <Link href="/products">Back to products</Link>
           </Button>
         ) : null}
       </Card>
