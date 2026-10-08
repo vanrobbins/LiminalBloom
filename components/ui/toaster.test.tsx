@@ -1,6 +1,6 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dismissToast, getToasts, toast } from "@/lib/toast";
 
@@ -38,5 +38,17 @@ describe("Toaster", () => {
     await user.click(screen.getByRole("button", { name: "Dismiss" }));
 
     expect(getToasts()).toEqual([]);
+  });
+
+  it("offers an action and closes the toast when it is chosen", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<Toaster />);
+    act(() => {
+      toast({ tone: "success", title: "Marked sold out", action: { label: "Undo", onSelect } });
+    });
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(onSelect).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByText("Marked sold out")).not.toBeInTheDocument());
   });
 });
