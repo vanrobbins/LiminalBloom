@@ -34,6 +34,32 @@ test("changes status at once, and Undo puts it back", async ({ page }) => {
   await expect(page.getByRole("radio", { name: "In stock" })).toHaveAttribute("aria-checked", "true");
 });
 
+test("a status change from a stale screen is refused and shows the current status", async ({ page, browser }) => {
+  // Opened from the URL, so the results are server-rendered and no debounced
+  // search can land after the first save and quietly refresh the second screen.
+  async function openFromUrl(p: import("@playwright/test").Page) {
+    await p.goto("/search?q=E2E-HRP-01");
+    await results(p).getByRole("button", { name: /E2E High-Rise Pant/ }).click();
+    await expect(p.getByRole("radio", { name: "In stock" })).toHaveAttribute("aria-checked", "true");
+  }
+  // A second device: a new context inherits the project's options, sign-in included.
+  const other = await browser.newContext();
+  try {
+    const otherPage = await other.newPage();
+    await openFromUrl(page);
+    await openFromUrl(otherPage);
+
+    await page.getByRole("radio", { name: "Sold out" }).click();
+    await expect(page.getByText("E2E High-Rise Pant: Sold out", { exact: true })).toBeVisible();
+
+    await otherPage.getByRole("radio", { name: "On sale" }).click();
+    await expect(otherPage.getByText("Changed on another device", { exact: true })).toBeVisible();
+    await expect(otherPage.getByRole("radio", { name: "Sold out" })).toHaveAttribute("aria-checked", "true");
+  } finally {
+    await other.close();
+  }
+});
+
 test("a filter narrows the results", async ({ page }) => {
   await page.goto("/search?q=e2e");
   await expect(results(page).getByRole("button")).toHaveCount(2);

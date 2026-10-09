@@ -5,6 +5,7 @@
 import {
   expect,
   goldColors,
+  hydrated,
   sizeOf,
   storeTrigger,
   switchStore,
@@ -131,6 +132,7 @@ test("the account menu switches the theme", async ({ page }) => {
   const isDark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));
   const before = await isDark();
 
+  await hydrated(page);
   await userMenuButton(page).click();
   const name = /^Switch to (light|dark) theme$/;
   await page
