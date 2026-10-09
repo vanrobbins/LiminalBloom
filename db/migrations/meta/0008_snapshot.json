@@ -1,5 +1,5 @@
 {
-  "id": "ece85ef3-c445-4b2c-b141-a0df2a44164e",
+  "id": "8295bb57-1bee-484d-a6ca-6c1f98beacca",
   "prevId": "b68a38ee-106a-4e96-9090-0a7a651b3bb3",
   "version": "7",
   "dialect": "postgresql",
@@ -239,14 +239,16 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "fixture_faces_fixture_id_fixtures_id_fk": {
-          "name": "fixture_faces_fixture_id_fixtures_id_fk",
+        "fixture_faces_fixture_fk": {
+          "name": "fixture_faces_fixture_fk",
           "tableFrom": "fixture_faces",
           "tableTo": "fixtures",
           "columnsFrom": [
+            "store_id",
             "fixture_id"
           ],
           "columnsTo": [
+            "store_id",
             "id"
           ],
           "onDelete": "cascade",
@@ -366,6 +368,27 @@
         }
       },
       "indexes": {
+        "fixtures_store_id_unique": {
+          "name": "fixtures_store_id_unique",
+          "columns": [
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "fixtures_store_idx": {
           "name": "fixtures_store_idx",
           "columns": [
@@ -396,19 +419,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "fixtures_zone_id_zones_id_fk": {
-          "name": "fixtures_zone_id_zones_id_fk",
-          "tableFrom": "fixtures",
-          "tableTo": "zones",
-          "columnsFrom": [
-            "zone_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
         "fixtures_table_set_id_table_sets_id_fk": {
           "name": "fixtures_table_set_id_table_sets_id_fk",
           "tableFrom": "fixtures",
@@ -420,6 +430,21 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "fixtures_zone_fk": {
+          "name": "fixtures_zone_fk",
+          "tableFrom": "fixtures",
+          "tableTo": "zones",
+          "columnsFrom": [
+            "store_id",
+            "zone_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1607,6 +1632,27 @@
         }
       },
       "indexes": {
+        "zones_store_id_unique": {
+          "name": "zones_store_id_unique",
+          "columns": [
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "zones_store_idx": {
           "name": "zones_store_idx",
           "columns": [

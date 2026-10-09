@@ -61,22 +61,8 @@
     {
       "idx": 8,
       "version": "7",
-      "when": 1791425583393,
-      "tag": "0008_thick_thena",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1791425632675,
-      "tag": "0009_tired_korg",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1791425787124,
-      "tag": "0010_secret_vertigo",
+      "when": 1791512083401,
+      "tag": "0008_store_scoped_fks",
       "breakpoints": true
     }
   ]

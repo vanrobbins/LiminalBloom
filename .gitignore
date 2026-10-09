@@ -32,8 +32,6 @@ docs/*
 # misc
 .DS_Store
 *.pem
-migrate-prod.js
-test-connection.js
 
 # debug
 npm-debug.log*

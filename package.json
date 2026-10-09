@@ -2,7 +2,6 @@
   "name": "liminal-bloom",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -16,7 +15,7 @@
     "test:e2e": "playwright test",
     "db:seed:demo": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --import ./scripts/ts-paths.mjs scripts/seed-demo/index.ts",
     "db:seed:demo:prod": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --import ./scripts/ts-paths.mjs scripts/seed-demo/index.ts --prod",
-    "db:migrate:prod": "node migrate-prod.js",
+    "db:migrate:prod": "drizzle-kit migrate --config=drizzle.production.config.ts",
     "key:generate": "node scripts/generate-key.mjs"
   },
   "dependencies": {
@@ -28,7 +27,6 @@
     "lucide-react": "^1.49.0",
     "next": "16.3.6",
     "next-themes": "^0.4.6",
-    "postgres": "^3.4.9",
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
