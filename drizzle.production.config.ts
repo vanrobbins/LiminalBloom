@@ -26,9 +26,5 @@ export default defineConfig({
   schema: ["./db/schema.ts", "./db/auth-schema.ts"],
   out: "./db/migrations",
   dialect: "postgresql",
-  dbCredentials: {
-    url,
-    neonSqlDriver: false,
-  } as any,
-  migrations: { table: "__drizzle_migrations_prod" },
+  dbCredentials: { url },
 });

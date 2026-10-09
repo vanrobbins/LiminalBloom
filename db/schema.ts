@@ -270,7 +270,11 @@ export const zones = pgTable(
     createdAt: mapCreatedAt(),
     updatedAt: mapUpdatedAt(),
   },
-  (t) => [index("zones_store_idx").on(t.storeId)],
+  (t) => [
+    // The target of fixtures' and stockroom_bins' (store_id, zone_id) composite FKs.
+    uniqueIndex("zones_store_id_unique").on(t.storeId, t.id),
+    index("zones_store_idx").on(t.storeId),
+  ],
 );
 
 export const fixtures = pgTable(
@@ -297,6 +301,8 @@ export const fixtures = pgTable(
     updatedAt: mapUpdatedAt(),
   },
   (t) => [
+    // The target of fixture_faces' (store_id, fixture_id) composite FK.
+    uniqueIndex("fixtures_store_id_unique").on(t.storeId, t.id),
     index("fixtures_store_idx").on(t.storeId),
     check("fixtures_rotation_range", sql`${t.rotation} between 0 and 359`),
     check("fixtures_size_range", sql`${t.width} between 12 and 600 and ${t.depth} between 12 and 600`),

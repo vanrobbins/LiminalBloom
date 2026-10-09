@@ -237,6 +237,23 @@ describe("cross-store update", () => {
   });
 });
 
+describe("deleting a zone", () => {
+  // The (store_id, zone_id) FK must null only zone_id; a bare SET NULL would
+  // null store_id too and the delete would fail on its NOT NULL (0008).
+  it("keeps the fixtures in it, now without a zone", async () => {
+    const store = await makeStore("zone-del");
+    const zone = newZone();
+    await db.insert(zones).values({ ...zone, storeId: store });
+    const rackId = randomUUID();
+    await db.insert(fixtures).values({ id: rackId, storeId: store, zoneId: zone.id, type: "prop", name: "Plant", x: 24, y: 24, width: 24, depth: 24 });
+
+    await db.delete(zones).where(eq(zones.id, zone.id));
+
+    const [row] = await db.select().from(fixtures).where(eq(fixtures.id, rackId));
+    expect(row).toMatchObject({ storeId: store, zoneId: null });
+  });
+});
+
 describe("conflictsFrom", () => {
   const dup = (constraint: string) =>
     new Error("Failed query", { cause: new Error(`duplicate key value violates unique constraint "${constraint}"`) });
