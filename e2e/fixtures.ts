@@ -57,8 +57,24 @@ export function storeChoice(page: Page, name: string) {
   return page.locator(`[data-store-name="${name}"]`).filter({ visible: true });
 }
 
+/**
+ * Everything in the element has hydrated: React attaches its props to every
+ * node it hydrates. A menu or sheet opened earlier sets aria-hidden on
+ * streamed-in page content that has not hydrated yet, which React reports as a
+ * hydration mismatch. Streaming's own template and script nodes never hydrate.
+ */
+export async function hydrated(page: Page, selector = "main") {
+  await page.waitForFunction((s) => {
+    const root = document.querySelector(s);
+    if (root === null) return false;
+    const isHydrated = (element: Element) => Object.keys(element).some((key) => key.startsWith("__reactProps"));
+    return [root, ...root.querySelectorAll(":not(template, script)")].every(isHydrated);
+  }, selector);
+}
+
 /** Switch stores through the shell and wait until the page shows the new one. */
 export async function switchStore(page: Page, name: string) {
+  await hydrated(page);
   await storeTrigger(page).click();
   await storeChoice(page, name).click();
   await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", name);
