@@ -64,6 +64,13 @@
       "when": 1791512083401,
       "tag": "0008_store_scoped_fks",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791597162001,
+      "tag": "0009_planograms",
+      "breakpoints": true
     }
   ]
 }
