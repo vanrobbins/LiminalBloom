@@ -1,5 +1,5 @@
-// A fixture face's grid with the product's cells filled (spec §7.3). In Week 5
-// this becomes the published planogram view.
+// A fixture face's grid with the product's cells filled (spec §7.3).
+// Planogram Detail draws the full grid: components/planograms/planogram-grid.tsx.
 
 import { columnLetters, spanLabel, type Cells } from "@/lib/products/location-label";
 
