@@ -35,7 +35,7 @@ export type DeleteCategoryOutcome =
 type Statements = [BatchItem<"pg">, ...BatchItem<"pg">[]];
 
 // Drizzle already wraps an interpolated builder in parentheses (lib/layout/write.ts).
-function guarded(query: SQLWrapper, label: string): BatchItem<"pg"> {
+export function guarded(query: SQLWrapper, label: string): BatchItem<"pg"> {
   return db.execute(sql`with changed as ${query} select layout_assert((select count(*) from changed) = 1, ${label})`);
 }
 
