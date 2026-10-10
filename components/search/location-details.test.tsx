@@ -26,6 +26,14 @@ describe("LocationDetails", () => {
     expect(screen.getByRole("img", { name: "Front table 1: cells A1–B2 of a 6 by 3 grid" })).toBeInTheDocument();
   });
 
+  it("links a floor place to its planogram, highlighting the product", () => {
+    render(<LocationDetails result={result} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    expect(screen.getByRole("link", { name: "Open planogram" })).toHaveAttribute(
+      "href",
+      `/planograms/${result.locations[0].floor?.fixtureId}?product=${result.id}`,
+    );
+  });
+
   it("says plainly when a product has no place yet", () => {
     render(<LocationDetails result={{ ...result, locations: [] }} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
     expect(screen.getByText("Not placed yet. It gets a place when it goes into a planogram.")).toBeInTheDocument();

@@ -3,6 +3,8 @@
 
 "use client";
 
+import Link from "next/link";
+
 import { ProductImage } from "@/components/products/product-image";
 import type { Layout } from "@/lib/layout/types";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
@@ -53,6 +55,12 @@ export function LocationDetails({ result, layout, onChanged }: LocationDetailsPr
                   <>
                     <LocationMap layout={layout} fixtureId={l.floor.fixtureId} />
                     <FaceGrid grid={l.floor.grid} cells={l.floor.cells} label={l.label.slice(0, l.label.lastIndexOf(","))} />
+                    <Link
+                      href={`/planograms/${l.floor.fixtureId}?product=${result.id}`}
+                      className="inline-flex min-h-11 items-center self-start text-brand-strong underline underline-offset-4"
+                    >
+                      Open planogram
+                    </Link>
                   </>
                 ) : null}
               </li>

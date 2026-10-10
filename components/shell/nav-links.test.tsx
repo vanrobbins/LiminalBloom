@@ -46,6 +46,7 @@ describe("NavLinks", () => {
     expect(link("Products")).toHaveAttribute("href", "/products");
     expect(link("Account")).toHaveAttribute("href", "/account");
     expect(link("Layout")).toHaveAttribute("href", "/layout");
+    expect(link("Planograms")).toHaveAttribute("href", "/planograms");
   });
 
   it("marks only the page being shown", () => {

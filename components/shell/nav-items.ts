@@ -2,7 +2,7 @@
 // listed (docs/DECISIONS.md, 2026-09-29): each feature adds its own line here
 // when it lands, and all three navigation forms pick it up.
 
-import { CircleUser, LayoutGrid, MapIcon, Search, type LucideIcon } from "lucide-react";
+import { CircleUser, LayoutGrid, LayoutPanelTop, MapIcon, Search, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -11,6 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/products", label: "Products", icon: LayoutGrid },
   { href: "/layout", label: "Layout", icon: MapIcon },
+  { href: "/planograms", label: "Planograms", icon: LayoutPanelTop },
   { href: "/account", label: "Account", icon: CircleUser },
 ];
 
