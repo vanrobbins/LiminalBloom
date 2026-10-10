@@ -64,3 +64,18 @@ export async function layoutCounts(storeName: string): Promise<{ fixtures: numbe
   const table = rows.find((row) => row.name === "Table 1");
   return { fixtures: rows.length, table1X: table ? Number(table.x) : null };
 }
+
+/** Attaches a lower table to the seeded Table 1, making it a table set. Run after seedLayout. */
+export async function seedTableSet(): Promise<{ upperId: string; lowerId: string }> {
+  const db = sql();
+  const store = await storeId(HOME_STORE);
+  const rows = await db`select id from fixtures where store_id = ${store} and name = 'Table 1' limit 1`;
+  const upperId = rows[0]?.id;
+  if (typeof upperId !== "string") throw new Error("Seed the layout before the table set.");
+  const set = randomUUID();
+  const lowerId = randomUUID();
+  await db`insert into table_sets (id, store_id, upper_fixture_id) values (${set}, ${store}, ${upperId})`;
+  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, table_set_id, set_side) values (${lowerId}, ${store}, 'table', 'Lower 1', 360, 140, 72, 36, ${set}, 'front')`;
+  await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${lowerId}, 'top', 6, 3)`;
+  return { upperId, lowerId };
+}
