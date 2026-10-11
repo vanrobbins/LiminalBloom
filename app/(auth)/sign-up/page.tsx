@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { signUp } from "@/lib/auth-client";
+import { CONNECTION_ERROR } from "@/lib/connection-error";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -23,19 +24,27 @@ export default function SignUpPage() {
 
     const form = new FormData(event.currentTarget);
 
-    const { error } = await signUp.email({
-      name: String(form.get("name")),
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
+    // Offline, the request rejects instead of returning { error }.
+    let failure: string | null = null;
+    try {
+      const { error } = await signUp.email({
+        name: String(form.get("name")),
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+      });
+      if (error) failure = error.message || "Could not create the account.";
+    } catch {
+      failure = CONNECTION_ERROR;
+    }
 
-    setPending(false);
-
-    if (error) {
-      setError(error.message ?? "Could not create the account.");
+    if (failure) {
+      setPending(false);
+      setError(failure);
       return;
     }
 
+    // Still "Creating account…" until /products replaces this page. Clearing
+    // it here left an idle button for the second the server took to render.
     router.push("/products");
     router.refresh();
   }

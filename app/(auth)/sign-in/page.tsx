@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth-client";
+import { CONNECTION_ERROR } from "@/lib/connection-error";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -22,20 +23,28 @@ export default function SignInPage() {
 
     const form = new FormData(event.currentTarget);
 
-    const { error } = await signIn.email({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
-
-    setPending(false);
-
-    if (error) {
+    // Offline, the request rejects instead of returning { error }.
+    let failure: string | null = null;
+    try {
+      const { error } = await signIn.email({
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+      });
       // Deliberately vague: saying which of the two was wrong tells an
       // attacker whether an email address has an account here.
-      setError("That email and password do not match.");
+      if (error) failure = "That email and password do not match.";
+    } catch {
+      failure = CONNECTION_ERROR;
+    }
+
+    if (failure) {
+      setPending(false);
+      setError(failure);
       return;
     }
 
+    // Still "Signing in…" until /products replaces this page. Clearing it
+    // here left an idle button for the second the server took to render.
     router.push("/products");
     router.refresh();
   }

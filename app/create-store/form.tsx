@@ -4,15 +4,27 @@
 
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CONNECTION_ERROR } from "@/lib/connection-error";
 
 import { createStore } from "./actions";
 
+/** Offline, the action rejects; a redirect() must still go through (unstable_rethrow). */
+async function createStoreOrExplain(previous: { error: string } | null, formData: FormData) {
+  try {
+    return await createStore(previous, formData);
+  } catch (error) {
+    unstable_rethrow(error);
+    return { error: CONNECTION_ERROR };
+  }
+}
+
 export function CreateStoreForm() {
-  const [state, formAction, pending] = useActionState(createStore, null);
+  const [state, formAction, pending] = useActionState(createStoreOrExplain, null);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
