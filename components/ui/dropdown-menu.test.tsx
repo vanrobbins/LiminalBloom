@@ -93,25 +93,14 @@ describe("DropdownMenu", () => {
     }
   });
 
-  it("marks the chosen item gold, the current selection (§5.5)", async () => {
+  it("marks the chosen item gold, the current selection (§5.5), even when keyboard-highlighted", async () => {
     const user = userEvent.setup();
     render(<Example />);
 
     await open(user);
 
-    expect(screen.getByRole("menuitemradio", { name: "Pioneer Place" }).className).toContain(
-      "data-[state=checked]:bg-brand",
-    );
-  });
-
-  it("keeps the chosen item gold when keyboard-highlighted", async () => {
-    const user = userEvent.setup();
-    render(<Example />);
-
-    await open(user);
-
-    expect(screen.getByRole("menuitemradio", { name: "Pioneer Place" }).className).toContain(
-      "data-[state=checked]:data-[highlighted]:bg-brand",
-    );
+    const { className } = screen.getByRole("menuitemradio", { name: "Pioneer Place" });
+    expect(className).toContain("data-[state=checked]:bg-brand");
+    expect(className).toContain("data-[state=checked]:data-[highlighted]:bg-brand");
   });
 });

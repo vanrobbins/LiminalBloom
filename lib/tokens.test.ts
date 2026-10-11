@@ -160,19 +160,23 @@ describe("app/ and components/ use tokens, not literal colors", () => {
       .map((file) => `${dir}/${file.replaceAll("\\", "/")}`),
   );
 
-  it.each(files)("%s has no hex colors", (file) => {
-    const source = readFileSync(file, "utf8");
+  /** Every file whose source matches `pattern`, so a failure names them all. */
+  const filesMatching = (pattern: RegExp) =>
+    files.filter((file) => pattern.test(readFileSync(file, "utf8")));
+
+  it("has no hex colors", () => {
     // Six-digit hex, or a Tailwind arbitrary color like bg-[#…]. HTML entities
     // such as &#10052; have five digits and a leading &, so do not match.
-    expect(source).not.toMatch(/(?<!&)#[0-9A-Fa-f]{6}\b|\[#/);
+    expect(filesMatching(/(?<!&)#[0-9A-Fa-f]{6}\b|\[#/)).toEqual([]);
   });
 
-  it.each(files)("%s has no Tailwind palette colors", (file) => {
+  it("has no Tailwind palette colors", () => {
     // text-red-700 and friends bypass the tokens, so they skip dark mode
     // and the contrast checks above.
-    const source = readFileSync(file, "utf8");
-    expect(source).not.toMatch(
-      /\b(?:bg|text|border|outline|ring|fill|stroke)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-\d{2,3}\b/,
-    );
+    expect(
+      filesMatching(
+        /\b(?:bg|text|border|outline|ring|fill|stroke)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-\d{2,3}\b/,
+      ),
+    ).toEqual([]);
   });
 });

@@ -14,13 +14,6 @@ import { DeleteProductButton } from "./delete-product-button";
 beforeEach(() => vi.clearAllMocks());
 
 describe("DeleteProductButton", () => {
-  it("opens confirmation dialog", async () => {
-    const user = userEvent.setup();
-    render(<DeleteProductButton productId="p1" version={1} name="High-Rise Pant" />);
-    await user.click(screen.getByRole("button", { name: "Delete product" }));
-    expect(screen.getByRole("dialog", { name: /Delete High-Rise Pant/ })).toBeInTheDocument();
-  });
-
   describe("loading state", () => {
     it("disables button while deleting", async () => {
       const user = userEvent.setup();
@@ -51,16 +44,6 @@ describe("DeleteProductButton", () => {
       expect(router.push).toHaveBeenCalledWith("/products");
     });
 
-    it("navigates to products page on successful delete", async () => {
-      const user = userEvent.setup();
-      actions.removeProduct.mockResolvedValueOnce({ status: "saved" });
-      render(<DeleteProductButton productId="p1" version={1} name="Vest" />);
-
-      await user.click(screen.getByRole("button", { name: "Delete product" }));
-      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete product" }));
-
-      await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith("/products"));
-    });
   });
 
   describe("error handling", () => {
@@ -89,7 +72,7 @@ describe("DeleteProductButton", () => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
-    it("shows conflict toast and refreshes on version conflict", async () => {
+    it("shows conflict toast, refreshes and stays put on version conflict", async () => {
       const user = userEvent.setup();
       actions.removeProduct.mockResolvedValueOnce({ status: "conflict" });
       render(<DeleteProductButton productId="p1" version={1} name="Shoes" />);
@@ -99,18 +82,9 @@ describe("DeleteProductButton", () => {
 
       expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
       expect(router.refresh).toHaveBeenCalled();
+      expect(router.push).not.toHaveBeenCalled();
       await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     });
 
-    it("does not navigate on version conflict", async () => {
-      const user = userEvent.setup();
-      actions.removeProduct.mockResolvedValueOnce({ status: "conflict" });
-      render(<DeleteProductButton productId="p1" version={1} name="Hat" />);
-
-      await user.click(screen.getByRole("button", { name: "Delete product" }));
-      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete product" }));
-
-      expect(router.push).not.toHaveBeenCalled();
-    });
   });
 });

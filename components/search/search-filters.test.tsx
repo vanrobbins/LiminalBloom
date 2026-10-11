@@ -40,56 +40,22 @@ describe("SearchFilters", () => {
       expect(screen.getByRole("checkbox", { name: `Color ${MAX_FILTER_CHOICES + 1}` })).toBeEnabled();
       expect(screen.queryByText(/^Up to/)).not.toBeInTheDocument();
     });
-
-    it("shows category filter group", () => {
-      const onChange = vi.fn();
-      render(<SearchFilters input={searchInput.parse({ categoryIds: [] })} categories={categories} colors={[]} onChange={onChange} />);
-
-      expect(screen.getByRole("checkbox", { name: "Pants" })).toBeInTheDocument();
-      expect(screen.getByRole("checkbox", { name: "Shirts" })).toBeInTheDocument();
-      expect(screen.getByRole("checkbox", { name: "Hats" })).toBeInTheDocument();
-    });
   });
 
   describe("filter state and onChange propagation", () => {
-    it("calls onChange when status filter changes", async () => {
+    it("reports a choice from every group", async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      const input = searchInput.parse({ statuses: [] });
-      render(<SearchFilters input={input} categories={[]} colors={[]} onChange={onChange} />);
+      render(<SearchFilters input={searchInput.parse({})} categories={categories} colors={["Black", "White", "Red"]} onChange={onChange} />);
 
       await user.click(screen.getByRole("checkbox", { name: "In stock" }));
-      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ statuses: ["in_stock"] }));
-    });
-
-    it("calls onChange when place filter changes", async () => {
-      const user = userEvent.setup();
-      const onChange = vi.fn();
-      const input = searchInput.parse({ places: [] });
-      render(<SearchFilters input={input} categories={[]} colors={[]} onChange={onChange} />);
-
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ["in_stock"] }));
       await user.click(screen.getByRole("checkbox", { name: "On the floor" }));
-      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ places: ["floor"] }));
-    });
-
-    it("calls onChange when category filter changes", async () => {
-      const user = userEvent.setup();
-      const onChange = vi.fn();
-      const input = searchInput.parse({ categoryIds: [] });
-      render(<SearchFilters input={input} categories={categories} colors={[]} onChange={onChange} />);
-
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ places: ["floor"] }));
       await user.click(screen.getByRole("checkbox", { name: "Pants" }));
-      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ categoryIds: ["550e8400-e29b-41d4-a716-446655440001"] }));
-    });
-
-    it("calls onChange when color filter changes", async () => {
-      const user = userEvent.setup();
-      const onChange = vi.fn();
-      const input = searchInput.parse({ colors: [] });
-      render(<SearchFilters input={input} categories={[]} colors={["Black", "White", "Red"]} onChange={onChange} />);
-
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ categoryIds: ["550e8400-e29b-41d4-a716-446655440001"] }));
       await user.click(screen.getByRole("checkbox", { name: "Black" }));
-      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ colors: ["Black"] }));
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ colors: ["Black"] }));
     });
 
     it("toggles filters on and off", async () => {
@@ -117,20 +83,6 @@ describe("SearchFilters", () => {
   });
 
   describe("multi-filter combinations", () => {
-    it("allows multiple filters simultaneously", () => {
-      const onChange = vi.fn();
-      const input = searchInput.parse({ colors: ["Black"], categoryIds: ["550e8400-e29b-41d4-a716-446655440001"], statuses: ["in_stock"], places: ["floor"] });
-      render(<SearchFilters input={input} categories={categories} colors={["Black", "White"]} onChange={onChange} />);
-
-      const allChecked = [
-        screen.getByRole("checkbox", { name: "Black" }),
-        screen.getByRole("checkbox", { name: "Pants" }),
-        screen.getByRole("checkbox", { name: "In stock" }),
-        screen.getByRole("checkbox", { name: "On the floor" }),
-      ];
-      allChecked.forEach((cb) => expect(cb).toBeChecked());
-    });
-
     it("counts active filters and displays in header (desktop)", () => {
       const input = searchInput.parse({ colors: ["Black"], categoryIds: ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"], statuses: ["in_stock"], places: [] });
       render(<SearchFilters input={input} categories={categories} colors={["Black"]} onChange={() => {}} />);
@@ -148,17 +100,6 @@ describe("SearchFilters", () => {
 
   describe("desktop layout (details element)", () => {
     beforeEach(() => mediaQuery.useMediaQuery.mockReturnValue(false));
-
-    it("renders as expandable details element on desktop", () => {
-      const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
-      const { container } = render(<SearchFilters input={input} categories={[]} colors={[]} onChange={() => {}} />);
-
-      const details = container.querySelector("details");
-      expect(details).toBeInTheDocument();
-      const summary = details?.querySelector("summary");
-      expect(summary).toBeInTheDocument();
-      expect(summary?.textContent).toMatch(/Filters/);
-    });
 
     it("starts open on desktop when filters are active", () => {
       const input = searchInput.parse({ colors: ["Black"], categoryIds: [], statuses: [], places: [] });
@@ -196,14 +137,6 @@ describe("SearchFilters", () => {
   describe("phone layout (bottom sheet)", () => {
     beforeEach(() => mediaQuery.useMediaQuery.mockReturnValue(true));
 
-    it("renders as button with sheet on phone", () => {
-      const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
-      render(<SearchFilters input={input} categories={[]} colors={[]} onChange={() => {}} />);
-
-      expect(screen.getByRole("button", { name: /Filters/ })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Filters/ }).parentElement?.tagName).not.toBe("SUMMARY");
-    });
-
     it("opens bottom sheet when button is clicked on phone", async () => {
       const user = userEvent.setup();
       const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
@@ -216,17 +149,17 @@ describe("SearchFilters", () => {
       expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
     });
 
-    it("closes bottom sheet after selecting a filter", async () => {
+    it("keeps the sheet open after a filter is chosen", async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
       const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
       render(<SearchFilters input={input} categories={[]} colors={["Black"]} onChange={onChange} />);
 
       await user.click(screen.getByRole("button", { name: /Filters/ }));
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      await user.click(screen.getByRole("checkbox", { name: "Black" }));
 
-      // Sheet stays open after click; user manually closes it or clicking outside closes it
-      // This tests the default behavior without additional actions
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ colors: ["Black"] }));
+      expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
     });
 
     it("shows filter count badge on phone button", () => {
