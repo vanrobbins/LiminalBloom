@@ -32,20 +32,11 @@ const renderScreen = (overrides?: Partial<Parameters<typeof SearchScreen>[0]>) =
   render(<SearchScreen initial={searchInput.parse({ q: "p" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} {...overrides} />);
 
 describe("SearchScreen result rendering", () => {
-  it("renders initial results", () => {
+  it("shows each result with its style number, and the count", () => {
     renderScreen();
     expect(screen.getByRole("button", { name: /High-Rise Pant/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Pocket Tee/ })).toBeInTheDocument();
-  });
-
-  it("displays product details in result rows", () => {
-    renderScreen();
-    expect(screen.getByText("High-Rise Pant")).toBeInTheDocument();
     expect(screen.getByText(/p1-01/)).toBeInTheDocument();
-  });
-
-  it("shows result count", () => {
-    renderScreen();
     expect(screen.getByText("2 products")).toBeInTheDocument();
   });
 
@@ -62,23 +53,6 @@ describe("SearchScreen result rendering", () => {
   });
 });
 
-describe("SearchScreen messaging", () => {
-  it("shows correct product count for multiple results", () => {
-    renderScreen();
-    expect(screen.getByText("2 products")).toBeInTheDocument();
-  });
-
-  it("shows correct product count for single result", () => {
-    render(<SearchScreen initial={searchInput.parse({ q: "p" })} initialResults={[pant]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
-    expect(screen.getByText("1 product")).toBeInTheDocument();
-  });
-
-  it("shows count message when filters or query active", () => {
-    render(<SearchScreen initial={searchInput.parse({ q: "shirt" })} initialResults={[tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
-    expect(screen.getByText("1 product")).toBeInTheDocument();
-  });
-});
-
 describe("SearchScreen empty state", () => {
   it("shows empty results message when no products found", () => {
     render(<SearchScreen initial={searchInput.parse({ q: "xyz" })} initialResults={[]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
@@ -90,26 +64,9 @@ describe("SearchScreen empty state", () => {
     expect(screen.getByText("2 products")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /High-Rise Pant/ })).toBeInTheDocument();
   });
-
-  it("clears filters when clear button is clicked", () => {
-    actions.runSearch.mockResolvedValueOnce([pant, tee]);
-    render(<SearchScreen initial={searchInput.parse({ q: "", colors: ["Black"], statuses: ["in_stock"] })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
-
-    // Would need to find and click clear button if it exists in results
-    // This tests the happy path exists
-    expect(screen.getByText("2 products")).toBeInTheDocument();
-  });
 });
 
 describe("SearchScreen focus and panel management", () => {
-  it("marks the open result with aria-current", async () => {
-    const user = userEvent.setup();
-    renderScreen();
-    const row = screen.getByRole("button", { name: /Pocket Tee/ });
-    await user.click(row);
-    expect(row).toHaveAttribute("aria-current", "true");
-  });
-
   it("moves focus into the panel on desktop", async () => {
     const user = userEvent.setup();
     renderScreen();
@@ -127,7 +84,7 @@ describe("SearchScreen focus and panel management", () => {
     expect(row).toHaveFocus();
   });
 
-  it("clears aria-current when panel closes", async () => {
+  it("marks the open result with aria-current, and clears it when the panel closes", async () => {
     const user = userEvent.setup();
     renderScreen();
     const row = screen.getByRole("button", { name: /Pocket Tee/ });

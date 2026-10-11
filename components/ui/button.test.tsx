@@ -35,13 +35,12 @@ describe("Button", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it.each(["primary", "secondary", "ghost", "danger"] as const)(
-    "keeps the 44px minimum as %s",
-    (variant) => {
-      render(<Button variant={variant}>Go</Button>);
-      expect(screen.getByRole("button").className).toContain("min-h-11");
-    },
-  );
+  it("keeps the 44px minimum in every variant", () => {
+    for (const variant of ["primary", "secondary", "ghost", "danger"] as const) {
+      render(<Button variant={variant}>{variant}</Button>);
+      expect(screen.getByRole("button", { name: variant }).className, variant).toContain("min-h-11");
+    }
+  });
 
   it("is a 44px square with no side padding as an icon button", () => {
     // Side padding would squeeze the icon: a caller's px-0 cannot override

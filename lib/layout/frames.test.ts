@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { angleTowards, normalizeAngle, rotate, toLocal, toWorld } from "./frames";
+import { angleTowards, normalizeAngle, rotate, toWorld } from "./frames";
 
 describe("rotate", () => {
   it("turns clockwise on the map, where y grows downward", () => {
@@ -14,15 +14,8 @@ describe("rotate", () => {
   });
 });
 
-describe("toLocal and toWorld", () => {
-  it.each([0, 37, 90, 180, 359])("are inverses at %i°", (rotation) => {
-    const pose = { x: 100, y: 50, rotation };
-    const p = { x: 133, y: 71 };
-    const back = toWorld(pose, toLocal(pose, p));
-    expect(back.x).toBeCloseTo(p.x, 9);
-    expect(back.y).toBeCloseTo(p.y, 9);
-  });
-
+describe("toWorld", () => {
+  // The toLocal round trip is a property test in properties.test.ts.
   it("puts a fixture's front edge below it at 0° and to its left at 90°", () => {
     expect(toWorld({ x: 0, y: 0, rotation: 0 }, { x: 0, y: 10 })).toEqual({ x: 0, y: 10 });
     expect(toWorld({ x: 0, y: 0, rotation: 90 }, { x: 0, y: 10 })).toEqual({ x: -10, y: 0 });

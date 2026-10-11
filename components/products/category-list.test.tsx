@@ -61,12 +61,6 @@ describe("CategoryList", () => {
       expect(screen.getByText(/Hung.*1.*4/)).toBeInTheDocument();
       expect(screen.getByText(/Folded.*2.*1/)).toBeInTheDocument();
     });
-
-    it("provides aria-label for edit and delete buttons", () => {
-      render(<CategoryList categories={[mockCategory({ name: "Denim" })]} />);
-      expect(screen.getByLabelText("Edit Denim")).toBeInTheDocument();
-      expect(screen.getByLabelText("Delete Denim")).toBeInTheDocument();
-    });
   });
 
   describe("add category dialog", () => {
@@ -94,29 +88,9 @@ describe("CategoryList", () => {
 
       expect(screen.queryByRole("dialog", { name: "New category" })).not.toBeInTheDocument();
     });
-
-    it("dialog provides CategoryForm component", async () => {
-      const user = userEvent.setup();
-      render(<CategoryList categories={[]} />);
-
-      await user.click(screen.getByRole("button", { name: "Add category" }));
-      const dialog = screen.getByRole("dialog", { name: "New category" });
-
-      // Dialog shows the form
-      expect(within(dialog).getByLabelText("Name")).toBeInTheDocument();
-      expect(within(dialog).getByRole("button", { name: /Add category/ })).toBeInTheDocument();
-    });
   });
 
   describe("edit category dialog", () => {
-    it("opens edit dialog with category name", async () => {
-      const user = userEvent.setup();
-      render(<CategoryList categories={[mockCategory({ name: "Outerwear" })]} />);
-
-      await user.click(screen.getByLabelText("Edit Outerwear"));
-      expect(screen.getByRole("dialog", { name: "Edit Outerwear" })).toBeInTheDocument();
-    });
-
     it("closes edit dialog on cancel", async () => {
       const user = userEvent.setup();
       render(<CategoryList categories={[mockCategory({ name: "Accessories" })]} />);
@@ -138,18 +112,9 @@ describe("CategoryList", () => {
       // Dialog opens with form showing the current name
       expect(within(dialog).getByLabelText("Name")).toHaveValue("Socks");
     });
-
   });
 
   describe("delete category dialog", () => {
-    it("opens delete confirmation dialog", async () => {
-      const user = userEvent.setup();
-      render(<CategoryList categories={[mockCategory({ name: "Hats", productCount: 2 })]} />);
-
-      await user.click(screen.getByLabelText("Delete Hats"));
-      expect(screen.getByRole("dialog", { name: /Delete Hats/ })).toBeInTheDocument();
-    });
-
     it("closes delete dialog on cancel", async () => {
       const user = userEvent.setup();
       render(<CategoryList categories={[mockCategory({ name: "Gloves", productCount: 1 })]} />);

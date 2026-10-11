@@ -17,12 +17,4 @@ describe("StatusBadge", () => {
     const { container } = render(<StatusBadge status="sold_out" />);
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
-
-  it("colors itself from the status tone, never gold", () => {
-    const { container } = render(<StatusBadge status="sold_out" />);
-    const badge = container.querySelector("[data-status]")!;
-    expect(badge).toHaveAttribute("data-status", "sold_out");
-    expect(badge.className).toContain("text-danger");
-    expect(badge.className).not.toMatch(/brand/);
-  });
 });

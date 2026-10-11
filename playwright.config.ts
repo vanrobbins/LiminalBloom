@@ -18,6 +18,10 @@ const SIZES = [
 
 const THEMES = ["light", "dark"] as const;
 
+// Behaviour flows run in light at every size; dark runs the specs that check
+// colour. Planograms stays in dark until its Week 6 contrast checks exist.
+const LIGHT_ONLY = /(library|search|store-map|sign-in|sign-out)\.spec\.ts$/;
+
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: false,
@@ -40,6 +44,7 @@ export default defineConfig({
       THEMES.map((theme) => ({
         name: `${size.name}-${theme}`,
         dependencies: ["setup"],
+        testIgnore: theme === "dark" ? LIGHT_ONLY : undefined,
         use: {
           ...devices["Desktop Chrome"],
           ...size.use,
