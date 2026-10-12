@@ -6,6 +6,11 @@
 // sent -- protected content never reaches a browser that should not have it
 // (proposal section 8.3). This is the pattern every signed-in screen follows.
 
+import Link from "next/link";
+import { Plus } from "lucide-react";
+
+import { PageHeader } from "@/components/shell/page-header";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireMember } from "@/lib/current-member";
 
@@ -18,7 +23,7 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <h1 className="text-3xl font-semibold tracking-tight text-ink">Account</h1>
+      <PageHeader title="Account" />
 
       <Card compact>
         <dl className="flex flex-col gap-2 text-sm">
@@ -57,6 +62,12 @@ export default async function AccountPage() {
             );
           })}
         </ul>
+        <Button asChild variant="secondary" className="self-start">
+          <Link href="/create-store">
+            <Plus aria-hidden="true" strokeWidth={1.75} className="size-4" />
+            Create a store
+          </Link>
+        </Button>
       </section>
     </div>
   );

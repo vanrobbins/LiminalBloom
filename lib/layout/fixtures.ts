@@ -4,7 +4,7 @@
 import { normalizeAngle, toLocal, toWorld, type Pose } from "./frames";
 import { dot, length, subtract } from "./geometry";
 import { MAX_FIXTURE_SIZE, MAX_GRID, MIN_FIXTURE_SIZE, ROTATED_EPSILON } from "./limits";
-import type { FaceSide, Fixture, FixtureType, Point, Side, TableSet } from "./types";
+import type { Face, FaceSide, Fixture, FixtureType, Point, Side, TableSet } from "./types";
 
 export type FixtureRule = {
   label: string;
@@ -213,8 +213,35 @@ export function distanceToRect(f: Rect, p: Point): number {
   return Math.hypot(dx, dy);
 }
 
+/** Cells along a run of this many inches: one a foot, within the grid limits. */
+function cellsAlong(inches: number): number {
+  return Math.min(MAX_GRID, Math.max(1, Math.round(inches / 12)));
+}
+
 /** A cell per foot on a surface seen from above, within the grid limits. */
 export function gridForSurface(width: number, depth: number): { columns: number; rows: number } {
-  const cells = (inches: number) => Math.min(MAX_GRID, Math.max(1, Math.round(inches / 12)));
-  return { columns: cells(width), rows: cells(depth) };
+  return { columns: cellsAlong(width), rows: cellsAlong(depth) };
+}
+
+/**
+ * The grid a face gets from its fixture's size (DECISIONS 10-10): a cell per
+ * foot along the face. Fixtures have no height, so a standing face keeps its
+ * type's rows.
+ */
+export function autoGrid(
+  f: Pick<Fixture, "type" | "width" | "depth">,
+  side: FaceSide,
+): { columns: number; rows: number } {
+  if (side === "top") return gridForSurface(f.width, f.depth);
+  const run = side === "front" || side === "back" ? f.width : f.depth;
+  return { columns: cellsAlong(run), rows: FIXTURE_RULES[f.type].defaultFaces[0]?.rows ?? 3 };
+}
+
+/** Nobody set this grid by hand: it is what the size implies. Not stored, so no migration. */
+export function isAutoGrid(
+  f: Pick<Fixture, "type" | "width" | "depth">,
+  face: Pick<Face, "side" | "columns" | "rows">,
+): boolean {
+  const auto = autoGrid(f, face.side);
+  return auto.columns === face.columns && auto.rows === face.rows;
 }

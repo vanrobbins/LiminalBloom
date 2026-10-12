@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { ProductForm } from "@/components/products/product-form";
+import { PageHeader } from "@/components/shell/page-header";
 import { requireMember } from "@/lib/current-member";
 import { listCategories } from "@/lib/products/queries";
 
@@ -11,10 +10,7 @@ export default async function NewProductPage() {
   const categories = await listCategories(activeStoreId);
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <Link href="/products" className="inline-flex min-h-11 items-center text-ink-muted underline-offset-4 hover:underline">
-        ← Product library
-      </Link>
-      <h1 className="mt-2 mb-6 text-3xl font-semibold tracking-tight text-ink">Add product</h1>
+      <PageHeader title="Add product" back={{ href: "/products", label: "Product library" }} />
       <ProductForm categories={categories} />
     </div>
   );

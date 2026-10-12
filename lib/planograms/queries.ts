@@ -17,6 +17,7 @@ import {
 } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
 import { effectiveFootprint, PRESENTATIONS, type Overrides } from "@/lib/products/footprint";
+import { imageKeyOf } from "@/lib/products/queries";
 
 import type { PlanogramSummary } from "./list";
 import type { RestoredRow } from "./restore";
@@ -73,6 +74,8 @@ function draftQuery(storeId: string, planogramId: string) {
       version: planogramPlacements.version,
       productName: products.name,
       styleNumber: products.styleNumber,
+      imagePath: products.imagePath,
+      categoryName: productCategories.name,
       // The folded stack limit whatever the presentation (only folded product
       // stacks), so switching hung → folded is checked against the right one.
       // The product's own folded footprint, else its category's.
@@ -124,7 +127,7 @@ export async function loadPlanogram(storeId: string, fixtureId: string): Promise
         ),
       ),
   ] as const);
-  const placements: PlacementView[] = draftRows;
+  const placements: PlacementView[] = draftRows.map(({ imagePath, ...p }) => ({ ...p, imageKey: imageKeyOf(imagePath) }));
   return {
     row,
     draft: row.hasDraft ? { planogramVersion: row.version, placements } : null,

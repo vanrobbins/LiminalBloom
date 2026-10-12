@@ -1,5 +1,5 @@
 // The read-only map (spec §10): pan, zoom, tap a zone to open it, tap a
-// fixture for its details. It runs the same session as the editor in
+// fixture for its details and its published planogram. It runs the same session as the editor in
 // read-only mode, so both behave alike and nothing here can change the layout.
 
 "use client";
@@ -13,15 +13,18 @@ import { OVERVIEW, hitTest } from "@/lib/layout/hit-test";
 import { createReducer } from "@/lib/layout/session";
 import { createSession } from "@/lib/layout/session-core";
 import type { Layout } from "@/lib/layout/types";
+import type { FloorPlanogram, ProductLook } from "@/lib/planograms/types";
 
-import { FixtureDetails } from "./fixture-details";
+import { FixturePanel } from "./fixture-panel";
 import { StoreMap } from "./store-map";
 import { useElementSize } from "./use-element-size";
 import { PHONE_QUERY, useMediaQuery } from "./use-media-query";
 import { usePointerInput } from "./use-pointer-input";
 import { ZoomControls } from "./zoom-controls";
 
-export function MapViewer({ layout }: { layout: Layout }) {
+type MapViewerProps = { layout: Layout; planograms: Readonly<Record<string, FloorPlanogram>>; looks: Readonly<Record<string, ProductLook>> };
+
+export function MapViewer({ layout, planograms, looks }: MapViewerProps) {
   // The viewer never makes new items, so its ids are never used.
   const reduce = useMemo(() => createReducer(() => crypto.randomUUID()), []);
   const [session, dispatch] = useReducer(reduce, layout, (initial) => createSession(initial, true));
@@ -75,9 +78,9 @@ export function MapViewer({ layout }: { layout: Layout }) {
         />
         <ZoomControls onZoom={(factor) => dispatch({ type: "zoom", factor })} onFit={() => dispatch({ type: "fit" })} />
         {selectedFixture && !isPhone ? (
-          <Card compact className="absolute bottom-3 left-3 w-72">
+          <Card compact className="absolute top-3 right-3 flex max-h-[calc(100%-1.5rem)] w-96 flex-col overflow-y-auto md:right-16 lg:right-3">
             <h3 className="mb-2 font-semibold text-ink">{selectedFixture.name}</h3>
-            <FixtureDetails layout={session.layout} fixtureId={selectedFixture.id} />
+            <FixturePanel layout={session.layout} fixtureId={selectedFixture.id} planograms={planograms} looks={looks} />
           </Card>
         ) : null}
       </div>
@@ -88,8 +91,9 @@ export function MapViewer({ layout }: { layout: Layout }) {
             if (!open) dispatch({ type: "select", ids: [] });
           }}
           title={selectedFixture?.name ?? "Fixture"}
+          tall
         >
-          {selectedFixture ? <FixtureDetails layout={session.layout} fixtureId={selectedFixture.id} /> : null}
+          {selectedFixture ? <FixturePanel layout={session.layout} fixtureId={selectedFixture.id} planograms={planograms} looks={looks} /> : null}
         </BottomSheet>
       ) : null}
     </div>

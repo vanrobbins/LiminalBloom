@@ -17,7 +17,10 @@ async function submit() {
   await user.click(screen.getByRole("button", { name: "Sign in" }));
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  sessionStorage.clear();
+});
 
 describe("SignInPage", () => {
   it("stays on Signing in… while the next page loads", async () => {
@@ -25,6 +28,7 @@ describe("SignInPage", () => {
     await submit();
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
     expect(mocks.refresh).toHaveBeenCalled();
+    expect(sessionStorage.getItem("liminal:signed-in")).toBe("1");
     expect(screen.getByRole("button", { name: /Signing in…/ })).toBeDisabled();
   });
 

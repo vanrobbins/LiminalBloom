@@ -102,6 +102,27 @@ describe("faces", () => {
     const result = run(rack, { type: "setFaceGrid", faceId: "face-a", columns: 8, rows: 2 });
     expect(result.faces[0]).toMatchObject({ columns: 8, rows: 2 });
   });
+
+  it("a resize carries an automatic grid with it", () => {
+    const result = run(rack, { type: "updateFixture", id: "fixture-a", changes: { width: 96 } });
+    expect(result.faces[0]).toMatchObject({ columns: 8, rows: 3 });
+  });
+
+  it("a resize leaves a hand-set grid alone (Review Focus 4)", () => {
+    const handSet = run(rack, { type: "setFaceGrid", faceId: "face-a", columns: 6, rows: 2 });
+    const result = run(handSet, { type: "updateFixture", id: "fixture-a", changes: { width: 96 } });
+    expect(result.faces[0]).toMatchObject({ columns: 6, rows: 2 });
+  });
+
+  it("a move keeps the very same face objects", () => {
+    const result = run(rack, { type: "updateFixture", id: "fixture-a", changes: { x: 10 } });
+    expect(result.faces[0]).toBe(rack.faces[0]);
+  });
+
+  it("a new side starts at its automatic size", () => {
+    const on = run(rack, { type: "setFace", fixtureId: "fixture-a", side: "left", on: true });
+    expect(on.faces.find((f) => f.side === "left")).toMatchObject({ columns: 2, rows: 3 });
+  });
 });
 
 describe("attachLowerTable", () => {

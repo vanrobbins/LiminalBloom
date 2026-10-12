@@ -3,7 +3,7 @@
 
 import { expect, test } from "./fixtures";
 
-const PAGES = ["/", "/sign-in", "/sign-up", "/account", "/products", "/create-store"];
+const PAGES = ["/", "/sign-in", "/sign-up", "/account", "/products", "/create-store", "/search", "/layout", "/planograms"];
 
 for (const path of PAGES) {
   test.describe(path, () => {

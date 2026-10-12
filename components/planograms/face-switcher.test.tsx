@@ -12,6 +12,7 @@ describe("FaceSwitcher", () => {
   it("offers each enabled face and marks the one shown", async () => {
     const onChange = vi.fn();
     render(<FaceSwitcher faces={[face("f", "Front"), face("b", "Back")]} value="f" onChange={onChange} />);
+    expect(screen.getByRole("group", { name: "Side" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Front" })).toHaveAttribute("aria-pressed", "true");
     // Not colour alone: the shown face also carries a check.
     expect(screen.getByRole("button", { name: "Front" }).querySelector("svg")).not.toBeNull();

@@ -1,20 +1,17 @@
-// Editing one placement (spec §5.3): a bottom sheet on phones, a panel beside
-// the grid on larger screens, like the location sheet.
+// The editing half of the product sheet (spec §4.2): the form, or why there is
+// no form (removed elsewhere, or its face left the set).
 
 "use client";
 
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
-import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-query";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import type { Neighbour } from "@/lib/planograms/rules";
 import type { PlacementFields, PlacementView, PlanogramFace } from "@/lib/planograms/types";
 
 import { PlacementForm } from "./placement-form";
 
-type PlacementPanelProps = {
-  open: boolean;
+type PlacementEditorProps = {
   placement: PlacementView | null;
   /** The other device removed it while it was open (spec §4.3). */
   isGone: boolean;
@@ -27,12 +24,10 @@ type PlacementPanelProps = {
   onRemove: (placement: PlacementView) => void;
 };
 
-export function PlacementPanel({ open, placement, isGone, faces, others, busy, onClose, onSave, onRemove }: PlacementPanelProps) {
-  const isPhone = useMediaQuery(PHONE_QUERY);
-  const title = placement?.productName ?? "Placement";
+export function PlacementEditor({ placement, isGone, faces, others, busy, onClose, onSave, onRemove }: PlacementEditorProps) {
   // Its face left the set (spec §3.3): it can only be removed, never saved there.
   const isOrphan = placement !== null && !faces.some((f) => f.faceId === placement.faceId);
-  const body = isGone ? (
+  return isGone ? (
     <div className="flex flex-col items-start gap-3">
       <p className="text-ink">Removed on another device</p>
       <Button variant="secondary" onClick={onClose}>
@@ -65,24 +60,4 @@ export function PlacementPanel({ open, placement, isGone, faces, others, busy, o
       onRemove={() => onRemove(placement)}
     />
   ) : null;
-
-  if (isPhone) {
-    return (
-      <BottomSheet open={open} onOpenChange={(next) => (next ? null : onClose())} title={title}>
-        {body}
-      </BottomSheet>
-    );
-  }
-  if (!open) return null;
-  return (
-    <aside aria-label={title} className="flex flex-col gap-4 rounded-lg border border-line-subtle bg-raised p-5">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-semibold tracking-tight text-ink wrap-anywhere">{title}</h2>
-        <Button variant="ghost" icon onClick={onClose} aria-label="Close">
-          <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
-        </Button>
-      </div>
-      {body}
-    </aside>
-  );
 }

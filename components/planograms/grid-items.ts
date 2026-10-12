@@ -3,12 +3,23 @@
 
 import type { Presentation } from "@/lib/products/footprint";
 import type { Cells } from "@/lib/products/location-label";
-import type { DraftState, PlacementView, PlanogramScope, SnapshotEntry } from "@/lib/planograms/types";
+import type { DraftState, PlacementView, PlanogramScope, ProductLook, SnapshotEntry } from "@/lib/planograms/types";
 
-export type GridItem = Cells & { id: string; faceId: string; productId: string; productName: string; presentation: Presentation; pieceCount: number };
+export type GridItem = Cells & {
+  id: string;
+  faceId: string;
+  productId: string;
+  productName: string;
+  styleNumber: string;
+  presentation: Presentation;
+  pieceCount: number;
+  imageKey: string | null;
+  categoryName: string;
+};
 
-export function itemsFromSnapshot(entries: readonly SnapshotEntry[]): GridItem[] {
-  return entries.map((e, i) => ({ ...e, id: `v-${i}` }));
+/** A product deleted since publishing has no look: it keeps its snapshot name and gets the default silhouette. */
+export function itemsFromSnapshot(entries: readonly SnapshotEntry[], looks: Readonly<Record<string, ProductLook>>): GridItem[] {
+  return entries.map((e, i) => ({ ...e, id: `v-${i}`, imageKey: looks[e.productId]?.imageKey ?? null, categoryName: looks[e.productId]?.categoryName ?? "" }));
 }
 
 export function itemsFromDraft(placements: readonly PlacementView[]): GridItem[] {

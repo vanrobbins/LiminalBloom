@@ -1,6 +1,7 @@
 // Planograms (spec §5.1): one per fixture, grouped by zone.
 
 import { PlanogramList } from "@/components/planograms/planogram-list";
+import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireMember } from "@/lib/current-member";
@@ -18,7 +19,7 @@ export default async function PlanogramsPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <h1 className="mb-6 text-3xl font-semibold tracking-tight text-ink">Planograms</h1>
+      <PageHeader title="Planograms" />
       {groups.length === 0 ? (
         <Card className="flex flex-col items-start gap-3">
           <p className="text-ink">No fixtures that show product yet.</p>

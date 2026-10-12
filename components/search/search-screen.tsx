@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 
+import { PageHeader } from "@/components/shell/page-header";
 import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-query";
 import { Input } from "@/components/ui/input";
 import type { Layout } from "@/lib/layout/types";
@@ -45,7 +46,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
     // The panel narrows on tablets so the results keep room for whole words.
     <div className={`mx-auto grid w-full gap-6 ${open ? "max-w-6xl md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]" : "max-w-2xl"}`}>
       <div className="min-w-0">
-        <h1 className="mb-4 text-3xl font-semibold tracking-tight text-ink">Search</h1>
+        <PageHeader title="Search" />
         <form role="search" onSubmit={(event) => event.preventDefault()}>
           <Input
             label="Search products"

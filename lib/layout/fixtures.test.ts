@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FIXTURE_RULES,
+  autoGrid,
   corners,
   distanceToRect,
   gridForSurface,
@@ -11,7 +12,8 @@ import {
   resizeFromHandle,
   resizeLowerTable,
 } from "./fixtures";
-import type { Fixture } from "./types";
+import { MAX_GRID } from "./limits";
+import type { Fixture, FixtureType } from "./types";
 
 const fixture = (over: Partial<Fixture> = {}): Fixture => ({
   id: "f",
@@ -147,5 +149,29 @@ describe("gridForSurface", () => {
   it("is a cell per foot, within 1–24", () => {
     expect(gridForSurface(72, 36)).toEqual({ columns: 6, rows: 3 });
     expect(gridForSurface(6, 600)).toEqual({ columns: 1, rows: 24 });
+  });
+});
+
+describe("autoGrid", () => {
+  it("is a cell per foot along the face", () => {
+    expect(autoGrid({ type: "table", width: 72, depth: 36 }, "top")).toEqual({ columns: 6, rows: 3 });
+    expect(autoGrid({ type: "wall_bay", width: 96, depth: 24 }, "front")).toEqual({ columns: 8, rows: 5 });
+    expect(autoGrid({ type: "rack", width: 60, depth: 24 }, "back")).toEqual({ columns: 5, rows: 3 });
+    expect(autoGrid({ type: "rack", width: 60, depth: 24 }, "left")).toEqual({ columns: 2, rows: 3 });
+  });
+
+  it("caps at the grid limit and never drops below one (Review Focus 4)", () => {
+    expect(autoGrid({ type: "table", width: 360, depth: 6 }, "top")).toEqual({ columns: MAX_GRID, rows: 1 });
+  });
+
+  it("matches today's defaults for every type at its default size", () => {
+    for (const [type, rule] of Object.entries(FIXTURE_RULES)) {
+      for (const face of rule.defaultFaces) {
+        expect(autoGrid({ type: type as FixtureType, width: rule.width, depth: rule.depth }, face.side)).toEqual({
+          columns: face.columns,
+          rows: face.rows,
+        });
+      }
+    }
   });
 });

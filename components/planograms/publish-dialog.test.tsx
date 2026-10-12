@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ShellProvider } from "@/components/shell/shell-context";
+
 import { PublishDialog } from "./publish-dialog";
 
 const actions = vi.hoisted(() => ({ previewPublishAction: vi.fn(), publishAction: vi.fn() }));
@@ -22,7 +24,7 @@ describe("PublishDialog", () => {
     expect(await screen.findByText("Front: 3 added, 1 moved")).toBeInTheDocument();
     expect(screen.getByText("Back: 1 added")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Summary (optional)"), "October denim reset");
-    await userEvent.click(screen.getByRole("button", { name: "Publish version 5" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Publish to / }));
     expect(actions.publishAction).toHaveBeenCalledWith("fx", 7, 4, "October denim reset");
   });
 
@@ -44,7 +46,7 @@ describe("PublishDialog", () => {
     actions.previewPublishAction.mockResolvedValue({ planogramVersion: 2, basedOnVersion: null, nextNumber: 1, changes: [change("Top", 1, 0)], issues: [], isEmpty: false });
     actions.publishAction.mockResolvedValue({ status: "refused", message: "The draft changed on another device — review the changes" });
     render(<PublishDialog open onOpenChange={vi.fn()} fixtureId="fx" />);
-    await userEvent.click(await screen.findByRole("button", { name: "Publish version 1" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Publish to / }));
     expect(await screen.findByText("The draft changed on another device — review the changes")).toBeInTheDocument();
     expect(actions.previewPublishAction).toHaveBeenCalledTimes(2);
   });
@@ -55,8 +57,20 @@ describe("PublishDialog", () => {
       .mockResolvedValueOnce(null);
     actions.publishAction.mockResolvedValue({ status: "refused", message: "Version 1 was published while you were editing — review the changes" });
     render(<PublishDialog open onOpenChange={vi.fn()} fixtureId="fx" />);
-    await userEvent.click(await screen.findByRole("button", { name: "Publish version 1" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Publish to / }));
     expect(await screen.findByText("This draft is no longer open. Close and reload.")).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Version 1 was published while you were editing — review the changes");
+  });
+
+  it("names the store in the title, button and version", async () => {
+    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 2, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
+    render(
+      <ShellProvider value={{ stores: [{ id: "s", name: "Pioneer Place" }], activeStoreId: "s", user: { name: "Van", email: "v@x.co" } }}>
+        <PublishDialog open onOpenChange={vi.fn()} fixtureId="fx" />
+      </ShellProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Publish to Pioneer Place?" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Publish to Pioneer Place" })).toBeInTheDocument();
+    expect(screen.getByText("Becomes version 1.")).toBeInTheDocument();
   });
 });

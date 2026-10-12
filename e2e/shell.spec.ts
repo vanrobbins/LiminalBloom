@@ -151,3 +151,13 @@ test("create-store offers a way back to members", async ({ page }) => {
     "/products",
   );
 });
+
+test("a phone page has one header and names the store once", async ({ page }, testInfo) => {
+  test.skip(sizeOf(testInfo) !== "phone", "phone header only");
+  for (const path of ["/search", "/products", "/layout", "/planograms", "/account"]) {
+    await page.goto(path);
+    await expect(page.locator("[data-page-header]").filter({ visible: true })).toHaveCount(1);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    await expect(storeTrigger(page)).toHaveCount(1);
+  }
+});

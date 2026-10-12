@@ -1,7 +1,7 @@
 // Making new items with sensible defaults (spec §5 table, §7 "Adding").
 // Pure: ids come from the caller, so tests and undo are repeatable.
 
-import { FIXTURE_RULES } from "./fixtures";
+import { FIXTURE_RULES, autoGrid } from "./fixtures";
 import { DEFAULT_ENTRANCE_WIDTH, MAX_NAME } from "./limits";
 import {
   ZONE_COLORS,
@@ -98,8 +98,7 @@ export function newFixture(
     id: newId(),
     fixtureId: id,
     side: face.side,
-    columns: face.columns,
-    rows: face.rows,
+    ...autoGrid(fixture, face.side),
     version: 0,
   }));
   return { fixture, faces };
