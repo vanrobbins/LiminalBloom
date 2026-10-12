@@ -120,9 +120,11 @@ describe("uploadProductImage", () => {
     }
   });
 
-  it("returns error when putImage fails", async () => {
+  it("returns error and logs the cause when putImage fails", async () => {
     const fixtures = await seedStoreFixtures(storeId);
-    vi.mocked(images.putImage).mockRejectedValueOnce(new Error("Upload failed"));
+    const cause = new Error("Upload failed");
+    vi.mocked(images.putImage).mockRejectedValueOnce(cause);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const form = new FormData();
     form.append("image", new File([new Uint8Array([0xff, 0xd8, 0xff])], "test.jpg"));
 
@@ -132,6 +134,9 @@ describe("uploadProductImage", () => {
     if (result.status === "error") {
       expect(result.message).toContain("Couldn't save");
     }
+    // The user sees a generic message, so the real Blob error must reach the server logs.
+    expect(logged).toHaveBeenCalledWith("Could not upload product image", expect.any(String), cause);
+    logged.mockRestore();
   });
 
   it("returns error when product not found after image upload", async () => {

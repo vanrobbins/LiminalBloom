@@ -28,7 +28,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ prod
   let result: Awaited<ReturnType<typeof getImage>>;
   try {
     result = await getImage(path, request.headers.get("if-none-match") ?? undefined);
-  } catch {
+  } catch (error) {
+    console.error("Could not read product image", path, error);
     return new Response(null, { status: 502 });
   }
   if (!result) return new Response(null, { status: 404 });

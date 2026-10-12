@@ -80,12 +80,16 @@ describe("GET /api/images/[productId]", () => {
     expect((await call("../../etc/passwd")).status).toBe(404);
   });
 
-  it("is 502 when Blob fails", async () => {
+  it("is 502 when Blob fails, and logs the cause", async () => {
     const store = await makeStore("image-502");
     const f = await seedStoreFixtures(store);
     await setProductImage(store, f.productId, "p/a.webp");
     member.current = { kind: "member", activeStoreId: store };
-    blob.get.mockRejectedValue(new Error("blob down"));
+    const cause = new Error("blob down");
+    blob.get.mockRejectedValue(cause);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     expect((await call(f.productId)).status).toBe(502);
+    expect(logged).toHaveBeenCalledWith("Could not read product image", "p/a.webp", cause);
+    logged.mockRestore();
   });
 });
