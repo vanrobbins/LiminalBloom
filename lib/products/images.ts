@@ -10,8 +10,9 @@ import { BlobNotFoundError, del, get, head, list, put } from "@vercel/blob";
 
 import { optionalEnv } from "@/lib/env";
 
-// Locally the dev store's token; on Vercel the SDK falls back to the connected
-// store's OIDC credentials when this is unset.
+// Locally the dev store's token; on Vercel the connected store's, scoped per
+// environment (prod store → Production, dev token → Preview). One name, one
+// value per environment. See docs/DECISIONS.md, 2026-10-12.
 const token = () => optionalEnv("BLOB_READ_WRITE_TOKEN");
 
 export function uploadPath(storeId: string, productId: string, extension: string): string {

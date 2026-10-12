@@ -30,7 +30,8 @@ export async function uploadProductImage(productId: string, form: FormData): Pro
   const path = uploadPath(activeStoreId, productId, IMAGE_EXTENSION[type]);
   try {
     await putImage(path, Buffer.from(bytes), type);
-  } catch {
+  } catch (error) {
+    console.error("Could not upload product image", path, error);
     return refuse("Couldn't save the image. Try again.");
   }
 
