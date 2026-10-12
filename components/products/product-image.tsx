@@ -13,22 +13,24 @@ type ProductImageProps = {
   name: string;
   categoryName: string;
   imageKey: string | null;
-  size?: "sm" | "lg";
+  size?: "sm" | "lg" | "fill";
+  /** Inside a control that already names the product: hidden from screen readers. */
+  decorative?: boolean;
 };
 
-const SIZES = { sm: "size-12", lg: "h-48 w-40" } as const;
+const SIZES = { sm: "size-12 rounded-md border border-line-subtle", lg: "h-48 w-40 rounded-md border border-line-subtle", fill: "size-full" } as const;
 
-export function ProductImage({ productId, name, categoryName, imageKey, size = "sm" }: ProductImageProps) {
+export function ProductImage({ productId, name, categoryName, imageKey, size = "sm", decorative = false }: ProductImageProps) {
   // Remember which key failed, so a new image gets its own chance to load.
   const [failedKey, setFailedKey] = useState<string | null>(null);
-  const box = `${SIZES[size]} shrink-0 overflow-hidden rounded-md border border-line-subtle bg-surface`;
+  const box = `${SIZES[size]} shrink-0 overflow-hidden bg-surface`;
 
   if (imageKey && failedKey !== imageKey) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- the optimizer cannot fetch an authenticated route (spec §5.5)
       <img
         src={`/api/images/${productId}?v=${encodeURIComponent(imageKey)}`}
-        alt={name}
+        alt={decorative ? "" : name}
         loading="lazy"
         onError={() => setFailedKey(imageKey)}
         className={`${box} object-cover`}
@@ -37,7 +39,13 @@ export function ProductImage({ productId, name, categoryName, imageKey, size = "
   }
 
   return (
-    <svg role="img" aria-label={`${name} (no photo)`} viewBox="0 0 100 120" className={`${box} p-1`}>
+    <svg
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : `${name} (no photo)`}
+      aria-hidden={decorative || undefined}
+      viewBox="0 0 100 120"
+      className={`${box} p-1`}
+    >
       <path d={SILHOUETTE_PATHS[silhouetteFor(categoryName)]} className="fill-line" fillRule="evenodd" />
     </svg>
   );

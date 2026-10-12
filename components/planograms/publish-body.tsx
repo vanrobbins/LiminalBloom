@@ -10,7 +10,7 @@ import { faceSummary } from "@/lib/planograms/diff";
 import type { Preview } from "@/lib/planograms/publish";
 import { toast } from "@/lib/toast";
 
-export function PublishBody({ fixtureId, onDone }: { fixtureId: string; onDone: () => void }) {
+export function PublishBody({ fixtureId, store, onDone }: { fixtureId: string; store: string; onDone: () => void }) {
   const router = useRouter();
   const [preview, setPreview] = useState<Preview | null | "loading">("loading");
   const [reloads, setReloads] = useState(0);
@@ -85,9 +85,10 @@ export function PublishBody({ fixtureId, onDone }: { fixtureId: string; onDone: 
               {preview.changes.length === 0 ? <li>No changes from the published version.</li> : preview.changes.map((c) => <li key={c.faceId}>{faceSummary(c)}</li>)}
             </ul>
           )}
+          <p className="text-sm text-ink-muted">Becomes version {preview.nextNumber}.</p>
           <Input label="Summary (optional)" value={summary} maxLength={200} onChange={(e) => setSummary(e.target.value)} hint="Like “October denim reset”." />
           <Button onClick={() => publish(preview)} loading={busy} loadingText="Publishing…">
-            {preview.isEmpty ? "Publish anyway" : `Publish version ${preview.nextNumber}`}
+            {preview.isEmpty ? "Publish anyway" : `Publish to ${store}`}
           </Button>
         </>
       )}

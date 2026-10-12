@@ -5,6 +5,7 @@
 import Link from "next/link";
 
 import { ProductRows } from "@/components/products/product-rows";
+import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireMember } from "@/lib/current-member";
@@ -18,25 +19,21 @@ export const dynamic = "force-dynamic";
 const LIBRARY_LIMIT = 1000;
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
-  const { stores, activeStoreId } = await requireMember();
-  const store = stores.find((s) => s.id === activeStoreId);
+  const { activeStoreId } = await requireMember();
   const { q } = await searchParams;
   const query = typeof q === "string" ? q : "";
   const rows = await searchProducts(activeStoreId, searchInput.parse({ q: query }), LIBRARY_LIMIT);
 
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <p className="text-sm font-medium text-brand-strong">{store?.name ?? "Your store"}</p>
-      <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Product library</h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" asChild>
-            <Link href="/products/categories">Categories</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/products/new">Add product</Link>
-          </Button>
-        </div>
+      <PageHeader title="Product library" />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" asChild>
+          <Link href="/products/categories">Categories</Link>
+        </Button>
+        <Button asChild>
+          <Link href="/products/new">Add product</Link>
+        </Button>
       </div>
       <form role="search" action="/products" className="mt-6">
         <Input label="Filter products" name="q" type="search" defaultValue={query} />

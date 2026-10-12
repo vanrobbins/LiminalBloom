@@ -4,24 +4,24 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PlacementView, PlanogramFace } from "@/lib/planograms/types";
 
-import { PlacementPanel } from "./placement-panel";
+import { PlacementEditor } from "./placement-panel";
 
 vi.mock("@/components/store-map/use-media-query", () => ({ PHONE_QUERY: "", useMediaQuery: () => false }));
 
 const top: PlanogramFace = { faceId: "00000000-0000-4000-8000-000000000001", fixtureId: "t", fixtureName: "Table 1", side: "top", setSide: null, label: "Top", columns: 6, rows: 3 };
 const placement: PlacementView = {
-  id: "p", productId: "pr", productName: "Pocket Tee", styleNumber: "PT-1", stackLimit: 8, version: 1,
+  id: "p", productId: "pr", productName: "Pocket Tee", styleNumber: "PT-1", stackLimit: 8, version: 1, imageKey: null, categoryName: "Denim",
   faceId: top.faceId, presentation: "hung", col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 20,
 };
 
 function renderPanel(over: Partial<PlacementView> = {}, onSave = vi.fn().mockResolvedValue(null), onRemove = vi.fn()) {
-  render(<PlacementPanel open placement={{ ...placement, ...over }} isGone={false} faces={[top]} others={[]} busy={false} onClose={vi.fn()} onSave={onSave} onRemove={onRemove} />);
+  render(<PlacementEditor placement={{ ...placement, ...over }} isGone={false} faces={[top]} others={[]} busy={false} onClose={vi.fn()} onSave={onSave} onRemove={onRemove} />);
   return { onSave, onRemove };
 }
 
-describe("PlacementPanel", () => {
+describe("PlacementEditor", () => {
   it("says so when the other device removed the open placement", () => {
-    render(<PlacementPanel open placement={null} isGone faces={[]} others={[]} busy={false} onClose={vi.fn()} onSave={vi.fn()} onRemove={vi.fn()} />);
+    render(<PlacementEditor placement={null} isGone faces={[]} others={[]} busy={false} onClose={vi.fn()} onSave={vi.fn()} onRemove={vi.fn()} />);
     expect(screen.getByText("Removed on another device")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   });

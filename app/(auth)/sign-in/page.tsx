@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth-client";
+import { markSignedIn } from "@/components/shell/opened-store-toast";
 import { CONNECTION_ERROR } from "@/lib/connection-error";
 
 export default function SignInPage() {
@@ -45,6 +46,7 @@ export default function SignInPage() {
 
     // Still "Signing in…" until /products replaces this page. Clearing it
     // here left an idle button for the second the server took to render.
+    markSignedIn();
     router.push("/products");
     router.refresh();
   }

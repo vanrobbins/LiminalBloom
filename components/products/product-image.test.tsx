@@ -11,6 +11,16 @@ describe("ProductImage", () => {
     expect(screen.getByRole("img", { name: "High-Rise Pant" })).toHaveAttribute("src", `/api/images/${id}?v=abc.webp`);
   });
 
+  it("decorative: the photo has an empty alt and the silhouette is hidden from screen readers", () => {
+    const { container, rerender } = render(<ProductImage productId={id} name="Pant" categoryName="Pants" imageKey="a.webp" size="fill" decorative />);
+    expect(container.querySelector("img")).toHaveAttribute("alt", "");
+    rerender(<ProductImage productId={id} name="Pant" categoryName="Pants" imageKey={null} size="fill" decorative />);
+    const svg = container.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+    expect(svg).not.toHaveAttribute("role");
+    expect(svg).not.toHaveAttribute("aria-label");
+  });
+
   it("draws the category's silhouette when there is no image, or it fails to load", () => {
     const { rerender } = render(<ProductImage productId={id} name="High-Rise Pant" categoryName="Pants" imageKey={null} />);
     expect(screen.getByRole("img", { name: "High-Rise Pant (no photo)" })).toBeInTheDocument();

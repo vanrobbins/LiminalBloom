@@ -5,7 +5,7 @@
 
 import { attachLowerTable, duplicate } from "./commands-sets";
 import type { NewId } from "./factories";
-import { FIXTURE_RULES, gridForSurface } from "./fixtures";
+import { autoGrid, isAutoGrid } from "./fixtures";
 import { normalizeAngle } from "./frames";
 import { translate } from "./geometry";
 import { MAX_NAME } from "./limits";
@@ -106,8 +106,17 @@ function applyRaw(layout: Layout, command: Command, newId: NewId): Layout {
         ),
       };
 
-    case "updateFixture":
-      return { ...layout, fixtures: layout.fixtures.map((f) => (f.id === command.id ? updateFixture(f, command.changes) : f)) };
+    case "updateFixture": {
+      const before = layout.fixtures.find((f) => f.id === command.id);
+      if (!before) return layout;
+      const after = updateFixture(before, command.changes);
+      return {
+        ...layout,
+        fixtures: layout.fixtures.map((f) => (f === before ? after : f)),
+        // A grid nobody set by hand follows the new size (DECISIONS 10-10).
+        faces: layout.faces.map((face) => followSize(face, before, after)),
+      };
+    }
 
     case "updateEntrance":
       return {
@@ -172,6 +181,12 @@ function updateFixture(f: Fixture, changes: Partial<Pick<Fixture, "name" | "x" |
   return next;
 }
 
+function followSize(face: Face, before: Fixture, after: Fixture): Face {
+  if (face.fixtureId !== after.id || !isAutoGrid(before, face)) return face;
+  const next = autoGrid(after, face.side);
+  return next.columns === face.columns && next.rows === face.rows ? face : { ...face, ...next };
+}
+
 function move(layout: Layout, ids: string[], delta: Point): Layout {
   if (delta.x === 0 && delta.y === 0) return layout;
   const wanted = new Set(ids);
@@ -205,7 +220,6 @@ function setFace(layout: Layout, fixtureId: string, side: FaceSide, on: boolean,
     return existing ? { ...layout, faces: layout.faces.filter((face) => face !== existing) } : layout;
   }
   if (existing) return layout;
-  const fallback = FIXTURE_RULES[f.type].defaultFaces[0] ?? { columns: 4, rows: 3 };
-  const grid = side === "top" ? gridForSurface(f.width, f.depth) : { columns: fallback.columns, rows: fallback.rows };
+  const grid = autoGrid(f, side);
   return { ...layout, faces: [...layout.faces, { id: newId(), fixtureId, side, ...grid, version: 0 }] };
 }

@@ -79,3 +79,15 @@ export async function seedTableSet(): Promise<{ upperId: string; lowerId: string
   await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${lowerId}, 'top', 6, 3)`;
   return { upperId, lowerId };
 }
+
+/** A rack with a front and a back, for face switching. Seed the layout first. */
+export async function seedRack(name = "Rack 1"): Promise<{ rackId: string }> {
+  const db = sql();
+  const store = await storeId(HOME_STORE);
+  const rackId = randomUUID();
+  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth) values (${rackId}, ${store}, 'rack', ${name}, 120, 260, 48, 24)`;
+  for (const side of ["front", "back"]) {
+    await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${rackId}, ${side}, 4, 3)`;
+  }
+  return { rackId };
+}

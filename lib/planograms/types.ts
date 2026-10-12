@@ -16,7 +16,10 @@ export type PlacementFields = Cells & { faceId: string; presentation: Presentati
 export type Placement = PlacementFields & { id: string; productId: string; version: number };
 
 /** A draft row with what the screens show beside it. `stackLimit` is the product's folded one. */
-export type PlacementView = Placement & { productName: string; styleNumber: string; stackLimit: number };
+export type PlacementView = Placement & { productName: string; styleNumber: string; stackLimit: number; imageKey: string | null; categoryName: string };
+
+/** What a tile draws a product with: its photo key and category (for the silhouette). */
+export type ProductLook = { imageKey: string | null; categoryName: string };
 
 /** One face a planogram covers. `label` names it on screen: "Front", "Upper", "Front table". */
 export type PlanogramFace = {
@@ -32,6 +35,9 @@ export type PlanogramFace = {
 };
 
 export type PlanogramScope = { fixtureId: string; fixtureName: string; isSet: boolean; faces: PlanogramFace[] };
+
+/** What the map needs of a planogram: the latest published version, and whether a draft is under way. */
+export type FloorPlanogram = { hasDraft: boolean; dueDate: string | null; latest: { number: number; placements: SnapshotEntry[] } | null };
 
 /** One placement in a published version (spec §3.1). */
 export type SnapshotEntry = PlacementFields & {

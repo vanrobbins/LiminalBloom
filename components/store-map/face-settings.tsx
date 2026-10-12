@@ -4,7 +4,8 @@
 "use client";
 
 import { NumberStepper } from "@/components/ui/number-stepper";
-import { FIXTURE_RULES } from "@/lib/layout/fixtures";
+import { Button } from "@/components/ui/button";
+import { FIXTURE_RULES, autoGrid, isAutoGrid } from "@/lib/layout/fixtures";
 import { SIDE_LABEL } from "@/lib/layout/format";
 import { MAX_GRID } from "@/lib/layout/limits";
 import type { SessionAction } from "@/lib/layout/session";
@@ -58,6 +59,11 @@ export function FaceSettings({ fixture, faces, dispatch }: FaceSettingsProps) {
             max={MAX_GRID}
             onChange={(rows) => run({ type: "setFaceGrid", faceId: face.id, columns: face.columns, rows })}
           />
+          {isAutoGrid(fixture, face) ? null : (
+            <Button variant="secondary" onClick={() => run({ type: "setFaceGrid", faceId: face.id, ...autoGrid(fixture, face.side) })}>
+              Fit to fixture ({autoGrid(fixture, face.side).columns} × {autoGrid(fixture, face.side).rows})
+            </Button>
+          )}
         </fieldset>
       ))}
     </div>

@@ -61,7 +61,7 @@ describe("checkPlacement", () => {
 
 describe("draftIssues", () => {
   const view = (id: string, over: Partial<PlacementView> = {}): PlacementView => ({
-    id, faceId: "front", productId: id, productName: id, styleNumber: id, presentation: "folded", stackLimit: 8,
+    id, faceId: "front", productId: id, productName: id, styleNumber: id, presentation: "folded", stackLimit: 8, imageKey: null, categoryName: "Denim",
     col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 1, version: 1, ...over,
   });
 

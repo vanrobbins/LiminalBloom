@@ -1,7 +1,8 @@
-// The current store, and the way to change it. §5.2: on a phone it opens a
-// bottom sheet; on tablet and desktop a menu drops down from the button. The
-// shell picks the variant by where it places the menu -- top bar, rail or
-// sidebar -- never by measuring the screen.
+// The current store, and the way to change it. §5.2: on a phone it is the
+// line under the page title (PageHeader) and opens a bottom sheet; on tablet
+// and desktop a menu drops down from the button. The shell picks the variant by
+// where it places the menu -- page header, rail or sidebar -- never by
+// measuring the screen.
 
 "use client";
 
@@ -31,7 +32,7 @@ const TRIGGER_BASE =
   "inline-flex min-h-11 items-center gap-2 rounded border border-line bg-raised text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 const TRIGGER: Record<StoreMenuVariant, string> = {
-  sheet: `${TRIGGER_BASE} min-w-0 max-w-full px-3 py-2 text-left`,
+  sheet: "flex min-h-11 w-full min-w-0 items-center gap-1 rounded text-left text-sm text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
   initials: `${TRIGGER_BASE} size-11 shrink-0 justify-center`,
   name: `${TRIGGER_BASE} w-full justify-between px-3 py-2 text-left`,
 };
@@ -64,7 +65,7 @@ export function StoreMenu({
           onClick={() => setIsSheetOpen(true)}
           className={TRIGGER.sheet}
         >
-          <span data-store-label className="min-w-0 wrap-anywhere">
+          <span data-store-label className="min-w-0 truncate">
             {name}
           </span>
           <ChevronDown aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />

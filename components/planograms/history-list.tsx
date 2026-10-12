@@ -4,6 +4,7 @@
 
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
 import { formatMoment } from "@/lib/planograms/dates";
 
 import { RestoreButton } from "./restore-button";
@@ -31,9 +32,11 @@ export function HistoryList({ fixtureId, expectedVersion, entries }: { fixtureId
               <p key={g.label} className="text-sm text-ink-muted">{`${g.label} is no longer on this fixture (${g.count} ${g.count === 1 ? "product" : "products"}).`}</p>
             ))}
             <div className="flex flex-wrap gap-3">
-              <Link href={`/planograms/${fixtureId}?version=${e.number}`} aria-label={`View version ${e.number}`} className="inline-flex min-h-11 items-center text-brand-strong underline underline-offset-4">
-                View
-              </Link>
+              <Button asChild variant="secondary">
+                <Link href={`/planograms/${fixtureId}?version=${e.number}`} aria-label={`View version ${e.number}`}>
+                  View
+                </Link>
+              </Button>
               <RestoreButton fixtureId={fixtureId} expectedVersion={expectedVersion} number={e.number} />
             </div>
           </article>

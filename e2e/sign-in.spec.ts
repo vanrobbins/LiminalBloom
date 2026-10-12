@@ -16,3 +16,12 @@ test("a wrong password shows the error next to the form", async ({ page }) => {
   await expect(page.getByText("That email and password do not match.")).toBeVisible();
   await expect(page).toHaveURL(/\/sign-in$/);
 });
+
+test("signing in names the store that was reopened", async ({ page }) => {
+  await page.goto("/sign-in");
+  await page.getByLabel("Work email").fill(TEST_ACCOUNT.email);
+  await page.getByLabel("Password", { exact: true }).fill(TEST_ACCOUNT.password);
+  await page.getByRole("button", { name: /Sign in/ }).click();
+
+  await expect(page.getByText(/^Opened /)).toBeVisible();
+});

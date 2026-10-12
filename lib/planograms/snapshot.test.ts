@@ -10,7 +10,7 @@ const faces: PlanogramFace[] = [
 ];
 const view = (over: Partial<PlacementView>): PlacementView => ({
   id: id(5), faceId: id(1), productId: id(7), productName: "Crew Sock", styleNumber: "CS-1", presentation: "hung",
-  stackLimit: 12, col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 6, version: 1, ...over,
+  stackLimit: 12, imageKey: null, categoryName: "Denim", col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 6, version: 1, ...over,
 });
 
 describe("snapshot", () => {

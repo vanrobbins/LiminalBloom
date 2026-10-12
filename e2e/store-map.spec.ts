@@ -91,6 +91,36 @@ async function choose(page: Page, label: RegExp) {
 test.describe("read-only map", () => {
 	test.beforeEach(() => seedLayout());
 
+	test("a fixture never published says No planogram yet", async ({ page }) => {
+		await page.goto("/layout");
+		await hydrated(page);
+		const at = await centreOf(page, '[data-fixture-name="Table 1"]');
+		await page.mouse.click(at.x, at.y);
+		await expect(page.getByText("No planogram yet").filter({ visible: true })).toBeVisible();
+		await expect(page.getByRole("link", { name: "Edit planogram" }).filter({ visible: true })).toBeVisible();
+	});
+
+	test("the fixture card never covers the zoom buttons", async ({ page }) => {
+		test.skip(sizeOf(test.info()) !== "tablet", "zoom buttons show on tablet only with a card beside the map");
+		await page.goto("/layout");
+		await hydrated(page);
+		const at = await centreOf(page, '[data-fixture-name="Table 1"]');
+		await page.mouse.click(at.x, at.y);
+		await expect(page.getByRole("link", { name: "Edit planogram" }).filter({ visible: true })).toBeVisible();
+		for (const name of ["Zoom in", "Zoom out", "Fit to screen"]) {
+			const button = page.getByRole("button", { name });
+			await expect(button).toBeVisible();
+			const box = (await button.boundingBox())!;
+			// The press lands on the button itself, not on the card above it.
+			const hit = await page.evaluate(
+				([x, y, label]) => document.elementFromPoint(x as number, y as number)?.closest("button")?.getAttribute("aria-label") === label,
+				[box.x + box.width / 2, box.y + box.height / 2, name],
+			);
+			expect(hit, `${name} is under the card`).toBe(true);
+		}
+		await page.getByRole("button", { name: "Zoom in" }).click();
+	});
+
 	test("fills the content area beside the navigation on wide screens", async ({ page }) => {
 		test.skip(sizeOf(test.info()) === "phone", "Phones are a single column anyway.");
 		await page.goto("/layout");
@@ -184,6 +214,17 @@ test.describe("editing", () => {
 		await expandPeek(page);
 		await page.getByRole("button", { name: "Back", exact: true }).click();
 		await expect(page.getByText("Back grid").filter({ visible: true })).toBeVisible();
+		await saved(page);
+	});
+
+	test("widening a table widens its grid", async ({ page }) => {
+		await page.goto("/layout/edit");
+		await choose(page, /Table 1/);
+		await expandPeek(page);
+		const feet = page.getByRole("textbox", { name: "Width, feet" }).filter({ visible: true });
+		await feet.fill("8");
+		await feet.press("Enter");
+		await expect(page.getByRole("group", { name: "Columns" }).filter({ visible: true })).toContainText("8");
 		await saved(page);
 	});
 

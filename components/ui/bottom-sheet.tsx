@@ -30,6 +30,8 @@ type BottomSheetProps = {
    * pointer lock. It rests low; the handle (tap or drag) raises it to full.
    */
   peek?: boolean;
+  /** 75 dvh tall instead of fitting its content (the map's fixture panel). */
+  tall?: boolean;
   children: React.ReactNode;
 };
 
@@ -44,6 +46,7 @@ export function BottomSheet({
   title,
   hideTitle = false,
   peek = false,
+  tall = false,
   children,
 }: BottomSheetProps) {
   const returnFocusTo = useRef<HTMLElement | null>(null);
@@ -103,7 +106,7 @@ export function BottomSheet({
             event.preventDefault();
             returnFocusTo.current?.focus();
           }}
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-line-subtle bg-raised shadow-2xl outline-none"
+          className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex w-full max-w-lg flex-col rounded-t-2xl border border-line-subtle bg-raised shadow-2xl outline-none ${tall ? "h-[75dvh]" : "max-h-[85vh]"}`}
         >
           <div aria-hidden="true" className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-line" />
           <div className="flex items-center justify-between gap-4 px-6 pt-4">
@@ -114,7 +117,7 @@ export function BottomSheet({
               </Button>
             </Drawer.Close>
           </div>
-          <div className="overflow-y-auto px-6 pt-4 pb-8">{children}</div>
+          <div className={`overflow-y-auto px-6 pt-4 pb-8 ${tall ? "min-h-0 flex-1" : ""}`}>{children}</div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

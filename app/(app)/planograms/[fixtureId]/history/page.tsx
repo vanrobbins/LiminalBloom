@@ -1,10 +1,10 @@
 // A planogram's published versions (spec §5.5).
 
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { HistoryList, type HistoryEntry } from "@/components/planograms/history-list";
+import { PageHeader } from "@/components/shell/page-header";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
 import { diffPlacements, goneFaces, sortByFaceOrder, summarizeChanges } from "@/lib/planograms/diff";
@@ -38,10 +38,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ fixtur
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <Link href={`/planograms/${owner.id}`} className="inline-flex min-h-11 items-center text-ink-muted underline-offset-4 hover:underline">
-        ← {scope.fixtureName}
-      </Link>
-      <h1 className="text-3xl font-semibold tracking-tight text-ink">History</h1>
+      <PageHeader title="History" back={{ href: `/planograms/${owner.id}`, label: scope.fixtureName }} />
       {entries.length === 0 ? <p className="text-ink-muted">Nothing published yet.</p> : <HistoryList fixtureId={owner.id} expectedVersion={row.version} entries={entries} />}
     </div>
   );

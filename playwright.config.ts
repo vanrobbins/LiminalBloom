@@ -19,8 +19,9 @@ const SIZES = [
 const THEMES = ["light", "dark"] as const;
 
 // Behaviour flows run in light at every size; dark runs the specs that check
-// colour. Planograms stays in dark until its Week 6 contrast checks exist.
-const LIGHT_ONLY = /(library|search|store-map|sign-in|sign-out)\.spec\.ts$/;
+// colour. Planograms joined the light-only set once planogram-contrast.spec.ts
+// began checking its colours in both themes. Anchored to whole file names.
+const LIGHT_ONLY = /(?:^|[\\/])(library|search|store-map|sign-in|sign-out|planograms)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "e2e",

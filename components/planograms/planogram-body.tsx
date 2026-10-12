@@ -1,5 +1,5 @@
-// The face switcher, grid, placement list and (while editing) the placement
-// panel. Its own component, not nested in the screen: a nested one remounts on
+// The face switcher, grid, product cards and the product sheet (which holds
+// the placement editor while editing). Its own component, not nested in the screen: a nested one remounts on
 // every render and drops focus and typed values.
 
 "use client";
@@ -10,9 +10,11 @@ import type { Change, PlacementView, PlanogramFace, PlanogramScope } from "@/lib
 import { FaceSwitcher } from "./face-switcher";
 import type { GridItem } from "./grid-items";
 import { PlacementList } from "./placement-list";
-import { PlacementPanel } from "./placement-panel";
+import { PlacementEditor } from "./placement-panel";
 import { PlanogramGrid } from "./planogram-grid";
+import { ProductSheet } from "./product-sheet";
 import { refusalOf, type SaveResult } from "./use-planogram-draft";
+import type { Edges } from "./use-scroll-edges";
 
 type PlanogramBodyProps = {
   scope: PlanogramScope;
@@ -24,10 +26,15 @@ type PlanogramBodyProps = {
   isEditing: boolean;
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
+  sheetId: string | null;
+  setSheetId: (id: string | null) => void;
   highlightProductId: string | null;
   placements: readonly PlacementView[];
   selected: PlacementView | null;
   busy: boolean;
+  /** Which side a newly shown face slides in from; null on first paint. */
+  slideFrom: "left" | "right" | null;
+  onSwipe?: (gesture: { dx: number; dy: number; edges: Edges }) => void;
   onFace: (faceId: string) => void;
   onAdd: (cell: { faceId: string; col: number; row: number }) => void;
   save: (change: Change) => Promise<SaveResult>;
@@ -43,15 +50,37 @@ export function PlanogramBody({
   isEditing,
   selectedId,
   setSelectedId,
+  sheetId,
+  setSheetId,
   highlightProductId,
   placements,
   selected,
   busy,
+  slideFrom,
+  onSwipe,
   onFace,
   onAdd,
   save,
 }: PlanogramBodyProps) {
   const orphans = isEditing ? items.filter((i) => !scope.faces.some((f) => f.faceId === i.faceId)) : [];
+
+  function fromTile(id: string) {
+    setSelectedId(id);
+    setSheetId(id);
+  }
+
+  // A card marks its tile and brings it into view; an orphan has no tile, so its card opens the sheet.
+  function fromCard(id: string) {
+    setSelectedId(id);
+    if (orphans.some((o) => o.id === id)) return setSheetId(id);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    requestAnimationFrame(() =>
+      document.querySelector(`[data-placement="${id}"]`)?.scrollIntoView({ block: "nearest", inline: "center", behavior: reduce ? "auto" : "smooth" }),
+    );
+  }
+
+  const sheetItem = sheetId ? (items.find((i) => i.id === sheetId) ?? null) : null;
+
   return (
     <>
       {scope.isSet ? null : <FaceSwitcher faces={scope.faces} value={face.faceId} onChange={onFace} />}
@@ -63,27 +92,34 @@ export function PlanogramBody({
           selectedId={selectedId}
           highlightProductId={highlightProductId}
           issues={issues}
-          onSelect={isEditing ? setSelectedId : undefined}
+          onSelect={fromTile}
           onEmptyCell={isEditing ? onAdd : undefined}
+          slideFrom={slideFrom}
+          onSwipe={onSwipe}
         />
         <div className="flex flex-col gap-4">
-          <PlacementList faces={shownFaces} items={items} orphans={orphans} issues={issues} highlightProductId={highlightProductId} onSelect={isEditing ? setSelectedId : undefined} />
-          {isEditing ? (
-            <PlacementPanel
-              open={selectedId !== null}
-              placement={selected}
-              isGone={selectedId !== null && selected === null}
-              faces={scope.faces}
-              others={placements}
-              busy={busy}
-              onClose={() => setSelectedId(null)}
-              onSave={async (p, fields) => refusalOf(await save({ kind: "update", id: p.id, version: p.version, fields }))}
-              onRemove={(p) => {
-                setSelectedId(null);
-                void save({ kind: "remove", id: p.id, version: p.version });
-              }}
-            />
-          ) : null}
+          <ProductSheet open={sheetId !== null} item={sheetItem} onClose={() => setSheetId(null)}>
+            {isEditing && sheetId !== null ? (
+              <PlacementEditor
+                placement={selected}
+                isGone={selected === null}
+                faces={scope.faces}
+                others={placements}
+                busy={busy}
+                onClose={() => setSheetId(null)}
+                onSave={async (p, fields) => refusalOf(await save({ kind: "update", id: p.id, version: p.version, fields }))}
+                onRemove={(p) => {
+                  setSheetId(null);
+                  setSelectedId(null);
+                  // The tile is gone once this lands: leave focus on the grid, not the page top.
+                  void save({ kind: "remove", id: p.id, version: p.version }).then((result) => {
+                    if (result.saved) requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-planogram-grid]")?.focus());
+                  });
+                }}
+              />
+            ) : null}
+          </ProductSheet>
+          <PlacementList faces={shownFaces} items={items} orphans={orphans} issues={issues} highlightProductId={highlightProductId} selectedId={selectedId} onSelect={fromCard} />
         </div>
       </div>
     </>
