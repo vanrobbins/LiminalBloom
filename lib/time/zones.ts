@@ -21,8 +21,24 @@ function knownZones(): Set<string> {
   return known;
 }
 
+/**
+ * The runtime's own spelling of an IANA zone, or null if it is not one. Browsers
+ * disagree on names (Firefox says America/Indiana/Indianapolis where Node says
+ * America/Indianapolis), so a name is accepted when Intl resolves it, and stored
+ * the way this runtime spells it. Region names only: no "PST", no "+05:00".
+ */
+export function canonicalZone(name: string): string | null {
+  if (!name.includes("/")) return null;
+  try {
+    const zone = new Intl.DateTimeFormat("en-US", { timeZone: name }).resolvedOptions().timeZone;
+    return /^[+-]/.test(zone) ? null : zone;
+  } catch {
+    return null;
+  }
+}
+
 export function isTimezone(name: string): boolean {
-  return knownZones().has(name);
+  return canonicalZone(name) !== null;
 }
 
 export function zoneLabel(zone: string): string {
@@ -44,5 +60,5 @@ export function zoneChoices(query: string): { us: ZoneChoice[]; others: ZoneChoi
 }
 
 export function startingZone(device: string | null): string {
-  return device && isTimezone(device) ? device : DEFAULT_TIMEZONE;
+  return (device && canonicalZone(device)) || DEFAULT_TIMEZONE;
 }

@@ -13,7 +13,7 @@ import { storeSettings } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
 import { conflictLabel } from "@/lib/layout/save";
 import { guarded } from "@/lib/products/write";
-import { DEFAULT_TIMEZONE, isTimezone } from "@/lib/time/zones";
+import { canonicalZone, DEFAULT_TIMEZONE, isTimezone } from "@/lib/time/zones";
 
 export type SettingsOutcome = { status: "saved" | "conflict" | "forbidden" | "invalid" };
 
@@ -38,20 +38,21 @@ export async function canManageStore(userId: string, storeId: string): Promise<b
   return rows.some((r) => r.role.split(",").some((role) => ["owner", "admin"].includes(role.trim())));
 }
 
-export async function setStoreTimezone(storeId: string, userId: string, timezone: string, expectedVersion: number): Promise<SettingsOutcome> {
-  if (!isTimezone(timezone)) return { status: "invalid" };
+/** expectedVersion 0 means "this store has no settings row yet": the row is made, unless one appeared meanwhile. */
+export async function setStoreTimezone(storeId: string, userId: string, input: string, expectedVersion: number): Promise<SettingsOutcome> {
+  const timezone = canonicalZone(input);
+  if (timezone === null) return { status: "invalid" };
   if (!(await canManageStore(userId, storeId))) return { status: "forbidden" };
-  try {
-    await withStore(storeId, [
-      guarded(
-        db
+  const write =
+    expectedVersion === 0
+      ? db.insert(storeSettings).values({ storeId, timezone }).onConflictDoNothing().returning({ storeId: storeSettings.storeId })
+      : db
           .update(storeSettings)
           .set({ timezone, version: sql`${storeSettings.version} + 1`, updatedAt: new Date() })
           .where(and(eq(storeSettings.storeId, storeId), eq(storeSettings.version, expectedVersion)))
-          .returning({ storeId: storeSettings.storeId }),
-        "store settings",
-      ),
-    ]);
+          .returning({ storeId: storeSettings.storeId });
+  try {
+    await withStore(storeId, [guarded(write, "store settings")]);
     return { status: "saved" };
   } catch (error) {
     if (conflictLabel(error) !== null) return { status: "conflict" };

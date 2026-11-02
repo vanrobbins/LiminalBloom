@@ -66,7 +66,11 @@ export async function createStore(
         headers: requestHeaders,
       });
       // The hook gave it Pacific; the creator owns it, so their choice replaces that.
-      if (created) await setStoreTimezone(created.id, session.user.id, timezone, 1);
+      if (created) {
+        const outcome = await setStoreTimezone(created.id, session.user.id, timezone, 1);
+        // The store exists either way; it keeps Pacific, which /store can change.
+        if (outcome.status !== "saved") console.error("create-store: time zone not saved", created.id, outcome.status);
+      }
 
       // Make it the store this session is working in. Every scoped query
       // reads activeOrganizationId from the session.

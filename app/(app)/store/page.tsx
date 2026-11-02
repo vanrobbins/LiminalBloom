@@ -24,8 +24,9 @@ export default async function StorePage() {
       <Card className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-ink">Time zone</h2>
         <p className="text-sm text-ink-muted">Due dates turn overdue at midnight here, wherever you are. Times like &ldquo;published at&rdquo; show in your own device&apos;s time.</p>
-        {canManage && settings ? (
-          <TimezoneForm zone={zone} version={settings.version} />
+        {canManage ? (
+          // Version 0 = no settings row yet; saving makes it.
+          <TimezoneForm zone={zone} version={settings?.version ?? 0} />
         ) : (
           <p className="text-ink">
             {zoneLabel(zone)}

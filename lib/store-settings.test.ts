@@ -11,6 +11,7 @@ import { member, user } from "@/db/auth-schema";
 import { storeSettings } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
 import { dropStores, makeStore } from "@/lib/products/test-stores";
+import { canonicalZone } from "@/lib/time/zones";
 
 import { canManageStore, setStoreTimezone, storeSettingsFor, storeTimezone } from "./store-settings";
 
@@ -65,6 +66,28 @@ describe("store settings", () => {
     expect(await setStoreTimezone(store, owner, "Mars/Olympus", 1)).toEqual({ status: "invalid" });
     expect(await setStoreTimezone(store, owner, "America/Denver", 1)).toEqual({ status: "saved" });
     expect(await setStoreTimezone(store, owner, "America/Chicago", 1)).toEqual({ status: "conflict" });
+    expect(await storeTimezone(store)).toBe("America/Denver");
+  });
+
+  it("stores the runtime's spelling of a zone the browser spelled differently", async () => {
+    const store = await storeWithZone("tz-alias");
+    const owner = await person(store, "owner");
+    expect(await setStoreTimezone(store, owner, "America/Indiana/Indianapolis", 1)).toEqual({ status: "saved" });
+    expect((await storeSettingsFor(store))?.timezone).toBe(canonicalZone("America/Indiana/Indianapolis"));
+    expect(await setStoreTimezone(store, owner, "america/denver", 2)).toEqual({ status: "saved" });
+    expect((await storeSettingsFor(store))?.timezone).toBe("America/Denver");
+  });
+
+  it("makes the row for a store that has none (version 0), once", async () => {
+    const store = await makeStore("tz-norow");
+    const owner = await person(store, "owner");
+    const plain = await person(store, "member");
+    expect(await setStoreTimezone(store, plain, "America/Denver", 0)).toEqual({ status: "forbidden" });
+    expect(await storeSettingsFor(store)).toBeNull();
+    expect(await setStoreTimezone(store, owner, "America/Denver", 0)).toEqual({ status: "saved" });
+    expect(await storeSettingsFor(store)).toEqual({ timezone: "America/Denver", version: 1 });
+    // The row exists now, so "no row yet" is stale.
+    expect(await setStoreTimezone(store, owner, "America/Chicago", 0)).toEqual({ status: "conflict" });
     expect(await storeTimezone(store)).toBe("America/Denver");
   });
 
