@@ -31,6 +31,20 @@ export async function startDraftAction(fixtureId: string, expectedVersion: numbe
   return result.status === "saved" ? { status: "saved", message: "Draft started" } : { status: "refused", message: CONFLICT };
 }
 
+/**
+ * The builder's first change with no draft (Part 2 spec §4): start one and hand
+ * it back in the same request. If another device started one first, theirs is
+ * returned, so this device works in it rather than failing (Review Focus 3).
+ */
+export async function beginDraftAction(fixtureId: string, expectedVersion: number | null): Promise<DraftReply> {
+  const { activeStoreId } = await requireMember();
+  if (!isId(fixtureId) || !optionalVersion.safeParse(expectedVersion).success) return { status: "refused", message: RELOAD, draft: null };
+  const result = await startDraft(activeStoreId, fixtureId, expectedVersion);
+  const draft = await draftState(activeStoreId, fixtureId);
+  if (draft) return { status: "saved", draft };
+  return { status: "refused", message: result.status === "not-found" ? "This fixture is no longer on the map." : CONFLICT, draft: null };
+}
+
 export async function saveChangeAction(fixtureId: string, raw: unknown): Promise<DraftReply> {
   const { activeStoreId } = await requireMember();
   const parsed = changeInput.safeParse(raw);

@@ -51,7 +51,7 @@ describe("PlanogramScreen", () => {
   });
 
   it("after Remove, focus moves to the planogram, not the top of the page", async () => {
-    hook.save = vi.fn().mockResolvedValue({ saved: true });
+    hook.save = vi.fn().mockResolvedValue({ saved: true, draft: { planogramVersion: 1, placements: [] } });
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());

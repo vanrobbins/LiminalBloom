@@ -22,6 +22,27 @@ describe("usePlanogramDraft", () => {
     expect(result.current.status).toEqual({ kind: "saved" });
   });
 
+  it("returns the saved draft with a save", async () => {
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.save(remove);
+    });
+    expect(reply).toEqual({ saved: true, draft: draft(5) });
+  });
+
+  it("adopts a draft started on this page, and reloads it on focus from then on", async () => {
+    actions.reloadDraftAction.mockResolvedValue(draft(4));
+    const { result } = renderHook(() => usePlanogramDraft("fx", null, vi.fn()));
+    act(() => result.current.adopt(draft(2)));
+    expect(result.current.draft).toEqual(draft(2));
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(result.current.draft).toEqual(draft(4)));
+  });
+
   it("shows a refusal and still takes the current draft", async () => {
     actions.saveChangeAction.mockResolvedValue({ status: "refused", message: "Changed on another device", draft: draft(3) });
     const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
