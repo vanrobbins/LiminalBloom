@@ -32,6 +32,9 @@ export function ProductImage({ productId, name, categoryName, imageKey, size = "
         src={`/api/images/${productId}?v=${encodeURIComponent(imageKey)}`}
         alt={decorative ? "" : name}
         loading="lazy"
+        // A native image drag takes the mouse from a planogram tile's own drag
+        // (ghost image, "no drop" cursor). Nothing here drags images natively.
+        draggable={false}
         onError={() => setFailedKey(imageKey)}
         className={`${box} object-cover`}
       />
