@@ -39,7 +39,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
   function close() {
     setOpenId(null);
     // The phone's sheet is a dialog and gives focus back itself; the side panel
-    // is not, so focus goes back to the row it came from.
+    // is not, so focus goes back to the card it came from.
     if (!isPhone && openId) document.querySelector<HTMLElement>(`[data-result-id="${openId}"]`)?.focus();
   }
 

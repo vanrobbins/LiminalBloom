@@ -16,6 +16,8 @@ describe("silhouettes", () => {
     expect(silhouetteFor("Accessories", "Crossbody Bag")).toBe("accessory");
     expect(silhouetteFor("Tops", "Cap Sleeve Top")).toBe("tee");
     expect(silhouetteFor("Cap-sleeve tees")).toBe("tee");
+    expect(silhouetteFor("Tops", "Cap  Sleeve Top")).toBe("tee");
+    expect(silhouetteFor("Tops", "Cap–sleeve Top")).toBe("tee");
   });
 
   it("reads short as shorts, never short-sleeve", () => {
@@ -23,6 +25,8 @@ describe("silhouettes", () => {
     expect(silhouetteFor("Pants", "Chino Short")).toBe("pants");
     expect(silhouetteFor("Short-Sleeve Tees")).toBe("tee");
     expect(silhouetteFor("Short sleeve shirts")).toBe("tee");
+    expect(silhouetteFor("Boardshorts")).toBe("pants");
+    expect(silhouetteFor("Cargo Shorts")).toBe("pants");
   });
 
   it("draws an SVG in the product's color", () => {

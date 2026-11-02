@@ -66,6 +66,23 @@ describe("StatusControl", () => {
     expect(actions.changeStatus).toHaveBeenCalledWith("p1", 3, "on_sale");
   });
 
+  it("keeps focus on the choice while a save is pending", async () => {
+    const user = userEvent.setup();
+    let finish: (value: { status: "saved"; version: number }) => void = () => {};
+    actions.changeStatus.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(<StatusControl product={product} onChanged={vi.fn()} />);
+    await user.tab();
+    await user.keyboard("{ArrowRight}");
+    const soldOut = screen.getByRole("radio", { name: "Sold out" });
+    await user.keyboard(" ");
+    expect(soldOut).toHaveFocus();
+    expect(soldOut).toHaveAttribute("aria-disabled", "true");
+    expect(soldOut).not.toBeDisabled();
+    await user.keyboard(" ");
+    expect(actions.changeStatus).toHaveBeenCalledTimes(1);
+    finish({ status: "saved", version: 4 });
+  });
+
   it("puts only the checked choice in the Tab order", () => {
     render(<StatusControl product={product} onChanged={vi.fn()} />);
     expect(screen.getByRole("radio", { name: "In stock" })).toHaveAttribute("tabindex", "0");

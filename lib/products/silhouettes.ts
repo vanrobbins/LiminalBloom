@@ -17,13 +17,13 @@ export const SILHOUETTE_PATHS: Record<Silhouette, string> = {
 
 // A product's own name settles the shapes a category can't: a cap sits in
 // "Accessories" beside bags (P3.7). "Cap sleeve" is a top, not a cap.
-const NAME_KEYWORDS: [RegExp, Silhouette][] = [[/\b(cap|hat|beanie|beret|bucket hat)s?\b(?![\s-]?sleeve)/i, "hat"]];
+const NAME_KEYWORDS: [RegExp, Silhouette][] = [[/\b(cap|hat|beanie|beret|bucket hat)s?\b(?![\s\-–]*sleeve)/i, "hat"]];
 
 const KEYWORDS: [RegExp, Silhouette][] = [
-  [/\b(hats?|caps?|beanies?)\b(?![\s-]?sleeve)/i, "hat"],
+  [/\b(hats?|caps?|beanies?)\b(?![\s\-–]*sleeve)/i, "hat"],
   [/knit|sweater|cardigan|long.?sleeve/i, "knit"],
-  // "Short" is shorts, never "short-sleeve".
-  [/denim|jean|pant|trouser|\bshorts?\b(?![\s-]?sleeve)|legging/i, "pants"],
+  // "Short" is shorts (also "Boardshorts"), never "short-sleeve".
+  [/denim|jean|pant|trouser|shorts?\b(?![\s\-–]*sleeve)|legging/i, "pants"],
   [/dress|skirt/i, "dress"],
   [/outer|coat|jacket|blazer/i, "outerwear"],
   [/accessor|bag|tote|scarf|belt|jewel/i, "accessory"],

@@ -33,12 +33,16 @@ export function SearchResults({ results, openId = null, query, hasFilters, onOpe
   }
 
   return (
-    <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-      {results.map((r) => (
-        <li key={r.id}>
-          <SearchCard result={r} isOpen={r.id === openId} onOpen={onOpen} />
-        </li>
-      ))}
-    </ul>
+    // Two columns follow this column's width, not the viewport's: an open panel
+    // narrows it, and a card needs about 300 px for the name beside the badge.
+    <div className="@container mt-4">
+      <ul className="grid gap-3 @2xl:grid-cols-2">
+        {results.map((r) => (
+          <li key={r.id}>
+            <SearchCard result={r} isOpen={r.id === openId} onOpen={onOpen} />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

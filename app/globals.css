@@ -147,11 +147,12 @@ body {
 }
 
 /* The browser's clear (×) in search fields is blue in Chromium; draw it in ink,
-   on a 44 px target (§5.4) with the mark itself 16 px. */
+   on a 44 px target (§5.4) with the mark itself 16 px. The width is the 44 px;
+   the height fills the field, which is already 44 px tall. */
 input[type="search"]::-webkit-search-cancel-button {
   appearance: none;
   width: 2.75rem;
-  height: 2.75rem;
+  height: 100%;
   margin-right: -0.75rem;
   cursor: pointer;
   background-color: var(--ink);

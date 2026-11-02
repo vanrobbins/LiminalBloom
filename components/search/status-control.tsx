@@ -69,7 +69,8 @@ export function StatusControl({ product, onChanged }: { product: ProductRow; onC
             role="radio"
             aria-checked={isChecked}
             tabIndex={isChecked ? 0 : -1}
-            disabled={isSaving}
+            // Not `disabled`: that would drop keyboard focus mid-save. choose() ignores taps meanwhile.
+            aria-disabled={isSaving}
             onClick={() => void choose(status)}
             className={`flex min-h-11 items-center justify-center gap-1.5 rounded-md text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${isChecked ? "bg-raised font-semibold text-ink shadow-sm" : "text-ink-muted"}`}
           >

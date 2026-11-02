@@ -115,6 +115,15 @@ describe("locations", () => {
     expect(page.total).toBeGreaterThan(1);
   });
 
+  it("counts only the matches of a filtered search, not every product", async () => {
+    const byText = await search(a, input({ q: "tees" }), 1);
+    expect(byText.results).toHaveLength(1);
+    expect(byText.total).toBe(2);
+    const byStatus = await search(a, input({ statuses: ["in_stock"] }), 1);
+    expect(byStatus.results).toHaveLength(1);
+    expect(byStatus.total).toBe(2);
+  });
+
   it("reads a back lower table from its outer edge, and keeps the stored cells for the grid", async () => {
     // Front table 1's top (6 x 3) becomes the back lower of a set; its pant sits at the stored back-left.
     const upperId = randomUUID();
