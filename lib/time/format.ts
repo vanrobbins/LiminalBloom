@@ -6,7 +6,7 @@
 
 const MOMENT: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };
 
-const plain = (text: string) => text.replace(/[  ]/g, " ");
+const plain = (text: string) => text.replace(/[202f00a0]/g, " ");
 
 export function deviceTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
