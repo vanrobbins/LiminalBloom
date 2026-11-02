@@ -1,20 +1,22 @@
-// The face switcher, grid, product cards and the product sheet (which holds
-// the placement editor while editing). Its own component, not nested in the screen: a nested one remounts on
-// every render and drops focus and typed values.
+// The face switcher, grid, product cards and the product sheet. Its own
+// component, not nested in the screen: a nested one remounts on every render
+// and drops focus and typed values. The screen decides what a tap does and
+// holds the builder; this lays it out.
 
 "use client";
 
 import type { GridLayout } from "@/lib/planograms/set-grid";
-import type { Change, PlacementView, PlanogramFace, PlanogramScope } from "@/lib/planograms/types";
+import type { PlacementFields, PlacementView, PlanogramFace, PlanogramScope } from "@/lib/planograms/types";
 
 import { FaceSwitcher } from "./face-switcher";
 import type { GridItem } from "./grid-items";
 import { PlacementList } from "./placement-list";
 import { PlacementEditor } from "./placement-panel";
-import { PlanogramGrid } from "./planogram-grid";
+import { PlanogramGrid, type GridBuilder } from "./planogram-grid";
 import { ProductSheet } from "./product-sheet";
-import { refusalOf, type SaveResult } from "./use-planogram-draft";
 import type { Edges } from "./use-scroll-edges";
+
+export type SheetMode = "details" | "edit";
 
 type PlanogramBodyProps = {
   scope: PlanogramScope;
@@ -27,17 +29,20 @@ type PlanogramBodyProps = {
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
   sheetId: string | null;
-  setSheetId: (id: string | null) => void;
+  sheetMode: SheetMode;
+  openSheet: (id: string | null, mode?: SheetMode) => void;
   highlightProductId: string | null;
   placements: readonly PlacementView[];
-  selected: PlacementView | null;
   busy: boolean;
   /** Which side a newly shown face slides in from; null on first paint. */
   slideFrom: "left" | "right" | null;
+  builder?: GridBuilder;
+  onTile: (id: string) => void;
   onSwipe?: (gesture: { dx: number; dy: number; edges: Edges }) => void;
   onFace: (faceId: string) => void;
-  onAdd: (cell: { faceId: string; col: number; row: number }) => void;
-  save: (change: Change) => Promise<SaveResult>;
+  /** "Edit numbers": resolves to the refusal to show in the form, or null. */
+  onEdit: (placement: PlacementView, fields: PlacementFields) => Promise<string | null>;
+  onRemove: (placement: PlacementView) => void;
 };
 
 export function PlanogramBody({
@@ -51,35 +56,33 @@ export function PlanogramBody({
   selectedId,
   setSelectedId,
   sheetId,
-  setSheetId,
+  sheetMode,
+  openSheet,
   highlightProductId,
   placements,
-  selected,
   busy,
   slideFrom,
+  builder,
+  onTile,
   onSwipe,
   onFace,
-  onAdd,
-  save,
+  onEdit,
+  onRemove,
 }: PlanogramBodyProps) {
   const orphans = isEditing ? items.filter((i) => !scope.faces.some((f) => f.faceId === i.faceId)) : [];
 
-  function fromTile(id: string) {
-    setSelectedId(id);
-    setSheetId(id);
-  }
-
-  // A card marks its tile and brings it into view; an orphan has no tile, so its card opens the sheet.
+  // A card marks its tile and brings it into view; an orphan has no tile, so its card opens the sheet to remove it.
   function fromCard(id: string) {
     setSelectedId(id);
-    if (orphans.some((o) => o.id === id)) return setSheetId(id);
+    if (orphans.some((o) => o.id === id)) return openSheet(id, "edit");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     requestAnimationFrame(() =>
-      document.querySelector(`[data-placement="${id}"]`)?.scrollIntoView({ block: "nearest", inline: "center", behavior: reduce ? "auto" : "smooth" }),
+      document.querySelector(`[data-placement="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest", inline: "center", behavior: reduce ? "auto" : "smooth" }),
     );
   }
 
   const sheetItem = sheetId ? (items.find((i) => i.id === sheetId) ?? null) : null;
+  const sheetPlacement = sheetId ? (placements.find((p) => p.id === sheetId) ?? null) : null;
 
   return (
     <>
@@ -92,30 +95,23 @@ export function PlanogramBody({
           selectedId={selectedId}
           highlightProductId={highlightProductId}
           issues={issues}
-          onSelect={fromTile}
-          onEmptyCell={isEditing ? onAdd : undefined}
+          onSelect={onTile}
           slideFrom={slideFrom}
           onSwipe={onSwipe}
+          builder={builder}
         />
         <div className="flex flex-col gap-4">
-          <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => setSheetId(null)}>
-            {isEditing && sheetId !== null ? (
+          <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => openSheet(null)}>
+            {isEditing && sheetId !== null && sheetMode === "edit" ? (
               <PlacementEditor
-                placement={selected}
-                isGone={selected === null}
+                placement={sheetPlacement}
+                isGone={sheetPlacement === null}
                 faces={scope.faces}
                 others={placements}
                 busy={busy}
-                onClose={() => setSheetId(null)}
-                onSave={async (p, fields) => refusalOf(await save({ kind: "update", id: p.id, version: p.version, fields }))}
-                onRemove={(p) => {
-                  setSheetId(null);
-                  setSelectedId(null);
-                  // The tile is gone once this lands: leave focus on the grid, not the page top.
-                  void save({ kind: "remove", id: p.id, version: p.version }).then((result) => {
-                    if (result.saved) requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-planogram-grid]")?.focus());
-                  });
-                }}
+                onClose={() => openSheet(null)}
+                onSave={onEdit}
+                onRemove={onRemove}
               />
             ) : null}
           </ProductSheet>

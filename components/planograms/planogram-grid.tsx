@@ -1,35 +1,46 @@
-// A planogram's grid (spec §4.1): one face, or a table set's combined view.
-// HTML, not SVG: every placement is a real button (keyboard and screen readers
-// for free; Part 2's builder adds gestures to the same elements). One unit is
-// half a foot (set-grid.ts) and fills the width, never under 20 px (40 px a
-// foot, as before); a face too wide for that scrolls sideways inside the grid,
-// with a fade on the clipped edge. The cell size is pure CSS (container query
-// units), so the first paint is right.
+// A planogram's grid (spec §4.1; Part 2 §4): one face, or a table set's
+// combined view. HTML, not SVG: every placement is a real button. One unit is
+// half a foot on both axes (set-grid.ts), never under 20 px, filling the width;
+// a face too wide scrolls sideways with a fade on the clipped edge. No cell
+// lines at rest; half-foot guides and a feet ruler appear only while a tile is
+// dragged. With a builder, the selected tile drags and resizes: every frame is
+// rebuilt from the press's start (lib/planograms/builder), and whether it may
+// land is the builder's `check` (rules.ts).
 
 "use client";
 
-import { AlertTriangle } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
-import { ProductImage } from "@/components/products/product-image";
-import { PRESENTATION_LABEL } from "@/lib/products/footprint";
-import { ROW_UNITS, spanRect, spotOf, type GridLayout, type Rect } from "@/lib/planograms/set-grid";
-import { spotSummary } from "@/lib/products/location-words";
+import { dragTarget } from "@/lib/planograms/builder/drag";
+import { resizeTarget } from "@/lib/planograms/builder/resize";
+import { spanRect, spotOf, type GridLayout } from "@/lib/planograms/set-grid";
+import type { PlacementFields } from "@/lib/planograms/types";
+import { shortSpot, spotSummary } from "@/lib/products/location-words";
 
+import { DragChip, DragGuides, DropGhost } from "./drag-guides";
 import { SWIPE_MIN_PX } from "./face-swipe";
+import { BlockView, GridTile, at } from "./grid-tile";
 import type { GridItem } from "./grid-items";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
+import { useTileGesture, type Gesture } from "./use-tile-gesture";
 
-/** Room above the grid for a table set's labels. */
+/** Room above the grid for a table set's labels, the ruler and the drag chip. */
 const GUTTER = "1.5rem";
-const at = (n: number) => `calc(var(--cell) * ${n})`;
-/** A tile sits 1 px inside its cells, so neighbours read as separate. */
-const placed = (r: Rect): React.CSSProperties => ({
-  left: `calc(${at(r.x)} + 1px)`,
-  top: `calc(${at(r.y)} + 1px)`,
-  width: `calc(${at(r.width)} - 2px)`,
-  height: `calc(${at(r.height)} - 2px)`,
-});
+const OFF_FACE = "Off the edge of the face";
+
+export type GridBuilder = {
+  /** The selected tile may be dragged, resized and moved with the arrow keys. */
+  canMove: boolean;
+  /** Why a tile can't go there (rules.ts words), or null. */
+  check: (item: GridItem, fields: PlacementFields) => string | null;
+  onCommit: (item: GridItem, fields: PlacementFields, verb: "Moved" | "Resized") => void;
+  /** An invalid drop: it has already snapped back; say why. */
+  onRefused: (message: string) => void;
+  onKey: (item: GridItem, key: string, shift: boolean) => void;
+  /** Tap on empty space, or Escape on the selected tile. */
+  onEmpty: () => void;
+  onDragging: (isDragging: boolean) => void;
+};
 
 type PlanogramGridProps = {
   layout: GridLayout;
@@ -39,17 +50,22 @@ type PlanogramGridProps = {
   highlightProductId?: string | null;
   issues?: ReadonlyMap<string, string>;
   onSelect: (id: string) => void;
-  onEmptyCell?: (cell: { faceId: string; col: number; row: number }) => void;
   slideFrom?: "left" | "right" | null;
   onSwipe?: (gesture: { dx: number; dy: number; edges: Edges }) => void;
+  builder?: GridBuilder;
 };
 
-export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, onEmptyCell, slideFrom = null, onSwipe }: PlanogramGridProps) {
+const sameSpot = (a: PlacementFields, b: PlacementFields) =>
+  a.faceId === b.faceId && a.col === b.col && a.row === b.row && a.colSpan === b.colSpan && a.rowSpan === b.rowSpan;
+
+export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, slideFrom = null, onSwipe, builder }: PlanogramGridProps) {
   const faceKey = layout.blocks.map((b) => b.faceId).join();
   const { ref, edges } = useScrollEdges<HTMLDivElement>(faceKey);
-  // Where a drag began, and which way the grid could scroll then: a drag that
+  const space = useRef<HTMLDivElement>(null);
+  // Where a swipe began, and which way the grid could scroll then: a drag that
   // scrolls the grid to its edge doesn't also change face; the next one does.
   const start = useRef<{ x: number; y: number; edges: Edges } | null>(null);
+  const [drag, setDrag] = useState<Gesture | null>(null);
   const drawn = items.filter((item) => layout.blocks.some((b) => b.faceId === item.faceId));
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
   const mask =
@@ -60,6 +76,35 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
         : edges.left
           ? "linear-gradient(to left, black calc(100% - 2rem), transparent)"
           : undefined;
+
+  const moving = builder?.canMove ? (drawn.find((i) => i.id === selectedId) ?? null) : null;
+  const movingBlock = moving ? (layout.blocks.find((b) => b.faceId === moving.faceId) ?? null) : null;
+  function landing(g: Gesture): PlacementFields | null {
+    if (!moving || !movingBlock) return null;
+    return g.mode === "move" ? dragTarget(layout, moving, g.dx, g.dy) : resizeTarget(movingBlock, moving, g.mode, g.dx, g.dy);
+  }
+  const target = drag ? landing(drag) : null;
+  const targetBlock = target ? (layout.blocks.find((b) => b.faceId === target.faceId) ?? null) : null;
+  const refusal = drag && moving ? (target ? (builder?.check(moving, target) ?? null) : OFF_FACE) : null;
+
+  const gestures = useTileGesture({
+    unitPx: () => (space.current?.getBoundingClientRect().width ?? 0) / layout.width,
+    scroller: () => ref.current,
+    onMove: (g) => {
+      if (!drag) builder?.onDragging(true);
+      setDrag(g);
+    },
+    onEnd: (g) => {
+      setDrag(null);
+      builder?.onDragging(false);
+      if (!g || !moving || !builder) return;
+      const fields = landing(g);
+      const reason = fields ? builder.check(moving, fields) : OFF_FACE;
+      if (!fields || reason) return builder.onRefused(reason ?? OFF_FACE);
+      if (!sameSpot(fields, moving)) builder.onCommit(moving, fields, g.mode === "move" ? "Moved" : "Resized");
+    },
+  });
+
   function begin(x: number, y: number) {
     start.current = { x, y, edges };
   }
@@ -76,6 +121,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
     start.current = null;
   }
   const slide = slideFrom === "right" ? "motion-safe:animate-slide-from-right" : slideFrom === "left" ? "motion-safe:animate-slide-from-left" : "";
+  const chipAt = target && targetBlock ? spanRect(targetBlock, target) : moving && movingBlock ? spanRect(movingBlock, moving) : null;
 
   return (
     <section
@@ -93,7 +139,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
         // A sideways swipe changes face (the screen decides). Touch is read
         // from touch events: they keep coming while the browser scrolls the
         // grid natively, where pointer events end in pointercancel. Mouse and
-        // pen use pointer events.
+        // pen use pointer events. The moving tile stops both (Review Focus 1).
         onPointerDown={(e) => (e.pointerType === "touch" ? undefined : begin(e.clientX, e.clientY))}
         onPointerUp={(e) => (e.pointerType === "touch" ? undefined : end(e.clientX, e.clientY))}
         onPointerCancel={(e) => (e.pointerType === "touch" ? undefined : cancel())}
@@ -114,82 +160,44 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
             } as React.CSSProperties
           }
         >
-          <div className="absolute inset-x-0 bottom-0" style={{ top: GUTTER }}>
+          <div ref={space} className="absolute inset-x-0 bottom-0" style={{ top: GUTTER }}>
             {layout.blocks.map((block) => (
-              <div key={block.faceId}>
-                {layout.blocks.length > 1 ? (
-                  <span aria-hidden="true" className="absolute -translate-y-full pb-0.5 text-xs text-ink-muted" style={{ left: at(block.x), top: at(block.y) }}>
-                    {block.label}
-                  </span>
-                ) : null}
-                {Array.from({ length: block.rows }, (_, row) =>
-                  Array.from({ length: block.columns }, (_, col) => {
-                    const r = spanRect(block, { col, row, colSpan: 1, rowSpan: 1 });
-                    return (
-                      // Taps on open cells are a shortcut; "Add product" is the keyboard route.
-                      <div
-                        key={`${col}-${row}`}
-                        data-cell={`${block.faceId}:${col}:${row}`}
-                        onClick={onEmptyCell ? () => onEmptyCell({ faceId: block.faceId, col, row }) : undefined}
-                        className={`absolute border border-line-subtle bg-raised ${onEmptyCell ? "cursor-copy" : ""}`}
-                        style={{ left: at(r.x), top: at(r.y), width: at(r.width), height: at(r.height) }}
-                      />
-                    );
-                  }),
-                )}
-              </div>
+              <BlockView key={block.faceId} block={block} labelled={layout.blocks.length > 1} onEmpty={builder?.onEmpty} />
             ))}
+            {drag ? <DragGuides layout={layout} /> : null}
+            {drag?.mode === "move" && target && targetBlock ? <DropGhost rect={spanRect(targetBlock, target)} invalid={refusal !== null} /> : null}
             {drawn.map((item) => {
               const block = layout.blocks.find((b) => b.faceId === item.faceId);
               if (!block) return null;
+              const isMoving = item.id === moving?.id;
+              const resized = isMoving && drag && drag.mode !== "move" ? target : null;
               return (
-                <Tile
+                <GridTile
                   key={item.id}
                   item={item}
-                  rect={spanRect(block, item)}
+                  block={block}
+                  rect={spanRect(block, resized ?? item)}
                   words={spotSummary(spotOf(block, item))}
                   selected={item.id === selectedId}
                   highlighted={item.productId === highlightProductId}
                   issue={issues?.get(item.id)}
+                  movable={isMoving}
+                  offset={isMoving && drag?.mode === "move" ? drag : null}
+                  invalid={isMoving && refusal !== null}
+                  bounds={layout}
+                  gestures={gestures}
                   onSelect={onSelect}
+                  onKey={builder && isMoving ? (key, shift) => builder.onKey(item, key, shift) : undefined}
+                  onEscape={builder?.onEmpty}
                 />
               );
             })}
+            {drag && chipAt ? (
+              <DragChip rect={chipAt} invalid={refusal !== null} text={refusal ?? (target && targetBlock ? shortSpot(spotOf(targetBlock, target)) : OFF_FACE)} />
+            ) : null}
           </div>
         </div>
       </div>
     </section>
-  );
-}
-
-type TileProps = { item: GridItem; rect: Rect; words: string; selected: boolean; highlighted: boolean; issue: string | undefined; onSelect: (id: string) => void };
-
-function Tile({ item, rect, words, selected, highlighted, issue, onSelect }: TileProps) {
-  // Under 2 ft wide there is room for the photo and stock only; the name is in the sheet and the card.
-  const named = rect.width >= 2 * ROW_UNITS;
-  return (
-    <button
-      type="button"
-      data-placement={item.id}
-      data-marked={selected || highlighted ? "" : undefined}
-      data-highlighted={highlighted ? "" : undefined}
-      data-issue={issue ? "" : undefined}
-      aria-pressed={selected}
-      aria-label={`${item.productName}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
-      onClick={() => onSelect(item.id)}
-      style={placed(rect)}
-      className="absolute overflow-hidden rounded-md border border-line bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse"
-    >
-      <ProductImage productId={item.productId} name={item.productName} categoryName={item.categoryName} imageKey={item.imageKey} size="fill" decorative />
-      <span aria-hidden="true" className="absolute top-1 right-1 rounded bg-raised/90 px-1 font-mono text-xs text-ink">
-        {item.presentation === "hung" ? "H" : "F"} {item.pieceCount}
-      </span>
-      {issue ? <AlertTriangle aria-hidden="true" strokeWidth={2} className="absolute top-1 left-1 size-4 text-danger" /> : null}
-      {named ? (
-        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 line-clamp-2 bg-raised/90 px-1 py-0.5 text-center text-xs leading-tight font-medium text-ink">
-          {item.productName}
-        </span>
-      ) : null}
-    </button>
   );
 }
