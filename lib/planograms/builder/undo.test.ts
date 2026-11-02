@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PlacementFields, PlacementView } from "../types";
 
-import { EMPTY_HISTORY, forget, prune, record, redo, undo, type Step } from "./undo";
+import { EMPTY_HISTORY, forget, prune, record, redo, sitsAt, undo, type Step } from "./undo";
 
 const at = (col: number): PlacementFields => ({ faceId: "f", presentation: "hung", col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1 });
 const view = (id: string, col: number, version: number): PlacementView => ({
@@ -38,6 +38,13 @@ describe("undo history", () => {
   it("drops steps whose placement is gone", () => {
     const history = { done: [moved("a", 0, 2), moved("gone", 0, 2)], undone: [moved("gone", 2, 4)] };
     expect(prune(history, [view("a", 2, 3)])).toEqual({ done: [moved("a", 0, 2)], undone: [] });
+  });
+
+  it("tells whether a placement still sits where a step left it (Review Focus 2)", () => {
+    expect(sitsAt(view("a", 4, 9), at(4))).toBe(true);
+    expect(sitsAt(view("a", 6, 9), at(4))).toBe(false);
+    expect(sitsAt({ ...view("a", 4, 9), pieceCount: 3 }, at(4))).toBe(false);
+    expect(sitsAt({ ...view("a", 4, 9), faceId: "g" }, at(4))).toBe(false);
   });
 
   it("keeps the last 50 steps", () => {

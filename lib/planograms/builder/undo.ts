@@ -43,6 +43,23 @@ export function forget(history: History, id: string): History {
   return { done: history.done.filter((s) => s.id !== id), undone: history.undone.filter((s) => s.id !== id) };
 }
 
+/**
+ * Whether a placement still holds the fields a step left it with. A draft
+ * picks up other devices' edits, so a fresh version alone doesn't say the
+ * placement is untouched (Review Focus 2).
+ */
+export function sitsAt(placement: PlacementFields, fields: PlacementFields): boolean {
+  return (
+    placement.faceId === fields.faceId &&
+    placement.presentation === fields.presentation &&
+    placement.col === fields.col &&
+    placement.row === fields.row &&
+    placement.colSpan === fields.colSpan &&
+    placement.rowSpan === fields.rowSpan &&
+    placement.pieceCount === fields.pieceCount
+  );
+}
+
 export function prune(history: History, placements: readonly PlacementView[]): History {
   const live = (s: Step) => placements.some((p) => p.id === s.id);
   return { done: history.done.filter(live), undone: history.undone.filter(live) };
