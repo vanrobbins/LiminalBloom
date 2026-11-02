@@ -12,6 +12,8 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { isSlugTaken } from "@/lib/store-errors";
+import { setStoreTimezone } from "@/lib/store-settings";
+import { isTimezone } from "@/lib/time/zones";
 
 /** "Pioneer Place" -> "pioneer-place". Organizations are addressed by slug. */
 function slugify(name: string): string {
@@ -43,6 +45,11 @@ export async function createStore(
     return { error: "That name has no letters or numbers in it." };
   }
 
+  const timezone = String(formData.get("timezone") ?? "");
+  if (!isTimezone(timezone)) {
+    return { error: "Choose the store's time zone from the list." };
+  }
+
   // Slugs are unique across every store, so a second "Pioneer Place" needs a
   // different one. Try the clean slug, then fall back to a suffixed version
   // rather than making the person rename their store.
@@ -53,11 +60,13 @@ export async function createStore(
   for (const slug of candidates) {
     try {
       // Better Auth's afterCreateOrganization hook (lib/auth.ts) gives the
-      // store its encryption key, however the store was created.
-      await auth.api.createOrganization({
+      // store its encryption key and settings, however the store was created.
+      const created = await auth.api.createOrganization({
         body: { name, slug },
         headers: requestHeaders,
       });
+      // The hook gave it Pacific; the creator owns it, so their choice replaces that.
+      if (created) await setStoreTimezone(created.id, session.user.id, timezone, 1);
 
       // Make it the store this session is working in. Every scoped query
       // reads activeOrganizationId from the session.

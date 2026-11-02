@@ -79,9 +79,14 @@ export async function giveStoreItsKey(storeId: string): Promise<void> {
   try {
     await createStoreKey(storeId);
   } catch (error) {
-    await db.delete(organization).where(eq(organization.id, storeId));
+    await removeStore(storeId);
     throw error;
   }
+}
+
+/** Removes a store whose setup failed, so no half-made store remains. */
+export async function removeStore(storeId: string): Promise<void> {
+  await db.delete(organization).where(eq(organization.id, storeId));
 }
 
 /**

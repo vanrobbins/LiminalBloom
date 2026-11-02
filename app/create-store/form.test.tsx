@@ -53,4 +53,15 @@ describe("CreateStoreForm", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     errors.mockRestore();
   });
+
+  it("sends the chosen time zone with the store name", async () => {
+    mocks.createStore.mockResolvedValue(null);
+    const user = userEvent.setup();
+    render(<CreateStoreForm />);
+    await user.type(screen.getByLabelText("Store name"), "Pioneer Place");
+    await user.selectOptions(screen.getByLabelText("Time zone"), "America/Denver");
+    await user.click(screen.getByRole("button", { name: "Create store" }));
+    const form: FormData = mocks.createStore.mock.calls[0][1];
+    expect(form.get("timezone")).toBe("America/Denver");
+  });
 });
