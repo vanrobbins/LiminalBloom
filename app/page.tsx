@@ -1,36 +1,33 @@
 // The home page. Next.js turns any `page.tsx` file into a route --
 // this one sits at app/page.tsx, so it is the site root: "/".
 // Save this file while `npm run dev` is running and the browser updates itself.
+//
+// One page for two visitors (DECISIONS 11-02): a store team signing in, and a
+// store deciding whether to use the app. The ways in come first; the scroll
+// explains the product. A server component: only the theme toggle runs in the browser.
+
+import type { Metadata } from "next";
 
 import { CornerThemeToggle } from "@/components/corner-theme-toggle";
-import { Button } from "@/components/ui/button";
+import { ClosingSection } from "@/components/landing/closing-section";
+import { FeatureList } from "@/components/landing/feature-list";
+import { LandingHero } from "@/components/landing/landing-hero";
+import { PlanSection } from "@/components/landing/plan-section";
+
+export const metadata: Metadata = {
+  title: "Liminal Bloom: find any product on the floor",
+  description:
+    "Store maps, product photos, planograms and search for retail store teams, on the phone in their pocket.",
+};
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6">
+    <main className="flex-1 bg-surface">
       <CornerThemeToggle />
-      <div className="flex flex-col items-start gap-4">
-        <span className="text-4xl" aria-hidden="true">
-          &#10052;
-        </span>
-        <h1 className="text-5xl font-semibold tracking-tight text-ink">
-          liminal bloom
-        </h1>
-        <p className="max-w-md text-lg text-ink-muted">
-          A mobile-first visual merchandising platform for retail store teams.
-        </p>
-        <p className="mt-4 rounded border border-brand px-3 py-1 text-sm text-brand-strong">
-          Week 1 &middot; foundation
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Button asChild>
-            <a href="/sign-in">Sign in</a>
-          </Button>
-          <Button asChild variant="secondary">
-            <a href="/sign-up">Create an account</a>
-          </Button>
-        </div>
-      </div>
+      <LandingHero />
+      <PlanSection />
+      <FeatureList />
+      <ClosingSection />
     </main>
   );
 }
