@@ -116,4 +116,15 @@ describe("SearchScreen focus and panel management", () => {
     expect(screen.queryByRole("complementary", { name: "Pocket Tee" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Pocket Tee/ })).not.toHaveAttribute("aria-current");
   });
+
+  it("on tablet and desktop, opening a card moves focus into the panel, and Escape brings it back (P3.4)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const card = screen.getByRole("button", { name: /High-Rise Pant/ });
+    await user.click(card);
+    expect(screen.getByRole("heading", { level: 2, name: "High-Rise Pant" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("complementary", { name: "High-Rise Pant" })).toBeNull();
+    expect(card).toHaveFocus();
+  });
 });

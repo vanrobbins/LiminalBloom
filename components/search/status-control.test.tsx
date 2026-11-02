@@ -50,4 +50,25 @@ describe("StatusControl", () => {
     expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error", title: "Couldn't save the status" }));
     expect(screen.getByRole("radio", { name: "Sold out" })).toBeEnabled();
   });
+
+  it("moves between the choices with the arrow keys without saving; Space chooses (P3.5)", async () => {
+    const user = userEvent.setup();
+    actions.changeStatus.mockResolvedValue({ status: "saved", version: 4 });
+    render(<StatusControl product={product} onChanged={vi.fn()} />);
+    await user.tab();
+    expect(screen.getByRole("radio", { name: "In stock" })).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Sold out" })).toHaveFocus();
+    await user.keyboard("{ArrowLeft}{ArrowLeft}");
+    expect(screen.getByRole("radio", { name: "On sale" })).toHaveFocus();
+    expect(actions.changeStatus).not.toHaveBeenCalled();
+    await user.keyboard(" ");
+    expect(actions.changeStatus).toHaveBeenCalledWith("p1", 3, "on_sale");
+  });
+
+  it("puts only the checked choice in the Tab order", () => {
+    render(<StatusControl product={product} onChanged={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "In stock" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("radio", { name: "Sold out" })).toHaveAttribute("tabindex", "-1");
+  });
 });
