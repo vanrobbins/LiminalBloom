@@ -13,7 +13,7 @@ function groups(chapters: Listed[]) {
   for (const chapter of chapters) {
     const last = runs.at(-1);
     if (last && last.chapters[0].status === chapter.status) last.chapters.push(chapter);
-    else runs.push({ label: chapter.status === "about" ? chapter.week : STATUS_LABEL[chapter.status], chapters: [chapter] });
+    else runs.push({ label: chapter.status === "about" ? (chapter.index === 0 ? "Overview" : "Architecture") : STATUS_LABEL[chapter.status], chapters: [chapter] });
   }
   return runs;
 }
@@ -32,7 +32,7 @@ export function ChapterNav({ current, onGo }: { current: number; onGo: (index: n
         >
           {chapters.map((chapter) => (
             <option key={chapter.id} value={chapter.index}>
-              {chapter.index + 1}. {chapter.title} ({chapter.week})
+              {chapter.index + 1}. {chapter.title}
             </option>
           ))}
         </select>
@@ -48,10 +48,9 @@ export function ChapterNav({ current, onGo }: { current: number; onGo: (index: n
                   <a
                     href={`#${chapter.id}`}
                     aria-current={chapter.index === current ? "step" : undefined}
-                    className="flex min-h-11 flex-col justify-center rounded px-3 py-1.5 text-ink hover:bg-line-subtle focus-visible:outline-2 focus-visible:outline-ink aria-[current=step]:bg-brand aria-[current=step]:text-on-brand"
+                    className="flex min-h-11 items-center rounded px-3 py-1.5 text-ink hover:bg-line-subtle focus-visible:outline-2 focus-visible:outline-ink aria-[current=step]:bg-brand aria-[current=step]:text-on-brand"
                   >
                     <span className="text-sm leading-snug font-medium">{chapter.title}</span>
-                    {chapter.status === "about" ? null : <span className="text-xs opacity-80">{chapter.week}</span>}
                   </a>
                 </li>
               ))}

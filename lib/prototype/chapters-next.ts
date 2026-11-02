@@ -1,4 +1,4 @@
-// Chapters for Week 6.5: the instructor-feedback work being built now
+// Chapters for the instructor-feedback work being built now
 // (specs written 11-02; the palette and roles/dashboards specs are still to write).
 
 import type { Chapter } from "./types";
@@ -6,7 +6,6 @@ import type { Chapter } from "./types";
 export const CHAPTERS_NEXT: Chapter[] = [
   {
     id: "space-and-drawings",
-    week: "Week 6.5",
     status: "next",
     title: "Space on the fixture, sizes and drawings",
     lede: "How much room a product takes, said in plain words with a drawing, and asked only when the product differs from its category.",
@@ -47,7 +46,6 @@ export const CHAPTERS_NEXT: Chapter[] = [
   },
   {
     id: "frame-racks",
-    week: "Week 6.5",
     status: "next",
     title: "Frame racks and runs",
     lede: "A new fixture: a frame with one hanging rail. Stores join several end to end into a straight line, an L, a U or a closed square, and plan the run as one display.",
@@ -72,7 +70,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
     ],
     why: [
       "Stores use frame racks next to ordinary racks, often several in a row against a column or wall. Planning each rack alone breaks up what shoppers see as one display.",
-      "Runs reuse the table-set approach: one combined grid on screen, but each rack's placements are stored on that rack. Nothing spans two racks, so Search can still say exactly which rack a product hangs on: “Frame Rack 2 · Rail · 2–3½ ft from left”.",
+      "Runs reuse the table-set approach: one combined grid on screen, but each rack's placements are stored on that rack. Nothing spans two racks, so Search can still say exactly which rack a product hangs on: “Back wall, middle frame · Rail · 2–3½ ft from left”.",
       "There's one rail, so nothing hangs above anything else; only a product's hung width counts.",
     ],
     underTheHood: [
@@ -83,7 +81,6 @@ export const CHAPTERS_NEXT: Chapter[] = [
   },
   {
     id: "palette-and-tooltips",
-    week: "Week 6.5",
     status: "next",
     title: "Command palette and tooltips",
     lede: "Jump anywhere from the keyboard, and get an explanation of any term without leaving the screen.",
@@ -109,7 +106,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
     why: [
       "The desktop sidebar had a search box that only jumped to the Search page. With Products merged, the palette replaces it and reaches more than products, as the original proposal promised (§3.12).",
       "The instructor asked for tooltips throughout. Hover-only help doesn't exist on a phone, which is where most people use the app, so terms get a tap-to-open popover and hover tooltips are kept for naming buttons.",
-      "Tooltips go in as one sweep across every screen at the end of Week 6.5, rather than branch by branch, so no screen is left behind.",
+      "Tooltips go in as one sweep across every screen, rather than branch by branch, so no screen is left behind.",
     ],
     underTheHood: [
       "Tooltip and Popover come from Radix, which is already installed and styled through `components/ui/`.",
@@ -119,7 +116,6 @@ export const CHAPTERS_NEXT: Chapter[] = [
   },
   {
     id: "home",
-    week: "Week 6.5 (end)",
     status: "next",
     title: "Roles and Home",
     lede: "Four roles, each opening to a Home screen built around its day. A VM Lead sees what's due and what's stuck; a Sales Associate sees search first.",
@@ -139,7 +135,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
       },
       {
         title: "Sold out, still on display",
-        text: "Products marked sold out that still hold space on a published planogram. In Week 7 each one starts a Quick Adjust.",
+        text: "Products marked sold out that still hold space on a published planogram. Once Quick Adjust ships, each one starts one.",
       },
       {
         title: "Home tab",
@@ -148,7 +144,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
     ],
     why: [
       "The instructor asked for a home dashboard. A dashboard is only useful if it knows who is looking, so the four roles are built first, for real, and Home is built on them. No placeholder roles and no empty cards.",
-      "Home uses only data that already exists. Cards for tasks, the review queue, shifts and My Day are added in the weeks those features ship.",
+      "Home uses only data that already exists. Cards for tasks, the review queue, shifts and My Day are added as those features ship.",
       "Store rename (Admins only) and the session changes ship here too, because both need the role check.",
     ],
     flow: {

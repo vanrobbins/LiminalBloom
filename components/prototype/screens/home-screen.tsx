@@ -38,12 +38,12 @@ export function HomeScreen() {
         <Marker n={1} />
       </div>
       <Card title="Due soon" n={2}>
-        <Row icon={Calendar} main="Table 1 · Fall front table" side="Tomorrow" />
-        <Row icon={Calendar} main="Rack 2 · Knit story" side="Nov 14" />
+        <Row icon={Calendar} main="Front table · Fall story" side="Tomorrow" />
+        <Row icon={Calendar} main="Fitting room rack · Knit story" side="Nov 14" />
       </Card>
       <Card title="Drafts in progress" n={3}>
-        <Row icon={PencilLine} main="Wall bay 3 · 4 changes" side="Jordan, 2 h ago" />
-        <Row icon={PencilLine} main="Frame run A · 1 change" side="You, yesterday" />
+        <Row icon={PencilLine} main="Denim wall · 4 changes" side="Jordan, 2 h ago" />
+        <Row icon={PencilLine} main="Back wall run · 1 change" side="You, yesterday" />
       </Card>
       <Card title="Sold out, still on display" n={4}>
         <span className="flex items-center gap-2 text-ink">

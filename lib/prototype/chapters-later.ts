@@ -1,11 +1,10 @@
-// Chapters for Weeks 7–12 (planned, not built) and the closing architecture chapter.
+// Chapters for planned work (not built yet) and the closing architecture chapter.
 
 import type { Chapter } from "./types";
 
 export const CHAPTERS_LATER: Chapter[] = [
   {
     id: "quick-adjust",
-    week: "Week 7 · milestone",
     status: "planned",
     title: "Quick Adjust: the core loop",
     lede: "A product sells out. The app lists every display it leaves a gap in, suggests what fits, and lets the team fix it from a phone in under two minutes.",
@@ -29,9 +28,9 @@ export const CHAPTERS_LATER: Chapter[] = [
       },
     ],
     why: [
-      "This is the feature the project exists for. Week 7's milestone is a live demo of the loop on a phone: sold out, to a published adjustment, everyone sees it.",
+      "This is the feature the project exists for, and its milestone is a live demo of the loop on a phone: sold out, to a published adjustment, everyone sees it.",
       "An adjustment is a layer on top of the monthly planogram, not a replacement. When next month's planogram is published, adjustments are cleared or reviewed, so temporary fixes never quietly become the plan.",
-      "Week 7 also enforces the four roles on every feature: Sales Associates can mark status but not move products, VM Workers draft, VM Leads publish. The rules are checked by the server, not only hidden on screen.",
+      "The same milestone enforces the four roles on every feature: Sales Associates can mark status but not move products, VM Workers draft, VM Leads publish. The rules are checked by the server, not only hidden on screen.",
     ],
     flow: {
       title: "After a sellout",
@@ -46,12 +45,11 @@ export const CHAPTERS_LATER: Chapter[] = [
     underTheHood: [
       "A new `adjustments` table with draft, in review and published states, linked to the planogram version it adjusts.",
       "Open-space matching uses the grid that's already stored: the half-foot cells a placement covers tell exactly what a replacement must fit into.",
-      "Measured in Week 10: a sold-out product becomes a published adjustment in under 2 minutes.",
+      "Measured in the store test: a sold-out product becomes a published adjustment in under 2 minutes.",
     ],
   },
   {
-    id: "week-8",
-    week: "Week 8",
+    id: "review",
     status: "planned",
     title: "Review, sharing, price and bigger screens",
     lede: "The handoff between the people who draft and the people who publish, plus the extras that make the builder comfortable on a tablet or desk.",
@@ -86,8 +84,7 @@ export const CHAPTERS_LATER: Chapter[] = [
     ],
   },
   {
-    id: "week-9",
-    week: "Week 9",
+    id: "schedule",
     status: "planned",
     title: "Tasks, the VM schedule and My Day",
     lede: "Display work, assigned to the people scheduled to do it. Each person gets their day in time order, with every task's location attached.",
@@ -126,13 +123,12 @@ export const CHAPTERS_LATER: Chapter[] = [
     },
     underTheHood: [
       "Tables: `tasks`, `shifts`, `shift_tasks`, `roles`, `role_permissions`, `permission_changes`.",
-      "Shifts are shown in the store's time zone (added in Week 6), with a zone label only when your device is somewhere else.",
+      "Shifts are shown in the store's time zone, with a zone label only when your device is somewhere else.",
       "The scheduler's spec (11-01) builds it as a shared package so a standalone personal-schedule app can use it too. That app is new scope and waits for the course outline to be updated.",
     ],
   },
   {
-    id: "week-10",
-    week: "Week 10",
+    id: "store-test",
     status: "planned",
     title: "Testing with a real store",
     lede: "Two team members from a real store run the everyday flows on their own phones, without help, while the clock runs.",
@@ -144,7 +140,7 @@ export const CHAPTERS_LATER: Chapter[] = [
       },
       {
         title: "Sold out to published in under 2 minutes",
-        text: "The Week 7 loop, timed with a real VM Lead.",
+        text: "The Quick Adjust loop, timed with a real VM Lead.",
       },
       {
         title: "New product placed in under 2 minutes",
@@ -158,7 +154,7 @@ export const CHAPTERS_LATER: Chapter[] = [
     why: [
       "Every measure here was written into the proposal before any code, so the app is checked against what was promised, not against what got built.",
       "Device testing happens on a physical iPhone and tablet as well: a few things, like the safe area under the bottom tabs, only show up on real hardware.",
-      "Whatever the session turns up gets fixed in the rest of the week.",
+      "Whatever the session turns up gets fixed before the finish.",
     ],
     underTheHood: [
       "Already automated: the builder refuses every overlap and off-edge placement (unit tests); key screens work at 375, 820 and 1280 px (Playwright); one store can't read or decrypt another's data (database tests, mutation-checked).",
@@ -167,10 +163,9 @@ export const CHAPTERS_LATER: Chapter[] = [
   },
   {
     id: "finish",
-    week: "Weeks 11–12",
     status: "planned",
     title: "AI Auto-Build, polish and the presentation",
-    lede: "If time allows, a store connects its own AI provider and asks for a layout. Either way, the last weeks are polish, documentation and the final presentation.",
+    lede: "If time allows, a store connects its own AI provider and asks for a layout. Either way, the finish is polish, documentation and the final presentation.",
     screen: "ai-connection",
     points: [
       {
@@ -193,7 +188,7 @@ export const CHAPTERS_LATER: Chapter[] = [
     why: [
       "AI is a “Could” item: nice to have, cut first if time runs short. The app ships no shared AI account, so each store controls its provider, usage and bill.",
       "A VM Lead picks a fixture and products, adds guidance such as “colour block light to dark”, and the proposal appears on the builder grid to accept, edit or discard. Every AI result is checked for overlaps and fit before it's shown, exactly like a person's move.",
-      "Week 6.5 pushed the schedule back by a week, so the finish runs through Week 12: polish, documentation and the presentation.",
+      "The finish is polish, documentation and the presentation.",
     ],
     underTheHood: [
       "Tables: `ai_connections` (the key locked with the store's key, decrypted only on the server for one request) and `ai_build_requests` (a log of every request and result).",
@@ -202,7 +197,6 @@ export const CHAPTERS_LATER: Chapter[] = [
   },
   {
     id: "under-the-hood",
-    week: "Architecture",
     status: "about",
     title: "How a request travels",
     lede: "Every action takes the same path. Nothing reaches the database, files or an AI provider until the server has answered three questions.",

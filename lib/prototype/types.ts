@@ -1,4 +1,4 @@
-// The walkthrough's chapters (`/prototype`, branch feature/prototype-walkthrough).
+// The walkthrough's chapters (the index page on branch feature/prototype-walkthrough).
 // Each chapter is one screen of the app, drawn as a static mock, plus the
 // explanation beside it. Numbered points tie a spot on the mock to a line of text.
 
@@ -32,7 +32,6 @@ export type Point = {
 export type Chapter = {
   /** Used as the URL hash: ASCII letters, digits and hyphens. */
   id: string;
-  week: string;
   status: ChapterStatus;
   title: string;
   lede: string;

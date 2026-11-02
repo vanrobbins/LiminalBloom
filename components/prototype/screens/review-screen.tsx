@@ -1,4 +1,4 @@
-// The Week 8 review queue: waiting work, one opened with its actions,
+// The review queue: waiting work, one opened with its actions,
 // print and share, and the display's price averages.
 
 import { Printer, Share2 } from "lucide-react";
@@ -7,8 +7,8 @@ import { Marker } from "../marker";
 import { MockScreen } from "../mock/mock-screen";
 
 const WAITING = [
-  { what: "Wall bay 3 · Quick Adjust", who: "Jordan · 25 min ago" },
-  { what: "Frame run A · Draft", who: "Alex · yesterday" },
+  { what: "Denim wall · Quick Adjust", who: "Jordan · 25 min ago" },
+  { what: "Back wall run · Draft", who: "Alex · yesterday" },
 ];
 
 export function ReviewScreen() {
@@ -18,7 +18,7 @@ export function ReviewScreen() {
         3 waiting · oldest first <Marker n={1} />
       </span>
       <section className="flex flex-col gap-2 rounded-lg border border-brand bg-raised p-3">
-        <span className="text-sm font-semibold text-ink">Table 1 · Fall front table</span>
+        <span className="text-sm font-semibold text-ink">Front table · Fall story</span>
         <span className="text-xs text-ink-muted">Draft from Sam · 6 changes · due tomorrow</span>
         <span className="flex items-center gap-2">
           <span className="flex h-10 flex-1 items-center justify-center rounded bg-brand text-sm font-medium text-on-brand">Approve</span>

@@ -1,4 +1,4 @@
-// The Week 10 store test sheet: each promise from the proposal and its target.
+// The store test sheet: each promise from the proposal and its target.
 
 import { Timer } from "lucide-react";
 
@@ -15,7 +15,7 @@ const CHECKS = [
 export function ChecklistScreen() {
   return (
     <MockScreen title="Store test" tab="none">
-      <span className="text-xs text-ink-muted">Week 10 · two team members · no help given</span>
+      <span className="text-xs text-ink-muted">Two team members · no help given</span>
       <ol className="flex flex-col gap-2">
         {CHECKS.map((check, i) => (
           <li key={check.what} className="flex items-center gap-3 rounded-lg border border-line bg-raised p-3">

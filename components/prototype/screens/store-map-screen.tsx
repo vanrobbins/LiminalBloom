@@ -25,7 +25,7 @@ export function StoreMapScreen() {
           <rect x="44" y="170" width="54" height="36" className="fill-brand stroke-ink" strokeWidth="1.5" />
           <rect x="52" y="206" width="38" height="18" className="fill-surface stroke-ink" />
           <rect x="26" y="176" width="18" height="24" className="fill-surface stroke-ink" />
-          <text x="54" y="192" className="fill-on-brand text-[10px] font-medium">Table 1</text>
+          <text x="54" y="192" className="fill-on-brand text-[10px] font-medium">Front</text>
         </svg>
         <span className="absolute top-[5%] left-[30%]"><Marker n={1} /></span>
         <span className="absolute top-[62%] left-[38%]"><Marker n={2} /></span>
@@ -35,7 +35,7 @@ export function StoreMapScreen() {
         <span aria-hidden="true" className="mx-auto mb-2 block h-1 w-10 rounded-full bg-line" />
         <div className="mb-2 flex items-center justify-between">
           <span>
-            <span className="block text-sm font-semibold text-ink">Table 1</span>
+            <span className="block text-sm font-semibold text-ink">Front table</span>
             <span className="block text-xs text-ink-muted">Front tables · Published v4</span>
           </span>
           <Marker n={4} />

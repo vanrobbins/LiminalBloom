@@ -1,12 +1,11 @@
 // Chapters for what is already on main and live at liminalbloom.vanar.me
-// (Weeks 1–6), plus the opening chapter.
+// plus the opening chapter.
 
 import type { Chapter } from "./types";
 
 export const CHAPTERS_LIVE: Chapter[] = [
   {
     id: "welcome",
-    week: "Overview",
     status: "about",
     title: "Keep the floor matching the plan",
     lede: "Liminal Bloom is a phone-first app for retail store teams. It answers two questions all day long: where does this product go, and how should the display look now that stock has changed?",
@@ -31,8 +30,8 @@ export const CHAPTERS_LIVE: Chapter[] = [
     ],
     why: [
       "Most stores get a new planogram (a drawing of where each product goes on a fixture) once a month. Between releases the product keeps changing and the plan doesn't. Each person improvises, the floor drifts, and the stockroom stops agreeing with the floor about where things live.",
-      "The whole app is built around the loop on the right. Product search and Quick Adjust deliver it; the store map, planograms, roles and the scheduler exist to feed it. That is also the build order: the loop's pieces first (Weeks 1–7), team features next (Weeks 8–9), then testing with a real store and polish (Weeks 10–12).",
-      "How to read this walkthrough: each chapter is one screen. The phone on the right is a drawing of that screen, not the working app. Numbered dots on it match the numbered points in the text; tap either one to link them. Each chapter's label says whether it's live today, being built now (Week 6.5), or planned for a later week. Screens are drawn as the app will look once Week 6.5 is done, so Home already sits in the tabs.",
+      "The whole app is built around the loop on the right. Product search and Quick Adjust deliver it; the store map, planograms, roles and the scheduler exist to feed it. That is also the build order: the loop's pieces first, team features next, then testing with a real store and polish.",
+      "How to read this walkthrough: each chapter is one screen. The phone on the right is a drawing of that screen, not the working app. Numbered dots on it match the numbered points in the text; tap either one to link them. Each chapter's label says whether it's live today, being built now, or planned. Screens are drawn as the app will look once the current work is done, so Home already sits in the tabs.",
       "Use the arrow keys, the Back and Next buttons, or the chapter list to move around. Each chapter has its own link, so you can send someone straight to one.",
     ],
     underTheHood: [
@@ -44,7 +43,6 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "sign-in",
-    week: "Weeks 1–2",
     status: "live",
     title: "Getting in, and choosing a store",
     lede: "One account, several stores. Signing in opens the store you used last, and a single tap switches to another.",
@@ -56,7 +54,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
       },
       {
         title: "Keep me signed in",
-        text: "Coming with roles in Week 6.5. Leave it off on a shared store tablet and the session ends when the browser closes.",
+        text: "Coming with roles. Leave it off on a shared store tablet and the session ends when the browser closes.",
       },
       {
         title: "The current store",
@@ -77,7 +75,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
       steps: [
         "Create an account",
         "Name the store and pick its time zone",
-        "Land on Products (Home, once the dashboards ship in Week 6.5)",
+        "Land on Products (Home, once the dashboards ship)",
       ],
     },
     underTheHood: [
@@ -88,7 +86,6 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "store-map",
-    week: "Week 3",
     status: "live",
     title: "The store map",
     lede: "A to-scale drawing of the sales floor: the walls, the doors, the zones and every table, rack and wall bay. Everything else in the app points back to it.",
@@ -112,8 +109,8 @@ export const CHAPTERS_LIVE: Chapter[] = [
       },
     ],
     why: [
-      "A location only helps if people recognise it. “Rack 2” means something when you can see Rack 2 is the one by the fitting rooms.",
-      "Liminal Bloom's predecessor (Merch Mobile, a Flutter app) had a map that mixed up coordinate spaces, broke when things rotated, and had gestures that fought each other. This map was built with a guard for each of those bugs: one coordinate space (whole inches), one file that knows about rotation, and one gesture state machine where a press has exactly one outcome.",
+      "A location only helps if people recognise it. Fixtures carry the names the team already uses out loud, like “Denim wall”, “Front table” or “Fitting room rack”, and the map shows where each one stands.",
+      "Map editors tend to break in the same three ways: coordinate spaces get mixed up, rotation breaks tapping and resizing, and gestures fight each other. This map was built with a guard against each: one coordinate space (whole inches), one file that knows about rotation, and one gesture state machine where a press has exactly one outcome.",
       "Viewing the map lives inside the app; editing it opens full screen at /layout/edit, because drawing walls on a phone needs every pixel.",
     ],
     flow: {
@@ -134,7 +131,6 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "products",
-    week: "Week 4 · merged in 6.5",
     status: "live",
     title: "Products: search and catalog in one place",
     lede: "One screen finds any product in seconds and manages the catalog. It is the first thing a Sales Associate needs, so it's where sign-in lands until Home ships.",
@@ -162,7 +158,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
       },
     ],
     why: [
-      "Until Week 6.5 there were two screens, Products and Search, that both listed products. The instructor's feedback was that they overlapped and confused people, so they merge into one Products screen. The /search address keeps working and forwards to it.",
+      "There used to be two screens, Products and Search, that both listed products. The instructor's feedback was that they overlapped and confused people, so they merge into one Products screen. The /search address keeps working and forwards to it.",
       "Cards lead with location because the question on the floor is almost always “where is it?”, not “what is it?”. The photo and name confirm you've found the right thing; the location is what you came for.",
       "Show more keeps the page light on store Wi-Fi. Refreshing goes back to the first 30, which is predictable and cheap.",
       "Status changes save immediately and offer Undo. If another device changed the same product a moment earlier, the change is refused and the card shows the current status rather than silently overwriting it.",
@@ -176,7 +172,6 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "locator",
-    week: "Weeks 4–6",
     status: "live",
     title: "Find a product: the location sheet",
     lede: "Tap a product and a sheet slides up with everything needed to walk to it: where on the map, where on the fixture, and how it should be presented.",
@@ -192,7 +187,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
       },
       {
         title: "In words and feet",
-        text: "“Rack 2 · Top rail · 2–3½ ft from left”. People on the floor measure with their hands and eyes, not with grid codes.",
+        text: "“Fitting room rack · Top rail · 2–3½ ft from left”. People on the floor measure with their hands and eyes, not with grid codes.",
       },
       {
         title: "The fixture's face",
@@ -205,7 +200,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
     ],
     why: [
       "The success measure is that anyone finds a product's spot on a phone in under 10 seconds. Everything on the sheet serves that, in the order you need it: is it in stock, which fixture, which part of the fixture.",
-      "Early versions named spots with grid codes like “A4”. In Week 6 they became words and feet, because that's how people describe a spot out loud. Lower tables are read the way you see them standing at the outer edge, so left and right never flip on you.",
+      "Early versions named spots with grid codes like “A4”. They became words and feet, because that's how people describe a spot out loud. Lower tables are read the way you see them standing at the outer edge, so left and right never flip on you.",
       "On a phone the sheet slides up from the bottom; on tablet and desktop the same content sits in a side panel next to the results.",
     ],
     flow: {
@@ -213,7 +208,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
       steps: [
         "Type “high-rise pant”",
         "Filter by colour",
-        "Read “Wall bay 3 · Middle shelf · 2–3 ft from left · Folded · In stock”",
+        "Read “Denim wall · Middle shelf · 2–3 ft from left · Folded · In stock”",
         "Open the planogram with its space highlighted",
       ],
     },
@@ -224,7 +219,6 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "planograms",
-    week: "Weeks 5–6",
     status: "live",
     title: "Planograms and the builder",
     lede: "Every fixture has one planogram: a grid drawn to the half foot, where each product takes up real space. Lay it out on a phone, then publish it to the team.",

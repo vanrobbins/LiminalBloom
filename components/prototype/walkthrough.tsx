@@ -72,8 +72,6 @@ export function Walkthrough() {
               <span className="font-mono">
                 {index + 1} / {CHAPTERS.length}
               </span>
-              <span aria-hidden="true">·</span>
-              {chapter.week}
               {chapter.status === "about" ? null : <StatusTag status={chapter.status} />}
             </p>
             <h1 ref={heading} tabIndex={-1} className="text-3xl font-semibold tracking-tight text-ink outline-none md:text-4xl">

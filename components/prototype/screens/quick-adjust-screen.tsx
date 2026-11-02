@@ -24,7 +24,7 @@ export function QuickAdjustScreen() {
         <Marker n={1} />
       </span>
       <span className="flex items-center justify-between text-xs font-medium text-ink">
-        Wall bay 3 · Bottom shelf <Marker n={2} />
+        Denim wall · Bottom shelf <Marker n={2} />
       </span>
       <span className="text-[0.625rem] text-ink-muted">Original</span>
       <MockGrid cols={10} rows={1} rowHeight="2.25rem" tiles={[...BASE, { label: "Sold out: Straight", col: 3, row: 0, w: 4, h: 1, tone: 0, look: "gap" }]} />

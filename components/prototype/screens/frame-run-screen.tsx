@@ -21,7 +21,7 @@ function Rack({ x, y, vertical }: { x: number; y: number; vertical?: boolean }) 
 
 export function FrameRunScreen() {
   return (
-    <MockScreen title="Frame run A" tab="planograms">
+    <MockScreen title="Back wall run" tab="planograms">
       <div className="relative rounded-lg border border-line bg-raised">
         <svg viewBox="0 0 260 150" aria-hidden="true" className="w-full">
           <rect x="16" y="16" width="40" height="40" className="fill-line-subtle stroke-line" />
@@ -50,7 +50,7 @@ export function FrameRunScreen() {
         ]}
       />
       <span className="flex justify-between text-[0.625rem] text-ink-muted">
-        <span>Frame rack 1</span><span>Frame rack 2</span><span>Frame rack 3</span>
+        <span>Left frame</span><span>Middle frame</span><span>Right frame</span>
       </span>
       <span className="mt-auto flex items-center gap-2">
         <span className="flex flex-1 items-center justify-between rounded-lg bg-ink px-3 py-2 text-xs text-surface">

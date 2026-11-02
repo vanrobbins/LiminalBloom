@@ -13,6 +13,13 @@ describe("walkthrough chapters", () => {
     expect(CHAPTERS.filter((chapter) => chapter.points.length === 0)).toEqual([]);
   });
 
+  it("never names a project week or a numbered fixture, only places a team would say", () => {
+    const text = JSON.stringify(CHAPTERS);
+    expect(text).not.toMatch(/\bweeks? \d/i);
+    // Case matters: "which rack a product hangs on" is fine, "Rack 2" is not.
+    expect(text).not.toMatch(/\b(Rack|Wall bay|Table|Frame run|Frame rack) [0-9A-Z]\b/);
+  });
+
   it("finds a chapter by its hash, with or without the #", () => {
     expect(chapterIndex("#store-map")).toBe(chapterIndex("store-map"));
     expect(CHAPTERS[chapterIndex("#store-map")].id).toBe("store-map");

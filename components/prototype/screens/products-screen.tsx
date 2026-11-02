@@ -1,4 +1,4 @@
-// Products after the Week 6.5 merge: one search box, the count, and
+// Products after the merge: one search box, the count, and
 // location-first cards.
 
 import { Check, Ellipsis, MapPin, Percent, Plus, Search, X } from "lucide-react";
@@ -7,8 +7,8 @@ import { Marker } from "../marker";
 import { MockScreen } from "../mock/mock-screen";
 
 const CARDS = [
-  { name: "High-Rise Pant", style: "HRP-01", where: "Wall bay 3 · Middle · 2–3 ft from left", status: "ok", tone: "bg-zone-2" },
-  { name: "High-Rise Short", style: "HRS-04", where: "Table 1 · Front · ½–1½ ft from left", status: "sale", tone: "bg-zone-6" },
+  { name: "High-Rise Pant", style: "HRP-01", where: "Denim wall · Middle shelf · 2–3 ft from left", status: "ok", tone: "bg-zone-2" },
+  { name: "High-Rise Short", style: "HRS-04", where: "Front table · ½–1½ ft from left", status: "sale", tone: "bg-zone-6" },
   { name: "Rise Wide-Leg Jean", style: "RWJ-02", where: "Not placed", status: "out", tone: "bg-zone-5" },
 ] as const;
 

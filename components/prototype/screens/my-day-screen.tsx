@@ -1,4 +1,4 @@
-// My Day (Week 9): VM blocks in time order, the current one open with its
+// My Day: VM blocks in time order, the current one open with its
 // tasks and their locations.
 
 import { Check } from "lucide-react";
@@ -7,8 +7,8 @@ import { Marker } from "../marker";
 import { MockScreen } from "../mock/mock-screen";
 
 const TASKS = [
-  { what: "Refold straight denim", where: "Wall bay 3 · Bottom shelf", done: true },
-  { what: "Set wide-leg into the gap", where: "Wall bay 3 · 1½–3½ ft", done: false },
+  { what: "Refold straight denim", where: "Denim wall · Bottom shelf", done: true },
+  { what: "Set wide-leg into the gap", where: "Denim wall · 1½–3½ ft from left", done: false },
 ];
 
 export function MyDayScreen() {
@@ -51,7 +51,7 @@ export function MyDayScreen() {
       </div>
       <span className="flex gap-3 text-xs text-ink-muted">
         <span className="w-10 font-mono">2:00</span>
-        <span className="flex-1 rounded-lg border border-line px-3 py-2">Front table reset · Table 1</span>
+        <span className="flex-1 rounded-lg border border-line px-3 py-2">Front table reset</span>
       </span>
       <section className="mt-auto flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink">
         Not yet scheduled · 2 tasks <Marker n={4} />

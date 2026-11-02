@@ -1,33 +1,39 @@
-// The home page. Next.js turns any `page.tsx` file into a route --
-// this one sits at app/page.tsx, so it is the site root: "/".
-// Save this file while `npm run dev` is running and the browser updates itself.
-//
-// One page for two visitors (DECISIONS 11-02): a store team signing in, and a
-// store deciding whether to use the app. The ways in come first; the scroll
-// explains the product. A server component: only the theme toggle runs in the browser.
+// The index page on the feature/prototype-walkthrough branch: a guided
+// walkthrough of the app instead of the landing page. This branch is never
+// merged (DECISIONS 11-02). Public and static: no sign-in, no database.
 
 import type { Metadata } from "next";
 
-import { CornerThemeToggle } from "@/components/corner-theme-toggle";
-import { ClosingSection } from "@/components/landing/closing-section";
-import { FeatureList } from "@/components/landing/feature-list";
-import { LandingHero } from "@/components/landing/landing-hero";
-import { PlanSection } from "@/components/landing/plan-section";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Walkthrough } from "@/components/prototype/walkthrough";
 
 export const metadata: Metadata = {
-  title: "Liminal Bloom: find any product on the floor",
-  description:
-    "Store maps, product photos, planograms and search for retail store teams, on the phone in their pocket.",
+  title: "Liminal Bloom: prototype walkthrough",
+  description: "Every screen of Liminal Bloom, explained: what's live, what's being built and what's planned.",
 };
 
 export default function Home() {
   return (
-    <main className="flex-1 bg-surface">
-      <CornerThemeToggle />
-      <LandingHero />
-      <PlanSection />
-      <FeatureList />
-      <ClosingSection />
-    </main>
+    <div className="flex-1 bg-surface">
+      <div className="border-b border-line-subtle">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 md:px-8">
+          <span className="flex items-center gap-2">
+            <span aria-hidden="true" className="size-4 rounded-full bg-brand" />
+            <span className="font-semibold tracking-tight text-ink">Liminal Bloom</span>
+            <span className="hidden text-ink-muted sm:inline">· Prototype walkthrough</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <a
+              href="https://liminalbloom.vanar.me"
+              className="hidden min-h-11 items-center px-2 text-brand-strong underline underline-offset-4 md:inline-flex"
+            >
+              Open the live app
+            </a>
+            <ThemeToggle />
+          </span>
+        </div>
+      </div>
+      <Walkthrough />
+    </div>
   );
 }

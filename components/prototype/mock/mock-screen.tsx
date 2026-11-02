@@ -1,5 +1,5 @@
 // The app's phone chrome, drawn: a header with the store line and title, the
-// content, and the bottom tabs as they stand once Home ships (Week 6.5).
+// content, and the bottom tabs as they stand once Home ships.
 
 import { House, LayoutGrid, Map, Search, User } from "lucide-react";
 

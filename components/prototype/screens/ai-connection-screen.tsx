@@ -1,4 +1,4 @@
-// Store settings' AI connection (Weeks 11–12, if time allows): provider,
+// Store settings' AI connection (if time allows): provider,
 // masked key, usage, and a disabled AI button elsewhere until it's connected.
 
 import { KeyRound, Lock, Sparkles } from "lucide-react";

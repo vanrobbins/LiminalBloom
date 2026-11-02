@@ -1,4 +1,4 @@
-// The product form's Week 6.5 sections: space in words with a drawing,
+// The product form's new sections: space in words with a drawing,
 // inherited from the category, size chips, swatch and texture.
 
 import { Marker } from "../marker";

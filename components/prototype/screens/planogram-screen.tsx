@@ -9,7 +9,7 @@ import { MockScreen } from "../mock/mock-screen";
 
 export function PlanogramScreen() {
   return (
-    <MockScreen title="Rack 2" tab="planograms">
+    <MockScreen title="Fitting room rack" tab="planograms">
       <span className="flex items-center gap-2">
         <span className="inline-flex rounded-lg border border-line p-0.5 text-xs">
           <span className="flex items-center gap-1 rounded-md bg-brand px-3 py-1.5 font-semibold text-on-brand">

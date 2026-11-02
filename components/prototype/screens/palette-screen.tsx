@@ -8,7 +8,7 @@ import { MockScreen } from "../mock/mock-screen";
 
 const GROUPS = [
   { name: "Products", items: ["Linen tee", "Linen shirt"] },
-  { name: "Planograms", items: ["Linen wall · Wall bay 1"] },
+  { name: "Planograms", items: ["Linen story · Window wall"] },
   { name: "Zones", items: ["Linen shop"] },
 ];
 

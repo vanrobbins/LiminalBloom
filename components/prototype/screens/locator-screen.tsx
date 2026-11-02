@@ -35,7 +35,7 @@ export function LocatorScreen() {
           </svg>
           <Marker n={2} />
           <span className="flex flex-col gap-0.5 text-xs">
-            <span className="font-medium text-ink">Wall bay 3 · Middle shelf</span>
+            <span className="font-medium text-ink">Denim wall · Middle shelf</span>
             <span className="text-ink-muted">2–3 ft from left · Folded</span>
             <Marker n={3} />
           </span>
