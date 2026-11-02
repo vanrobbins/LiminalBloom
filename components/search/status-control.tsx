@@ -46,8 +46,19 @@ export function StatusControl({ product, onChanged }: { product: ProductRow; onC
     });
   }
 
+  // Arrows move focus only; Space or Enter chooses. Every choice saves at once,
+  // so arrowing must not save three times on the way (DECISIONS, plan D5).
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const radios = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')];
+    const at = radios.indexOf(document.activeElement as HTMLButtonElement);
+    radios[(at + step + radios.length) % radios.length]?.focus();
+  }
+
   return (
-    <div role="radiogroup" aria-label="Status" className="grid grid-cols-3 gap-1 rounded-lg border border-line-subtle bg-surface p-1">
+    <div role="radiogroup" aria-label="Status" onKeyDown={onKeyDown} className="grid grid-cols-3 gap-1 rounded-lg border border-line-subtle bg-surface p-1">
       {PRODUCT_STATUSES.map((status) => {
         const { label, icon: Icon } = PRODUCT_STATUS[status];
         const isChecked = product.status === status;
@@ -57,9 +68,11 @@ export function StatusControl({ product, onChanged }: { product: ProductRow; onC
             type="button"
             role="radio"
             aria-checked={isChecked}
-            disabled={isSaving}
+            tabIndex={isChecked ? 0 : -1}
+            // Not `disabled`: that would drop keyboard focus mid-save. choose() ignores taps meanwhile.
+            aria-disabled={isSaving}
             onClick={() => void choose(status)}
-            className={`flex min-h-11 items-center justify-center gap-1.5 rounded-md text-sm ${isChecked ? "bg-raised font-semibold text-ink shadow-sm" : "text-ink-muted"}`}
+            className={`flex min-h-11 items-center justify-center gap-1.5 rounded-md text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${isChecked ? "bg-raised font-semibold text-ink shadow-sm" : "text-ink-muted"}`}
           >
             <Icon aria-hidden="true" strokeWidth={1.75} className="size-4" />
             {label}

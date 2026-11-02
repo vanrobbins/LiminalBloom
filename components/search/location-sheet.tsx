@@ -41,7 +41,13 @@ export function LocationSheet({ result, layout, onClose, onChanged }: LocationSh
   }
   if (!result) return null;
   return (
-    <aside aria-label={result.name} className="sticky top-6 flex max-h-[calc(100dvh-3rem)] flex-col gap-4 overflow-y-auto rounded-lg border border-line-subtle bg-raised p-5">
+    <aside
+      aria-label={result.name}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onClose();
+      }}
+      className="sticky top-6 flex max-h-[calc(100dvh-3rem)] flex-col gap-4 overflow-y-auto rounded-lg border border-line-subtle bg-raised p-5"
+    >
       <div className="flex items-start justify-between gap-3">
         <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold tracking-tight text-ink break-words outline-none">
           {result.name}

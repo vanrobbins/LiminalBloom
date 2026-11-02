@@ -13,13 +13,13 @@ const base: SearchResult = {
 const floor = (id: string, label: string) => ({ id, productId: "p1", presentation: "hung" as const, label, detail: "", floor: null });
 
 describe("SearchResults", () => {
-  it("shows each product's first place, presentation and how many more", async () => {
+  it("shows each product's first place and how many more", async () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();
     render(<SearchResults results={[{ ...base, locations: [floor("l1", "Wall bay 3 · Left · Top rail"), floor("l2", "Rack 1 · Back · Center"), floor("l3", "Stockroom, bin B-12")] }]} query="pant" hasFilters={false} onOpen={onOpen} onClear={() => {}} />);
     const row = screen.getByRole("button", { name: /High-Rise Pant/ });
-    expect(within(row).getByText("Wall bay 3 · Left · Top rail · Hung")).toBeInTheDocument();
-    expect(within(row).getByText("+2 more")).toBeInTheDocument();
+    expect(within(row).getByText("Wall bay 3 · Left · Top rail")).toBeInTheDocument();
+    expect(row).toHaveTextContent("+2 more");
     await user.click(row);
     expect(onOpen).toHaveBeenCalledWith("p1");
   });

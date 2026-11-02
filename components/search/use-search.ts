@@ -12,9 +12,10 @@ import { toSearchParams } from "@/lib/products/search-params";
 
 export const DEBOUNCE_MS = 150;
 
-export function useSearch(initial: SearchInput, initialResults: SearchResult[]) {
+export function useSearch(initial: SearchInput, initialResults: SearchResult[], initialTotal: number) {
   const [input, setInput] = useState(initial);
   const [results, setResults] = useState(initialResults);
+  const [total, setTotal] = useState(initialTotal);
   const [isPending, setIsPending] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,7 +30,10 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[]) 
     try {
       const found = await runSearch(next);
       if (ticket !== latest.current) return;
-      if (found) setResults(found);
+      if (found) {
+        setResults(found.results);
+        setTotal(found.total);
+      }
       setIsOffline(false);
     } catch {
       if (ticket === latest.current) setIsOffline(true);
@@ -54,5 +58,5 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[]) 
     setResults((list) => list.map((r) => (r.id === product.id ? { ...r, ...product } : r)));
   }
 
-  return { input, results, isPending, isOffline, update, patchProduct };
+  return { input, results, total, isPending, isOffline, update, patchProduct };
 }

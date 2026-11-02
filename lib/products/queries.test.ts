@@ -105,8 +105,23 @@ describe("locations", () => {
     const [floor] = await locationsFor(a, [fa.productId]);
     expect(floor).toMatchObject({ label: "Front table 1 · Left · Middle", detail: "0–1 ft from left · 0–2 ft from back", presentation: "folded" });
     expect(floor.floor).toEqual({ fixtureId: fa.fixtureId, faceId: fa.faceId, grid: { columns: 6, rows: 3 }, cells: { col: 0, row: 0, colSpan: 2, rowSpan: 2 } });
-    const results = await search(a, input({ q: "rise tee" }));
+    const { results } = await search(a, input({ q: "rise tee" }));
     expect(results[0].locations[0]).toMatchObject({ label: "Stockroom, bin B-12", floor: null });
+  });
+
+  it("counts every match, not just the page shown", async () => {
+    const page = await search(a, input({ q: "" }), 1);
+    expect(page.results).toHaveLength(1);
+    expect(page.total).toBeGreaterThan(1);
+  });
+
+  it("counts only the matches of a filtered search, not every product", async () => {
+    const byText = await search(a, input({ q: "tees" }), 1);
+    expect(byText.results).toHaveLength(1);
+    expect(byText.total).toBe(2);
+    const byStatus = await search(a, input({ statuses: ["in_stock"] }), 1);
+    expect(byStatus.results).toHaveLength(1);
+    expect(byStatus.total).toBe(2);
   });
 
   it("reads a back lower table from its outer edge, and keeps the stored cells for the grid", async () => {

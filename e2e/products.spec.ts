@@ -31,7 +31,7 @@ test("tapping a product opens its edit page", async ({ page }, testInfo) => {
 
 test("the filter narrows the list", async ({ page }) => {
   await page.goto("/products");
-  const first = (await page.getByRole("main").getByRole("list").getByRole("link").first().locator("span span").first().textContent())!.trim();
+  const first = (await page.locator("[data-product-card] [data-product-name]").first().textContent())!.trim();
   await page.getByLabel("Filter products").fill(first);
   await page.getByLabel("Filter products").press("Enter");
   await expect(page).toHaveURL(/\?q=/);

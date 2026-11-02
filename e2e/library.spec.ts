@@ -68,7 +68,8 @@ test("adds a product with a photo, finds it, and deletes it", async ({ page }) =
   await page.getByLabel("Filter products").fill(name);
   await page.getByLabel("Filter products").press("Enter");
   const row = page.getByRole("main").getByRole("link", { name: new RegExp(name) });
-  const image = row.getByRole("img", { name });
+  // The card's photo is decorative (empty alt): the link's own name already says what it is.
+  const image = row.locator("img");
   await expect(image).toBeVisible();
   await expect(image).toHaveAttribute("src", /\/api\/images\//);
   // The real resize ran: what was stored is within 1200 px, not the 2400 px original.

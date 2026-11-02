@@ -31,6 +31,13 @@ export function toSearchParams(input: SearchInput): URLSearchParams {
   return params;
 }
 
+/** "30 of 47 products" when Search caps the list, else "2 products" (P3.3). */
+export function resultCount(shown: number, total: number): string {
+  const noun = total === 1 ? "product" : "products";
+  const all = total.toLocaleString("en-US");
+  return shown < total ? `${shown} of ${all} ${noun}` : `${all} ${noun}`;
+}
+
 export function hasFilters(input: SearchInput): boolean {
   return input.categoryIds.length + input.colors.length + input.statuses.length + input.places.length > 0;
 }

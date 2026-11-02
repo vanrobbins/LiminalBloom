@@ -1,11 +1,10 @@
-// Each result names its place in words (§3.2 items 4–6), hung or
-// folded, and status as a word with an icon.
+// Search results as location-first cards (Part 2 spec §6); the empty state
+// says why nothing matched.
 
-import { ProductImage } from "@/components/products/product-image";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 import type { SearchResult } from "@/lib/products/queries";
+
+import { SearchCard } from "./search-card";
 
 type SearchResultsProps = {
   results: SearchResult[];
@@ -16,11 +15,6 @@ type SearchResultsProps = {
   onOpen: (productId: string) => void;
   onClear: () => void;
 };
-
-// §5.5: gold marks the current selection, as a bar at the row's edge so the
-// status pill never sits on gold. Open and closed never share a class.
-const OPEN = "bg-surface shadow-[inset_4px_0_0_var(--color-brand)]";
-const CLOSED = "bg-raised";
 
 export function SearchResults({ results, openId = null, query, hasFilters, onOpen, onClear }: SearchResultsProps) {
   if (results.length === 0) {
@@ -39,40 +33,16 @@ export function SearchResults({ results, openId = null, query, hasFilters, onOpe
   }
 
   return (
-    <ul className="mt-4 flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
-      {results.map((r) => {
-        const [first, ...rest] = r.locations;
-        return (
+    // Two columns follow this column's width, not the viewport's: an open panel
+    // narrows it, and a card needs about 300 px for the name beside the badge.
+    <div className="@container mt-4">
+      <ul className="grid gap-3 @2xl:grid-cols-2">
+        {results.map((r) => (
           <li key={r.id}>
-            <button
-              type="button"
-              data-result-id={r.id}
-              aria-current={r.id === openId ? "true" : undefined}
-              onClick={() => onOpen(r.id)}
-              className={`flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${r.id === openId ? OPEN : CLOSED}`}
-            >
-              <ProductImage productId={r.id} name={r.name} categoryName={r.categoryName} imageKey={r.imageKey} />
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="font-medium text-ink break-words">{r.name}</span>
-                <span className="text-sm text-ink-muted">
-                  {r.styleNumber} · {r.color}
-                </span>
-                {first ? (
-                  <span className="flex flex-wrap gap-x-2 text-sm font-semibold text-ink">
-                    <span>
-                      {first.label} · {PRESENTATION_LABEL[first.presentation]}
-                    </span>
-                    {rest.length > 0 ? <span className="font-sans font-normal text-ink-muted">+{rest.length} more</span> : null}
-                  </span>
-                ) : (
-                  <span className="text-sm text-ink-muted">Not placed</span>
-                )}
-              </span>
-              <StatusBadge status={r.status} />
-            </button>
+            <SearchCard result={r} isOpen={r.id === openId} onOpen={onOpen} />
           </li>
-        );
-      })}
-    </ul>
+        ))}
+      </ul>
+    </div>
   );
 }

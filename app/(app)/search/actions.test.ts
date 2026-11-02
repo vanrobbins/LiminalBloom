@@ -6,7 +6,7 @@ vi.mock("@/lib/products/queries", () => ({ search: fake.search }));
 
 import { runSearch } from "./actions";
 
-beforeEach(() => fake.search.mockReset().mockResolvedValue([]));
+beforeEach(() => fake.search.mockReset().mockResolvedValue({ results: [], total: 0 }));
 
 describe("runSearch", () => {
   it("searches the session's store with the parsed input", async () => {

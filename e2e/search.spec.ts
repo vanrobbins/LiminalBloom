@@ -13,13 +13,15 @@ async function openPant(page: import("@playwright/test").Page) {
   await page.goto("/search");
   await page.getByRole("main").getByLabel("Search products").fill("e2e hi rise pnt");
   const row = results(page).getByRole("button", { name: /E2E High-Rise Pant/ });
-  await expect(row).toContainText("Table 1 · Left · Middle · Folded");
+  await expect(row).toContainText("Table 1 · Left · Middle");
+  await expect(row).toContainText("Folded · 0–2 ft from left · 0–2 ft from back");
   await row.click();
 }
 
 test("finds a product through a typo and shows exactly where it goes", async ({ page }) => {
   await openPant(page);
-  await expect(page.getByText("Table 1 · Left · Middle", { exact: true })).toBeVisible();
+  // The card in the list says it too; the sheet or panel is the later one.
+  await expect(page.getByText("Table 1 · Left · Middle", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("0–2 ft from left · 0–2 ft from back", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Table 1 · Left · Middle, 0–2 ft from left · 0–2 ft from back" })).toBeVisible();
   await expect(page.getByText("Table 1, highlighted on the store map")).toBeVisible();

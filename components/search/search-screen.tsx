@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import type { Layout } from "@/lib/layout/types";
 import type { SearchResult } from "@/lib/products/queries";
 import type { SearchInput } from "@/lib/products/schemas";
-import { hasFilters } from "@/lib/products/search-params";
+import { hasFilters, resultCount } from "@/lib/products/search-params";
 
 import { LocationSheet } from "./location-sheet";
 import { SearchFilters } from "./search-filters";
@@ -23,10 +23,11 @@ type SearchScreenProps = {
   categories: { id: string; name: string }[];
   colors: string[];
   layout: Layout;
+  initialTotal?: number;
 };
 
-export function SearchScreen({ initial, initialResults, categories, colors, layout }: SearchScreenProps) {
-  const { input, results, isPending, isOffline, update, patchProduct } = useSearch(initial, initialResults);
+export function SearchScreen({ initial, initialResults, categories, colors, layout, initialTotal = initialResults.length }: SearchScreenProps) {
+  const { input, results, total, isPending, isOffline, update, patchProduct } = useSearch(initial, initialResults, initialTotal);
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [openId, setOpenId] = useState<string | null>(null);
   const open = results.find((r) => r.id === openId) ?? null;
@@ -38,7 +39,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
   function close() {
     setOpenId(null);
     // The phone's sheet is a dialog and gives focus back itself; the side panel
-    // is not, so focus goes back to the row it came from.
+    // is not, so focus goes back to the card it came from.
     if (!isPhone && openId) document.querySelector<HTMLElement>(`[data-result-id="${openId}"]`)?.focus();
   }
 
@@ -63,7 +64,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
         </form>
         <SearchFilters input={input} categories={categories} colors={colors} onChange={update} />
         <p className="mt-4 min-h-6 text-sm text-ink-muted" aria-live="polite">
-          {isOffline ? "You're offline. These are the last results." : isPending ? "Searching…" : `${results.length} ${results.length === 1 ? "product" : "products"}`}
+          {isOffline ? "You're offline. These are the last results." : isPending ? "Searching…" : resultCount(results.length, total)}
         </p>
         <SearchResults results={results} openId={open?.id ?? null} query={input.q} hasFilters={hasFilters(input)} onOpen={setOpenId} onClear={clear} />
       </div>

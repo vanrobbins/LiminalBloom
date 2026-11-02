@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function SearchPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { activeStoreId } = await requireMember();
   const initial = fromSearchParams(await searchParams);
-  const [results, categories, colors, layout] = await Promise.all([
+  const [page, categories, colors, layout] = await Promise.all([
     search(activeStoreId, initial),
     listCategories(activeStoreId),
     listColors(activeStoreId),
@@ -26,7 +26,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     <SearchScreen
       key={toSearchParams(initial).toString()}
       initial={initial}
-      initialResults={results}
+      initialResults={page.results}
+      initialTotal={page.total}
       categories={categories.map(({ id, name }) => ({ id, name }))}
       colors={colors}
       layout={layout}

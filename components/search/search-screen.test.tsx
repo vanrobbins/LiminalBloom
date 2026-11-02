@@ -40,6 +40,11 @@ describe("SearchScreen result rendering", () => {
     expect(screen.getByText("2 products")).toBeInTheDocument();
   });
 
+  it("says how many of how many when Search shows only the first page", () => {
+    renderScreen({ initialTotal: 47 });
+    expect(screen.getByText("2 of 47 products")).toBeInTheDocument();
+  });
+
   it("shows singular product for count of 1", () => {
     render(<SearchScreen initial={searchInput.parse({ q: "p" })} initialResults={[pant]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
     expect(screen.getByText("1 product")).toBeInTheDocument();
@@ -97,7 +102,7 @@ describe("SearchScreen focus and panel management", () => {
 
   it("forgets the open product when search leaves it out", async () => {
     const user = userEvent.setup();
-    actions.runSearch.mockResolvedValueOnce([pant]).mockResolvedValueOnce([pant, tee]);
+    actions.runSearch.mockResolvedValueOnce({ results: [pant], total: 1 }).mockResolvedValueOnce({ results: [pant, tee], total: 2 });
     renderScreen();
     await user.click(screen.getByRole("button", { name: /Pocket Tee/ }));
     const box = screen.getByRole("searchbox", { name: "Search products" });
@@ -110,5 +115,16 @@ describe("SearchScreen focus and panel management", () => {
     await act(async () => {});
     expect(screen.queryByRole("complementary", { name: "Pocket Tee" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Pocket Tee/ })).not.toHaveAttribute("aria-current");
+  });
+
+  it("on tablet and desktop, opening a card moves focus into the panel, and Escape brings it back (P3.4)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const card = screen.getByRole("button", { name: /High-Rise Pant/ });
+    await user.click(card);
+    expect(screen.getByRole("heading", { level: 2, name: "High-Rise Pant" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("complementary", { name: "High-Rise Pant" })).toBeNull();
+    expect(card).toHaveFocus();
   });
 });

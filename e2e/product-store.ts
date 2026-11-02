@@ -48,6 +48,22 @@ export async function seedCatalog(): Promise<void> {
     values (${store}, ${pant.id}, 'folded', ${face.id}, 0, 0, 4, 2)`;
 }
 
+/**
+ * Adds `E2E Card 1..count` to the library, enough to fill a row of cards on any
+ * screen. Run seedCatalog() first, which removes them again (they sit in an
+ * `E2E ` category).
+ */
+export async function seedCardProducts(count = 6): Promise<void> {
+  const db = sql();
+  const store = await homeStoreId();
+  const [cards] = await db`insert into product_categories (store_id, name) values (${store}, 'E2E Cards') returning id`;
+  for (let n = 1; n <= count; n++) {
+    await db`
+      insert into products (store_id, name, style_number, category_id, color)
+      values (${store}, ${`E2E Card ${n}`}, ${`E2E-CARD-${n}`}, ${cards.id}, 'Sand')`;
+  }
+}
+
 /** Puts the E2E products back to in stock, for a test that changed one. */
 export async function resetE2eStatus(): Promise<void> {
   const store = await homeStoreId();
