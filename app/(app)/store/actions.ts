@@ -15,7 +15,8 @@ const PICK = "Choose a time zone from the list.";
 export async function saveTimezoneAction(timezone: unknown, expectedVersion: unknown): Promise<SettingsReply> {
   const { user, activeStoreId } = await requireMember();
   const zone = z.string().safeParse(timezone);
-  const version = z.int().min(1).safeParse(expectedVersion);
+  // 0 = the store has no settings row yet (lib/store-settings.ts makes it).
+  const version = z.int().min(0).safeParse(expectedVersion);
   if (!zone.success || !version.success) return { status: "refused", message: PICK };
   const outcome = await setStoreTimezone(activeStoreId, user.id, zone.data, version.data);
   switch (outcome.status) {

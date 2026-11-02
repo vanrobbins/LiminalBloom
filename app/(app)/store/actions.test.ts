@@ -36,6 +36,13 @@ describe("saveTimezoneAction", () => {
     expect(await saveTimezoneAction("America/Denver", 1)).toEqual({ status: "saved", message: "Time zone saved" });
   });
 
+  it("makes the settings row for the owner of a store that has none (version 0)", async () => {
+    await db.delete(storeSettings).where(eq(storeSettings.storeId, store));
+    await joinAs("owner");
+    expect(await saveTimezoneAction("America/Denver", 0)).toEqual({ status: "saved", message: "Time zone saved" });
+    expect(await saveTimezoneAction("America/Chicago", -1)).toEqual({ status: "refused", message: "Choose a time zone from the list." });
+  });
+
   it("refuses a member, an unknown zone, and a stale page, each in words", async () => {
     await joinAs("member");
     expect(await saveTimezoneAction("America/Denver", 1)).toEqual({ status: "refused", message: "Only the store's owner or admins can change this." });
