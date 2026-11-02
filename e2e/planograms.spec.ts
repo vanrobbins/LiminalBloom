@@ -40,36 +40,56 @@ async function tapTableOnMap(page: Page) {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
-async function addTee(page: Page, fromLeft: string, fromBack = "0") {
+/** The draft's own status line: toasts are role="status" too. */
+const saved = (page: Page) => expect(page.locator("[data-draft-status]")).toHaveText("Saved");
+
+/** Add places the tee at the first open spot: Table 1 has the pant at 0-2 ft, so the tee lands at 2-4 ft. */
+async function addTee(page: Page) {
   await page.getByRole("button", { name: "Add product" }).click();
   await page.getByLabel("Find a product").fill("E2E Pocket");
   await page.getByRole("button", { name: /E2E Pocket Tee/ }).click();
-  await page.getByLabel("From left (ft)").fill(fromLeft);
-  await page.getByLabel("From back (ft)").fill(fromBack);
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("Saved");
+  await saved(page);
+  await expect(page.getByRole("toolbar", { name: "E2E Pocket Tee selected" })).toBeVisible();
 }
 
-async function movePant(page: Page, fromBack: string) {
-  await page.getByRole("button", { name: /^E2E High-Rise Pant, / }).click();
-  await page.getByLabel("From back (ft)").fill(fromBack);
+async function editNumbers(page: Page, product: string, field: string, value: string) {
+  await page.getByRole("button", { name: new RegExp(`^${product}, `) }).filter({ visible: true }).click();
+  await page.getByRole("button", { name: "Edit numbers" }).click();
+  await page.getByLabel(field).fill(value);
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("status")).toHaveText("Saved");
-  // On phones the edit sheet stays open and hides the page behind it.
-  const sheet = page.getByRole("dialog", { name: "E2E High-Rise Pant" });
-  if (await sheet.isVisible()) {
-    await page.keyboard.press("Escape");
-    await expect(sheet).toBeHidden();
-  }
 }
 
-test("a draft from the floor is edited, published, and Search shows the new cell", async ({ page }) => {
+/** `modal`: the page is phone-sized, where the sheet is a dialog; elsewhere it is a side panel. */
+async function closeSheet(page: Page, product: string, modal: boolean) {
+  // On phones the edit sheet is a modal dialog that stays open and hides the page behind it.
+  if (!modal) return;
+  const sheet = page.getByRole("dialog", { name: product });
+  await expect(sheet).toBeVisible();
+  // Close, not Escape: the "Changed" toast is still up and takes the first Escape.
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await expect(sheet).toBeHidden();
+}
+
+async function movePant(page: Page, fromBack: string, modal: boolean) {
+  await editNumbers(page, "E2E High-Rise Pant", "From back (ft)", fromBack);
+  await saved(page);
+  await closeSheet(page, "E2E High-Rise Pant", modal);
+}
+
+test("a draft from the floor is edited, published, and Search shows the new cell", async ({ page }, info) => {
   await openTable(page);
   await startDraft(page);
-  await addTee(page, "3");
-  await movePant(page, "1");
+  await addTee(page);
+  await movePant(page, "1", sizeOf(info) === "phone");
   await expect(page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" })).toContainText("Left · Front");
 
+  // The pant is still selected, and on a phone its selection bar takes the draft bar's place.
+  // A tap on empty grid deselects, as a phone user would (Table 1 is 6 ft wide; the right 2 ft are empty).
+  const block = page.locator("[data-block]").filter({ visible: true }).first();
+  const blockBox = await block.boundingBox();
+  if (!blockBox) throw new Error("no grid");
+  await block.click({ position: { x: blockBox.width - 12, y: blockBox.height / 2 } });
+  await expect(page.getByRole("toolbar", { name: "E2E High-Rise Pant selected" })).toBeHidden();
   await page.getByRole("button", { name: "Publish…" }).click();
   await expect(page.getByText("Top: 2 added")).toBeVisible();
   await page.getByLabel("Summary (optional)").fill("E2E reset");
@@ -78,7 +98,7 @@ test("a draft from the floor is edited, published, and Search shows the new cell
   await expect(page.getByText(/Version 1 · published/)).toBeVisible();
 
   await page.goto("/search?q=E2E-PT-01");
-  await expect(page.getByRole("main").getByRole("list").first()).toContainText("Table 1 · Right · Middle · Folded");
+  await expect(page.getByRole("main").getByRole("list").first()).toContainText("Table 1 · Center · Middle · Folded");
 });
 
 test("history shows the version, and restore makes it the draft", async ({ page }) => {
@@ -106,8 +126,8 @@ test("two devices edit one draft and see each other's changes", async ({ page, b
     await openTable(otherPage);
     await expect(otherPage.getByRole("button", { name: /^E2E High-Rise Pant, / })).toBeVisible();
 
-    await addTee(page, "3");
-    await movePant(otherPage, "1");
+    await addTee(page);
+    await movePant(otherPage, "1", false);
     // The other device's save reply carried the tee.
     await expect(otherPage.locator("[data-card]").filter({ hasText: "E2E Pocket Tee" })).toBeVisible();
     // Coming back to the first device reloads the draft.
@@ -121,11 +141,8 @@ test("two devices edit one draft and see each other's changes", async ({ page, b
 test("a refused placement says why", async ({ page }) => {
   await openTable(page);
   await startDraft(page);
-  await page.getByRole("button", { name: "Add product" }).click();
-  await page.getByLabel("Find a product").fill("E2E Pocket");
-  await page.getByRole("button", { name: /E2E Pocket Tee/ }).click();
-  await page.getByLabel("From left (ft)").fill("1");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await addTee(page);
+  await editNumbers(page, "E2E Pocket Tee", "From left (ft)", "1");
   await expect(page.getByText("Blocked by E2E High-Rise Pant")).toBeVisible();
 });
 
