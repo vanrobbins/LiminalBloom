@@ -103,16 +103,18 @@ export function PlanogramBody({
         <div className="flex flex-col gap-4">
           <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => openSheet(null)}>
             {isEditing && sheetId !== null && sheetMode === "edit" ? (
-              <PlacementEditor
-                placement={sheetPlacement}
-                isGone={sheetPlacement === null}
-                faces={scope.faces}
-                others={placements}
-                busy={busy}
-                onClose={() => openSheet(null)}
-                onSave={onEdit}
-                onRemove={onRemove}
-              />
+              <div data-placement-editor>
+                <PlacementEditor
+                  placement={sheetPlacement}
+                  isGone={sheetPlacement === null}
+                  faces={scope.faces}
+                  others={placements}
+                  busy={busy}
+                  onClose={() => openSheet(null)}
+                  onSave={onEdit}
+                  onRemove={onRemove}
+                />
+              </div>
             ) : null}
           </ProductSheet>
           <PlacementList faces={shownFaces} items={items} orphans={orphans} issues={issues} highlightProductId={highlightProductId} selectedId={selectedId} onSelect={fromCard} />

@@ -1,7 +1,9 @@
-// Planogram Detail's body (spec §5.2–5.3): published, draft or a past version,
-// face by face (a table set as one combined view), and the plain editor. A
-// status row (Draft | Published, due date, saving) sits above the grid, and
-// the actions in a bar below it: sticky on a phone (spec §4.4).
+// Planogram Detail's body (spec §5.2–5.3; Part 2 §4): published, draft or a
+// past version, face by face (a table set as one combined view). The draft and
+// the latest version are editable on the grid: tap to select, then drag,
+// resize, use the selection bar or the arrow keys; with no draft the first
+// change starts one. A status row sits above the grid and the actions in a bar
+// below it: sticky on a phone, where the selection bar takes its place.
 
 "use client";
 
@@ -22,8 +24,13 @@ import { DraftStatusLine } from "./draft-status";
 import { DueDateChip } from "./due-date-chip";
 import { swipeTarget } from "./face-swipe";
 import { itemsFromDraft, itemsFromSnapshot, startFace } from "./grid-items";
+import { MoveToFaceDialog } from "./move-to-face-dialog";
 import { PlanogramBody } from "./planogram-body";
+import { SelectionBar } from "./selection-bar";
+import { useBuilder } from "./use-builder";
+import { spotWords, usePlacementActions } from "./use-placement-actions";
 import { usePlanogramDraft } from "./use-planogram-draft";
+import { useSelection } from "./use-selection";
 import type { Edges } from "./use-scroll-edges";
 
 type PlanogramScreenProps = {
@@ -40,35 +47,47 @@ type PlanogramScreenProps = {
 
 export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewing, looks, highlightProductId, dueDate, today }: PlanogramScreenProps) {
   const router = useRouter();
-  const { draft, status, save } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
+  const { draft, status, save, adopt } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
   const [faceId, setFaceId] = useState(() => startFace(scope, (viewing ?? latest)?.placements ?? [], initialDraft, highlightProductId));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [sheetId, setSheetId] = useState<string | null>(null);
-  const [adding, setAdding] = useState<{ faceId: string; col: number; row: number } | null | "open">(null);
+  const [adding, setAdding] = useState(false);
+  const [movingFace, setMovingFace] = useState(false);
   const [slideFrom, setSlideFrom] = useState<"left" | "right" | null>(null);
 
   const face = scope.faces.find((f) => f.faceId === faceId) ?? scope.faces[0];
   const shownFaces = scope.isSet ? scope.faces : [face];
   const layout = scope.isSet ? setBlocks(scope.faces) : singleBlock(face);
   const isEditing = draft !== null && view === "draft" && viewing === null;
+  // The latest version is movable too: its first change starts a draft (Part 2 spec §4 "Draft").
+  const canMove = viewing === null && (isEditing || (draft === null && latest !== null));
   const placements = draft?.placements ?? [];
   const issues = isEditing ? draftIssues(placements, scope.faces) : new Map<string, string>();
   const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks);
-  const selected = sheetId ? (placements.find((p) => p.id === sheetId) ?? null) : null;
   const busy = status.kind === "saving";
   const isEmpty = !latest && !draft;
+  const { selectedId, setSelectedId, sheetId, sheetMode, openSheet, select, onTile, editNumbers } = useSelection(isEditing, items);
+  const selectedPlacement = isEditing ? (placements.find((p) => p.id === selectedId) ?? null) : null;
 
-  // A read-only sheet whose product is no longer shown closes, rather than
-  // standing open and empty. (While editing, the editor says "Removed on
-  // another device" instead.) Adjusted during render, as React allows for own state.
-  if (sheetId !== null && !isEditing && !items.some((i) => i.id === sheetId)) setSheetId(null);
+  const builder = useBuilder({
+    fixtureId: scope.fixtureId,
+    draft,
+    // Ctrl+Z only on the draft being edited, never on Published or a past version.
+    enabled: isEditing,
+    expectedVersion: row?.version ?? null,
+    save,
+    adopt,
+    // A draft this device started or another device's it adopted: either way it's now the one shown.
+    onStarted: () => {
+      setView("draft");
+      openSheet(null);
+    },
+    describe: (fields) => spotWords(scope.faces, fields),
+  });
 
   // Draft and Published are different placements: the open sheet and the mark don't carry over.
   function showView(next: "draft" | "published") {
     setView(next);
-    setSheetId(null);
-    setSelectedId(null);
+    select(null);
   }
 
   const faceIds = scope.faces.map((f) => f.faceId);
@@ -82,6 +101,13 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
     if (target) showFace(target.faceId, target.from);
   }
 
+  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, save, setSelectedId, select, showFace });
+
+  function chooseFace(id: string) {
+    setMovingFace(false);
+    actions.moveToFace(id);
+  }
+
   const body = (
     <PlanogramBody
       scope={scope}
@@ -92,18 +118,20 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
       issues={issues}
       isEditing={isEditing}
       selectedId={selectedId}
-      setSelectedId={setSelectedId}
+      setSelectedId={select}
       sheetId={sheetId}
-      setSheetId={setSheetId}
+      sheetMode={sheetMode}
+      openSheet={openSheet}
       highlightProductId={highlightProductId}
       placements={placements}
-      selected={selected}
       busy={busy}
       slideFrom={slideFrom}
+      builder={actions.gridBuilder}
+      onTile={onTile}
       onSwipe={onSwipe}
       onFace={showFace}
-      onAdd={setAdding}
-      save={save}
+      onEdit={actions.edit}
+      onRemove={actions.remove}
     />
   );
 
@@ -146,6 +174,17 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
       ) : (
         body
       )}
+      {selectedPlacement ? (
+        <SelectionBar
+          name={selectedPlacement.productName}
+          canMoveFace={scope.faces.length > 1}
+          busy={busy}
+          onDetails={() => openSheet(selectedPlacement.id, "details")}
+          onEdit={() => editNumbers(selectedPlacement.id)}
+          onMoveFace={() => setMovingFace(true)}
+          onRemove={() => actions.remove(selectedPlacement)}
+        />
+      ) : null}
       <DraftBar
         fixtureId={scope.fixtureId}
         row={row}
@@ -153,19 +192,16 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
         isEditing={isEditing}
         draftVersion={draft?.planogramVersion ?? null}
         latestNumber={latest?.number ?? null}
-        onAdd={() => setAdding("open")}
+        onAdd={() => setAdding(true)}
+        yieldOnPhone={selectedPlacement !== null}
       />
-      {isEditing ? (
-        <AddProductDialog
-          open={adding !== null}
-          onOpenChange={(open) => (open ? null : setAdding(null))}
-          faces={scope.faces}
-          startAt={adding === "open" ? null : adding}
-          others={placements}
-          busy={busy}
-          onAdd={(productId, fields) => save({ kind: "add", productId, fields })}
-        />
+      {isEditing ? <AddProductDialog open={adding} onOpenChange={setAdding} onPick={actions.addProduct} onCloseAutoFocus={actions.focusAdded} /> : null}
+      {selectedPlacement ? (
+        <MoveToFaceDialog open={movingFace} onOpenChange={setMovingFace} faces={scope.faces} currentFaceId={selectedPlacement.faceId} onChoose={chooseFace} />
       ) : null}
+      <p aria-live="polite" className="sr-only">
+        {builder.announcement}
+      </p>
     </div>
   );
 }

@@ -20,9 +20,10 @@ const state = (...placements: PlacementView[]): DraftState => ({ planogramVersio
 function setup(draft: DraftState | null, save = vi.fn().mockResolvedValue({ saved: true, draft: state() })) {
   const adopt = vi.fn();
   const onStarted = vi.fn();
-  const hook = renderHook(({ d }) => useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save, adopt, onStarted, describe: () => "here" }), {
-    initialProps: { d: draft },
-  });
+  const hook = renderHook(
+    ({ d, on }: { d: DraftState | null; on?: boolean }) => useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save, adopt, onStarted, describe: () => "here", enabled: on }),
+    { initialProps: { d: draft } as { d: DraftState | null; on?: boolean } },
+  );
   return { ...hook, save, adopt, onStarted };
 }
 
@@ -168,5 +169,22 @@ describe("useBuilder", () => {
     });
     expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ fields: fields(pant, 0) }));
     input.remove();
+  });
+
+  it("while not enabled, Ctrl+Z is left alone and Undo saves nothing", async () => {
+    const pant = view("a", 0);
+    const { result, rerender, save } = setup(state(pant));
+    await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
+    rerender({ d: state({ ...pant, col: 4, version: 2 }), on: false });
+    const press = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, cancelable: true });
+    await act(async () => {
+      window.dispatchEvent(press);
+    });
+    expect(press.defaultPrevented).toBe(false);
+    await act(() => result.current.undo());
+    expect(save).toHaveBeenCalledTimes(1);
+    rerender({ d: state({ ...pant, col: 4, version: 2 }), on: true });
+    await act(() => result.current.undo());
+    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ fields: fields(pant, 0) }));
   });
 });

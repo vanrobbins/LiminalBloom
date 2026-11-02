@@ -32,6 +32,8 @@ type Options = {
   adopt: (draft: DraftState) => void;
   onStarted: () => void;
   describe: (fields: PlacementFields) => string;
+  /** False while the draft isn't the one shown (Published, a past version): Undo and Ctrl+Z do nothing. */
+  enabled?: boolean;
 };
 
 /** Only a placement's own fields: a tile carries names and looks too. */
@@ -48,16 +50,16 @@ const fieldsOf = (p: PlacementFields): PlacementFields => ({
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], [role=dialog]") !== null;
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, describe }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, describe, enabled = true }: Options) {
   const [history, setHistory] = useState<History>(EMPTY_HISTORY);
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
   // One start at a time: a second change before it's back waits for the same reply.
   const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
   // Toast actions and the key listener outlive the render that made them.
-  const latest = useRef({ history, draft });
+  const latest = useRef({ history, draft, enabled });
   useEffect(() => {
-    latest.current = { history, draft };
+    latest.current = { history, draft, enabled };
   });
 
   async function placementFor(item: GridItem): Promise<{ placement: PlacementView } | { message: string | null }> {
@@ -123,8 +125,8 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
   }
 
   async function travel(direction: "undo" | "redo") {
-    const { history: held, draft: current } = latest.current;
-    if (dragging.current || !current) return;
+    const { history: held, draft: current, enabled: on } = latest.current;
+    if (!on || dragging.current || !current) return;
     const pruned = prune(held, current.placements);
     const step = direction === "undo" ? undoStep(pruned, current.placements) : redoStep(pruned, current.placements);
     if (!step) return setHistory(pruned);
@@ -146,6 +148,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
   }
 
   useEffect(() => {
+    if (!enabled) return;
     function onKey(event: KeyboardEvent) {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "z" || isTyping(event.target)) return;
       event.preventDefault();
