@@ -17,8 +17,8 @@ afterEach(() => vi.useRealTimers());
 
 describe("useSearch", () => {
   it("waits 150 ms after typing, then searches once and mirrors the URL", async () => {
-    actions.runSearch.mockResolvedValue([]);
-    const { result } = renderHook(() => useSearch(searchInput.parse({}), []));
+    actions.runSearch.mockResolvedValue({ results: [], total: 0 });
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [], 0));
     act(() => result.current.update({ q: "p" }));
     act(() => result.current.update({ q: "pa" }));
     act(() => result.current.update({ q: "pan" }));
@@ -31,20 +31,20 @@ describe("useSearch", () => {
 
   it("ignores a slow answer that a newer search overtook", async () => {
     let answerFirst: (value: unknown) => void = () => {};
-    actions.runSearch.mockReturnValueOnce(new Promise((resolve) => (answerFirst = resolve))).mockResolvedValueOnce([{ id: "new" }]);
-    const { result } = renderHook(() => useSearch(searchInput.parse({}), []));
+    actions.runSearch.mockReturnValueOnce(new Promise((resolve) => (answerFirst = resolve))).mockResolvedValueOnce({ results: [{ id: "new" }], total: 1 });
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [], 0));
     act(() => result.current.update({ q: "old" }));
     await act(async () => vi.advanceTimersByTime(150));
     act(() => result.current.update({ q: "new" }));
     await act(async () => vi.advanceTimersByTime(150));
-    await act(async () => answerFirst([{ id: "old" }]));
+    await act(async () => answerFirst({ results: [{ id: "old" }], total: 1 }));
     expect(result.current.results).toEqual([{ id: "new" }]);
   });
 
   it("keeps the last results and says it's offline when a search fails", async () => {
     actions.runSearch.mockRejectedValue(new TypeError("Failed to fetch"));
     const before = [{ id: "kept" }] as never[];
-    const { result } = renderHook(() => useSearch(searchInput.parse({}), before));
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), before, 1));
     act(() => result.current.update({ q: "x1" }));
     await act(async () => vi.advanceTimersByTime(150));
     expect(result.current.results).toBe(before);
@@ -54,11 +54,19 @@ describe("useSearch", () => {
   it("keeps the last results, without blaming the connection, when the server refuses the search", async () => {
     actions.runSearch.mockResolvedValue(null);
     const before = [{ id: "kept" }] as never[];
-    const { result } = renderHook(() => useSearch(searchInput.parse({}), before));
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), before, 1));
     act(() => result.current.update({ q: "x1" }));
     await act(async () => vi.advanceTimersByTime(150));
     expect(result.current.results).toBe(before);
     expect(result.current.isOffline).toBe(false);
     expect(result.current.isPending).toBe(false);
+  });
+
+  it("keeps the total the server counted", async () => {
+    actions.runSearch.mockResolvedValue({ results: [], total: 47 });
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [], 0));
+    act(() => result.current.update({ q: "pa" }));
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    expect(result.current.total).toBe(47);
   });
 });

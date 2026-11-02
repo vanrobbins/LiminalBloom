@@ -70,6 +70,7 @@ export type LocationRow = {
 };
 
 export type SearchResult = ProductRow & { locations: LocationRow[] };
+export type SearchPage = { results: SearchResult[]; total: number };
 
 export type CategoryRow = CategoryDefaults & { id: string; name: string; version: number; productCount: number };
 
@@ -101,7 +102,8 @@ function placeCondition(place: Place): SQL {
   return sql`not ${located(sql`true`)}`;
 }
 
-export async function searchProducts(storeId: string, input: SearchInput, limit = SEARCH_LIMIT): Promise<ProductRow[]> {
+// The total is a window count taken before the limit, so one query answers both.
+async function searchRows(storeId: string, input: SearchInput, limit: number): Promise<{ rows: ProductRow[]; total: number }> {
   const q = normalizeQuery(input.q);
   const isText = isTextQuery(q);
   const categoryName = sql`lower(${productCategories.name})`;
@@ -120,14 +122,18 @@ export async function searchProducts(storeId: string, input: SearchInput, limit 
   const [, rows] = await withStore(storeId, [
     db.execute(sql`select set_config('pg_trgm.word_similarity_threshold', ${WORD_SIMILARITY_THRESHOLD}, true)`),
     db
-      .select(productColumns)
+      .select({ ...productColumns, total: sql<number>`(count(*) over ())::int` })
       .from(products)
       .innerJoin(productCategories, eq(productCategories.id, products.categoryId))
       .where(and(...conditions))
       .orderBy(...(isText ? [desc(score), asc(products.name)] : [asc(products.name)]))
       .limit(limit),
   ] as const);
-  return rows.map(toRow);
+  return { rows: rows.map(({ total, ...row }) => (void total, toRow(row))), total: rows[0]?.total ?? 0 };
+}
+
+export async function searchProducts(storeId: string, input: SearchInput, limit = SEARCH_LIMIT): Promise<ProductRow[]> {
+  return (await searchRows(storeId, input, limit)).rows;
 }
 
 export async function locationsFor(storeId: string, productIds: readonly string[]): Promise<LocationRow[]> {
@@ -191,10 +197,10 @@ export async function locationsFor(storeId: string, productIds: readonly string[
   });
 }
 
-export async function search(storeId: string, input: SearchInput): Promise<SearchResult[]> {
-  const rows = await searchProducts(storeId, input);
+export async function search(storeId: string, input: SearchInput, limit = SEARCH_LIMIT): Promise<SearchPage> {
+  const { rows, total } = await searchRows(storeId, input, limit);
   const locations = await locationsFor(storeId, rows.map((r) => r.id));
-  return rows.map((row) => ({ ...row, locations: locations.filter((l) => l.productId === row.id) }));
+  return { results: rows.map((row) => ({ ...row, locations: locations.filter((l) => l.productId === row.id) })), total };
 }
 
 const categoryColumns = {
