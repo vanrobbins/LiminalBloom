@@ -76,6 +76,7 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
     expectedVersion: row?.version ?? null,
     save,
     adopt,
+    onStale: () => router.refresh(),
     // A draft this device started or another device's it adopted: either way it's now the one shown.
     onStarted: () => {
       setView("draft");

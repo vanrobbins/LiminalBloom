@@ -53,8 +53,20 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     return checkPlacement({ ...fields, id: item.id }, others, scope.faces, stackLimit)?.message ?? null;
   }
 
-  async function change(item: GridItem, fields: PlacementFields, verb: Verb): Promise<string | null> {
-    const result = await builder.commit(item, fields, verb);
+  async function change(item: GridItem, fields: PlacementFields, verb: Verb, onFound?: (id: string) => void): Promise<string | null> {
+    // The first change on Published starts a draft, and the tile comes back under a new id:
+    // keep it selected straight away, and focused if it was (the old tile unmounts).
+    const hadFocus = document.activeElement?.closest("[data-placement]")?.getAttribute("data-placement") === item.id;
+    let renamed: string | null = null;
+    const result = await builder.commit(item, fields, verb, (id) => {
+      if (id !== item.id) {
+        renamed = id;
+        setSelectedId(id);
+      }
+      onFound?.(id);
+    });
+    const refocus = renamed;
+    if (hadFocus && refocus) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(refocus)}"]`)?.focus());
     if (!result.ok) return result.message;
     setSelectedId(result.id);
     if (!scope.isSet && fields.faceId !== face.faceId) showFace(fields.faceId);
@@ -65,7 +77,7 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     ? {
         canMove: true,
         check,
-        onCommit: (item, fields, verb) => void change(item, fields, verb),
+        onCommit: (item, fields, verb, onFound) => change(item, fields, verb, onFound),
         onRefused: (message) => toast({ tone: "error", title: message }),
         onKey: (item, key, shift) => {
           const next = keyTarget(layout, item, key, shift);

@@ -9,7 +9,7 @@ import * as currentMember from "@/lib/current-member";
 import { addProduct } from "@/lib/planograms/test-planograms";
 import { dropStores, makeStore, seedStoreFixtures, type StoreFixtures } from "@/lib/products/test-stores";
 
-import { beginDraftAction, pickerSearch, previewPublishAction, publishAction, restoreAction, saveChangeAction, startDraftAction } from "./actions";
+import { beginDraftAction, pickerSearch, previewPublishAction, publishAction, reloadDraftAction, restoreAction, saveChangeAction, startDraftAction } from "./actions";
 
 vi.mock("@/lib/current-member");
 // publishedBy is a real foreign key, so the signed-in member must be a real user row.
@@ -54,6 +54,28 @@ describe("planogram actions", () => {
     expect(again.status).toBe("saved");
     if (again.status === "saved") expect(again.draft.placements.map((p) => p.productName)).toEqual(["High-Rise Pant"]);
     expect(await beginDraftAction("not-a-uuid", null)).toMatchObject({ status: "refused", draft: null });
+  });
+
+  it("begins a fresh draft from the latest version", async () => {
+    const preview = await previewPublishAction(f.fixtureId);
+    await publishAction(f.fixtureId, preview?.planogramVersion ?? 0, null, "");
+    const reply = await beginDraftAction(f.fixtureId, (preview?.planogramVersion ?? 0) + 1);
+    expect(reply.status).toBe("saved");
+    if (reply.status === "saved") expect(reply.draft.placements.map((p) => p.productName)).toEqual(["High-Rise Pant"]);
+  });
+
+  it("refuses a begin from a stale version with no draft to hand back, so the device reloads", async () => {
+    const preview = await previewPublishAction(f.fixtureId);
+    await publishAction(f.fixtureId, preview?.planogramVersion ?? 0, null, "");
+    expect(await beginDraftAction(f.fixtureId, preview?.planogramVersion ?? 0)).toEqual({ status: "refused", message: "Changed on another device", draft: null });
+  });
+
+  it("never begins a draft on another store's fixture", async () => {
+    const other = await makeStore(`pg-actions-other-${randomUUID().slice(0, 6)}`);
+    const theirs = await seedStoreFixtures(other, "Their Pant");
+    expect(await beginDraftAction(theirs.fixtureId, null)).toMatchObject({ status: "refused", draft: null });
+    vi.mocked(currentMember.requireMember).mockResolvedValue({ kind: "member", user: VAN, stores: [{ id: other, name: "Other" }], activeStoreId: other });
+    expect(await reloadDraftAction(theirs.fixtureId)).toBeNull();
   });
 
   it("returns the whole draft, so each device sees the other's edits", async () => {

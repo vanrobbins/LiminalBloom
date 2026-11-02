@@ -7,7 +7,7 @@ import { useBuilder } from "./use-builder";
 
 const actions = vi.hoisted(() => ({ beginDraftAction: vi.fn() }));
 vi.mock("@/app/(app)/planograms/actions", () => actions);
-const toasts = vi.hoisted(() => ({ toast: vi.fn() }));
+const toasts = vi.hoisted(() => ({ toast: vi.fn(), dismissToast: vi.fn() }));
 vi.mock("@/lib/toast", () => toasts);
 
 const view = (id: string, col: number, version = 1): PlacementView => ({
@@ -20,11 +20,12 @@ const state = (...placements: PlacementView[]): DraftState => ({ planogramVersio
 function setup(draft: DraftState | null, save = vi.fn().mockResolvedValue({ saved: true, draft: state() })) {
   const adopt = vi.fn();
   const onStarted = vi.fn();
+  const onStale = vi.fn();
   const hook = renderHook(
-    ({ d, on }: { d: DraftState | null; on?: boolean }) => useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save, adopt, onStarted, describe: () => "here", enabled: on }),
+    ({ d, on }: { d: DraftState | null; on?: boolean }) => useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save, adopt, onStarted, onStale, describe: () => "here", enabled: on }),
     { initialProps: { d: draft } as { d: DraftState | null; on?: boolean } },
   );
-  return { ...hook, save, adopt, onStarted };
+  return { ...hook, save, adopt, onStarted, onStale };
 }
 
 describe("useBuilder", () => {
@@ -186,5 +187,50 @@ describe("useBuilder", () => {
     rerender({ d: state({ ...pant, col: 4, version: 2 }), on: true });
     await act(() => result.current.undo());
     expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ fields: fields(pant, 0) }));
+  });
+
+  it("resyncs when the first change is refused with no draft to work in", async () => {
+    const published = { ...view("v-0", 0), id: "v-0" };
+    actions.beginDraftAction.mockResolvedValue({ status: "refused", message: "Changed on another device", draft: null });
+    const { result, save, onStale } = setup(null);
+    const outcome = await act(() => result.current.commit(published, fields(published, 4), "Moved"));
+    expect(outcome).toEqual({ ok: false, message: "Changed on another device" });
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
+    expect(onStale).toHaveBeenCalledTimes(1);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("names the tile a started draft gave the change, before its save is back", async () => {
+    const published = { ...view("v-0", 0), id: "v-0" };
+    actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: state(view("real", 0, 1)) });
+    const found = vi.fn();
+    const save = vi.fn(() => {
+      expect(found).toHaveBeenCalledWith("real");
+      return Promise.resolve({ saved: true as const, draft: state() });
+    });
+    const { result } = setup(null, save);
+    await act(() => result.current.commit(published, fields(published, 4), "Moved", found));
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("only the latest change offers Undo: the toast before it goes", async () => {
+    const pant = view("a", 0);
+    toasts.toast.mockReturnValueOnce(7).mockReturnValueOnce(8);
+    const { result } = setup(state(pant));
+    await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
+    expect(toasts.dismissToast).not.toHaveBeenCalled();
+    await act(() => result.current.commit(pant, fields(pant, 6), "Moved"));
+    expect(toasts.dismissToast).toHaveBeenCalledWith(7);
+    expect(toasts.dismissToast).not.toHaveBeenCalledWith(8);
+  });
+
+  it("the same words twice still change the live region, so they're read again", () => {
+    const { result } = setup(null);
+    act(() => result.current.say("Blocked by Tee"));
+    const first = result.current.announcement;
+    act(() => result.current.say("Blocked by Tee"));
+    expect(result.current.announcement).not.toBe(first);
+    expect(result.current.announcement.startsWith("Blocked by Tee")).toBe(true);
+    expect(first).toBe("Blocked by Tee");
   });
 });

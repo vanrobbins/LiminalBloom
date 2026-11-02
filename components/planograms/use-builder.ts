@@ -14,7 +14,7 @@ import { beginDraftAction } from "@/app/(app)/planograms/actions";
 import { matchPlacement } from "@/lib/planograms/builder/match";
 import { EMPTY_HISTORY, forget, prune, record, redo as redoStep, sitsAt, undo as undoStep, type History } from "@/lib/planograms/builder/undo";
 import type { Change, DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
-import { toast } from "@/lib/toast";
+import { dismissToast, toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
 import type { SaveResult } from "./use-planogram-draft";
@@ -31,6 +31,8 @@ type Options = {
   save: (change: Change) => Promise<SaveResult>;
   adopt: (draft: DraftState) => void;
   onStarted: () => void;
+  /** The first change was refused with no draft to work in: this screen is out of date, so reload it. */
+  onStale: () => void;
   describe: (fields: PlacementFields) => string;
   /** False while the draft isn't the one shown (Published, a past version): Undo and Ctrl+Z do nothing. */
   enabled?: boolean;
@@ -50,10 +52,12 @@ const fieldsOf = (p: PlacementFields): PlacementFields => ({
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], [role=dialog]") !== null;
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, describe, enabled = true }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, onStale, describe, enabled = true }: Options) {
   const [history, setHistory] = useState<History>(EMPTY_HISTORY);
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
+  // Only the latest change offers Undo: an older toast's Undo would undo the newest step.
+  const undoToast = useRef<number | null>(null);
   // One start at a time: a second change before it's back waits for the same reply.
   const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
   // Toast actions and the key listener outlive the render that made them.
@@ -76,6 +80,9 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
           latest.current = { ...latest.current, draft: reply.draft };
           onStarted();
           toast({ tone: "success", title: "Draft started" });
+        } else if (reply.status === "refused") {
+          // Published or discarded elsewhere since this page loaded: every later change would be refused too.
+          onStale();
         }
         return reply;
       });
@@ -92,7 +99,11 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
     return placement ? { placement } : { message: CONFLICT };
   }
 
-  async function commit(item: GridItem, next: PlacementFields, verb: Verb): Promise<CommitResult> {
+  // The same words twice must still change the live region, or a screen reader stays silent.
+  const say = (text: string) => setAnnouncement((current) => (current === text ? `${text}\u200B` : text));
+
+  /** `onFound` hears which tile the change is saved to as soon as it's known: a started draft gives it a new id. */
+  async function commit(item: GridItem, next: PlacementFields, verb: Verb, onFound?: (id: string) => void): Promise<CommitResult> {
     const fields = fieldsOf(next);
     // A typed edit shows its refusal in its own form; the others say it in a toast.
     const tell = (message: string) => {
@@ -110,6 +121,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
       return { ok: false, message: found.message };
     }
     const target = found.placement;
+    onFound?.(target.id);
     const result = await save({ kind: "update", id: target.id, version: target.version, fields });
     if (!result.saved) {
       if (result.message) {
@@ -119,8 +131,9 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
       return { ok: false, message: result.message };
     }
     setHistory((h) => record(h, { id: target.id, before: fieldsOf(target), after: fields }));
-    setAnnouncement(`${verb} to ${describe(fields)}`);
-    toast({ tone: "success", title: verb, action: { label: "Undo", onSelect: () => void travel("undo") } });
+    say(`${verb} to ${describe(fields)}`);
+    if (undoToast.current !== null) dismissToast(undoToast.current);
+    undoToast.current = toast({ tone: "success", title: verb, action: { label: "Undo", onSelect: () => void travel("undo") } });
     return { ok: true, id: target.id };
   }
 
@@ -140,7 +153,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
     const result = await save(step.change);
     if (result.saved) {
       setHistory(step.history);
-      setAnnouncement(`${direction === "undo" ? "Undone" : "Redone"}: ${describe(step.change.fields)}`);
+      say(`${direction === "undo" ? "Undone" : "Redone"}: ${describe(step.change.fields)}`);
       return;
     }
     setHistory(result.message ? forget(pruned, step.step.id) : pruned);
@@ -162,7 +175,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
     commit,
     undo: () => travel("undo"),
     redo: () => travel("redo"),
-    say: setAnnouncement,
+    say,
     announcement,
     setDragging: (isDragging: boolean) => {
       dragging.current = isDragging;

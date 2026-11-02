@@ -21,19 +21,23 @@ import { DragChip, DragGuides, DropGhost } from "./drag-guides";
 import { SWIPE_MIN_PX } from "./face-swipe";
 import { BlockView, GridTile, at } from "./grid-tile";
 import type { GridItem } from "./grid-items";
+import { usePendingLanding } from "./use-pending-landing";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
 import { useTileGesture, type Gesture } from "./use-tile-gesture";
 
 /** Room above the grid for a table set's labels, the ruler and the drag chip. */
 const GUTTER = "1.5rem";
 const OFF_FACE = "Off the edge of the face";
+// A landed tile waiting on its save sits still, rather than sliding back from where the pointer let go.
+const STILL = { dx: 0, dy: 0 };
 
 export type GridBuilder = {
   /** The selected tile may be dragged, resized and moved with the arrow keys. */
   canMove: boolean;
   /** Why a tile can't go there (rules.ts words), or null. */
   check: (item: GridItem, fields: PlacementFields) => string | null;
-  onCommit: (item: GridItem, fields: PlacementFields, verb: "Moved" | "Resized") => void;
+  /** Saves a drop; the tile stays where it landed until this settles. `onFound` names the tile it was saved to (a started draft renames it). */
+  onCommit: (item: GridItem, fields: PlacementFields, verb: "Moved" | "Resized", onFound: (id: string) => void) => Promise<unknown>;
   /** An invalid drop: it has already snapped back; say why. */
   onRefused: (message: string) => void;
   onKey: (item: GridItem, key: string, shift: boolean) => void;
@@ -66,7 +70,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   // scrolls the grid to its edge doesn't also change face; the next one does.
   const start = useRef<{ x: number; y: number; edges: Edges } | null>(null);
   const [drag, setDrag] = useState<Gesture | null>(null);
-  const drawn = items.filter((item) => layout.blocks.some((b) => b.faceId === item.faceId));
+  const landed = usePendingLanding();
+  const drawn = landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId));
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
   const mask =
     edges.left && edges.right
@@ -101,7 +106,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
       const fields = landing(g);
       const reason = fields ? builder.check(moving, fields) : OFF_FACE;
       if (!fields || reason) return builder.onRefused(reason ?? OFF_FACE);
-      if (!sameSpot(fields, moving)) builder.onCommit(moving, fields, g.mode === "move" ? "Moved" : "Resized");
+      const verb = g.mode === "move" ? "Moved" : "Resized";
+      if (!sameSpot(fields, moving)) landed.hold(moving.id, fields, (onFound) => builder.onCommit(moving, fields, verb, onFound));
     },
   });
 
@@ -182,7 +188,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   highlighted={item.productId === highlightProductId}
                   issue={issues?.get(item.id)}
                   movable={isMoving}
-                  offset={isMoving && drag?.mode === "move" ? drag : null}
+                  offset={isMoving && drag?.mode === "move" ? drag : landed.isHeld(item.id) ? STILL : null}
                   invalid={isMoving && refusal !== null}
                   bounds={layout}
                   gestures={gestures}

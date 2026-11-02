@@ -45,9 +45,24 @@ export function useTileGesture({ unitPx, scroller, onMove, onEnd }: Options) {
       if (e.button !== 0) return;
       // The grid's own swipe never sees a press on the moving tile (Review Focus 1).
       e.stopPropagation();
+      // A second finger while one is down doesn't take over the drag (capture is on the first).
+      if (press.current) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       dragged.current = false;
       press.current = { mode, id: e.pointerId, x: e.clientX, y: e.clientY, scroll: scroller()?.scrollLeft ?? 0, moved: false };
+      // The press ends even if the tile stopped listening meanwhile (deselected or gone mid-drag),
+      // so it can't block every later press.
+      const id = e.pointerId;
+      const release = (ev: PointerEvent) => {
+        if (ev.pointerId !== id) return;
+        window.removeEventListener("pointerup", release);
+        window.removeEventListener("pointercancel", release);
+        if (press.current?.id !== id) return;
+        press.current = null;
+        onEnd(null);
+      };
+      window.addEventListener("pointerup", release);
+      window.addEventListener("pointercancel", release);
     };
   }
 

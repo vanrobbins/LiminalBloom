@@ -8,9 +8,12 @@ import type { DraftState, PlacementView, PlanogramFace, PlanogramScope } from "@
 const hook = vi.hoisted(() => ({ draft: null as DraftState | null, save: (() => {}) as (...args: unknown[]) => unknown }));
 vi.mock("./use-planogram-draft", async (original) => ({
   ...(await original<typeof import("./use-planogram-draft")>()),
-  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (...args: unknown[]) => hook.save(...args), adopt: vi.fn() }),
+  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (...args: unknown[]) => hook.save(...args), adopt: (next: DraftState) => (hook.draft = next) }),
 }));
-const actions = vi.hoisted(() => ({ pickerSearch: (() => Promise.resolve([])) as (q: string) => Promise<unknown[]> }));
+const actions = vi.hoisted(() => ({
+  pickerSearch: (() => Promise.resolve([])) as (q: string) => Promise<unknown[]>,
+  beginDraftAction: (() => Promise.resolve(null)) as (...args: unknown[]) => Promise<unknown>,
+}));
 vi.mock("@/app/(app)/planograms/actions", () => actions);
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock("next/link", () => ({
@@ -217,5 +220,24 @@ describe("PlanogramScreen", () => {
     render(screenWith(null, null));
     expect(screen.getByText("No planogram yet")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+  });
+
+  it("on Published, an arrow that starts a draft keeps the tile selected and focused, so the next arrow works", async () => {
+    const started = { planogramVersion: 3, placements: [pant] };
+    const moved = { planogramVersion: 4, placements: [{ ...pant, col: 1, version: 2 }] };
+    actions.beginDraftAction = vi.fn().mockResolvedValue({ status: "saved", draft: started });
+    hook.save = vi.fn(() => {
+      hook.draft = moved;
+      return Promise.resolve({ saved: true, draft: moved });
+    });
+    const user = userEvent.setup();
+    render(screenWith(published, null));
+    await user.click(tile());
+    expect(tile()).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(hook.save).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(tile()).toHaveFocus());
+    expect(tile()).toHaveAttribute("data-placement", "d1");
+    expect(screen.getByRole("toolbar", { name: "Pant selected" })).toBeInTheDocument();
   });
 });

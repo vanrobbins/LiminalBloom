@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setBlocks, singleBlock } from "@/lib/planograms/set-grid";
@@ -14,7 +14,7 @@ const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: 
 
 const fieldsOf = (i: GridItem) => ({ faceId: i.faceId, presentation: i.presentation, col: i.col, row: i.row, colSpan: i.colSpan, rowSpan: i.rowSpan, pieceCount: i.pieceCount });
 const builderWith = (over: Partial<GridBuilder> = {}): GridBuilder => ({
-  canMove: true, check: () => null, onCommit: vi.fn(), onRefused: vi.fn(), onKey: vi.fn(), onEmpty: vi.fn(), onDragging: vi.fn(), ...over,
+  canMove: true, check: () => null, onCommit: vi.fn(() => Promise.resolve()), onRefused: vi.fn(), onKey: vi.fn(), onEmpty: vi.fn(), onDragging: vi.fn(), ...over,
 });
 // 12 half-foot units across, drawn 240 px wide: 20 px a unit.
 const sized = () =>
@@ -56,7 +56,7 @@ describe("PlanogramGrid as the builder's surface", () => {
     expect(container.querySelector("[data-guides]")).not.toBeNull();
     expect(container.querySelector("[data-drop-ghost]")).not.toBeNull();
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
-    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ ...fieldsOf(pant), col: 3 }), "Moved");
+    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ ...fieldsOf(pant), col: 3 }), "Moved", expect.any(Function));
     expect(container.querySelector("[data-guides]")).toBeNull();
   });
 
@@ -96,7 +96,7 @@ describe("PlanogramGrid as the builder's surface", () => {
     fireEvent.pointerDown(handle, { pointerId: 2, button: 0, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(handle, { pointerId: 2, clientX: 40, clientY: 0 });
     fireEvent.pointerUp(handle, { pointerId: 2, clientX: 40, clientY: 0 });
-    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ colSpan: 6 }), "Resized");
+    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ colSpan: 6 }), "Resized", expect.any(Function));
   });
 
   it("a touch on the moving tile never reaches the face swipe; elsewhere it still does (Review Focus 1)", () => {
@@ -145,7 +145,7 @@ describe("PlanogramGrid as the builder's surface", () => {
     fireEvent.pointerDown(handle("left"), { pointerId: 3, button: 0, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(handle("left"), { pointerId: 3, clientX: 40, clientY: 0 });
     fireEvent.pointerUp(handle("left"), { pointerId: 3, clientX: 40, clientY: 0 });
-    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ col: 2, colSpan: 2 }), "Resized");
+    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ col: 2, colSpan: 2 }), "Resized", expect.any(Function));
     // Last column: the right handle ends at the edge and reaches left.
     rerender(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant, last]} label="T" selectedId="p2" onSelect={vi.fn()} builder={builder} />);
     expect(handle("right")).toHaveAttribute("data-inward");
@@ -154,7 +154,7 @@ describe("PlanogramGrid as the builder's surface", () => {
     fireEvent.pointerDown(handle("right"), { pointerId: 4, button: 0, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(handle("right"), { pointerId: 4, clientX: -40, clientY: 0 });
     fireEvent.pointerUp(handle("right"), { pointerId: 4, clientX: -40, clientY: 0 });
-    expect(builder.onCommit).toHaveBeenLastCalledWith(last, expect.objectContaining({ col: 8, colSpan: 2 }), "Resized");
+    expect(builder.onCommit).toHaveBeenLastCalledWith(last, expect.objectContaining({ col: 8, colSpan: 2 }), "Resized", expect.any(Function));
   });
 
   it("a swipe from an unselected tile still changes face; a mouse press on the moving tile doesn't (Review Focus 1)", () => {
@@ -182,5 +182,49 @@ describe("PlanogramGrid as the builder's surface", () => {
     // Enter on a button clicks it with detail 0.
     fireEvent.click(screen.getByRole("button", { name: /High-Rise Pant/ }), { detail: 0 });
     expect(onSelect).toHaveBeenCalledWith("p1");
+  });
+
+  it("a valid drop stays where it landed while its save is out; a refused save snaps it back", async () => {
+    sized();
+    let settle: (value: unknown) => void = () => {};
+    const builder = builderWith({ onCommit: vi.fn(() => new Promise((resolve) => (settle = resolve))) });
+    render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builder} />);
+    const tile = screen.getByRole("button", { name: /High-Rise Pant/ });
+    const home = tile.style.left;
+    fireEvent.pointerDown(tile, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    expect(tile.style.left).toBe("calc(calc(var(--cell) * 3) + 1px)");
+    expect(tile).toHaveAttribute("data-lifted");
+    await act(async () => settle({ ok: false, message: "Changed on another device" }));
+    expect(tile.style.left).toBe(home);
+  });
+
+  it("a second finger on the moving tile doesn't take over the drag", () => {
+    sized();
+    const builder = builderWith();
+    render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builder} />);
+    const tile = screen.getByRole("button", { name: /High-Rise Pant/ });
+    fireEvent.pointerDown(tile, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerDown(tile, { pointerId: 2, button: 0, clientX: 100, clientY: 0 });
+    fireEvent.pointerMove(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ col: 3 }), "Moved", expect.any(Function));
+  });
+
+  it("a press that ends after its tile was deselected doesn't block the next drag", () => {
+    sized();
+    const builder = builderWith();
+    const grid = (selectedId: string | null) => <PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId={selectedId} onSelect={vi.fn()} builder={builder} />;
+    const { rerender } = render(grid("p1"));
+    const tile = screen.getByRole("button", { name: /High-Rise Pant/ });
+    fireEvent.pointerDown(tile, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
+    rerender(grid(null));
+    fireEvent.pointerUp(tile, { pointerId: 1, clientX: 0, clientY: 0 });
+    rerender(grid("p1"));
+    fireEvent.pointerDown(tile, { pointerId: 2, button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(tile, { pointerId: 2, clientX: 61, clientY: 0 });
+    fireEvent.pointerUp(tile, { pointerId: 2, clientX: 61, clientY: 0 });
+    expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ col: 3 }), "Moved", expect.any(Function));
   });
 });
