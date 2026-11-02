@@ -46,7 +46,7 @@ export function ProductImage({ productId, name, categoryName, imageKey, size = "
       viewBox="0 0 100 120"
       className={`${box} p-1`}
     >
-      <path d={SILHOUETTE_PATHS[silhouetteFor(categoryName)]} className="fill-line" fillRule="evenodd" />
+      <path d={SILHOUETTE_PATHS[silhouetteFor(categoryName, name)]} className="fill-line" fillRule="evenodd" />
     </svg>
   );
 }

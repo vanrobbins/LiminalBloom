@@ -2,7 +2,7 @@
 // color, and the app shows the same shape, in a neutral token, for a product
 // without a photo. Plain data so the seed script (Node, no JSX) can use it.
 
-export type Silhouette = "tee" | "knit" | "pants" | "dress" | "outerwear" | "accessory";
+export type Silhouette = "tee" | "knit" | "pants" | "dress" | "outerwear" | "accessory" | "hat";
 
 /** Path data in a 100 × 120 box. */
 export const SILHOUETTE_PATHS: Record<Silhouette, string> = {
@@ -12,18 +12,29 @@ export const SILHOUETTE_PATHS: Record<Silhouette, string> = {
   dress: "M38 6 L44 6 Q50 14 56 6 L62 6 L64 30 L58 40 L88 112 L12 112 L42 40 L36 30 Z",
   outerwear: "M30 8 L44 4 L50 20 L56 4 L70 8 L90 26 L94 104 L80 104 L76 44 L76 114 L24 114 L24 44 L20 104 L6 104 L10 26 Z",
   accessory: "M36 40 Q36 18 50 18 Q64 18 64 40 L58 40 Q58 26 50 26 Q42 26 42 40 Z M18 40 L82 40 L88 110 L12 110 Z",
+  hat: "M18 74 Q18 34 52 34 Q84 34 84 74 Z M18 74 L96 74 Q98 86 84 86 L18 86 Z",
 };
 
+// A product's own name settles the shapes a category can't: a cap sits in
+// "Accessories" beside bags (P3.7). "Cap sleeve" is a top, not a cap.
+const NAME_KEYWORDS: [RegExp, Silhouette][] = [[/\b(cap|hat|beanie|beret|bucket hat)s?\b(?![\s-]?sleeve)/i, "hat"]];
+
 const KEYWORDS: [RegExp, Silhouette][] = [
+  [/\b(hats?|caps?|beanies?)\b(?![\s-]?sleeve)/i, "hat"],
   [/knit|sweater|cardigan|long.?sleeve/i, "knit"],
-  [/denim|jean|pant|trouser|short|legging/i, "pants"],
+  // "Short" is shorts, never "short-sleeve".
+  [/denim|jean|pant|trouser|\bshorts?\b(?![\s-]?sleeve)|legging/i, "pants"],
   [/dress|skirt/i, "dress"],
   [/outer|coat|jacket|blazer/i, "outerwear"],
-  [/accessor|bag|hat|scarf|belt|jewel/i, "accessory"],
+  [/accessor|bag|tote|scarf|belt|jewel/i, "accessory"],
 ];
 
-export function silhouetteFor(categoryName: string): Silhouette {
-  return KEYWORDS.find(([pattern]) => pattern.test(categoryName))?.[1] ?? "tee";
+export function silhouetteFor(categoryName: string, productName = ""): Silhouette {
+  return (
+    NAME_KEYWORDS.find(([pattern]) => pattern.test(productName))?.[1] ??
+    KEYWORDS.find(([pattern]) => pattern.test(categoryName))?.[1] ??
+    "tee"
+  );
 }
 
 export function silhouetteSvg(kind: Silhouette, fill: string): string {

@@ -48,7 +48,7 @@ export function buildDemo(storeId: string, newId: () => string = randomUUID): De
   const images = new Map<string, string>();
 
   const productRows = DEMO_PRODUCTS.map((p) => {
-    const svg = silhouetteSvg(silhouetteFor(p.category), p.hex);
+    const svg = silhouetteSvg(silhouetteFor(p.category, p.name), p.hex);
     const imagePath = `stores/${storeId}/products/seed-${createHash("sha256").update(svg).digest("hex").slice(0, 16)}.svg`;
     images.set(imagePath, svg);
     return {
