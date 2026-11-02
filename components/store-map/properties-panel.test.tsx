@@ -47,7 +47,7 @@ describe("PropertiesPanel", () => {
 
   it("changes a grid with the steppers", async () => {
     const dispatch = panel({ ...store(), fixtures: [fixture()], faces: [face()] }, ["fixture-a"]);
-    await userEvent.click(screen.getByRole("button", { name: "More columns" }));
+    await userEvent.click(screen.getByRole("button", { name: "More width" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "command", command: { type: "setFaceGrid", faceId: "face-a", columns: 7, rows: 3 } });
   });
 

@@ -13,14 +13,15 @@ async function openPant(page: import("@playwright/test").Page) {
   await page.goto("/search");
   await page.getByRole("main").getByLabel("Search products").fill("e2e hi rise pnt");
   const row = results(page).getByRole("button", { name: /E2E High-Rise Pant/ });
-  await expect(row).toContainText("Table 1, A1 · Folded");
+  await expect(row).toContainText("Table 1 · Left · Middle · Folded");
   await row.click();
 }
 
 test("finds a product through a typo and shows exactly where it goes", async ({ page }) => {
   await openPant(page);
-  await expect(page.getByText("Table 1, A1–B2", { exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Table 1: cells A1–B2 of a 6 by 3 grid" })).toBeVisible();
+  await expect(page.getByText("Table 1 · Left · Middle", { exact: true })).toBeVisible();
+  await expect(page.getByText("0–2 ft from left · 0–2 ft from back", { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Table 1 · Left · Middle, 0–2 ft from left · 0–2 ft from back" })).toBeVisible();
   await expect(page.getByText("Table 1, highlighted on the store map")).toBeVisible();
   await expect(page).toHaveURL(/\?q=e2e\+hi\+rise\+pnt/);
 });
@@ -102,7 +103,7 @@ test("finds a product's cell well inside 10 seconds on a phone", async ({ page }
   await page.goto("/search");
   const started = Date.now();
   await openPant(page);
-  await expect(page.getByRole("img", { name: /cells A1–B2/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /0–2 ft from left/ })).toBeVisible();
   expect(Date.now() - started).toBeLessThan(10_000);
 });
 

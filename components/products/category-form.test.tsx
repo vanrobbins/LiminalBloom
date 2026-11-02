@@ -16,7 +16,7 @@ describe("CategoryForm", () => {
     render(<CategoryForm onDone={onDone} />);
     await user.type(screen.getByLabelText("Name"), "Denim");
     await user.click(screen.getByRole("button", { name: "Add category" }));
-    expect(actions.saveCategory).toHaveBeenCalledWith(null, null, { name: "Denim", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 8 });
+    expect(actions.saveCategory).toHaveBeenCalledWith(null, null, { name: "Denim", hungColumns: 2, hungRows: 3, foldedColumns: 4, foldedRows: 2, stackLimit: 8 });
     expect(onDone).toHaveBeenCalled();
   });
 

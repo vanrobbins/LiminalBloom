@@ -31,7 +31,12 @@ export function PlanogramPreview({ scope, entries, looks }: PlanogramPreviewProp
         selectedId={sheetId}
         onSelect={setSheetId}
       />
-      <ProductSheet open={sheetId !== null} item={items.find((i) => i.id === sheetId) ?? null} onClose={() => setSheetId(null)} />
+      <ProductSheet
+        open={sheetId !== null}
+        item={items.find((i) => i.id === sheetId) ?? null}
+        face={scope.faces.find((f) => f.faceId === items.find((i) => i.id === sheetId)?.faceId) ?? null}
+        onClose={() => setSheetId(null)}
+      />
     </div>
   );
 }

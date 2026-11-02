@@ -7,14 +7,14 @@ import type { PlanogramFace } from "@/lib/planograms/types";
 import type { GridItem } from "./grid-items";
 import { PlacementList } from "./placement-list";
 
-const top: PlanogramFace = { faceId: "u", fixtureId: "t", fixtureName: "Table 1", side: "top", setSide: null, label: "Top", columns: 6, rows: 3 };
-const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: "High-Rise Pant", styleNumber: "HR-1", presentation: "folded", pieceCount: 6, col: 0, row: 0, colSpan: 2, rowSpan: 2, imageKey: null, categoryName: "Denim" };
+const top: PlanogramFace = { faceId: "u", fixtureId: "t", fixtureName: "Table 1", fixtureType: "table", side: "top", setSide: null, label: "Top", columns: 12, rows: 3 };
+const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: "High-Rise Pant", styleNumber: "HR-1", presentation: "folded", pieceCount: 6, col: 0, row: 0, colSpan: 4, rowSpan: 2, imageKey: null, categoryName: "Denim" };
 
 describe("PlacementList", () => {
   it("is a card per product with its cells, presentation and pieces", () => {
     render(<PlacementList faces={[top]} items={[pant]} onSelect={vi.fn()} />);
     const card = screen.getByRole("button", { name: /High-Rise Pant/ });
-    expect(card).toHaveTextContent("A1–B2");
+    expect(card).toHaveTextContent("Left · Middle");
     expect(card).toHaveTextContent("Folded · 6 pcs");
   });
 

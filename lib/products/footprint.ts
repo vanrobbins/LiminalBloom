@@ -1,6 +1,8 @@
-// How many cells a product covers (§1.4 "Footprint"), hung or folded. A
+// How much room (half-foot columns × rows) a product covers (§1.4 "Footprint"), hung or folded. A
 // category sets the default and a product overrides it only where it differs
 // (spec §4.3); this is the one place that decides which applies.
+
+import { MAX_COLUMNS, MAX_ROWS, feetText } from "@/lib/feet";
 
 export const PRESENTATIONS = ["hung", "folded"] as const;
 export type Presentation = (typeof PRESENTATIONS)[number];
@@ -8,7 +10,8 @@ export type Presentation = (typeof PRESENTATIONS)[number];
 export const PRESENTATION_LABEL: Record<Presentation, string> = { hung: "Hung", folded: "Folded" };
 
 /** Matches the face grid limit, so a footprint can always fit some face. */
-export const MAX_CELLS = 24;
+export const MAX_FOOTPRINT_COLUMNS = MAX_COLUMNS;
+export const MAX_FOOTPRINT_ROWS = MAX_ROWS;
 export const MAX_STACK = 99;
 
 export type Footprint = { columns: number; rows: number; stackLimit: number };
@@ -41,7 +44,7 @@ export function effectiveFootprint(
 }
 
 export function describeFootprint(f: { columns: number; rows: number }): string {
-  return `${f.columns} × ${f.rows}`;
+  return `${feetText(f.columns)} ft × ${f.rows}`;
 }
 
 export function describeDefaults(c: CategoryDefaults): string {

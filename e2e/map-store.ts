@@ -39,6 +39,7 @@ export async function resetLayout(storeName: string = HOME_STORE): Promise<void>
   await db`delete from store_layouts where store_id = ${store}`;
 }
 
+// Faces are half-foot columns (DECISIONS 10-12): Table 1 is 6 ft × 3 ft.
 export async function seedLayout(): Promise<void> {
   await resetLayout();
   const db = sql();
@@ -49,7 +50,7 @@ export async function seedLayout(): Promise<void> {
   await db`insert into store_layouts (store_id, outline) values (${store}, ${outline}::jsonb)`;
   await db`insert into zones (id, store_id, name, type, color, points) values (${randomUUID()}, ${store}, 'Front tables', 'display', 'zone-1', ${zone}::jsonb)`;
   await db`insert into fixtures (id, store_id, type, name, x, y, width, depth) values (${table}, ${store}, 'table', 'Table 1', 360, 100, 72, 36)`;
-  await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${table}, 'top', 6, 3)`;
+  await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${table}, 'top', 12, 3)`;
 }
 
 /** What a store's layout holds, for checking that a refused save wrote nothing. */
@@ -76,7 +77,7 @@ export async function seedTableSet(): Promise<{ upperId: string; lowerId: string
   const lowerId = randomUUID();
   await db`insert into table_sets (id, store_id, upper_fixture_id) values (${set}, ${store}, ${upperId})`;
   await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, table_set_id, set_side) values (${lowerId}, ${store}, 'table', 'Lower 1', 360, 140, 72, 36, ${set}, 'front')`;
-  await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${lowerId}, 'top', 6, 3)`;
+  await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${lowerId}, 'top', 12, 3)`;
   return { upperId, lowerId };
 }
 
@@ -87,7 +88,7 @@ export async function seedRack(name = "Rack 1"): Promise<{ rackId: string }> {
   const rackId = randomUUID();
   await db`insert into fixtures (id, store_id, type, name, x, y, width, depth) values (${rackId}, ${store}, 'rack', ${name}, 120, 260, 48, 24)`;
   for (const side of ["front", "back"]) {
-    await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${rackId}, ${side}, 4, 3)`;
+    await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${rackId}, ${side}, 8, 3)`;
   }
   return { rackId };
 }

@@ -2,20 +2,23 @@
 
 import { z } from "zod";
 
+import { MAX_COLUMNS, MAX_ROWS } from "@/lib/feet";
 import { PRESENTATIONS } from "@/lib/products/footprint";
 
 import { EARLIEST_DUE_DATE, MAX_PIECES } from "./types";
 
-const cell = z.int().min(0).max(23);
-const span = z.int().min(1).max(24);
+const col = z.int().min(0).max(MAX_COLUMNS - 1);
+const row = z.int().min(0).max(MAX_ROWS - 1);
+const colSpan = z.int().min(1).max(MAX_COLUMNS);
+const rowSpan = z.int().min(1).max(MAX_ROWS);
 
 export const placementFields = z.object({
   faceId: z.uuid(),
   presentation: z.enum(PRESENTATIONS),
-  col: cell,
-  row: cell,
-  colSpan: span,
-  rowSpan: span,
+  col,
+  row,
+  colSpan,
+  rowSpan,
   pieceCount: z.int().min(1).max(MAX_PIECES),
 });
 

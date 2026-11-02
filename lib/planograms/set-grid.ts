@@ -1,19 +1,28 @@
-// A table set's combined view (spec §5.2, DECISIONS 10-08): the upper's top in
-// the middle, each lower top joined on its side at the same cell size, as on
-// the map. Left and right lowers are turned so their columns run along the
-// upper's edge. Units are cells; the grid component scales them. Storage is
-// untouched: each block keeps its own face and cell names.
+// A planogram's drawing space (spec §5.2, DECISIONS 10-08, 10-12). One unit is
+// half a foot on both axes: a column is one unit wide and a row (a level, or a
+// foot of a table top) is ROW_UNITS tall. A table set's lower tops join the
+// upper on their side, as on the map; left and right lowers are turned so
+// their columns run along the upper's edge. Storage is untouched: each block
+// keeps its own face, columns and rows. The grid and the builder use only these
+// units (one coordinate space: Merch Mobile's map mixed several).
 
+import type { FaceSide, FixtureType } from "@/lib/layout/types";
+import type { Presentation } from "@/lib/products/footprint";
 import type { Cells } from "@/lib/products/location-label";
+import type { Spot } from "@/lib/products/location-words";
 
 import type { PlanogramFace } from "./types";
 
-/** Cells of space between two tables, so they read as separate surfaces. */
-export const SET_GAP = 0.5;
+/** Units per row: a row is a foot, a column half of one. */
+export const ROW_UNITS = 2;
+/** Half a foot of space between two tables, so they read as separate surfaces. */
+export const SET_GAP = 1;
 
 export type Block = {
   faceId: string;
   label: string;
+  fixtureType: FixtureType;
+  side: FaceSide;
   columns: number;
   rows: number;
   turned: boolean;
@@ -29,13 +38,15 @@ function block(face: PlanogramFace, turned: boolean, x: number, y: number): Bloc
   return {
     faceId: face.faceId,
     label: face.label,
+    fixtureType: face.fixtureType,
+    side: face.side,
     columns: face.columns,
     rows: face.rows,
     turned,
     x,
     y,
-    width: turned ? face.rows : face.columns,
-    height: turned ? face.columns : face.rows,
+    width: turned ? face.rows * ROW_UNITS : face.columns,
+    height: turned ? face.columns : face.rows * ROW_UNITS,
   };
 }
 
@@ -59,30 +70,52 @@ export function setBlocks(faces: readonly PlanogramFace[]): GridLayout {
   const upper = faces.find((f) => f.setSide === null);
   if (!upper) return shifted([]);
   const lower = (side: "front" | "back" | "left" | "right") => faces.find((f) => f.setSide === side);
+  const upperHeight = upper.rows * ROW_UNITS;
   const blocks = [block(upper, false, 0, 0)];
   const back = lower("back");
   const front = lower("front");
   const left = lower("left");
   const right = lower("right");
-  if (back) blocks.push(block(back, false, (upper.columns - back.columns) / 2, -back.rows - SET_GAP));
-  if (front) blocks.push(block(front, false, (upper.columns - front.columns) / 2, upper.rows + SET_GAP));
-  if (left) blocks.push(block(left, true, -left.rows - SET_GAP, (upper.rows - left.columns) / 2));
-  if (right) blocks.push(block(right, true, upper.columns + SET_GAP, (upper.rows - right.columns) / 2));
+  if (back) blocks.push(block(back, false, (upper.columns - back.columns) / 2, -back.rows * ROW_UNITS - SET_GAP));
+  if (front) blocks.push(block(front, false, (upper.columns - front.columns) / 2, upperHeight + SET_GAP));
+  if (left) blocks.push(block(left, true, -left.rows * ROW_UNITS - SET_GAP, (upperHeight - left.columns) / 2));
+  if (right) blocks.push(block(right, true, upper.columns + SET_GAP, (upperHeight - right.columns) / 2));
   return shifted(blocks);
 }
 
+// A turned block's rows run from the table's own back (row 0), which is the
+// edge against the upper on a left lower and the outer edge on a right lower.
 export function spanRect(b: Block, c: Cells): Rect {
   return b.turned
-    ? { x: b.x + c.row, y: b.y + c.col, width: c.rowSpan, height: c.colSpan }
-    : { x: b.x + c.col, y: b.y + c.row, width: c.colSpan, height: c.rowSpan };
+    ? { x: b.x + (b.rows - c.row - c.rowSpan) * ROW_UNITS, y: b.y + c.col, width: c.rowSpan * ROW_UNITS, height: c.colSpan }
+    : { x: b.x + c.col, y: b.y + c.row * ROW_UNITS, width: c.colSpan, height: c.rowSpan * ROW_UNITS };
+}
+
+export function blockAt(blocks: readonly Block[], x: number, y: number): Block | null {
+  return blocks.find((b) => x >= b.x && y >= b.y && x < b.x + b.width && y < b.y + b.height) ?? null;
 }
 
 export function cellAt(blocks: readonly Block[], x: number, y: number): { faceId: string; col: number; row: number } | null {
-  for (const b of blocks) {
-    if (x < b.x || y < b.y || x >= b.x + b.width || y >= b.y + b.height) continue;
-    const dx = Math.floor(x - b.x);
-    const dy = Math.floor(y - b.y);
-    return b.turned ? { faceId: b.faceId, col: dy, row: dx } : { faceId: b.faceId, col: dx, row: dy };
-  }
-  return null;
+  const b = blockAt(blocks, x, y);
+  if (!b) return null;
+  const dx = x - b.x;
+  const dy = y - b.y;
+  return b.turned
+    ? { faceId: b.faceId, col: Math.floor(dy), row: b.rows - 1 - Math.floor(dx / ROW_UNITS) }
+    : { faceId: b.faceId, col: Math.floor(dx), row: Math.floor(dy / ROW_UNITS) };
+}
+
+/** What location-words needs to read a placement on this face. */
+export function spotOf(
+  face: Pick<Block, "fixtureType" | "side" | "columns" | "rows">,
+  item: Cells & { presentation: Presentation },
+): Spot {
+  return {
+    fixtureType: face.fixtureType,
+    side: face.side,
+    columns: face.columns,
+    rows: face.rows,
+    presentation: item.presentation,
+    cells: { col: item.col, row: item.row, colSpan: item.colSpan, rowSpan: item.rowSpan },
+  };
 }

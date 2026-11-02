@@ -8,14 +8,15 @@ import type { ProductStatus } from "@/lib/product-status";
 
 export type Plan = "H" | "F" | "HF" | "B" | "HB" | "-";
 
+// Columns are half a foot (DECISIONS 10-12): a 1 ft hung rail spot is 2 columns.
 export const DEMO_CATEGORIES = [
-  { name: "Tees", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 10 },
-  { name: "Knits", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 6 },
-  { name: "Denim", hungColumns: 1, hungRows: 4, foldedColumns: 2, foldedRows: 2, stackLimit: 8 },
-  { name: "Pants", hungColumns: 1, hungRows: 4, foldedColumns: 2, foldedRows: 2, stackLimit: 8 },
-  { name: "Dresses", hungColumns: 1, hungRows: 4, foldedColumns: 2, foldedRows: 2, stackLimit: 4 },
-  { name: "Outerwear", hungColumns: 2, hungRows: 4, foldedColumns: 3, foldedRows: 2, stackLimit: 3 },
-  { name: "Accessories", hungColumns: 1, hungRows: 1, foldedColumns: 1, foldedRows: 1, stackLimit: 12 },
+  { name: "Tees", hungColumns: 2, hungRows: 3, foldedColumns: 4, foldedRows: 2, stackLimit: 10 },
+  { name: "Knits", hungColumns: 2, hungRows: 3, foldedColumns: 4, foldedRows: 2, stackLimit: 6 },
+  { name: "Denim", hungColumns: 2, hungRows: 4, foldedColumns: 4, foldedRows: 2, stackLimit: 8 },
+  { name: "Pants", hungColumns: 2, hungRows: 4, foldedColumns: 4, foldedRows: 2, stackLimit: 8 },
+  { name: "Dresses", hungColumns: 2, hungRows: 4, foldedColumns: 4, foldedRows: 2, stackLimit: 4 },
+  { name: "Outerwear", hungColumns: 4, hungRows: 4, foldedColumns: 6, foldedRows: 2, stackLimit: 3 },
+  { name: "Accessories", hungColumns: 2, hungRows: 1, foldedColumns: 2, foldedRows: 1, stackLimit: 12 },
 ] as const;
 
 type Row = [name: string, styleNumber: string, category: (typeof DEMO_CATEGORIES)[number]["name"], color: string, hex: string, sizeRange: string, status: ProductStatus, plan: Plan];

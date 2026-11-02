@@ -37,6 +37,7 @@ describe("planogramScope", () => {
     const scope = planogramScope(layout, "rack");
     expect(scope?.isSet).toBe(false);
     expect(scope?.faces.map((f) => f.label)).toEqual(["Front", "Back", "Right"]);
+    expect(scope?.faces.every((f) => f.fixtureType === "rack")).toBe(true);
   });
 
   it("covers a set's upper and lower tops, labelled by table", () => {
@@ -47,6 +48,7 @@ describe("planogramScope", () => {
       ["f-top", "Front table", "front"],
       ["l-top", "Left table", "left"],
     ]);
+    expect(scope?.faces.every((f) => f.fixtureType === "table")).toBe(true);
   });
 
   it("gives a lower table no scope of its own", () => {

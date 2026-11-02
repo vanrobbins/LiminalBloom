@@ -84,11 +84,11 @@ describe("updates", () => {
 });
 
 describe("faces", () => {
-  const rack = { ...store(), fixtures: [fixture({ type: "rack", name: "Rack 1", width: 48, depth: 24 })], faces: [face({ side: "front", columns: 4 })] };
+  const rack = { ...store(), fixtures: [fixture({ type: "rack", name: "Rack 1", width: 48, depth: 24 })], faces: [face({ side: "front", columns: 8 })] };
 
   it("turns a rack's back side on with a new grid, and off again", () => {
     const on = run(rack, { type: "setFace", fixtureId: "fixture-a", side: "back", on: true });
-    expect(on.faces).toContainEqual({ id: "new-1", fixtureId: "fixture-a", side: "back", columns: 4, rows: 3, version: 0 });
+    expect(on.faces).toContainEqual({ id: "new-1", fixtureId: "fixture-a", side: "back", columns: 8, rows: 3, version: 0 });
 
     const off = run(on, { type: "setFace", fixtureId: "fixture-a", side: "back", on: false });
     expect(off.faces.map((f) => f.side)).toEqual(["front"]);
@@ -105,7 +105,7 @@ describe("faces", () => {
 
   it("a resize carries an automatic grid with it", () => {
     const result = run(rack, { type: "updateFixture", id: "fixture-a", changes: { width: 96 } });
-    expect(result.faces[0]).toMatchObject({ columns: 8, rows: 3 });
+    expect(result.faces[0]).toMatchObject({ columns: 16, rows: 3 });
   });
 
   it("a resize leaves a hand-set grid alone (Review Focus 4)", () => {
@@ -121,7 +121,7 @@ describe("faces", () => {
 
   it("a new side starts at its automatic size", () => {
     const on = run(rack, { type: "setFace", fixtureId: "fixture-a", side: "left", on: true });
-    expect(on.faces.find((f) => f.side === "left")).toMatchObject({ columns: 2, rows: 3 });
+    expect(on.faces.find((f) => f.side === "left")).toMatchObject({ columns: 4, rows: 3 });
   });
 });
 

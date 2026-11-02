@@ -48,13 +48,14 @@ export function LocationDetails({ result, layout, onChanged }: LocationDetailsPr
             {result.locations.map((l) => (
               <li key={l.id} className="flex flex-col gap-2">
                 <p className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-mono font-semibold text-ink">{l.spanLabel}</span>
+                  <span className="font-semibold text-ink">{l.label}</span>
                   <span className="text-sm text-ink-muted">{PRESENTATION_LABEL[l.presentation]}</span>
                 </p>
+                {l.detail ? <p className="text-sm text-ink-muted">{l.detail}</p> : null}
                 {l.floor ? (
                   <>
                     <LocationMap layout={layout} fixtureId={l.floor.fixtureId} />
-                    <FaceGrid grid={l.floor.grid} cells={l.floor.cells} label={l.label.slice(0, l.label.lastIndexOf(","))} />
+                    <FaceGrid grid={l.floor.grid} cells={l.floor.cells} label={`${l.label}, ${l.detail}`} />
                     <Link
                       href={`/planograms/${l.floor.fixtureId}?product=${result.id}`}
                       className="inline-flex min-h-11 items-center self-start text-brand-strong underline underline-offset-4"

@@ -1,6 +1,6 @@
 // The shapes planograms are made of (spec §3). Types and constants only.
 
-import type { FaceSide, Side } from "@/lib/layout/types";
+import type { FaceSide, FixtureType, Side } from "@/lib/layout/types";
 import type { Footprint, Presentation } from "@/lib/products/footprint";
 import type { Cells } from "@/lib/products/location-label";
 
@@ -26,6 +26,8 @@ export type PlanogramFace = {
   faceId: string;
   fixtureId: string;
   fixtureName: string;
+  /** The face's own fixture's type: a wall bay's levels are shelves or rails, a table's are front to back. */
+  fixtureType: FixtureType;
   side: FaceSide;
   /** The lower table's side of its set; null for the planogram fixture's own faces. */
   setSide: Side | null;

@@ -12,7 +12,8 @@ import {
   MAX_COORD,
   MAX_ENTRANCE_WIDTH,
   MAX_FIXTURE_SIZE,
-  MAX_GRID,
+  MAX_GRID_COLUMNS,
+  MAX_GRID_ROWS,
   MAX_NAME,
   MIN_ENTRANCE_WIDTH,
   MIN_FIXTURE_SIZE,
@@ -167,8 +168,8 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
         issues.push(issue(f.id, "faces", `${f.name} has two ${SIDE_LABEL[face.side].toLowerCase()} grids.`));
       }
       sides.add(face.side);
-      if ([face.columns, face.rows].some((n) => n < 1 || n > MAX_GRID)) {
-        issues.push(issue(f.id, "grid", "Each grid needs 1 to 24 columns and rows."));
+      if (face.columns < 1 || face.columns > MAX_GRID_COLUMNS || face.rows < 1 || face.rows > MAX_GRID_ROWS) {
+        issues.push(issue(f.id, "grid", "Each grid needs ½ to 24 ft of width and 1 to 24 rows."));
       }
     }
     if (rule.faces.length > 0 && faces.length === 0) {

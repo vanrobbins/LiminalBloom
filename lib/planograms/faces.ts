@@ -23,6 +23,7 @@ function toFace(face: Face, owner: Fixture, fixtureName: string, label: string):
     faceId: face.id,
     fixtureId: owner.id,
     fixtureName,
+    fixtureType: owner.type,
     side: face.side,
     setSide: owner.setSide,
     label,

@@ -8,8 +8,9 @@ import { AlertTriangle } from "lucide-react";
 
 import { ProductImage } from "@/components/products/product-image";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
-import { spanLabel } from "@/lib/products/location-label";
+import { spotOf } from "@/lib/planograms/set-grid";
 import type { PlanogramFace } from "@/lib/planograms/types";
+import { spotSummary } from "@/lib/products/location-words";
 
 import type { GridItem } from "./grid-items";
 
@@ -39,6 +40,7 @@ export function PlacementList({ faces, items, orphans = [], issues, highlightPro
             <ul className="grid gap-2 sm:grid-cols-2 md:grid-cols-1">
               {rows.map((item) => {
                 const issue = issues?.get(item.id);
+                const face = faces.find((f) => f.faceId === item.faceId);
                 return (
                   <li key={item.id}>
                     <button
@@ -53,7 +55,7 @@ export function PlacementList({ faces, items, orphans = [], issues, highlightPro
                       <span className="flex min-w-0 flex-1 flex-col gap-1">
                         <span className="truncate font-medium text-ink">{item.productName}</span>
                         <span className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-                          <span className="rounded bg-line-subtle px-1.5 font-mono whitespace-nowrap text-ink">{spanLabel(item)}</span>
+                          {face ? <span className="rounded bg-line-subtle px-1.5 text-ink">{spotSummary(spotOf(face, item))}</span> : null}
                           {PRESENTATION_LABEL[item.presentation]} · {item.pieceCount} pcs
                         </span>
                         {issue ? (

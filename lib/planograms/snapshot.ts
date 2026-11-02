@@ -4,12 +4,15 @@
 import { z } from "zod";
 
 import { FACE_SIDES } from "@/lib/layout/types";
+import { MAX_COLUMNS, MAX_ROWS } from "@/lib/feet";
 import { PRESENTATIONS } from "@/lib/products/footprint";
 
 import { MAX_PIECES, type PlacementView, type PlanogramFace, type SnapshotEntry } from "./types";
 
-const cell = z.int().min(0).max(23);
-const span = z.int().min(1).max(24);
+const col = z.int().min(0).max(MAX_COLUMNS - 1);
+const row = z.int().min(0).max(MAX_ROWS - 1);
+const colSpan = z.int().min(1).max(MAX_COLUMNS);
+const rowSpan = z.int().min(1).max(MAX_ROWS);
 
 export const snapshotSchema = z.array(
   z.object({
@@ -22,10 +25,10 @@ export const snapshotSchema = z.array(
     productName: z.string(),
     styleNumber: z.string(),
     presentation: z.enum(PRESENTATIONS),
-    col: cell,
-    row: cell,
-    colSpan: span,
-    rowSpan: span,
+    col,
+    row,
+    colSpan,
+    rowSpan,
     pieceCount: z.int().min(1).max(MAX_PIECES),
   }),
 );

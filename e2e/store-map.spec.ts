@@ -224,7 +224,7 @@ test.describe("editing", () => {
 		const feet = page.getByRole("textbox", { name: "Width, feet" }).filter({ visible: true });
 		await feet.fill("8");
 		await feet.press("Enter");
-		await expect(page.getByRole("group", { name: "Columns" }).filter({ visible: true })).toContainText("8");
+		await expect(page.getByRole("group", { name: "Top grid" }).filter({ visible: true }).getByRole("group", { name: "Width", exact: true })).toContainText("8 ft");
 		await saved(page);
 	});
 

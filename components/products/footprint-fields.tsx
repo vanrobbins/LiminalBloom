@@ -5,8 +5,10 @@
 
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
+import { feetText } from "@/lib/feet";
 import {
-  MAX_CELLS,
+  MAX_FOOTPRINT_COLUMNS,
+  MAX_FOOTPRINT_ROWS,
   MAX_STACK,
   PRESENTATIONS,
   PRESENTATION_LABEL,
@@ -55,8 +57,8 @@ export function FootprintFields({ category, overrides, onChange }: FootprintFiel
           <div key={presentation} className="flex flex-col gap-2">
             <p className="font-medium text-ink">{label} (this product only)</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <NumberStepper label={`${label} columns`} value={override.columns} min={1} max={MAX_CELLS} onChange={(columns) => set(presentation, { ...override, columns })} />
-              <NumberStepper label={`${label} rows`} value={override.rows} min={1} max={MAX_CELLS} onChange={(rows) => set(presentation, { ...override, rows })} />
+              <NumberStepper label={`${label} width`} value={override.columns} min={1} max={MAX_FOOTPRINT_COLUMNS} format={(c) => `${feetText(c)} ft`} onChange={(columns) => set(presentation, { ...override, columns })} />
+              <NumberStepper label={`${label} rows`} value={override.rows} min={1} max={MAX_FOOTPRINT_ROWS} onChange={(rows) => set(presentation, { ...override, rows })} />
               <NumberStepper label={`${label} stack limit`} value={override.stackLimit} min={1} max={MAX_STACK} onChange={(stackLimit) => set(presentation, { ...override, stackLimit })} />
             </div>
             <Button variant="ghost" onClick={() => set(presentation, undefined)} aria-label={`Use category default for ${lower}`}>

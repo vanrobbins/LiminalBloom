@@ -71,6 +71,13 @@
       "when": 1791597162001,
       "tag": "0009_planograms",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791851746781,
+      "tag": "0010_half_foot",
+      "breakpoints": true
     }
   ]
 }

@@ -23,7 +23,7 @@ vi.mock("@/components/store-map/use-media-query", () => ({ PHONE_QUERY: "", useM
 
 import { PlanogramScreen } from "./planogram-screen";
 
-const face = (faceId: string, label: string): PlanogramFace => ({ faceId, fixtureId: "r", fixtureName: "Rack 1", side: "front", setSide: null, label, columns: 4, rows: 3 });
+const face = (faceId: string, label: string): PlanogramFace => ({ faceId, fixtureId: "r", fixtureName: "Rack 1", fixtureType: "rack", side: "front", setSide: null, label, columns: 4, rows: 3 });
 const front = face("00000000-0000-4000-8000-000000000001", "Front");
 const back = face("00000000-0000-4000-8000-000000000002", "Back");
 const scope: PlanogramScope = { fixtureId: "r", fixtureName: "Rack 1", isSet: false, faces: [front, back] };

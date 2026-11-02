@@ -19,12 +19,12 @@ describe("product input", () => {
   });
 
   it("refuses an empty name and an out-of-range footprint, naming the field", () => {
-    const result = productInput.safeParse({ ...valid, name: "  ", overrides: { hung: { columns: 25, rows: 1, stackLimit: 1 }, folded: null } });
+    const result = productInput.safeParse({ ...valid, name: "  ", overrides: { hung: { columns: 49, rows: 1, stackLimit: 1 }, folded: null } });
     expect(result.success).toBe(false);
     if (!result.success) {
       const errors = fieldErrors(result.error);
       expect(errors.name).toBe("Enter a name.");
-      expect(errors.overrides).toBe("Footprints are 1 to 24 cells each way.");
+      expect(errors.overrides).toBe("Footprints are ½ to 24 ft wide and 1 to 24 rows tall.");
     }
   });
 });

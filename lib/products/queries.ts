@@ -20,7 +20,7 @@ import { withStore } from "@/lib/db/with-store";
 import type { ProductStatus } from "@/lib/product-status";
 
 import type { CategoryDefaults, Overrides, Presentation } from "./footprint";
-import { locationLabel, type Cells } from "./location-label";
+import { locationDetail, locationLabel, type Cells } from "./location-label";
 import type { Place, SearchInput } from "./schemas";
 
 export const SEARCH_LIMIT = 30;
@@ -63,7 +63,8 @@ export type LocationRow = {
   productId: string;
   presentation: Presentation;
   label: string;
-  spanLabel: string;
+  /** Feet and levels; "" for a bin. */
+  detail: string;
   floor: FloorPlace | null;
 };
 
@@ -146,6 +147,7 @@ export async function locationsFor(storeId: string, productIds: readonly string[
         rows: fixtureFaces.rows,
         fixtureId: fixtures.id,
         fixtureName: fixtures.name,
+        fixtureType: fixtures.type,
         faceCount: sql<number>`(select count(*)::int from ${fixtureFaces} f2 where f2.fixture_id = ${fixtures.id})`,
         binCode: stockroomBins.code,
       })
@@ -162,21 +164,24 @@ export async function locationsFor(storeId: string, productIds: readonly string[
     const base = { id: r.id, productId: r.productId, presentation: r.presentation };
     if (r.binCode !== null) {
       const label = locationLabel({ kind: "bin", code: r.binCode });
-      return [{ ...base, label, spanLabel: label, floor: null }];
+      return [{ ...base, label, detail: "", floor: null }];
     }
     if (
-      r.faceId === null || r.side === null || r.fixtureId === null || r.fixtureName === null ||
+      r.faceId === null || r.side === null || r.fixtureId === null || r.fixtureName === null || r.fixtureType === null ||
       r.columns === null || r.rows === null || r.col === null || r.row === null || r.colSpan === null || r.rowSpan === null
     ) {
       return [];
     }
     const cells = { col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan };
-    const parts = { kind: "floor" as const, fixtureName: r.fixtureName, side: r.side, faceCount: r.faceCount, cells };
+    const parts = {
+      kind: "floor" as const, fixtureName: r.fixtureName, faceCount: r.faceCount, fixtureType: r.fixtureType,
+      side: r.side, columns: r.columns, rows: r.rows, presentation: r.presentation, cells,
+    };
     return [
       {
         ...base,
         label: locationLabel(parts),
-        spanLabel: locationLabel(parts, { span: true }),
+        detail: locationDetail(parts),
         floor: { fixtureId: r.fixtureId, faceId: r.faceId, grid: { columns: r.columns, rows: r.rows }, cells },
       },
     ];

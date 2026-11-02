@@ -17,4 +17,12 @@ describe("NumberStepper", () => {
     render(<NumberStepper label="Rows" value={3} min={1} max={24} onChange={() => {}} />);
     expect(screen.getByRole("group", { name: "Rows" })).toHaveTextContent("3");
   });
+
+  it("can show its value in other words, while stepping whole numbers", async () => {
+    const onChange = vi.fn();
+    render(<NumberStepper label="Width" value={3} min={1} max={48} format={(v) => `${v / 2} ft`} onChange={onChange} />);
+    expect(screen.getByRole("group", { name: "Width" })).toHaveTextContent("1.5 ft");
+    await userEvent.click(screen.getByRole("button", { name: "More width" }));
+    expect(onChange).toHaveBeenCalledWith(4);
+  });
 });

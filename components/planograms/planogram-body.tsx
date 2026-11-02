@@ -98,7 +98,7 @@ export function PlanogramBody({
           onSwipe={onSwipe}
         />
         <div className="flex flex-col gap-4">
-          <ProductSheet open={sheetId !== null} item={sheetItem} onClose={() => setSheetId(null)}>
+          <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => setSheetId(null)}>
             {isEditing && sheetId !== null ? (
               <PlacementEditor
                 placement={selected}

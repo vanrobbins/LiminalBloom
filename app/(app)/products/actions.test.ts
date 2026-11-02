@@ -231,7 +231,7 @@ describe("server actions", () => {
       expect(result.status).toBe("saved");
       if (result.status === "saved") {
         expect(result.category.name).toBe("Knits");
-        expect(result.category.hungColumns).toBe(1);
+        expect(result.category.hungColumns).toBe(2);
       }
     });
 
@@ -265,9 +265,9 @@ describe("server actions", () => {
 
       expect(result.category).toMatchObject({
         name: "Outerwear",
-        hungColumns: 1,
+        hungColumns: 2,
         hungRows: 3,
-        foldedColumns: 2,
+        foldedColumns: 4,
         foldedRows: 2,
         stackLimit: 8,
       });

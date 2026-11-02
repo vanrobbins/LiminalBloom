@@ -3,14 +3,23 @@ import { describe, expect, it } from "vitest";
 
 import { FaceGrid } from "./face-grid";
 
+const LABEL = "Front table 1 · Left · Middle, 0–2 ft from left · 0–2 ft from back";
+const grid = { columns: 12, rows: 3 };
+const cells = { col: 0, row: 0, colSpan: 4, rowSpan: 2 };
+
 describe("FaceGrid", () => {
-  it("names the filled cells and the grid size for screen readers", () => {
-    render(<FaceGrid grid={{ columns: 6, rows: 3 }} cells={{ col: 0, row: 0, colSpan: 2, rowSpan: 2 }} label="Front table 1" />);
-    expect(screen.getByRole("img", { name: "Front table 1: cells A1–B2 of a 6 by 3 grid" })).toBeInTheDocument();
+  it("describes the place for screen readers with the label it is given", () => {
+    render(<FaceGrid grid={grid} cells={cells} label={LABEL} />);
+    expect(screen.getByRole("img", { name: LABEL })).toBeInTheDocument();
   });
 
   it("draws one filled cell per covered cell", () => {
-    const { container } = render(<FaceGrid grid={{ columns: 6, rows: 3 }} cells={{ col: 1, row: 1, colSpan: 2, rowSpan: 1 }} label="T" />);
-    expect(container.querySelectorAll("[data-filled]")).toHaveLength(2);
+    const { container } = render(<FaceGrid grid={grid} cells={cells} label="T" />);
+    expect(container.querySelectorAll("[data-filled]")).toHaveLength(8);
+  });
+
+  it("draws no cell names", () => {
+    const { container } = render(<FaceGrid grid={grid} cells={cells} label="T" />);
+    expect(container.querySelectorAll("text")).toHaveLength(0);
   });
 });

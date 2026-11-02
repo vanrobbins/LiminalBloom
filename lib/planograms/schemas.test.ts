@@ -12,7 +12,7 @@ describe("planogram inputs", () => {
   });
 
   it("refuses cells, spans and counts outside the table's limits", () => {
-    for (const bad of [{ col: 24 }, { colSpan: 0 }, { pieceCount: 100 }, { pieceCount: 1.5 }, { presentation: "draped" }]) {
+    for (const bad of [{ col: 48 }, { colSpan: 0 }, { pieceCount: 100 }, { pieceCount: 1.5 }, { presentation: "draped" }]) {
       expect(changeInput.safeParse({ kind: "add", productId: "00000000-0000-4000-8000-000000000002", fields: { ...fields, ...bad } }).success).toBe(false);
     }
     expect(changeInput.safeParse({ kind: "update", id: "x", version: 1, fields }).success).toBe(false);

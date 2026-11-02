@@ -6,7 +6,7 @@ import type { PlanogramFace } from "@/lib/planograms/types";
 
 import { FaceSwitcher } from "./face-switcher";
 
-const face = (faceId: string, label: string): PlanogramFace => ({ faceId, fixtureId: "r", fixtureName: "Rack", side: "front", setSide: null, label, columns: 6, rows: 4 });
+const face = (faceId: string, label: string): PlanogramFace => ({ faceId, fixtureId: "r", fixtureName: "Rack", fixtureType: "rack", side: "front", setSide: null, label, columns: 6, rows: 4 });
 
 describe("FaceSwitcher", () => {
   it("offers each enabled face and marks the one shown", async () => {
