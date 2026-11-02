@@ -78,6 +78,13 @@
       "when": 1791851746781,
       "tag": "0010_half_foot",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793645009866,
+      "tag": "0011_store_settings",
+      "breakpoints": true
     }
   ]
 }

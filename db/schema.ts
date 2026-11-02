@@ -582,3 +582,20 @@ export const planogramVersions = pgTable(
     check("planogram_versions_number_positive", sql`${t.number} >= 1`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// A store's own settings (DECISIONS "Time", 10-12). Its own table so the
+// generated Better Auth schema is never edited. Row-level security is added by
+// hand in 0011, which also gives every existing store a row.
+// ---------------------------------------------------------------------------
+
+export const storeSettings = pgTable("store_settings", {
+  storeId: text("store_id")
+    .primaryKey()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  // An IANA name; the server accepts only names in Intl.supportedValuesOf("timeZone").
+  timezone: text("timezone").notNull(),
+  version: mapVersion(),
+  createdAt: mapCreatedAt(),
+  updatedAt: mapUpdatedAt(),
+});

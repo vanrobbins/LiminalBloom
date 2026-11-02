@@ -12,10 +12,11 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
-import { todayIso } from "@/lib/planograms/dates";
 import { planogramOwner, planogramScope } from "@/lib/planograms/faces";
 import { productLooks } from "@/lib/planograms/product-looks";
 import { loadPlanogram, loadVersion } from "@/lib/planograms/queries";
+import { storeTimezone } from "@/lib/store-settings";
+import { storeToday } from "@/lib/time/format";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,8 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
   const scope = planogramScope(layout, owner.id);
   if (!scope || scope.faces.length === 0) notFound();
 
-  const state = await loadPlanogram(activeStoreId, owner.id);
+  const [state, zone] = await Promise.all([loadPlanogram(activeStoreId, owner.id), storeTimezone(activeStoreId)]);
+  const today = storeToday(zone);
   const versionNumber = z.coerce.number().int().min(1).safeParse(query.version);
   const viewing = versionNumber.success && state.row ? await loadVersion(activeStoreId, state.row.id, versionNumber.data) : null;
   const looks = await productLooks(activeStoreId, [...(state.latest?.placements ?? []), ...(viewing?.placements ?? [])].map((p) => p.productId));
@@ -69,7 +71,7 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         looks={looks}
         highlightProductId={product}
         dueDate={state.row?.dueDate ?? null}
-        today={todayIso()}
+        today={today}
       />
     </div>
   );

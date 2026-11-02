@@ -84,9 +84,9 @@ export const auth = betterAuth({
     // deliberately left out until now. See docs/DECISIONS.md.
     organization({
       organizationHooks: {
-        // Every store gets its own encryption key the moment it exists,
-        // however it was created -- the Server Action or Better Auth's own
-        // endpoint. Proposal 8.1.
+        // Every store gets its own encryption key and its settings row the
+        // moment it exists, however it was created -- the Server Action or
+        // Better Auth's own endpoint. Proposal 8.1.
         //
         // Imported inside the hook: store-keys imports `server-only`, and the
         // Better Auth CLI loads this file outside Next.js, where that throws.
@@ -95,6 +95,15 @@ export const auth = betterAuth({
         afterCreateOrganization: async ({ organization }) => {
           const { giveStoreItsKey } = await import("./store-keys");
           await giveStoreItsKey(organization.id);
+          // A store never exists without a time zone (DECISIONS "Time", 10-12).
+          const { giveStoreSettings } = await import("./store-settings");
+          try {
+            await giveStoreSettings(organization.id);
+          } catch (error) {
+            const { removeStore } = await import("./store-keys");
+            await removeStore(organization.id);
+            throw error;
+          }
         },
       },
     }),

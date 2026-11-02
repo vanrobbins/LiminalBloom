@@ -7,9 +7,12 @@
 import { unstable_rethrow } from "next/navigation";
 import { useActionState } from "react";
 
+import { TimezonePicker } from "@/components/time/timezone-picker";
+import { useDeviceTimezone } from "@/components/time/use-device-timezone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CONNECTION_ERROR } from "@/lib/connection-error";
+import { startingZone } from "@/lib/time/zones";
 
 import { createStore } from "./actions";
 
@@ -25,10 +28,13 @@ async function createStoreOrExplain(previous: { error: string } | null, formData
 
 export function CreateStoreForm() {
   const [state, formAction, pending] = useActionState(createStoreOrExplain, null);
+  // Prefilled from the device once it is known; keyed so the picker restarts on it.
+  const zone = startingZone(useDeviceTimezone());
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <Input label="Store name" name="name" required minLength={2} placeholder="Pioneer Place" />
+      <TimezonePicker key={zone} name="timezone" defaultZone={zone} />
 
       {state?.error ? (
         <p role="alert" className="text-sm text-danger">

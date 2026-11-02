@@ -54,6 +54,7 @@ describe("UserMenu", () => {
 
     expect(screen.getByText("van@example.com")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Account" })).toHaveAttribute("href", "/account");
+    expect(screen.getByRole("menuitem", { name: "Store settings" })).toHaveAttribute("href", "/store");
     await user.click(screen.getByRole("menuitem", { name: "Switch to light theme" }));
     expect(mocks.setTheme).toHaveBeenCalledWith("light");
   });
@@ -121,6 +122,7 @@ describe("UserMenu", () => {
 
     expect(screen.getByText("van@example.com")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account");
+    expect(screen.getByRole("link", { name: "Store settings" })).toHaveAttribute("href", "/store");
     expect(screen.getByRole("button", { name: "Switch to light theme" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });

@@ -6,15 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
-import { todayIso } from "@/lib/planograms/dates";
 import { planogramList } from "@/lib/planograms/list";
 import { planogramSummaries } from "@/lib/planograms/queries";
+import { storeTimezone } from "@/lib/store-settings";
+import { storeToday } from "@/lib/time/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlanogramsPage() {
   const { activeStoreId } = await requireMember();
-  const [layout, summaries] = await Promise.all([loadLayout(activeStoreId), planogramSummaries(activeStoreId)]);
+  const [layout, summaries, zone] = await Promise.all([loadLayout(activeStoreId), planogramSummaries(activeStoreId), storeTimezone(activeStoreId)]);
+  const today = storeToday(zone);
   const groups = planogramList(layout, summaries);
 
   return (
@@ -29,7 +31,7 @@ export default async function PlanogramsPage() {
           </Button>
         </Card>
       ) : (
-        <PlanogramList groups={groups} today={todayIso()} />
+        <PlanogramList groups={groups} today={today} />
       )}
     </div>
   );

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 
-import { formatMoment } from "@/lib/planograms/dates";
+import { LocalTime } from "@/components/time/local-time";
 import type { ListGroup } from "@/lib/planograms/list";
 
 import { DueBadge } from "./due-badge";
@@ -26,9 +26,13 @@ export function PlanogramList({ groups, today }: { groups: ListGroup[]; today: s
                   </span>
                   <span className="flex flex-wrap items-center gap-3 text-sm">
                     <span className="text-ink-muted">
-                      {item.publishedVersion && item.publishedAt
-                        ? `Version ${item.publishedVersion} · ${formatMoment(item.publishedAt)}`
-                        : "Not published"}
+                      {item.publishedVersion && item.publishedAt ? (
+                        <>
+                          Version {item.publishedVersion} · <LocalTime at={item.publishedAt} />
+                        </>
+                      ) : (
+                        "Not published"
+                      )}
                     </span>
                     {item.hasDraft ? <span className="rounded border border-line px-2 text-ink">Draft</span> : null}
                     {item.dueDate ? <DueBadge dueDate={item.dueDate} today={today} /> : null}

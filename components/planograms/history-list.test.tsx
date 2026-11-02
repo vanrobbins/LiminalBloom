@@ -21,7 +21,7 @@ describe("HistoryList", () => {
     render(<HistoryList fixtureId="fx" expectedVersion={9} entries={entries} />);
     const items = screen.getAllByRole("article");
     expect(within(items[0]).getByRole("heading")).toHaveTextContent("Version 2");
-    expect(items[0]).toHaveTextContent("Oct 8 · Van");
+    expect(items[0]).toHaveTextContent(/Oct 8, .+ · Van/);
     expect(items[0]).toHaveTextContent("October denim reset");
     expect(items[0]).toHaveTextContent("Front: 1 moved");
     expect(items[0]).toHaveTextContent("Back is no longer on this fixture (3 products).");
