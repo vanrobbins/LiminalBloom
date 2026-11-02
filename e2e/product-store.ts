@@ -69,3 +69,12 @@ export async function resetE2eStatus(): Promise<void> {
   const store = await homeStoreId();
   await sql()`update products set status = 'in_stock' where store_id = ${store} and style_number like 'E2E-%'`;
 }
+
+/**
+ * Gives the seeded pant a photo path, so its tile draws an <img>. Nothing is in
+ * Blob at that path: stub `/api/images/**` in the test (page.route).
+ */
+export async function givePantAPhoto(): Promise<void> {
+  const store = await homeStoreId();
+  await sql()`update products set image_path = 'e2e/pant.png' where store_id = ${store} and name = 'E2E High-Rise Pant'`;
+}

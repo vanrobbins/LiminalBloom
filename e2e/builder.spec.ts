@@ -7,7 +7,10 @@
 
 import { expect, hydrated, sizeOf, test } from "./fixtures";
 import { seedLayout, seedRack } from "./map-store";
-import { seedCatalog } from "./product-store";
+import { givePantAPhoto, seedCatalog } from "./product-store";
+
+/** A 1×1 PNG, served in place of a product photo. */
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 
 type Page = import("@playwright/test").Page;
 type Locator = import("@playwright/test").Locator;
@@ -97,6 +100,20 @@ test("a selected tile drags two feet, then Undo and Redo move it back and forth"
     await page.reload();
     await expect(card(page, "E2E High-Rise Pant")).toContainText("Center · Middle", { timeout: 2000 });
   }).toPass();
+});
+
+test("a tile with a photo drags by mouse; the browser doesn't drag the image instead", async ({ page }, info) => {
+  test.skip(sizeOf(info) !== "desktop", "A native image drag is a mouse thing.");
+  await givePantAPhoto();
+  await page.route("**/api/images/**", (route) => route.fulfill({ contentType: "image/png", body: PNG }));
+  await openTable(page);
+  await startDraft(page);
+  await tile(page, "E2E High-Rise Pant").click();
+  await expect(tile(page, "E2E High-Rise Pant").locator("img")).toBeVisible();
+  const unit = await halfFoot(page);
+  await dragBy(page, tile(page, "E2E High-Rise Pant"), unit * 4, 0, info);
+  await saved(page);
+  await expect(card(page, "E2E High-Rise Pant")).toContainText("Center · Middle");
 });
 
 test("the right handle widens a tile half a foot at a time", async ({ page }, info) => {

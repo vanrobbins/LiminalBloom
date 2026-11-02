@@ -11,6 +11,11 @@ describe("ProductImage", () => {
     expect(screen.getByRole("img", { name: "High-Rise Pant" })).toHaveAttribute("src", `/api/images/${id}?v=abc.webp`);
   });
 
+  it("can't be dragged by the browser, which would steal a planogram tile's mouse drag", () => {
+    render(<ProductImage productId={id} name="High-Rise Pant" categoryName="Pants" imageKey="abc.webp" />);
+    expect(screen.getByRole("img", { name: "High-Rise Pant" })).toHaveAttribute("draggable", "false");
+  });
+
   it("decorative: the photo has an empty alt and the silhouette is hidden from screen readers", () => {
     const { container, rerender } = render(<ProductImage productId={id} name="Pant" categoryName="Pants" imageKey="a.webp" size="fill" decorative />);
     expect(container.querySelector("img")).toHaveAttribute("alt", "");
