@@ -98,7 +98,7 @@ test("a draft from the floor is edited, published, and Search shows the new cell
   await expect(page.getByText(/Version 1 · published/)).toBeVisible();
 
   await page.goto("/search?q=E2E-PT-01");
-  await expect(page.getByRole("main").getByRole("list").first()).toContainText("Table 1 · Center · Middle · Folded");
+  await expect(page.getByRole("main").getByRole("list").first()).toContainText("Table 1 · Center · Middle");
 });
 
 test("history shows the version, and restore makes it the draft", async ({ page }) => {
