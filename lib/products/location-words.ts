@@ -2,17 +2,31 @@
 // store ("Left of center · Top rail"), then feet and levels for the exact spot.
 // Cells stay the storage; nothing else turns them into words. "Left" is as you
 // stand facing the face; a table top reads from its front, so its row 0 is the
-// back. Bands are equal slices of the face; a placement takes the band holding
-// its centre (a centre on an edge goes to the band after it).
+// back. A back or right lower table is read from its outer edge instead
+// (readCells). Bands are equal slices of the face; a placement takes the band
+// holding its centre (a centre on an edge goes to the band after it).
 
 import { COLUMNS_PER_FOOT, feetText } from "@/lib/feet";
-import type { FaceSide, FixtureType } from "@/lib/layout/types";
+import { outerSide } from "@/lib/layout/fixtures";
+import type { FaceSide, FixtureType, Side } from "@/lib/layout/types";
 
 import type { Presentation } from "./footprint";
 
 export type Cells = { col: number; row: number; colSpan: number; rowSpan: number };
 
+/** A placement as words see it; `cells` are as read (readCells), not as stored. */
 export type Spot = { fixtureType: FixtureType; side: FaceSide; columns: number; rows: number; presentation: Presentation; cells: Cells };
+
+/**
+ * Cells as a person reads them. A back or right lower table's own front touches
+ * the upper, so nobody stands there: it reads from its outer edge, which swaps
+ * left with right and front with back (DECISIONS 11-01). Its own inverse, so it
+ * also turns read cells back into stored ones.
+ */
+export function readCells(cells: Cells, face: { columns: number; rows: number; setSide: Side | null }): Cells {
+  if (face.setSide === null || outerSide(face.setSide) === "front") return cells;
+  return { col: face.columns - cells.col - cells.colSpan, row: face.rows - cells.row - cells.rowSpan, colSpan: cells.colSpan, rowSpan: cells.rowSpan };
+}
 
 const WIDE = ["Far left", "Left", "Left of center", "Center", "Right of center", "Right", "Far right"];
 const NARROW = ["Left", "Center", "Right"];

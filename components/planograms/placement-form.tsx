@@ -1,6 +1,7 @@
 // One placement's numbers (spec §4 "Edit numbers"): face, feet from the left
 // and width in half steps, then levels (or, on a table top, feet from the back
-// and depth), presentation and pieces. Checked here with the server's own rules
+// and depth), presentation and pieces. The numbers are as a person reads them,
+// so a back or right lower table counts from its outer edge (readCells). Checked here with the server's own rules
 // so a refusal names its reason before anything is sent; the server checks again.
 
 "use client";
@@ -14,6 +15,7 @@ import { feetText, parseFeet } from "@/lib/feet";
 import { checkPlacement, type Neighbour } from "@/lib/planograms/rules";
 import type { PlacementFields, PlanogramFace } from "@/lib/planograms/types";
 import { PRESENTATION_LABEL, PRESENTATIONS, type Footprint, type Presentation } from "@/lib/products/footprint";
+import { readCells, type Cells } from "@/lib/products/location-words";
 
 type PlacementFormProps = {
   faces: readonly PlanogramFace[];
@@ -33,13 +35,19 @@ type PlacementFormProps = {
 const whole = (text: string) => (/^\d+$/.test(text.trim()) ? Number(text) : NaN);
 
 export function PlacementForm({ faces, initial, others, excludeId, stackLimitFor, footprints, submitLabel, busy, onSubmit, onRemove }: PlacementFormProps) {
+  const faceOf = (id: string) => faces.find((f) => f.faceId === id);
+  const asRead = (cells: Cells, id: string) => {
+    const f = faceOf(id);
+    return f ? readCells(cells, f) : cells;
+  };
+  const shown = asRead(initial, initial.faceId);
   const [faceId, setFaceId] = useState(initial.faceId);
-  const [fromLeft, setFromLeft] = useState(feetText(initial.col));
-  const [width, setWidth] = useState(feetText(initial.colSpan));
+  const [fromLeft, setFromLeft] = useState(feetText(shown.col));
+  const [width, setWidth] = useState(feetText(shown.colSpan));
   // A standing face counts levels from 1 at the top; a table top counts whole feet from the back.
-  const isTopOf = (id: string) => faces.find((f) => f.faceId === id)?.side === "top";
-  const [rowStart, setRowStart] = useState(String(isTopOf(initial.faceId) ? initial.row : initial.row + 1));
-  const [rowSpan, setRowSpan] = useState(String(initial.rowSpan));
+  const isTopOf = (id: string) => faceOf(id)?.side === "top";
+  const [rowStart, setRowStart] = useState(String(isTopOf(initial.faceId) ? shown.row : shown.row + 1));
+  const [rowSpan, setRowSpan] = useState(String(shown.rowSpan));
   const [presentation, setPresentation] = useState<Presentation>(initial.presentation);
   const [pieces, setPieces] = useState(String(initial.pieceCount));
   const [error, setError] = useState<string | null>(null);
@@ -68,9 +76,11 @@ export function PlacementForm({ faces, initial, others, excludeId, stackLimitFor
     if (col === null || colSpan === null) return setError("Use feet in half steps, like 4 or 4½.");
     if (colSpan === 0) return setError("Width must be at least ½ ft.");
     const start = whole(rowStart);
-    const fields: PlacementFields = { faceId, presentation, col, colSpan, row: isTop ? start : start - 1, rowSpan: whole(rowSpan), pieceCount: whole(pieces) };
-    const levelsOk = [fields.row, fields.rowSpan, fields.pieceCount].every((n) => Number.isInteger(n) && n >= 0) && fields.rowSpan >= 1 && fields.pieceCount >= 1;
+    const read = { col, colSpan, row: isTop ? start : start - 1, rowSpan: whole(rowSpan) };
+    const pieceCount = whole(pieces);
+    const levelsOk = [read.row, read.rowSpan, pieceCount].every((n) => Number.isInteger(n) && n >= 0) && read.rowSpan >= 1 && pieceCount >= 1;
     if (!levelsOk) return setError(isTop ? "Use whole feet for from back and depth, and whole numbers for pieces." : "Use whole numbers from 1 for levels and pieces.");
+    const fields: PlacementFields = { faceId, presentation, pieceCount, ...asRead(read, faceId) };
     const refusal = checkPlacement({ ...fields, id: excludeId }, others, faces, stackLimitFor(presentation));
     if (refusal) return setError(refusal.message);
     setError(null);

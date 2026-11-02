@@ -41,6 +41,17 @@ describe("PlacementForm", () => {
     expect(onSubmit).toHaveBeenCalledWith({ ...initial, col: 7, colSpan: 3, row: 2, rowSpan: 1 });
   });
 
+  it("counts a back lower table's numbers from its outer edge and saves them as stored", async () => {
+    const back: PlanogramFace = { ...top, setSide: "back", label: "Back table", rows: 2 };
+    const onSubmit = vi.fn().mockResolvedValue(null);
+    const stored = { ...initial, faceId: back.faceId, col: 0, row: 0, colSpan: 4, rowSpan: 1 };
+    render(<PlacementForm faces={[back]} initial={stored} others={[]} excludeId={null} stackLimitFor={() => 8} submitLabel="Add" busy={false} onSubmit={onSubmit} />);
+    expect(screen.getByLabelText("From left (ft)")).toHaveValue("4");
+    expect(screen.getByLabelText("From back (ft)")).toHaveValue("1");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(onSubmit).toHaveBeenCalledWith(stored);
+  });
+
   it("asks a table top for feet from the back and depth", async () => {
     const onSubmit = renderForm({ faces: [top, front] });
     await userEvent.selectOptions(screen.getByLabelText("Side"), "Top");

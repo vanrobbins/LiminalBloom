@@ -7,7 +7,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
-import { productCategories, productLocations, products } from "@/db/schema";
+import { fixtures, productCategories, productLocations, products, tableSets } from "@/db/schema";
 
 import { WORD_SIMILARITY_THRESHOLD, isTextQuery, listCategories, locationsFor, productDetail, search, searchProducts } from "./queries";
 import { searchInput } from "./schemas";
@@ -107,6 +107,22 @@ describe("locations", () => {
     expect(floor.floor).toEqual({ fixtureId: fa.fixtureId, faceId: fa.faceId, grid: { columns: 6, rows: 3 }, cells: { col: 0, row: 0, colSpan: 2, rowSpan: 2 } });
     const results = await search(a, input({ q: "rise tee" }));
     expect(results[0].locations[0]).toMatchObject({ label: "Stockroom, bin B-12", floor: null });
+  });
+
+  it("reads a back lower table from its outer edge, and keeps the stored cells for the grid", async () => {
+    // Front table 1's top (6 x 3) becomes the back lower of a set; its pant sits at the stored back-left.
+    const upperId = randomUUID();
+    await db.insert(fixtures).values({ id: upperId, storeId: a, type: "table", name: "Upper", x: 100, y: 200, width: 72, depth: 36 });
+    const setId = randomUUID();
+    await db.insert(tableSets).values({ id: setId, storeId: a, upperFixtureId: upperId });
+    await db.update(fixtures).set({ tableSetId: setId, setSide: "back" }).where(eq(fixtures.id, fa.fixtureId));
+    try {
+      const [floor] = await locationsFor(a, [fa.productId]);
+      expect(floor).toMatchObject({ label: "Front table 1 · Right · Front", detail: "2–3 ft from left · 1–3 ft from back" });
+      expect(floor.floor?.cells).toEqual({ col: 0, row: 0, colSpan: 2, rowSpan: 2 });
+    } finally {
+      await db.update(fixtures).set({ tableSetId: null, setSide: null }).where(eq(fixtures.id, fa.fixtureId));
+    }
   });
 
   it("returns nothing for no ids or another store's ids", async () => {

@@ -6,10 +6,10 @@
 // keeps its own face, columns and rows. The grid and the builder use only these
 // units (one coordinate space: Merch Mobile's map mixed several).
 
-import type { FaceSide, FixtureType } from "@/lib/layout/types";
+import type { FaceSide, FixtureType, Side } from "@/lib/layout/types";
 import type { Presentation } from "@/lib/products/footprint";
 import type { Cells } from "@/lib/products/location-label";
-import type { Spot } from "@/lib/products/location-words";
+import { readCells, type Spot } from "@/lib/products/location-words";
 
 import type { PlanogramFace } from "./types";
 
@@ -23,6 +23,8 @@ export type Block = {
   label: string;
   fixtureType: FixtureType;
   side: FaceSide;
+  /** The lower table's side of its set; null for the planogram fixture's own faces. */
+  setSide: Side | null;
   columns: number;
   rows: number;
   turned: boolean;
@@ -40,6 +42,7 @@ function block(face: PlanogramFace, turned: boolean, x: number, y: number): Bloc
     label: face.label,
     fixtureType: face.fixtureType,
     side: face.side,
+    setSide: face.setSide,
     columns: face.columns,
     rows: face.rows,
     turned,
@@ -107,7 +110,7 @@ export function cellAt(blocks: readonly Block[], x: number, y: number): { faceId
 
 /** What location-words needs to read a placement on this face. */
 export function spotOf(
-  face: Pick<Block, "fixtureType" | "side" | "columns" | "rows">,
+  face: Pick<Block, "fixtureType" | "side" | "setSide" | "columns" | "rows">,
   item: Cells & { presentation: Presentation },
 ): Spot {
   return {
@@ -116,6 +119,6 @@ export function spotOf(
     columns: face.columns,
     rows: face.rows,
     presentation: item.presentation,
-    cells: { col: item.col, row: item.row, colSpan: item.colSpan, rowSpan: item.rowSpan },
+    cells: readCells({ col: item.col, row: item.row, colSpan: item.colSpan, rowSpan: item.rowSpan }, face),
   };
 }
