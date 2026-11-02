@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { acrossWord, feetLine, heightWord, placeWords, shortSpot, spotSummary, type Spot } from "./location-words";
+import { acrossWord, feetLine, heightWord, placeWords, readCells, shortSpot, spotSummary, type Spot } from "./location-words";
 
 // A face `feet` wide (two columns a foot) with a placement `span` columns wide whose centre is at `centre` columns.
 const across = (feet: number, col: number, colSpan: number) => acrossWord(feet * 2, { col, colSpan, row: 0, rowSpan: 1 });
@@ -91,5 +91,24 @@ describe("placeWords, feetLine and the short forms", () => {
   it("has a short form for the drag chip", () => {
     expect(shortSpot(wall({ presentation: "folded" }, { col: 8, colSpan: 4 }))).toBe("4–6 ft · Top shelf");
     expect(shortSpot(wall({ rows: 1 }, { col: 9, colSpan: 1 }))).toBe("4½ ft");
+  });
+});
+
+describe("readCells", () => {
+  // A 6 ft lower top (12 columns, 2 rows); a 1 ft placement at the left of the back row.
+  const cells = { col: 0, row: 0, colSpan: 2, rowSpan: 1 };
+  const lower = (setSide: "front" | "back" | "left" | "right" | null) => ({ columns: 12, rows: 2, setSide });
+
+  it("reads a back or right lower table from its outer edge: left and right swap, front and back swap", () => {
+    expect(readCells(cells, lower("back"))).toEqual({ col: 10, row: 1, colSpan: 2, rowSpan: 1 });
+    expect(readCells(cells, lower("right"))).toEqual({ col: 10, row: 1, colSpan: 2, rowSpan: 1 });
+  });
+
+  it("leaves front and left lowers and the fixture's own faces as stored", () => {
+    for (const setSide of ["front", "left", null] as const) expect(readCells(cells, lower(setSide))).toEqual(cells);
+  });
+
+  it("is its own inverse", () => {
+    expect(readCells(readCells(cells, lower("back")), lower("back"))).toEqual(cells);
   });
 });

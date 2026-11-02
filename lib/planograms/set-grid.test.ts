@@ -84,7 +84,7 @@ describe("spanRect and cellAt", () => {
 
   it("singleBlock is the face at the origin", () => {
     expect(singleBlock(face("u", null, 12, 3))).toEqual({
-      blocks: [{ faceId: "u", label: "u", fixtureType: "table", side: "top", columns: 12, rows: 3, turned: false, x: 0, y: 0, width: 12, height: 6 }],
+      blocks: [{ faceId: "u", label: "u", fixtureType: "table", side: "top", setSide: null, columns: 12, rows: 3, turned: false, x: 0, y: 0, width: 12, height: 6 }],
       width: 12,
       height: 6,
     });
@@ -94,5 +94,9 @@ describe("spanRect and cellAt", () => {
     expect(spotOf(face("u", null, 12, 3), { col: 0, row: 0, colSpan: 4, rowSpan: 2, presentation: "folded" })).toEqual({
       fixtureType: "table", side: "top", columns: 12, rows: 3, presentation: "folded", cells: { col: 0, row: 0, colSpan: 4, rowSpan: 2 },
     });
+  });
+
+  it("reads a back lower table's spot from its outer edge", () => {
+    expect(spotOf(face("b", "back", 12, 2), { col: 0, row: 0, colSpan: 4, rowSpan: 1, presentation: "folded" }).cells).toEqual({ col: 8, row: 1, colSpan: 4, rowSpan: 1 });
   });
 });

@@ -21,6 +21,7 @@ import type { ProductStatus } from "@/lib/product-status";
 
 import type { CategoryDefaults, Overrides, Presentation } from "./footprint";
 import { locationDetail, locationLabel, type Cells } from "./location-label";
+import { readCells } from "./location-words";
 import type { Place, SearchInput } from "./schemas";
 
 export const SEARCH_LIMIT = 30;
@@ -148,6 +149,7 @@ export async function locationsFor(storeId: string, productIds: readonly string[
         fixtureId: fixtures.id,
         fixtureName: fixtures.name,
         fixtureType: fixtures.type,
+        setSide: fixtures.setSide,
         faceCount: sql<number>`(select count(*)::int from ${fixtureFaces} f2 where f2.fixture_id = ${fixtures.id})`,
         binCode: stockroomBins.code,
       })
@@ -175,7 +177,8 @@ export async function locationsFor(storeId: string, productIds: readonly string[
     const cells = { col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan };
     const parts = {
       kind: "floor" as const, fixtureName: r.fixtureName, faceCount: r.faceCount, fixtureType: r.fixtureType,
-      side: r.side, columns: r.columns, rows: r.rows, presentation: r.presentation, cells,
+      side: r.side, columns: r.columns, rows: r.rows, presentation: r.presentation,
+      cells: readCells(cells, { columns: r.columns, rows: r.rows, setSide: r.setSide }),
     };
     return [
       {
