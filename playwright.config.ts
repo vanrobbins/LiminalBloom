@@ -21,9 +21,9 @@ const THEMES = ["light", "dark"] as const;
 // Behaviour flows run in light at every size; dark runs the specs that check
 // colour. Planograms joined the light-only set once planogram-contrast.spec.ts
 // began checking its colours in both themes; builder.spec.ts is behaviour only
-// (drag, undo, touch) and joined it; cards.spec.ts checks layout only (columns, name
+// (drag, undo, touch) and joined it; prototype.spec.ts (the walkthrough) is behaviour only; cards.spec.ts checks layout only (columns, name
 // widths), no colors. Anchored to whole file names.
-const LIGHT_ONLY = /(?:^|[\\/])(library|search|store-map|sign-in|sign-out|planograms|builder|cards|store-time)\.spec\.ts$/;
+const LIGHT_ONLY = /(?:^|[\\/])(library|search|store-map|sign-in|sign-out|planograms|builder|cards|store-time|prototype)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "e2e",
