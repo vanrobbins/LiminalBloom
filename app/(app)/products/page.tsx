@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 
-import { ProductRows } from "@/components/products/product-rows";
+import { ProductCard } from "@/components/products/product-card";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const rows = await searchProducts(activeStoreId, searchInput.parse({ q: query }), LIBRARY_LIMIT);
 
   return (
-    <div className="mx-auto w-full max-w-2xl">
+    <div className="mx-auto w-full max-w-6xl">
       <PageHeader title="Product library" />
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" asChild>
@@ -39,7 +39,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         <Input label="Filter products" name="q" type="search" defaultValue={query} />
       </form>
       <p className="mt-4 text-ink-muted" aria-live="polite">
-        {rows.length} {rows.length === 1 ? "product" : "products"}
+        {rows.length.toLocaleString("en-US")} {rows.length === 1 ? "product" : "products"}
         {query ? ` matching “${query}”` : " in this store"}.
       </p>
       {rows.length === 0 ? (
@@ -47,7 +47,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           {query ? "Nothing matches. Try fewer letters." : "No products yet. Add the first one, or set up categories."}
         </p>
       ) : (
-        <ProductRows products={rows} />
+        <ul className="mt-6 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {rows.map((p) => (
+            <li key={p.id}>
+              <ProductCard product={p} />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
