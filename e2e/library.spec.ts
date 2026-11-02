@@ -85,13 +85,13 @@ test("overrides a footprint for one product", async ({ page }) => {
   await page.goto("/products?q=E2E-HRP-01");
   await page.getByRole("main").getByRole("link", { name: /E2E High-Rise Pant/ }).click();
   await page.getByRole("button", { name: "Override hung for this product" }).click();
-  await page.getByRole("button", { name: "More hung columns" }).click();
+  await page.getByRole("button", { name: "More hung width" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(/\/products$/);
   await page.goto("/products?q=E2E-HRP-01");
   await page.getByRole("main").getByRole("link", { name: /E2E High-Rise Pant/ }).click();
   await expect(page.getByText("Hung (this product only)")).toBeVisible();
-  await expect(page.getByRole("group", { name: "Hung columns" })).toContainText("2");
+  await expect(page.getByRole("group", { name: "Hung width" })).toContainText("1½ ft");
 });
 
 test("deleting a category warns how many products go with it", async ({ page }) => {

@@ -1,4 +1,4 @@
-// Each result names its place (§3.2 items 4–6): fixture and cell, hung or
+// Each result names its place in words (§3.2 items 4–6), hung or
 // folded, and status as a word with an icon.
 
 import { ProductImage } from "@/components/products/product-image";
@@ -58,7 +58,7 @@ export function SearchResults({ results, openId = null, query, hasFilters, onOpe
                   {r.styleNumber} · {r.color}
                 </span>
                 {first ? (
-                  <span className="flex flex-wrap gap-x-2 font-mono text-sm font-semibold text-ink">
+                  <span className="flex flex-wrap gap-x-2 text-sm font-semibold text-ink">
                     <span>
                       {first.label} · {PRESENTATION_LABEL[first.presentation]}
                     </span>

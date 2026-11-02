@@ -3,6 +3,8 @@
 // (docs/superpowers/specs/2026-09-30-store-map-design.md §5–7). Lengths are
 // whole inches.
 
+import { MAX_COLUMNS, MAX_ROWS } from "@/lib/feet";
+
 /** The drawing area: 1,000 ft square. */
 export const MAX_COORD = 12_000;
 export const MAX_CORNERS = 64;
@@ -22,7 +24,9 @@ export const DEFAULT_ENTRANCE_WIDTH = 72;
 /** How far a new lower table reaches out from its upper table. */
 export const DEFAULT_LOWER_DEPTH = 24;
 
-export const MAX_GRID = 24;
+/** A face's grid: half-foot columns, up to 24 ft; up to 24 rows (DECISIONS 10-12). */
+export const MAX_GRID_COLUMNS = MAX_COLUMNS;
+export const MAX_GRID_ROWS = MAX_ROWS;
 export const MAX_NAME = 60;
 export const MAX_CHANGES_PER_SAVE = 500;
 

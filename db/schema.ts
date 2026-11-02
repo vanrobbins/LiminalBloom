@@ -60,9 +60,9 @@ export const productCategories = pgTable(
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    hungColumns: integer("hung_columns").notNull().default(1),
+    hungColumns: integer("hung_columns").notNull().default(2),
     hungRows: integer("hung_rows").notNull().default(3),
-    foldedColumns: integer("folded_columns").notNull().default(2),
+    foldedColumns: integer("folded_columns").notNull().default(4),
     foldedRows: integer("folded_rows").notNull().default(2),
     stackLimit: integer("stack_limit").notNull().default(8),
     version: integer("version").notNull().default(1),
@@ -75,9 +75,10 @@ export const productCategories = pgTable(
     uniqueIndex("product_categories_store_id_unique").on(t.storeId, t.id),
     uniqueIndex("product_categories_name_unique").on(t.storeId, sql`lower(${t.name})`),
     index("product_categories_name_trgm").using("gin", sql`lower(${t.name}) gin_trgm_ops`),
+    // Columns are half a foot (DECISIONS 10-12); rows are levels.
     check(
       "product_categories_ranges",
-      sql`${t.hungColumns} between 1 and 24 and ${t.hungRows} between 1 and 24 and ${t.foldedColumns} between 1 and 24 and ${t.foldedRows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+      sql`${t.hungColumns} between 1 and 48 and ${t.hungRows} between 1 and 24 and ${t.foldedColumns} between 1 and 48 and ${t.foldedRows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
     ),
   ],
 );
@@ -318,7 +319,7 @@ export const fixtures = pgTable(
   ],
 );
 
-/** A side of a fixture that displays product, with its grid of cells. */
+/** A side of a fixture that displays product: half-foot columns, levels as rows. */
 export const fixtureFaces = pgTable(
   "fixture_faces",
   {
@@ -337,7 +338,7 @@ export const fixtureFaces = pgTable(
     // The target of product_locations' (store_id, face_id) key.
     uniqueIndex("fixture_faces_store_id_unique").on(t.storeId, t.id),
     uniqueIndex("fixture_faces_side_unique").on(t.fixtureId, t.side),
-    check("fixture_faces_grid_range", sql`${t.columns} between 1 and 24 and ${t.rows} between 1 and 24`),
+    check("fixture_faces_grid_range", sql`${t.columns} between 1 and 48 and ${t.rows} between 1 and 24`),
     // Composite FK: a face can only reference a fixture in its own store.
     foreignKey({
       name: "fixture_faces_fixture_fk",
@@ -395,7 +396,7 @@ export const productFootprints = pgTable(
     }).onDelete("cascade"),
     check(
       "product_footprints_ranges",
-      sql`${t.columns} between 1 and 24 and ${t.rows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+      sql`${t.columns} between 1 and 48 and ${t.rows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
     ),
   ],
 );
@@ -468,7 +469,7 @@ export const productLocations = pgTable(
     ),
     check(
       "product_locations_ranges",
-      sql`${t.col} between 0 and 23 and ${t.row} between 0 and 23 and ${t.colSpan} between 1 and 24 and ${t.rowSpan} between 1 and 24`,
+      sql`${t.col} between 0 and 47 and ${t.row} between 0 and 23 and ${t.colSpan} between 1 and 48 and ${t.rowSpan} between 1 and 24 and ${t.col} + ${t.colSpan} <= 48`,
     ),
   ],
 );
@@ -550,7 +551,7 @@ export const planogramPlacements = pgTable(
     // The face's own grid, overlap and stack limit are checked in code (faces can be under 24).
     check(
       "planogram_placements_ranges",
-      sql`${t.col} between 0 and 23 and ${t.row} between 0 and 23 and ${t.colSpan} between 1 and 24 and ${t.rowSpan} between 1 and 24 and ${t.col} + ${t.colSpan} <= 24 and ${t.row} + ${t.rowSpan} <= 24 and ${t.pieceCount} between 1 and 99`,
+      sql`${t.col} between 0 and 47 and ${t.row} between 0 and 23 and ${t.colSpan} between 1 and 48 and ${t.rowSpan} between 1 and 24 and ${t.col} + ${t.colSpan} <= 48 and ${t.row} + ${t.rowSpan} <= 24 and ${t.pieceCount} between 1 and 99`,
     ),
   ],
 );

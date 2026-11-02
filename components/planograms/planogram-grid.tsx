@@ -1,9 +1,10 @@
 // A planogram's grid (spec §4.1): one face, or a table set's combined view.
 // HTML, not SVG: every placement is a real button (keyboard and screen readers
-// for free; Part 2's builder adds gestures to the same elements). Cells are
-// square and fill the width, never under 40 px; a face too wide for that
-// scrolls sideways inside the grid, with a fade on the clipped edge. The cell
-// size is pure CSS (container query units), so the first paint is right.
+// for free; Part 2's builder adds gestures to the same elements). One unit is
+// half a foot (set-grid.ts) and fills the width, never under 20 px (40 px a
+// foot, as before); a face too wide for that scrolls sideways inside the grid,
+// with a fade on the clipped edge. The cell size is pure CSS (container query
+// units), so the first paint is right.
 
 "use client";
 
@@ -12,14 +13,14 @@ import { useRef } from "react";
 
 import { ProductImage } from "@/components/products/product-image";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
-import { columnLetters, spanLabel } from "@/lib/products/location-label";
-import { spanRect, type GridLayout, type Rect } from "@/lib/planograms/set-grid";
+import { ROW_UNITS, spanRect, spotOf, type GridLayout, type Rect } from "@/lib/planograms/set-grid";
+import { spotSummary } from "@/lib/products/location-words";
 
 import { SWIPE_MIN_PX } from "./face-swipe";
 import type { GridItem } from "./grid-items";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
 
-/** Room for column letters above and row numbers to the left. */
+/** Room above the grid for a table set's labels. */
 const GUTTER = "1.5rem";
 const at = (n: number) => `calc(var(--cell) * ${n})`;
 /** A tile sits 1 px inside its cells, so neighbours read as separate. */
@@ -51,7 +52,6 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const start = useRef<{ x: number; y: number; edges: Edges } | null>(null);
   const drawn = items.filter((item) => layout.blocks.some((b) => b.faceId === item.faceId));
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
-  const single = layout.blocks.length === 1 ? layout.blocks[0] : null;
   const mask =
     edges.left && edges.right
       ? "linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent)"
@@ -108,27 +108,13 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
           className={`relative ${slide}`}
           style={
             {
-              "--cell": `max(2.5rem, calc((100cqw - ${GUTTER}) / ${layout.width}))`,
-              width: `calc(${GUTTER} + ${at(layout.width)})`,
+              "--cell": `max(1.25rem, calc(100cqw / ${layout.width}))`,
+              width: at(layout.width),
               height: `calc(${GUTTER} + ${at(layout.height)})`,
             } as React.CSSProperties
           }
         >
-          {single
-            ? Array.from({ length: single.columns }, (_, col) => (
-                <span key={`c${col}`} aria-hidden="true" className="absolute top-0 flex h-6 items-center justify-center font-mono text-xs text-ink-muted" style={{ left: `calc(${GUTTER} + ${at(col)})`, width: at(1) }}>
-                  {columnLetters(col)}
-                </span>
-              ))
-            : null}
-          {single
-            ? Array.from({ length: single.rows }, (_, row) => (
-                <span key={`r${row}`} aria-hidden="true" className="absolute left-0 flex w-6 items-center justify-center font-mono text-xs text-ink-muted" style={{ top: `calc(${GUTTER} + ${at(row)})`, height: at(1) }}>
-                  {row + 1}
-                </span>
-              ))
-            : null}
-          <div className="absolute inset-0" style={{ left: GUTTER, top: GUTTER }}>
+          <div className="absolute inset-x-0 bottom-0" style={{ top: GUTTER }}>
             {layout.blocks.map((block) => (
               <div key={block.faceId}>
                 {layout.blocks.length > 1 ? (
@@ -146,7 +132,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                         data-cell={`${block.faceId}:${col}:${row}`}
                         onClick={onEmptyCell ? () => onEmptyCell({ faceId: block.faceId, col, row }) : undefined}
                         className={`absolute border border-line-subtle bg-raised ${onEmptyCell ? "cursor-copy" : ""}`}
-                        style={{ left: at(r.x), top: at(r.y), width: at(1), height: at(1) }}
+                        style={{ left: at(r.x), top: at(r.y), width: at(r.width), height: at(r.height) }}
                       />
                     );
                   }),
@@ -161,6 +147,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   key={item.id}
                   item={item}
                   rect={spanRect(block, item)}
+                  words={spotSummary(spotOf(block, item))}
                   selected={item.id === selectedId}
                   highlighted={item.productId === highlightProductId}
                   issue={issues?.get(item.id)}
@@ -175,11 +162,11 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   );
 }
 
-type TileProps = { item: GridItem; rect: Rect; selected: boolean; highlighted: boolean; issue: string | undefined; onSelect: (id: string) => void };
+type TileProps = { item: GridItem; rect: Rect; words: string; selected: boolean; highlighted: boolean; issue: string | undefined; onSelect: (id: string) => void };
 
-function Tile({ item, rect, selected, highlighted, issue, onSelect }: TileProps) {
-  // A 1-cell tile has room for the photo and stock only; the name is in the sheet and the card.
-  const named = rect.width >= 2;
+function Tile({ item, rect, words, selected, highlighted, issue, onSelect }: TileProps) {
+  // Under 2 ft wide there is room for the photo and stock only; the name is in the sheet and the card.
+  const named = rect.width >= 2 * ROW_UNITS;
   return (
     <button
       type="button"
@@ -188,7 +175,7 @@ function Tile({ item, rect, selected, highlighted, issue, onSelect }: TileProps)
       data-highlighted={highlighted ? "" : undefined}
       data-issue={issue ? "" : undefined}
       aria-pressed={selected}
-      aria-label={`${item.productName}, ${spanLabel(item)}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
+      aria-label={`${item.productName}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
       onClick={() => onSelect(item.id)}
       style={placed(rect)}
       className="absolute overflow-hidden rounded-md border border-line bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse"

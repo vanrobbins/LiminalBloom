@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { restoreMessage, restoreRows } from "./restore";
 import type { PlanogramFace, ProductFit, SnapshotEntry } from "./types";
 
-const front: PlanogramFace = { faceId: "front", fixtureId: "rack", fixtureName: "Rack", side: "front", setSide: null, label: "Front", columns: 4, rows: 4 };
+const front: PlanogramFace = { faceId: "front", fixtureId: "rack", fixtureName: "Rack", fixtureType: "rack", side: "front", setSide: null, label: "Front", columns: 4, rows: 4 };
 const entry = (over: Partial<SnapshotEntry>): SnapshotEntry => ({
   faceId: "front", faceLabel: "Front", side: "front", fixtureId: "rack", fixtureName: "Rack", productId: "pant",
   productName: "High-Rise Pant", styleNumber: "HRP", presentation: "folded", col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 8, ...over,

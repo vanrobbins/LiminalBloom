@@ -8,15 +8,15 @@ import type { GridItem } from "./grid-items";
 import { PlanogramGrid } from "./planogram-grid";
 
 const face = (faceId: string, setSide: PlanogramFace["setSide"], rows: number): PlanogramFace => ({
-  faceId, fixtureId: faceId, fixtureName: "Front Table set", side: "top", setSide, label: faceId === "u" ? "Upper" : "Front table", columns: 6, rows,
+  faceId, fixtureId: faceId, fixtureName: "Front Table set", fixtureType: "table", side: "top", setSide, label: faceId === "u" ? "Upper" : "Front table", columns: 12, rows,
 });
-const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: "High-Rise Pant", styleNumber: "HR-1", presentation: "folded", pieceCount: 6, col: 0, row: 0, colSpan: 2, rowSpan: 2, imageKey: null, categoryName: "Denim" };
+const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: "High-Rise Pant", styleNumber: "HR-1", presentation: "folded", pieceCount: 6, col: 0, row: 0, colSpan: 4, rowSpan: 2, imageKey: null, categoryName: "Denim" };
 
 describe("PlanogramGrid", () => {
   it("names itself and gives each placement a button naming product, cells and stock", () => {
     render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="Front Table set, Top" onSelect={vi.fn()} />);
     expect(screen.getByRole("region", { name: "Front Table set, Top: 1 product" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "High-Rise Pant, A1–B2, Folded 6" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "High-Rise Pant, Left · Middle, Folded 6" })).toBeInTheDocument();
   });
 
   it("a tap on a tile selects it", () => {
@@ -27,7 +27,7 @@ describe("PlanogramGrid", () => {
   });
 
   it("marks the selection as pressed, and the highlighted product", () => {
-    const other = { ...pant, id: "p2", productId: "other", productName: "Tee", col: 3 };
+    const other = { ...pant, id: "p2", productId: "other", productName: "Tee", col: 6 };
     const { container } = render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant, other]} label="T" selectedId="p1" highlightProductId="other" onSelect={vi.fn()} />);
     expect(screen.getByRole("button", { name: /High-Rise Pant/ })).toHaveAttribute("aria-pressed", "true");
     expect(container.querySelector('[data-placement="p2"]')).toHaveAttribute("data-marked");
@@ -35,16 +35,22 @@ describe("PlanogramGrid", () => {
 
   it("names an issue in the tile's name", () => {
     render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" issues={new Map([["p1", "Off the edge of the face"]])} onSelect={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "High-Rise Pant, A1–B2, Folded 6. Off the edge of the face" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "High-Rise Pant, Left · Middle, Folded 6. Off the edge of the face" })).toBeInTheDocument();
   });
 
   it("a tap on a lower table's open cell picks that table's face", () => {
     const onEmptyCell = vi.fn();
     const { container } = render(<PlanogramGrid layout={setBlocks([face("u", null, 3), face("f", "front", 2)])} items={[pant]} label="Set" onSelect={vi.fn()} onEmptyCell={onEmptyCell} />);
-    const cell = container.querySelector('[data-cell="f:1:0"]');
+    const cell = container.querySelector('[data-cell="f:2:0"]');
     expect(cell).not.toBeNull();
     if (cell) fireEvent.click(cell);
-    expect(onEmptyCell).toHaveBeenCalledWith({ faceId: "f", col: 1, row: 0 });
+    expect(onEmptyCell).toHaveBeenCalledWith({ faceId: "f", col: 2, row: 0 });
+  });
+
+  it("shows no column letters or row numbers", () => {
+    render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" onSelect={vi.fn()} />);
+    expect(screen.queryByText("A")).toBeNull();
+    expect(screen.queryByText("1")).toBeNull();
   });
 
   it("counts only the products on faces it draws", () => {

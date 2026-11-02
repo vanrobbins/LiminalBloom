@@ -135,8 +135,8 @@ describe("fixtures", () => {
     );
   });
 
-  it("flags a grid over 24", () => {
-    const layout = { ...store(), fixtures: [fixture()], faces: [face({ columns: 30 })] };
+  it("flags a grid over 24 ft wide", () => {
+    const layout = { ...store(), fixtures: [fixture()], faces: [face({ columns: 49 })] };
     expect(kinds(validate(layout), "fixture-a")).toContain("grid");
   });
 

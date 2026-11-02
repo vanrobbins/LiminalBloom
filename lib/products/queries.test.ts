@@ -103,7 +103,7 @@ describe("isTextQuery", () => {
 describe("locations", () => {
   it("labels floor and bin locations and returns the face grid", async () => {
     const [floor] = await locationsFor(a, [fa.productId]);
-    expect(floor).toMatchObject({ label: "Front table 1, A1", spanLabel: "Front table 1, A1–B2", presentation: "folded" });
+    expect(floor).toMatchObject({ label: "Front table 1 · Left · Middle", detail: "0–1 ft from left · 0–2 ft from back", presentation: "folded" });
     expect(floor.floor).toEqual({ fixtureId: fa.fixtureId, faceId: fa.faceId, grid: { columns: 6, rows: 3 }, cells: { col: 0, row: 0, colSpan: 2, rowSpan: 2 } });
     const results = await search(a, input({ q: "rise tee" }));
     expect(results[0].locations[0]).toMatchObject({ label: "Stockroom, bin B-12", floor: null });

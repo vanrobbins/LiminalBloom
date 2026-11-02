@@ -12,7 +12,7 @@ import {
   resizeFromHandle,
   resizeLowerTable,
 } from "./fixtures";
-import { MAX_GRID } from "./limits";
+import { MAX_GRID_COLUMNS } from "./limits";
 import type { Fixture, FixtureType } from "./types";
 
 const fixture = (over: Partial<Fixture> = {}): Fixture => ({
@@ -146,22 +146,27 @@ describe("distanceToRect", () => {
 });
 
 describe("gridForSurface", () => {
-  it("is a cell per foot, within 1–24", () => {
-    expect(gridForSurface(72, 36)).toEqual({ columns: 6, rows: 3 });
-    expect(gridForSurface(6, 600)).toEqual({ columns: 1, rows: 24 });
+  it("is two columns a foot and a row a foot, within the limits", () => {
+    expect(gridForSurface(72, 36)).toEqual({ columns: 12, rows: 3 });
+    expect(gridForSurface(6, 600)).toEqual({ columns: 2, rows: 24 });
   });
 });
 
 describe("autoGrid", () => {
-  it("is a cell per foot along the face", () => {
-    expect(autoGrid({ type: "table", width: 72, depth: 36 }, "top")).toEqual({ columns: 6, rows: 3 });
-    expect(autoGrid({ type: "wall_bay", width: 96, depth: 24 }, "front")).toEqual({ columns: 8, rows: 5 });
-    expect(autoGrid({ type: "rack", width: 60, depth: 24 }, "back")).toEqual({ columns: 5, rows: 3 });
-    expect(autoGrid({ type: "rack", width: 60, depth: 24 }, "left")).toEqual({ columns: 2, rows: 3 });
+  it("is two columns per foot along the face; a top's rows are feet deep", () => {
+    expect(autoGrid({ type: "table", width: 72, depth: 36 }, "top")).toEqual({ columns: 12, rows: 3 });
+    expect(autoGrid({ type: "wall_bay", width: 96, depth: 24 }, "front")).toEqual({ columns: 16, rows: 5 });
+    expect(autoGrid({ type: "rack", width: 60, depth: 24 }, "back")).toEqual({ columns: 10, rows: 3 });
+    expect(autoGrid({ type: "rack", width: 60, depth: 24 }, "left")).toEqual({ columns: 4, rows: 3 });
   });
 
-  it("caps at the grid limit and never drops below one (Review Focus 4)", () => {
-    expect(autoGrid({ type: "table", width: 360, depth: 6 }, "top")).toEqual({ columns: MAX_GRID, rows: 1 });
+  it("doubles the old per-foot count exactly, so a doubled grid still reads as automatic", () => {
+    // 66 in rounds to 6 ft, as before: 12 columns, never 11.
+    expect(autoGrid({ type: "rack", width: 66, depth: 24 }, "front").columns).toBe(12);
+  });
+
+  it("caps at the grid limit and never drops below one foot (Review Focus 4)", () => {
+    expect(autoGrid({ type: "table", width: 360, depth: 6 }, "top")).toEqual({ columns: MAX_GRID_COLUMNS, rows: 1 });
   });
 
   it("matches today's defaults for every type at its default size", () => {

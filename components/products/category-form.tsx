@@ -8,11 +8,12 @@ import { saveCategory } from "@/app/(app)/products/categories/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberStepper } from "@/components/ui/number-stepper";
-import { MAX_CELLS, MAX_STACK, type CategoryDefaults } from "@/lib/products/footprint";
+import { feetText } from "@/lib/feet";
+import { MAX_FOOTPRINT_COLUMNS, MAX_FOOTPRINT_ROWS, MAX_STACK, type CategoryDefaults } from "@/lib/products/footprint";
 import type { CategoryRow } from "@/lib/products/queries";
 import { toast } from "@/lib/toast";
 
-const DEFAULTS: CategoryDefaults = { hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 8 };
+const DEFAULTS: CategoryDefaults = { hungColumns: 2, hungRows: 3, foldedColumns: 4, foldedRows: 2, stackLimit: 8 };
 
 export function CategoryForm({ category, onDone }: { category?: CategoryRow; onDone: () => void }) {
   const [name, setName] = useState(category?.name ?? "");
@@ -43,10 +44,10 @@ export function CategoryForm({ category, onDone }: { category?: CategoryRow; onD
     <div className="flex flex-col gap-4">
       <Input label="Name" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} />
       <div className="grid grid-cols-2 gap-3">
-        <NumberStepper label="Hung columns" value={sizes.hungColumns} min={1} max={MAX_CELLS} onChange={set("hungColumns")} />
-        <NumberStepper label="Hung rows" value={sizes.hungRows} min={1} max={MAX_CELLS} onChange={set("hungRows")} />
-        <NumberStepper label="Folded columns" value={sizes.foldedColumns} min={1} max={MAX_CELLS} onChange={set("foldedColumns")} />
-        <NumberStepper label="Folded rows" value={sizes.foldedRows} min={1} max={MAX_CELLS} onChange={set("foldedRows")} />
+        <NumberStepper label="Hung width" value={sizes.hungColumns} min={1} max={MAX_FOOTPRINT_COLUMNS} format={(c) => `${feetText(c)} ft`} onChange={set("hungColumns")} />
+        <NumberStepper label="Hung rows" value={sizes.hungRows} min={1} max={MAX_FOOTPRINT_ROWS} onChange={set("hungRows")} />
+        <NumberStepper label="Folded width" value={sizes.foldedColumns} min={1} max={MAX_FOOTPRINT_COLUMNS} format={(c) => `${feetText(c)} ft`} onChange={set("foldedColumns")} />
+        <NumberStepper label="Folded rows" value={sizes.foldedRows} min={1} max={MAX_FOOTPRINT_ROWS} onChange={set("foldedRows")} />
         <NumberStepper label="Stack limit" value={sizes.stackLimit} min={1} max={MAX_STACK} onChange={set("stackLimit")} />
       </div>
       {errors.form ? (

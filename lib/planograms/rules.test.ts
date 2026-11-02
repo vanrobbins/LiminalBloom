@@ -6,7 +6,7 @@ import { cellsOverlap, fitsGrid } from "@/lib/products/placement";
 import { checkPlacement, draftIssues, type Neighbour } from "./rules";
 import type { PlacementView, PlanogramFace } from "./types";
 
-const front: PlanogramFace = { faceId: "front", fixtureId: "bay", fixtureName: "Denim Wall · Bay 3", side: "front", setSide: null, label: "Front", columns: 6, rows: 4 };
+const front: PlanogramFace = { faceId: "front", fixtureId: "bay", fixtureName: "Denim Wall · Bay 3", fixtureType: "rack", side: "front", setSide: null, label: "Front", columns: 6, rows: 4 };
 const pant: Neighbour = { id: "pant", faceId: "front", productName: "High-Rise Pant", col: 0, row: 0, colSpan: 2, rowSpan: 2 };
 const sock = (over = {}) => ({ id: null, faceId: "front", presentation: "hung" as const, col: 2, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 1, ...over });
 

@@ -8,7 +8,7 @@ import { PlacementEditor } from "./placement-panel";
 
 vi.mock("@/components/store-map/use-media-query", () => ({ PHONE_QUERY: "", useMediaQuery: () => false }));
 
-const top: PlanogramFace = { faceId: "00000000-0000-4000-8000-000000000001", fixtureId: "t", fixtureName: "Table 1", side: "top", setSide: null, label: "Top", columns: 6, rows: 3 };
+const top: PlanogramFace = { faceId: "00000000-0000-4000-8000-000000000001", fixtureId: "t", fixtureName: "Table 1", fixtureType: "table", side: "top", setSide: null, label: "Top", columns: 6, rows: 3 };
 const placement: PlacementView = {
   id: "p", productId: "pr", productName: "Pocket Tee", styleNumber: "PT-1", stackLimit: 8, version: 1, imageKey: null, categoryName: "Denim",
   faceId: top.faceId, presentation: "hung", col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 20,

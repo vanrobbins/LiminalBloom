@@ -32,8 +32,8 @@ export async function seedCatalog(): Promise<void> {
   const store = await homeStoreId();
   // Categories take their products, and products their places.
   await db`delete from product_categories where store_id = ${store} and name like 'E2E %'`;
-  const [pants] = await db`insert into product_categories (store_id, name) values (${store}, 'E2E Pants') returning id`;
-  const [tees] = await db`insert into product_categories (store_id, name) values (${store}, 'E2E Tees') returning id`;
+  const [pants] = await db`insert into product_categories (store_id, name, hung_columns, folded_columns) values (${store}, 'E2E Pants', 2, 4) returning id`;
+  const [tees] = await db`insert into product_categories (store_id, name, hung_columns, folded_columns) values (${store}, 'E2E Tees', 2, 4) returning id`;
   const [pant] = await db`
     insert into products (store_id, name, style_number, category_id, color, size_range)
     values (${store}, 'E2E High-Rise Pant', 'E2E-HRP-01', ${pants.id}, 'Black', '0–14') returning id`;
@@ -45,7 +45,7 @@ export async function seedCatalog(): Promise<void> {
     where f.store_id = ${store} and f.name = 'Table 1' and ff.side = 'top'`;
   await db`
     insert into product_locations (store_id, product_id, presentation, face_id, col, row, col_span, row_span)
-    values (${store}, ${pant.id}, 'folded', ${face.id}, 0, 0, 2, 2)`;
+    values (${store}, ${pant.id}, 'folded', ${face.id}, 0, 0, 4, 2)`;
 }
 
 /** Puts the E2E products back to in stock, for a test that changed one. */

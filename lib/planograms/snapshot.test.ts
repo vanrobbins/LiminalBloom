@@ -5,8 +5,8 @@ import type { PlacementView, PlanogramFace } from "./types";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 const faces: PlanogramFace[] = [
-  { faceId: id(1), fixtureId: id(9), fixtureName: "4-way Rack 2", side: "front", setSide: null, label: "Front", columns: 6, rows: 4 },
-  { faceId: id(2), fixtureId: id(9), fixtureName: "4-way Rack 2", side: "back", setSide: null, label: "Back", columns: 6, rows: 4 },
+  { faceId: id(1), fixtureId: id(9), fixtureName: "4-way Rack 2", fixtureType: "rack", side: "front", setSide: null, label: "Front", columns: 6, rows: 4 },
+  { faceId: id(2), fixtureId: id(9), fixtureName: "4-way Rack 2", fixtureType: "rack", side: "back", setSide: null, label: "Back", columns: 6, rows: 4 },
 ];
 const view = (over: Partial<PlacementView>): PlacementView => ({
   id: id(5), faceId: id(1), productId: id(7), productName: "Crew Sock", styleNumber: "CS-1", presentation: "hung",
@@ -28,6 +28,6 @@ describe("snapshot", () => {
   it("rejects malformed history", () => {
     expect(() => parseSnapshot([{ faceId: "x" }])).toThrow();
     expect(() => parseSnapshot({})).toThrow();
-    expect(() => parseSnapshot([{ ...buildSnapshot([view({})], faces)[0], col: 30 }])).toThrow();
+    expect(() => parseSnapshot([{ ...buildSnapshot([view({})], faces)[0], col: 48 }])).toThrow();
   });
 });

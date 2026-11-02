@@ -28,7 +28,7 @@ describe("newFixture", () => {
     let n = 0;
     const { fixture, faces } = newFixture(store(), "rack", "r", { x: 100.4, y: 99.6 }, () => `id-${++n}`);
     expect(fixture).toMatchObject({ id: "r", name: "Rack 1", x: 100, y: 100, width: 48, depth: 24, rotation: 0 });
-    expect(faces).toEqual([{ id: "id-1", fixtureId: "r", side: "front", columns: 4, rows: 3, version: 0 }]);
+    expect(faces).toEqual([{ id: "id-1", fixtureId: "r", side: "front", columns: 8, rows: 3, version: 0 }]);
   });
 });
 

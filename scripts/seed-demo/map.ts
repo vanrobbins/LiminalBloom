@@ -47,14 +47,14 @@ export function demoMap(newId: () => string): DemoMap {
   zone("Cash wrap", "cash_wrap", "zone-6", 0, 300, 80, 180);
 
   // Back wall: eight bays facing into the store, two inches apart.
-  for (let i = 0; i < 8; i++) face(fixture("wall_bay", `Wall bay ${i + 1}`, 150 + i * 50, 14), "front", 4, 5, "wall");
+  for (let i = 0; i < 8; i++) face(fixture("wall_bay", `Wall bay ${i + 1}`, 150 + i * 50, 14), "front", 8, 5, "wall");
 
   // Double-sided racks, four a side. Four rows so a 1 × 4 hung footprint fits.
   const rackSpots = [[120, 160], [230, 160], [120, 230], [230, 230], [490, 160], [600, 160], [490, 230], [600, 230]];
   rackSpots.forEach(([x, y], i) => {
     const rack = fixture("rack", `Rack ${i + 1}`, x, y);
-    face(rack, "front", 4, 4, "rack");
-    face(rack, "back", 4, 4, "rack");
+    face(rack, "front", 8, 4, "rack");
+    face(rack, "back", 8, 4, "rack");
   });
 
   // Front tables: one set (an upper with lower tables left and right) between two singles.

@@ -59,7 +59,7 @@ export async function removeProduct(productId: string, expectedVersion: number):
 /** "New category…" from the product form: a name, with the usual defaults. */
 export async function addCategory(name: string): Promise<{ status: "saved"; category: CategoryRow } | { status: "invalid"; message: string }> {
   const { activeStoreId } = await requireMember();
-  const parsed = categoryInput.safeParse({ name, hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 8 });
+  const parsed = categoryInput.safeParse({ name, hungColumns: 2, hungRows: 3, foldedColumns: 4, foldedRows: 2, stackLimit: 8 });
   if (!parsed.success) return { status: "invalid", message: fieldErrors(parsed.error).name ?? "Enter a name." };
   const result = await createCategory(activeStoreId, parsed.data);
   if (result.status === "duplicate") return { status: "invalid", message: "There is already a category with that name." };

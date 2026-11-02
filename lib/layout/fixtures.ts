@@ -1,9 +1,11 @@
 // What each kind of fixture is, and the maths of rotated rectangles (spec §5).
 // All rotation goes through frames.ts.
 
+import { COLUMNS_PER_FOOT } from "@/lib/feet";
+
 import { normalizeAngle, toLocal, toWorld, type Pose } from "./frames";
 import { dot, length, subtract } from "./geometry";
-import { MAX_FIXTURE_SIZE, MAX_GRID, MIN_FIXTURE_SIZE, ROTATED_EPSILON } from "./limits";
+import { MAX_FIXTURE_SIZE, MAX_GRID_COLUMNS, MAX_GRID_ROWS, MIN_FIXTURE_SIZE, ROTATED_EPSILON } from "./limits";
 import type { Face, FaceSide, Fixture, FixtureType, Point, Side, TableSet } from "./types";
 
 export type FixtureRule = {
@@ -25,7 +27,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     width: 72,
     depth: 36,
     faces: ["top"],
-    defaultFaces: [{ side: "top", columns: 6, rows: 3 }],
+    defaultFaces: [{ side: "top", columns: 12, rows: 3 }],
     resize: "both",
     round: false,
   },
@@ -34,7 +36,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     width: 48,
     depth: 24,
     faces: ["front"],
-    defaultFaces: [{ side: "front", columns: 4, rows: 5 }],
+    defaultFaces: [{ side: "front", columns: 8, rows: 5 }],
     resize: "width",
     round: false,
   },
@@ -43,7 +45,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     width: 48,
     depth: 24,
     faces: ["front", "back", "left", "right"],
-    defaultFaces: [{ side: "front", columns: 4, rows: 3 }],
+    defaultFaces: [{ side: "front", columns: 8, rows: 3 }],
     resize: "both",
     round: false,
   },
@@ -213,20 +215,25 @@ export function distanceToRect(f: Rect, p: Point): number {
   return Math.hypot(dx, dy);
 }
 
-/** Cells along a run of this many inches: one a foot, within the grid limits. */
-function cellsAlong(inches: number): number {
-  return Math.min(MAX_GRID, Math.max(1, Math.round(inches / 12)));
+/** Whole feet along a run, within the row limit. */
+function feetAlong(inches: number): number {
+  return Math.min(MAX_GRID_ROWS, Math.max(1, Math.round(inches / 12)));
 }
 
-/** A cell per foot on a surface seen from above, within the grid limits. */
+/** Two columns a foot: exactly double the old count, so a migrated grid still reads as automatic. */
+function columnsAlong(inches: number): number {
+  return Math.min(MAX_GRID_COLUMNS, feetAlong(inches) * COLUMNS_PER_FOOT);
+}
+
+/** A surface seen from above: half-foot columns across, a row per foot of depth. */
 export function gridForSurface(width: number, depth: number): { columns: number; rows: number } {
-  return { columns: cellsAlong(width), rows: cellsAlong(depth) };
+  return { columns: columnsAlong(width), rows: feetAlong(depth) };
 }
 
 /**
- * The grid a face gets from its fixture's size (DECISIONS 10-10): a cell per
- * foot along the face. Fixtures have no height, so a standing face keeps its
- * type's rows.
+ * The grid a face gets from its fixture's size (DECISIONS 10-10, 10-12): two
+ * columns per foot along the face. Fixtures have no height, so a standing face
+ * keeps its type's rows.
  */
 export function autoGrid(
   f: Pick<Fixture, "type" | "width" | "depth">,
@@ -234,7 +241,7 @@ export function autoGrid(
 ): { columns: number; rows: number } {
   if (side === "top") return gridForSurface(f.width, f.depth);
   const run = side === "front" || side === "back" ? f.width : f.depth;
-  return { columns: cellsAlong(run), rows: FIXTURE_RULES[f.type].defaultFaces[0]?.rows ?? 3 };
+  return { columns: columnsAlong(run), rows: FIXTURE_RULES[f.type].defaultFaces[0]?.rows ?? 3 };
 }
 
 /** Nobody set this grid by hand: it is what the size implies. Not stored, so no migration. */

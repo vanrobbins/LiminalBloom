@@ -11,27 +11,31 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+import type { PlanogramFace } from "@/lib/planograms/types";
+
 import type { GridItem } from "./grid-items";
 import { ProductSheet } from "./product-sheet";
 
-const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: "High-Rise Pant", styleNumber: "HR-1", presentation: "folded", pieceCount: 6, col: 0, row: 0, colSpan: 2, rowSpan: 2, imageKey: null, categoryName: "Denim" };
+const top: PlanogramFace = { faceId: "u", fixtureId: "t", fixtureName: "Table 1", fixtureType: "table", side: "top", setSide: null, label: "Top", columns: 12, rows: 3 };
+const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: "High-Rise Pant", styleNumber: "HR-1", presentation: "folded", pieceCount: 6, col: 0, row: 0, colSpan: 4, rowSpan: 2, imageKey: null, categoryName: "Denim" };
 
 describe("ProductSheet", () => {
-  it("shows the product, its cells on one line, and a way to find it in Search", () => {
-    render(<ProductSheet open item={pant} onClose={vi.fn()} />);
+  it("shows the product, where it is in words and feet, and a way to find it in Search", () => {
+    render(<ProductSheet open item={pant} face={top} onClose={vi.fn()} />);
     expect(screen.getByText("HR-1")).toBeInTheDocument();
-    expect(screen.getByText("A1–B2")).toBeInTheDocument();
+    expect(screen.getByText("Left · Middle")).toBeInTheDocument();
+    expect(screen.getByText("0–2 ft from left · 0–2 ft from back")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Find in Search" })).toHaveAttribute("href", "/search?q=HR-1");
   });
 
   it("holds the editor while editing", () => {
-    render(<ProductSheet open item={pant} onClose={vi.fn()}><p>editor</p></ProductSheet>);
+    render(<ProductSheet open item={pant} face={top} onClose={vi.fn()}><p>editor</p></ProductSheet>);
     expect(screen.getByText("editor")).toBeInTheDocument();
   });
 
   it("closes from its close button", async () => {
     const onClose = vi.fn();
-    render(<ProductSheet open item={pant} onClose={onClose} />);
+    render(<ProductSheet open item={pant} face={top} onClose={onClose} />);
     await userEvent.setup().click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalled();
   });
@@ -76,7 +80,7 @@ function Harness({ tile = true }: { tile?: boolean }) {
           Pant card
         </button>
       )}
-      <ProductSheet open={open} item={open ? pant : null} onClose={() => setOpen(false)} />
+      <ProductSheet open={open} item={open ? pant : null} face={top} onClose={() => setOpen(false)} />
     </>
   );
 }

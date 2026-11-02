@@ -17,13 +17,15 @@ import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-que
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
-import { spanLabel } from "@/lib/products/location-label";
+import { spotOf } from "@/lib/planograms/set-grid";
+import type { PlanogramFace } from "@/lib/planograms/types";
+import { feetLine, placeWords } from "@/lib/products/location-words";
 
 import type { GridItem } from "./grid-items";
 
-type ProductSheetProps = { open: boolean; item: GridItem | null; onClose: () => void; children?: React.ReactNode };
+type ProductSheetProps = { open: boolean; item: GridItem | null; face: PlanogramFace | null; onClose: () => void; children?: React.ReactNode };
 
-export function ProductSheet({ open, item, onClose, children }: ProductSheetProps) {
+export function ProductSheet({ open, item, face, onClose, children }: ProductSheetProps) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const title = item?.productName ?? "Placement";
   // The product shown last: another tile may have been picked while it was open.
@@ -54,8 +56,14 @@ export function ProductSheet({ open, item, onClose, children }: ProductSheetProp
             <dl className="grid content-start grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
               <dt className="text-ink-muted">Style</dt>
               <dd className="font-mono text-ink">{item.styleNumber}</dd>
-              <dt className="text-ink-muted">Cells</dt>
-              <dd className="font-mono whitespace-nowrap text-ink">{spanLabel(item)}</dd>
+              {item && face ? (
+                <>
+                  <dt className="text-ink-muted">Where</dt>
+                  <dd className="text-ink">{placeWords(spotOf(face, item)) || face.label}</dd>
+                  <dt className="text-ink-muted">Exactly</dt>
+                  <dd className="text-ink">{feetLine(spotOf(face, item))}</dd>
+                </>
+              ) : null}
               <dt className="text-ink-muted">How</dt>
               <dd className="text-ink">{PRESENTATION_LABEL[item.presentation]}</dd>
               <dt className="text-ink-muted">Pieces</dt>

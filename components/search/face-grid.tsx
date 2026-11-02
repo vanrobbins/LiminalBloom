@@ -1,34 +1,17 @@
-// A fixture face's grid with the product's cells filled (spec §7.3).
+// A fixture face with the product's place filled (spec §7.3), no cell names:
+// columns are half a foot, so each is drawn half as wide as a row is tall.
 // Planogram Detail draws the full grid: components/planograms/planogram-grid.tsx.
 
-import { columnLetters, spanLabel, type Cells } from "@/lib/products/location-label";
+import type { Cells } from "@/lib/products/location-label";
 
-const CELL = 10;
+const ROW = 10;
+const COL = ROW / 2;
 
 export function FaceGrid({ grid, cells, label }: { grid: { columns: number; rows: number }; cells: Cells; label: string }) {
   const covered = (col: number, row: number) =>
     col >= cells.col && col < cells.col + cells.colSpan && row >= cells.row && row < cells.row + cells.rowSpan;
-  const width = (grid.columns + 1) * CELL;
-  const height = (grid.rows + 1) * CELL;
-  const cellRange = spanLabel(cells);
-
   return (
-    <svg
-      role="img"
-      aria-label={`${label}: cells ${cellRange} of a ${grid.columns} by ${grid.rows} grid`}
-      viewBox={`0 0 ${width} ${height}`}
-      className="w-full max-w-sm"
-    >
-      {Array.from({ length: grid.columns }, (_, col) => (
-        <text key={`c${col}`} x={(col + 1.5) * CELL} y={CELL * 0.7} textAnchor="middle" className="fill-ink-muted text-[4px]">
-          {columnLetters(col)}
-        </text>
-      ))}
-      {Array.from({ length: grid.rows }, (_, row) => (
-        <text key={`r${row}`} x={CELL * 0.5} y={(row + 1.65) * CELL} textAnchor="middle" className="fill-ink-muted text-[4px]">
-          {row + 1}
-        </text>
-      ))}
+    <svg role="img" aria-label={label} viewBox={`0 0 ${grid.columns * COL} ${grid.rows * ROW}`} className="w-full max-w-sm">
       {Array.from({ length: grid.rows }, (_, row) =>
         Array.from({ length: grid.columns }, (_, col) => {
           const isFilled = covered(col, row);
@@ -36,10 +19,10 @@ export function FaceGrid({ grid, cells, label }: { grid: { columns: number; rows
             <rect
               key={`${col}-${row}`}
               data-filled={isFilled ? "" : undefined}
-              x={(col + 1) * CELL}
-              y={(row + 1) * CELL}
-              width={CELL}
-              height={CELL}
+              x={col * COL}
+              y={row * ROW}
+              width={COL}
+              height={ROW}
               className={isFilled ? "fill-brand stroke-ink" : "fill-raised stroke-line"}
               strokeWidth={0.4}
             />

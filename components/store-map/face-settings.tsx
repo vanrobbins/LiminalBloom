@@ -7,7 +7,8 @@ import { NumberStepper } from "@/components/ui/number-stepper";
 import { Button } from "@/components/ui/button";
 import { FIXTURE_RULES, autoGrid, isAutoGrid } from "@/lib/layout/fixtures";
 import { SIDE_LABEL } from "@/lib/layout/format";
-import { MAX_GRID } from "@/lib/layout/limits";
+import { feetText } from "@/lib/feet";
+import { MAX_GRID_COLUMNS, MAX_GRID_ROWS } from "@/lib/layout/limits";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Face, Fixture } from "@/lib/layout/types";
 
@@ -46,22 +47,23 @@ export function FaceSettings({ fixture, faces, dispatch }: FaceSettingsProps) {
         <fieldset key={face.id} className="flex flex-col gap-2">
           <legend className="text-sm font-medium text-ink">{SIDE_LABEL[face.side]} grid</legend>
           <NumberStepper
-            label="Columns"
+            label="Width"
             value={face.columns}
             min={1}
-            max={MAX_GRID}
+            max={MAX_GRID_COLUMNS}
+            format={(columns) => `${feetText(columns)} ft`}
             onChange={(columns) => run({ type: "setFaceGrid", faceId: face.id, columns, rows: face.rows })}
           />
           <NumberStepper
             label="Rows"
             value={face.rows}
             min={1}
-            max={MAX_GRID}
+            max={MAX_GRID_ROWS}
             onChange={(rows) => run({ type: "setFaceGrid", faceId: face.id, columns: face.columns, rows })}
           />
           {isAutoGrid(fixture, face) ? null : (
             <Button variant="secondary" onClick={() => run({ type: "setFaceGrid", faceId: face.id, ...autoGrid(fixture, face.side) })}>
-              Fit to fixture ({autoGrid(fixture, face.side).columns} × {autoGrid(fixture, face.side).rows})
+              Fit to fixture ({feetText(autoGrid(fixture, face.side).columns)} ft × {autoGrid(fixture, face.side).rows})
             </Button>
           )}
         </fieldset>

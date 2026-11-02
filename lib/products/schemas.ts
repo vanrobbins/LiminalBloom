@@ -4,19 +4,20 @@
 
 import { z } from "zod";
 
-import { MAX_CELLS, MAX_STACK } from "./footprint";
+import { MAX_FOOTPRINT_COLUMNS, MAX_FOOTPRINT_ROWS, MAX_STACK } from "./footprint";
 
 export const PRODUCT_STATUSES = ["in_stock", "sold_out", "on_sale"] as const;
 export const PLACES = ["floor", "stockroom", "unplaced"] as const;
 export type Place = (typeof PLACES)[number];
 
-const FOOTPRINT_MESSAGE = `Footprints are 1 to ${MAX_CELLS} cells each way.`;
-const cells = z.int(FOOTPRINT_MESSAGE).min(1, FOOTPRINT_MESSAGE).max(MAX_CELLS, FOOTPRINT_MESSAGE);
+const FOOTPRINT_MESSAGE = "Footprints are ½ to 24 ft wide and 1 to 24 rows tall.";
+const columns = z.int(FOOTPRINT_MESSAGE).min(1, FOOTPRINT_MESSAGE).max(MAX_FOOTPRINT_COLUMNS, FOOTPRINT_MESSAGE);
+const rows = z.int(FOOTPRINT_MESSAGE).min(1, FOOTPRINT_MESSAGE).max(MAX_FOOTPRINT_ROWS, FOOTPRINT_MESSAGE);
 const stack = z.int(`Stack limits are 1 to ${MAX_STACK}.`).min(1, `Stack limits are 1 to ${MAX_STACK}.`).max(MAX_STACK, `Stack limits are 1 to ${MAX_STACK}.`);
 const text = (label: string, max: number) =>
   z.string().trim().min(1, `Enter ${label}.`).max(max, `Keep ${label} under ${max} characters.`);
 
-export const footprintInput = z.object({ columns: cells, rows: cells, stackLimit: stack });
+export const footprintInput = z.object({ columns, rows, stackLimit: stack });
 
 export const productInput = z.object({
   name: text("a name", 120),
@@ -31,10 +32,10 @@ export type ProductInput = z.infer<typeof productInput>;
 
 export const categoryInput = z.object({
   name: text("a name", 60),
-  hungColumns: cells,
-  hungRows: cells,
-  foldedColumns: cells,
-  foldedRows: cells,
+  hungColumns: columns,
+  hungRows: rows,
+  foldedColumns: columns,
+  foldedRows: rows,
   stackLimit: stack,
 });
 export type CategoryInput = z.infer<typeof categoryInput>;
