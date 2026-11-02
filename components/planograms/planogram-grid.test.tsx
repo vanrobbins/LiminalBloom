@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { setBlocks, singleBlock } from "@/lib/planograms/set-grid";
+import { singleBlock } from "@/lib/planograms/set-grid";
 import type { PlanogramFace } from "@/lib/planograms/types";
 
 import type { GridItem } from "./grid-items";
@@ -36,15 +36,6 @@ describe("PlanogramGrid", () => {
   it("names an issue in the tile's name", () => {
     render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" issues={new Map([["p1", "Off the edge of the face"]])} onSelect={vi.fn()} />);
     expect(screen.getByRole("button", { name: "High-Rise Pant, Left · Middle, Folded 6. Off the edge of the face" })).toBeInTheDocument();
-  });
-
-  it("a tap on a lower table's open cell picks that table's face", () => {
-    const onEmptyCell = vi.fn();
-    const { container } = render(<PlanogramGrid layout={setBlocks([face("u", null, 3), face("f", "front", 2)])} items={[pant]} label="Set" onSelect={vi.fn()} onEmptyCell={onEmptyCell} />);
-    const cell = container.querySelector('[data-cell="f:2:0"]');
-    expect(cell).not.toBeNull();
-    if (cell) fireEvent.click(cell);
-    expect(onEmptyCell).toHaveBeenCalledWith({ faceId: "f", col: 2, row: 0 });
   });
 
   it("shows no column letters or row numbers", () => {

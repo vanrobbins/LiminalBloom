@@ -1,4 +1,4 @@
-// The draft as this device holds it (spec §4.3, co-editing). One change in
+// The draft as this device holds it (spec §4.3, co-editing; Part 2 §4: a draft the builder starts is adopted). One change in
 // flight at a time; every reply carries the whole draft, so the other device's
 // edits arrive with each save, and coming back to the tab reloads it. A reply
 // older than the draft already held (a slow reload) is dropped.
@@ -13,7 +13,7 @@ import { toast } from "@/lib/toast";
 
 export type DraftStatus = { kind: "idle" | "saving" | "saved" } | { kind: "refused"; message: string };
 /** A refusal's words go to the form that sent it; null when there's nothing to say there. */
-export type SaveResult = { saved: true } | { saved: false; message: string | null };
+export type SaveResult = { saved: true; draft: DraftState } | { saved: false; message: string | null };
 
 export const refusalOf = (result: SaveResult) => (result.saved ? null : result.message);
 
@@ -30,8 +30,10 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     goneRef.current = onGone;
   });
 
+  const hasDraft = draft !== null;
+
   useEffect(() => {
-    if (!initial) return;
+    if (!hasDraft) return;
     // Focus and visibilitychange both fire on coming back: one reload at a time.
     function reload() {
       if (document.visibilityState !== "visible" || inFlight.current || reloading.current) return;
@@ -49,7 +51,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
       window.removeEventListener("focus", reload);
       document.removeEventListener("visibilitychange", reload);
     };
-  }, [fixtureId, initial]);
+  }, [fixtureId, hasDraft]);
 
   async function save(change: Change): Promise<SaveResult> {
     if (inFlight.current) return { saved: false, message: null };
@@ -61,7 +63,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
       if (next) setDraft((current) => newer(current, next));
       if (reply.status === "saved") {
         setStatus({ kind: "saved" });
-        return { saved: true };
+        return { saved: true, draft: reply.draft };
       }
       if (!reply.draft) {
         // Published or discarded on another device: the page reloads to what's there now.
@@ -80,5 +82,10 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     }
   }
 
-  return { draft, status, save };
+  /** A draft this page started (beginDraftAction): held as if it came with the page. */
+  function adopt(next: DraftState) {
+    setDraft((current) => newer(current, next));
+  }
+
+  return { draft, status, save, adopt };
 }

@@ -1,6 +1,7 @@
 // The planogram's actions (spec §4.4): Start draft, or Add product · Publish…
 // with Discard draft behind ⋯ so it never sits beside Publish. On a phone a
-// sticky bar above the tabs; inline on tablet and desktop.
+// sticky bar above the tabs; inline on tablet and desktop. While a tile is
+// selected the selection bar takes its place on a phone (`yieldOnPhone`).
 
 "use client";
 
@@ -17,9 +18,9 @@ import { toast } from "@/lib/toast";
 
 import { PublishDialog } from "./publish-dialog";
 
-type DraftBarProps = { fixtureId: string; row: PlanogramRow | null; hasDraft: boolean; isEditing: boolean; draftVersion: number | null; latestNumber: number | null; onAdd: () => void };
+type DraftBarProps = { fixtureId: string; row: PlanogramRow | null; hasDraft: boolean; isEditing: boolean; draftVersion: number | null; latestNumber: number | null; onAdd: () => void; yieldOnPhone?: boolean };
 
-export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, latestNumber, onAdd }: DraftBarProps) {
+export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, latestNumber, onAdd, yieldOnPhone = false }: DraftBarProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<"start" | "discard" | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -56,7 +57,7 @@ export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, la
 
   return (
     <>
-      <div data-action-bar className="fixed inset-x-0 bottom-14 z-20 border-t border-line-subtle bg-raised px-4 py-2 md:static md:border-0 md:bg-transparent md:p-0">
+      <div data-action-bar className={`fixed inset-x-0 bottom-14 z-20 border-t border-line-subtle bg-raised px-4 py-2 md:static md:border-0 md:bg-transparent md:p-0 ${yieldOnPhone ? "max-md:hidden" : ""}`}>
         <div className="mx-auto flex max-w-lg items-center gap-2 md:mx-0 md:max-w-none">
           {!hasDraft ? (
             <>
@@ -89,7 +90,7 @@ export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, la
         </div>
       </div>
       {/* Keeps the last card clear of the sticky bar on a phone. */}
-      <div aria-hidden="true" className="h-16 md:hidden" />
+      {yieldOnPhone ? null : <div aria-hidden="true" className="h-16 md:hidden" />}
       <PublishDialog open={publishing} onOpenChange={setPublishing} fixtureId={fixtureId} />
       <Dialog open={discarding} onOpenChange={setDiscarding} title="Discard this draft?" description="Every change since it started is lost. The published planogram stays as it is.">
         <Button variant="danger" onClick={discard} loading={busy === "discard"} loadingText="Discarding…">
