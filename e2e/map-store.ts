@@ -53,6 +53,13 @@ export async function seedLayout(): Promise<void> {
   await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${table}, 'top', 12, 3)`;
 }
 
+/** Puts the home store back on Pacific time after a test changed it. */
+export async function resetStoreZone(): Promise<void> {
+  const store = await storeId(HOME_STORE);
+  await sql()`insert into store_settings (store_id, timezone) values (${store}, 'America/Los_Angeles')
+    on conflict (store_id) do update set timezone = excluded.timezone, version = store_settings.version + 1`;
+}
+
 /** What a store's layout holds, for checking that a refused save wrote nothing. */
 export async function layoutCounts(storeName: string): Promise<{ fixtures: number; table1X: number | null }> {
   const db = sql();

@@ -4,8 +4,8 @@
 
 import Link from "next/link";
 
+import { LocalTime } from "@/components/time/local-time";
 import { Button } from "@/components/ui/button";
-import { formatMoment } from "@/lib/planograms/dates";
 
 import { RestoreButton } from "./restore-button";
 
@@ -25,7 +25,9 @@ export function HistoryList({ fixtureId, expectedVersion, entries }: { fixtureId
         <li key={e.number}>
           <article className="flex flex-col gap-2 rounded-lg border border-line-subtle bg-raised p-4">
             <h2 className="text-lg font-semibold text-ink">Version {e.number}</h2>
-            <p className="text-sm text-ink-muted">{`${formatMoment(e.publishedAt)} · ${e.publishedByName}`}</p>
+            <p className="text-sm text-ink-muted">
+              <LocalTime at={e.publishedAt} /> · {e.publishedByName}
+            </p>
             {e.summary ? <p className="text-ink">{e.summary}</p> : null}
             <p className="text-sm text-ink">{e.changeText}</p>
             {e.gone.map((g) => (
