@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 
-import { changeStatus } from "@/app/(app)/search/status-actions";
+import { changeStatus } from "@/app/(app)/products/status-actions";
 import { PRODUCT_STATUS, type ProductStatus } from "@/lib/product-status";
 import type { ProductRow } from "@/lib/products/queries";
 import { PRODUCT_STATUSES } from "@/lib/products/schemas";

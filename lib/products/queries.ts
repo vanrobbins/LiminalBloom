@@ -22,7 +22,8 @@ import type { ProductStatus } from "@/lib/product-status";
 import type { CategoryDefaults, Overrides, Presentation } from "./footprint";
 import { locationDetail, locationLabel, type Cells } from "./location-label";
 import { readCells } from "./location-words";
-import type { Place, SearchInput } from "./schemas";
+import type { Place, SearchInput, Sort } from "./schemas";
+import { effectiveSort, isTextQuery, normalizeQuery } from "./search-params";
 
 export const SEARCH_LIMIT = 30;
 // pg_trgm's default (0.6) misses "hi rise pnt", which scores 0.533 against "high-rise pant ...". At 0.3
@@ -30,14 +31,8 @@ export const SEARCH_LIMIT = 30;
 // closer ones.
 export const WORD_SIMILARITY_THRESHOLD = "0.3";
 
-export function normalizeQuery(q: string): string {
-  return q.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-/** Fewer than two characters, or no letter or digit, browses instead. */
-export function isTextQuery(q: string): boolean {
-  return q.length >= 2 && /[\p{L}\p{N}]/u.test(q);
-}
+// Pure, so the screen can use them too; re-exported for the callers here.
+export { isTextQuery, normalizeQuery };
 
 /** The file name only: it changes whenever the image does, so it busts the browser cache. */
 export function imageKeyOf(path: string | null): string | null {
@@ -119,6 +114,13 @@ async function searchRows(storeId: string, input: SearchInput, limit: number): P
   if (input.places.length > 0) conditions.push(or(...input.places.map(placeCondition)) as SQL);
 
   const score = sql`greatest(word_similarity(${q}, ${products.searchText}), word_similarity(${q}, ${categoryName}))`;
+  // Ties break on name, then id, so Show more never repeats or skips a card.
+  const first: Record<Sort, SQL[]> = {
+    match: [desc(score)],
+    name: [],
+    updated: [desc(products.updatedAt)],
+    added: [desc(products.createdAt)],
+  };
   const [, rows] = await withStore(storeId, [
     db.execute(sql`select set_config('pg_trgm.word_similarity_threshold', ${WORD_SIMILARITY_THRESHOLD}, true)`),
     db
@@ -126,8 +128,9 @@ async function searchRows(storeId: string, input: SearchInput, limit: number): P
       .from(products)
       .innerJoin(productCategories, eq(productCategories.id, products.categoryId))
       .where(and(...conditions))
-      .orderBy(...(isText ? [desc(score), asc(products.name)] : [asc(products.name)]))
-      .limit(limit),
+      .orderBy(...first[effectiveSort(input)], asc(products.name), asc(products.id))
+      .limit(limit)
+      .offset(input.offset),
   ] as const);
   return { rows: rows.map(({ total, ...row }) => (void total, toRow(row))), total: rows[0]?.total ?? 0 };
 }

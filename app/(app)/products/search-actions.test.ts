@@ -4,7 +4,7 @@ const fake = vi.hoisted(() => ({ search: vi.fn() }));
 vi.mock("@/lib/current-member", () => ({ requireMember: async () => ({ activeStoreId: "store_a" }) }));
 vi.mock("@/lib/products/queries", () => ({ search: fake.search }));
 
-import { runSearch } from "./actions";
+import { runSearch } from "./search-actions";
 
 beforeEach(() => fake.search.mockReset().mockResolvedValue({ results: [], total: 0 }));
 

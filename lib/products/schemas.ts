@@ -45,12 +45,22 @@ export const statusInput = z.enum(PRODUCT_STATUSES);
 /** The most categories, or colors, one search takes. The filter chips stop here too. */
 export const MAX_FILTER_CHOICES = 20;
 
+/** Best match (text only), Name A–Z, Recently updated, Newest added. */
+export const SORTS = ["match", "name", "updated", "added"] as const;
+export type Sort = (typeof SORTS)[number];
+/** Show more stops here, so a hand-made request can't page forever. */
+export const MAX_OFFSET = 1000;
+
 export const searchInput = z.object({
   q: z.string().default("").transform((q) => q.slice(0, 80)),
   categoryIds: z.array(z.uuid()).max(MAX_FILTER_CHOICES).default([]),
   colors: z.array(z.string().trim().max(40)).max(MAX_FILTER_CHOICES).default([]),
   statuses: z.array(z.enum(PRODUCT_STATUSES)).max(3).default([]),
   places: z.array(z.enum(PLACES)).max(3).default([]),
+  /** Unset means the default: Best match with text, else Name A–Z. */
+  sort: z.enum(SORTS).optional(),
+  /** Where Show more starts. Never kept in the URL: a refresh shows the first page. */
+  offset: z.int().min(0).max(MAX_OFFSET).default(0),
 });
 export type SearchInput = z.infer<typeof searchInput>;
 

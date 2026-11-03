@@ -97,7 +97,7 @@ test("a draft from the floor is edited, published, and Search shows the new cell
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
   await expect(page.getByText(/Version 1 · published/)).toBeVisible();
 
-  await page.goto("/search?q=E2E-PT-01");
+  await page.goto("/products?q=E2E-PT-01");
   await expect(page.getByRole("main").getByRole("list").first()).toContainText("Table 1 · Center · Middle");
   await expect(page.getByRole("main").getByRole("list").first()).toContainText("Folded ·");
 });
@@ -154,8 +154,8 @@ test("Open planogram from Search highlights the product", async ({ page }) => {
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
 
-  await page.goto("/search?q=E2E-HRP-01");
-  await page.getByRole("main").getByRole("list").first().getByRole("button", { name: /E2E High-Rise Pant/ }).click();
+  await page.goto("/products?q=E2E-HRP-01");
+  await page.getByRole("main").getByRole("list").first().getByRole("button", { name: /^E2E High-Rise Pant/ }).click();
   await page.getByRole("link", { name: "Open planogram" }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/planograms\/[0-9a-f-]+\?product=/);
   await expect(page.getByText(/Version 1 · published/)).toBeVisible();
@@ -168,7 +168,7 @@ test("the map shows the published planogram and opens it for editing", async ({ 
   const pant = page.getByRole("button", { name: /^E2E High-Rise Pant, / }).filter({ visible: true });
   await expect(pant).toBeVisible();
   await pant.click();
-  await expect(page.getByRole("link", { name: "Find in Search" }).filter({ visible: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Find in Products" }).filter({ visible: true })).toBeVisible();
   await tapTableOnMap(page);
   await page.getByRole("link", { name: "Edit planogram" }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/planograms\/[0-9a-f-]{36}/);

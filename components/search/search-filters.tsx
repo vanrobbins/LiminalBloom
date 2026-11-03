@@ -1,5 +1,5 @@
 // Filters (§3.2 item 3): category, color, status and place, combined with the
-// text. A sheet on phones; a bar on wider screens.
+// text, and the sort (Week 6.5 spec §2.2). A sheet on phones; a bar on wider screens.
 
 "use client";
 
@@ -10,9 +10,11 @@ import { useMediaQuery, PHONE_QUERY } from "@/components/store-map/use-media-que
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { PRODUCT_STATUS } from "@/lib/product-status";
-import { MAX_FILTER_CHOICES, PLACES, PRODUCT_STATUSES, type Place, type SearchInput } from "@/lib/products/schemas";
+import { MAX_FILTER_CHOICES, PLACES, PRODUCT_STATUSES, SORTS, type Place, type SearchInput, type Sort } from "@/lib/products/schemas";
+import { effectiveSort, isTextQuery, normalizeQuery } from "@/lib/products/search-params";
 
 const PLACE_LABEL: Record<Place, string> = { floor: "On the floor", stockroom: "Stockroom", unplaced: "Not placed" };
+const SORT_LABEL: Record<Sort, string> = { match: "Best match", name: "Name A–Z", updated: "Recently updated", added: "Newest added" };
 
 type SearchFiltersProps = {
   input: SearchInput;
@@ -25,10 +27,10 @@ function toggle<T>(list: readonly T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
-function Chip({ label, checked, disabled = false, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange: () => void }) {
+function Chip({ label, checked, disabled = false, type = "checkbox", name, onChange }: { label: string; checked: boolean; disabled?: boolean; type?: "checkbox" | "radio"; name?: string; onChange: () => void }) {
   return (
     <label className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm has-focus-visible:outline-2 has-focus-visible:outline-ink has-disabled:opacity-60 ${disabled ? "" : "cursor-pointer"} ${checked ? "border-ink bg-ink text-surface" : "border-line bg-raised text-ink"}`}>
-      <input type="checkbox" className="sr-only" checked={checked} disabled={disabled} onChange={onChange} />
+      <input type={type} name={name} className="sr-only" checked={checked} disabled={disabled} onChange={onChange} />
       {label}
     </label>
   );
@@ -46,8 +48,12 @@ function Groups({ input, categories, colors, onChange }: SearchFiltersProps) {
     </fieldset>
   );
   const limit = (chosen: readonly string[], noun: string) => (isFull(chosen) ? `Up to ${MAX_FILTER_CHOICES} ${noun} at once.` : undefined);
+  // Best match needs words to match against.
+  const sorts = isTextQuery(normalizeQuery(input.q)) ? SORTS : SORTS.filter((s) => s !== "match");
+  const sort = effectiveSort(input);
   return (
     <div className="flex flex-col gap-4">
+      {group("Sort", sorts.map((s) => <Chip key={s} type="radio" name="sort" label={SORT_LABEL[s]} checked={sort === s} onChange={() => onChange({ sort: s })} />))}
       {group("Status", PRODUCT_STATUSES.map((s) => <Chip key={s} label={PRODUCT_STATUS[s].label} checked={input.statuses.includes(s)} onChange={() => onChange({ statuses: toggle(input.statuses, s) })} />))}
       {group("Where", PLACES.map((p) => <Chip key={p} label={PLACE_LABEL[p]} checked={input.places.includes(p)} onChange={() => onChange({ places: toggle(input.places, p) })} />))}
       {categories.length > 0

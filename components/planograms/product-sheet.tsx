@@ -71,9 +71,9 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
             </dl>
           </div>
           <Button asChild variant="secondary" className="self-start">
-            <Link href={`/search?q=${encodeURIComponent(item.styleNumber)}`}>
+            <Link href={`/products?q=${encodeURIComponent(item.styleNumber)}`}>
               <Search aria-hidden="true" strokeWidth={1.75} className="size-4" />
-              Find in Search
+              Find in Products
             </Link>
           </Button>
         </>

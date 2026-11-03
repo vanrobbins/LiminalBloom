@@ -8,7 +8,7 @@ import { Loader } from "@/components/ui/loader";
 export default function Loading() {
   return (
     <>
-      <PageHeader title="Product library" />
+      <PageHeader title="Products" />
       <Loader label="Loading products…" />
     </>
   );

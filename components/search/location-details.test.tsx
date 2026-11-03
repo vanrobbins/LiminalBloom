@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/app/(app)/search/status-actions", () => ({ changeStatus: vi.fn() }));
+vi.mock("@/app/(app)/products/status-actions", () => ({ changeStatus: vi.fn() }));
 
 import { EMPTY_LAYOUT } from "@/lib/layout/types";
 import type { SearchResult } from "@/lib/products/queries";

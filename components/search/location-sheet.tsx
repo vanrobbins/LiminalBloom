@@ -3,7 +3,8 @@
 
 "use client";
 
-import { X } from "lucide-react";
+import { Pencil, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-query";
@@ -21,6 +22,18 @@ type LocationSheetProps = {
   onChanged: (product: ProductRow) => void;
 };
 
+/** To the product's own page, from the sheet's header (Week 6.5 spec §2.2). */
+function EditLink({ productId }: { productId: string }) {
+  return (
+    <Button asChild variant="secondary" className="shrink-0">
+      <Link href={`/products/${productId}`}>
+        <Pencil aria-hidden="true" strokeWidth={1.75} className="size-4" />
+        Edit product
+      </Link>
+    </Button>
+  );
+}
+
 export function LocationSheet({ result, layout, onClose, onChanged }: LocationSheetProps) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -35,7 +48,14 @@ export function LocationSheet({ result, layout, onClose, onChanged }: LocationSh
   if (isPhone) {
     return (
       <BottomSheet open={result !== null} onOpenChange={(open) => (open ? null : onClose())} title={result?.name ?? "Product"}>
-        {result ? <LocationDetails result={result} layout={layout} onChanged={onChanged} /> : null}
+        {result ? (
+          <div className="flex flex-col gap-4">
+            <div className="self-start">
+              <EditLink productId={result.id} />
+            </div>
+            <LocationDetails result={result} layout={layout} onChanged={onChanged} />
+          </div>
+        ) : null}
       </BottomSheet>
     );
   }
@@ -52,9 +72,12 @@ export function LocationSheet({ result, layout, onClose, onChanged }: LocationSh
         <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold tracking-tight text-ink break-words outline-none">
           {result.name}
         </h2>
-        <Button variant="ghost" icon onClick={onClose} aria-label="Close">
-          <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <EditLink productId={result.id} />
+          <Button variant="ghost" icon onClick={onClose} aria-label="Close">
+            <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
+          </Button>
+        </div>
       </div>
       <LocationDetails result={result} layout={layout} onChanged={onChanged} />
     </aside>

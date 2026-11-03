@@ -122,6 +122,24 @@ describe("products", () => {
     expect(await setProductImage(store, randomUUID(), "p/three.webp")).toEqual({ status: "not-found" });
   });
 
+  // "Recently updated" on Products sorts by this (Week 6.5 spec §2.3).
+  it("moves updated_at on every product write: form save, overrides, status and image", async () => {
+    const store = await makeStore("updated-at");
+    const f = await seedStoreFixtures(store);
+    const old = new Date(Date.UTC(2020, 0, 1));
+    const stamp = async () => (await db.select({ at: products.updatedAt }).from(products).where(eq(products.id, f.productId)))[0].at;
+    const writes: [string, () => Promise<unknown>][] = [
+      ["form save with an override", () => updateProduct(store, f.productId, 1, productInput(f.categoryId, { overrides: { hung: { columns: 2, rows: 4, stackLimit: 3 }, folded: null } }))],
+      ["status", () => setProductStatus(store, f.productId, 2, "sold_out")],
+      ["image", () => setProductImage(store, f.productId, "p/new.webp")],
+    ];
+    for (const [what, write] of writes) {
+      await db.update(products).set({ updatedAt: old }).where(eq(products.id, f.productId));
+      await write();
+      expect((await stamp()).getTime(), what).toBeGreaterThan(old.getTime());
+    }
+  });
+
   it("deletes a product and hands back its image path", async () => {
     const store = await makeStore("product-delete");
     const f = await seedStoreFixtures(store);

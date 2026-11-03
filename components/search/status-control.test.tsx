@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({ changeStatus: vi.fn() }));
 const toasts = vi.hoisted(() => ({ toast: vi.fn() }));
-vi.mock("@/app/(app)/search/status-actions", () => actions);
+vi.mock("@/app/(app)/products/status-actions", () => actions);
 vi.mock("@/lib/toast", () => toasts);
 
 import type { ProductRow } from "@/lib/products/queries";

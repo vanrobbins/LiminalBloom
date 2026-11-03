@@ -215,14 +215,15 @@ export function setProductStatus(
 
 /**
  * The image is not a form field, so it does not bump the version: an edit form
- * left open while a photo uploads can still save.
+ * left open while a photo uploads can still save. It does move `updated_at`, so
+ * "Recently updated" on Products is honest (Week 6.5 spec §2.3).
  */
 export async function setProductImage(storeId: string, id: string, path: string): Promise<SaveOutcome<{ previous: string | null }>> {
   const outcome = await attempt(async () => {
     const [previous] = await withStore(storeId, [
       db.select({ path: products.imagePath }).from(products).where(and(eq(products.id, id), eq(products.storeId, storeId))),
       guarded(
-        db.update(products).set({ imagePath: path }).where(and(eq(products.id, id), eq(products.storeId, storeId))).returning({ id: products.id }),
+        db.update(products).set({ imagePath: path, updatedAt: new Date() }).where(and(eq(products.id, id), eq(products.storeId, storeId))).returning({ id: products.id }),
         "product",
       ),
     ] as const);

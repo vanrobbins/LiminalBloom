@@ -10,7 +10,7 @@ export default async function NewProductPage() {
   const categories = await listCategories(activeStoreId);
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <PageHeader title="Add product" back={{ href: "/products", label: "Product library" }} />
+      <PageHeader title="Add product" back={{ href: "/products", label: "Products" }} />
       <ProductForm categories={categories} />
     </div>
   );

@@ -52,6 +52,14 @@ test.beforeEach(async () => {
   await seedCatalog();
 });
 
+/** Products card → its location sheet → Edit product. */
+async function openProduct(page: import("@playwright/test").Page, q: string, name: string) {
+  await page.goto(`/products?q=${q}`);
+  await page.getByRole("main").getByRole("button", { name: new RegExp(`^${name}`) }).click();
+  await page.getByRole("link", { name: "Edit product" }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/products\/[0-9a-f-]{36}$/);
+}
+
 test("adds a product with a photo, finds it, and deletes it", async ({ page }) => {
   test.skip(!process.env.BLOB_READ_WRITE_TOKEN, "Needs the dev Blob store (spec §6.5).");
   const name = `E2E Linen Shirt ${Date.now()}`;
@@ -65,9 +73,8 @@ test("adds a product with a photo, finds it, and deletes it", async ({ page }) =
   await page.getByRole("button", { name: "Add product" }).click();
   await expect(page).toHaveURL(/\/products$/);
 
-  await page.getByLabel("Filter products").fill(name);
-  await page.getByLabel("Filter products").press("Enter");
-  const row = page.getByRole("main").getByRole("link", { name: new RegExp(name) });
+  await page.getByRole("main").getByLabel("Search products").fill(name);
+  const row = page.getByRole("main").getByRole("button", { name: new RegExp(`^${name}`) });
   // The card's photo is decorative (empty alt): the link's own name already says what it is.
   const image = row.locator("img");
   await expect(image).toBeVisible();
@@ -77,20 +84,19 @@ test("adds a product with a photo, finds it, and deletes it", async ({ page }) =
   await expect.poll(longSide).toBeGreaterThan(0);
   expect(await longSide()).toBeLessThanOrEqual(1200);
   await row.click();
+  await page.getByRole("link", { name: "Edit product" }).filter({ visible: true }).click();
   await page.getByRole("button", { name: "Delete product" }).first().click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete product" }).click();
   await expect(page).toHaveURL(/\/products$/);
 });
 
 test("overrides a footprint for one product", async ({ page }) => {
-  await page.goto("/products?q=E2E-HRP-01");
-  await page.getByRole("main").getByRole("link", { name: /E2E High-Rise Pant/ }).click();
+  await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
   await page.getByRole("button", { name: "Override hung for this product" }).click();
   await page.getByRole("button", { name: "More hung width" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(/\/products$/);
-  await page.goto("/products?q=E2E-HRP-01");
-  await page.getByRole("main").getByRole("link", { name: /E2E High-Rise Pant/ }).click();
+  await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
   await expect(page.getByText("Hung (this product only)")).toBeVisible();
   await expect(page.getByRole("group", { name: "Hung width" })).toContainText("1½ ft");
 });

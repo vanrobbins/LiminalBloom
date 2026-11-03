@@ -2,6 +2,10 @@
 // first and large, then name, category and status. The whole card opens the
 // product. Search has its own card (components/search/search-card.tsx), which
 // puts where the product goes first.
+//
+// No page uses it since Products and Search merged (Week 6.5): the merged
+// screen shows the location-first card. Kept on purpose until the dashboard
+// spec decides whether Home's catalog cards are photo-first (DECISIONS 11-02).
 
 import Link from "next/link";
 

@@ -82,6 +82,26 @@ describe("searchProducts", () => {
     expect((await searchProducts(a, input({ places: ["unplaced"] }))).map((r) => r.name)).toEqual(["Pocket Tee"]);
   });
 
+  it("sorts by name, newest added and recently updated, ties by name", async () => {
+    expect((await searchProducts(a, input())).map((r) => r.name)).toEqual(["High-Rise Pant", "Pocket Tee", "Rise Tee"]);
+    const [pocket] = await db.select({ id: products.id }).from(products).where(eq(products.styleNumber, "PT-1"));
+    const day = (n: number) => new Date(Date.UTC(2026, 9, n));
+    // Rise Tee and the pant tie on both dates, so name decides between them.
+    await db.update(products).set({ updatedAt: day(20), createdAt: day(1) }).where(eq(products.id, pocket.id));
+    await db.update(products).set({ updatedAt: day(10), createdAt: day(5) }).where(eq(products.styleNumber, "RT-1"));
+    await db.update(products).set({ updatedAt: day(10), createdAt: day(5) }).where(eq(products.id, fa.productId));
+    expect((await searchProducts(a, input({ sort: "updated" }))).map((r) => r.name)).toEqual(["Pocket Tee", "High-Rise Pant", "Rise Tee"]);
+    expect((await searchProducts(a, input({ sort: "added" }))).map((r) => r.name)).toEqual(["High-Rise Pant", "Rise Tee", "Pocket Tee"]);
+  });
+
+  it("pages with an offset without repeating or skipping, and counts them all", async () => {
+    const first = await search(a, input({ sort: "name" }), 2);
+    const next = await search(a, input({ sort: "name", offset: 2 }), 2);
+    expect(first.total).toBe(3);
+    expect(next.total).toBe(3);
+    expect([...first.results, ...next.results].map((r) => r.name)).toEqual(["High-Rise Pant", "Pocket Tee", "Rise Tee"]);
+  });
+
   it("uses the trigram index", async () => {
     // As the owner, so row-level security's store filter does not give the planner a cheaper btree.
     const [, , , plan] = await db.batch([
