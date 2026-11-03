@@ -1,4 +1,4 @@
-// Chapters for the instructor-feedback work being built now
+// Chapters for the work being built now
 // (specs written 11-02; the palette and roles/dashboards specs are still to write).
 
 import type { Chapter } from "./types";
@@ -33,7 +33,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
       },
     ],
     why: [
-      "Feedback said the product page and everything about size felt convoluted. The fix is one model used twice: the category sets space and size range, the product inherits them live, and a product only asks when it's different. A category change then reaches every product that hasn't opted out.",
+      "The product page and everything about size were too convoluted. The fix is one model used twice: the category sets space and size range, the product inherits them live, and a product only asks when it's different. A category change then reaches every product that hasn't opted out.",
       "Stack limits are dropped. Nobody set them, and the number on the fixture is better judged by the person folding.",
       "Products without a photo are drawn as they really sit: laid flat on cards, hung or folded on planogram tiles. Folded has two drawings, from above on a table top and from the front on a shelf, because that's how you see them. Twelve garment shapes cover the catalog.",
       "Every drawing gets a thin ink outline, and its details (collar, placket, pockets) are the fill darkened. That keeps any swatch, even one close to the page colour, visible in both light and dark mode with one rule.",
@@ -41,7 +41,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
     underTheHood: [
       "Migration 0012: drops the stack limit, adds a default size range to categories, makes the product's size range nullable (empty = inherit), and adds swatch and texture columns.",
       "A real uploaded photo still wins on tiles; the drawing is the fallback. The demo seed stops uploading SVG pictures and stores swatch and texture instead, so there is one drawing path.",
-      "Branches: `feature/w65-products-merge`, `feature/w65-space-sizes`, `feature/w65-drawings`, `feature/w65-tooltips`.",
+      "Branches: `feature/products-merge`, `feature/space-sizes`, `feature/drawings`, `feature/tooltips`.",
     ],
   },
   {
@@ -105,7 +105,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
     ],
     why: [
       "The desktop sidebar had a search box that only jumped to the Search page. With Products merged, the palette replaces it and reaches more than products, as the original proposal promised (§3.12).",
-      "The instructor asked for tooltips throughout. Hover-only help doesn't exist on a phone, which is where most people use the app, so terms get a tap-to-open popover and hover tooltips are kept for naming buttons.",
+      "Help sits next to every term that needs it. Hover-only help doesn't exist on a phone, which is where most people use the app, so terms get a tap-to-open popover and hover tooltips are kept for naming buttons.",
       "Tooltips go in as one sweep across every screen, rather than branch by branch, so no screen is left behind.",
     ],
     underTheHood: [
@@ -120,6 +120,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
     title: "Roles and Home",
     lede: "Four roles, each opening to a Home screen built around its day. A VM Lead sees what's due and what's stuck; a Sales Associate sees search first.",
     screen: "home",
+    live: { start: { name: "home" } },
     points: [
       {
         title: "Who and where",
@@ -143,7 +144,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
       },
     ],
     why: [
-      "The instructor asked for a home dashboard. A dashboard is only useful if it knows who is looking, so the four roles are built first, for real, and Home is built on them. No placeholder roles and no empty cards.",
+      "Home is a dashboard. A dashboard is only useful if it knows who is looking, so the four roles are built first, for real, and Home is built on them. No placeholder roles and no empty cards.",
       "Home uses only data that already exists. Cards for tasks, the review queue, shifts and My Day are added as those features ship.",
       "Store rename (Admins only) and the session changes ship here too, because both need the role check.",
     ],

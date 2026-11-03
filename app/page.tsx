@@ -3,6 +3,7 @@
 // merged (DECISIONS 11-02). Public and static: no sign-in, no database.
 
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Walkthrough } from "@/components/prototype/walkthrough";
@@ -23,6 +24,9 @@ export default function Home() {
             <span className="hidden text-ink-muted sm:inline">· Prototype walkthrough</span>
           </span>
           <span className="flex items-center gap-2">
+            <Link href="/demo" className="inline-flex min-h-11 items-center px-2 text-brand-strong underline underline-offset-4">
+              Try the demo
+            </Link>
             <a
               href="https://liminalbloom.vanar.me"
               className="hidden min-h-11 items-center px-2 text-brand-strong underline underline-offset-4 md:inline-flex"

@@ -11,6 +11,19 @@ test("opens on the first chapter without signing in", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Keep the floor matching the plan");
 });
 
+test("the overview opens the demo, full screen or in the phone", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Try it in the phone" }).click();
+  await expect(page.locator("[data-demo]")).toBeVisible();
+
+  await page.getByRole("link", { name: "Open the demo" }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+
+  // Only the overview offers them.
+  await page.goto("/#sign-in");
+  await expect(page.getByRole("link", { name: "Open the demo" })).toHaveCount(0);
+});
+
 test("Next and the arrow keys move between chapters and update the link", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /^Next:/ }).click();

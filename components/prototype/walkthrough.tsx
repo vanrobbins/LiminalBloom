@@ -1,10 +1,11 @@
-// The walkthrough: chapter list, the chapter's explanation and its screen
-// drawing. The chapter lives in the URL hash so each one has its own link;
-// arrow keys, Back and Next move between them.
+// The walkthrough: chapter list, the chapter's explanation and its phone,
+// which shows a drawing or the working demo. The chapter lives in the URL hash
+// so each one has its own link; arrow keys, Back and Next move between them.
 
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { CHAPTERS, chapterIndex } from "@/lib/prototype/chapters";
@@ -12,8 +13,8 @@ import { CHAPTERS, chapterIndex } from "@/lib/prototype/chapters";
 import { ChapterDetails } from "./chapter-details";
 import { ChapterNav } from "./chapter-nav";
 import { ChapterPoints } from "./chapter-points";
-import { ChapterScreen } from "./chapter-screen";
-import { PhoneFrame } from "./phone-frame";
+import { DemoStoreProvider } from "../demo/demo-store";
+import { PhonePanel, type PhoneMode } from "./phone-panel";
 import { PointContext } from "./point-context";
 import { StatusTag } from "./status-tag";
 import { useChapterHash } from "./use-chapter-hash";
@@ -33,6 +34,8 @@ export function Walkthrough() {
   const active = lit?.id === chapter.id ? lit.n : null;
   const choose = (n: number) => setLit(active === n ? null : { id: chapter.id, n });
 
+  const [mode, setMode] = useState<PhoneMode>("explained");
+
   const heading = useRef<HTMLHeadingElement>(null);
   const shown = useRef(index);
   useEffect(() => {
@@ -51,15 +54,21 @@ export function Walkthrough() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement;
+      // Keys the demo used (arrows move a selected tile) or typed into it stay there.
+      if (event.defaultPrevented || target.closest("[data-demo]")) return;
       if (event.altKey || event.ctrlKey || event.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return;
-      if (event.key === "ArrowRight" && index < CHAPTERS.length - 1) go(index + 1);
-      if (event.key === "ArrowLeft" && index > 0) go(index - 1);
+      // Read the chapter now, not from the render that attached this, so a key
+      // pressed straight after Next still moves on from the new chapter.
+      const now = chapterIndex(window.location.hash);
+      if (event.key === "ArrowRight" && now < CHAPTERS.length - 1) go(now + 1);
+      if (event.key === "ArrowLeft" && now > 0) go(now - 1);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [index]);
+  }, []);
 
   return (
+    <DemoStoreProvider>
     <PointContext.Provider value={{ active, choose }}>
       <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)] gap-8 px-4 pt-6 pb-28 md:px-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
         <aside className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto">
@@ -78,12 +87,28 @@ export function Walkthrough() {
               {chapter.title}
             </h1>
             <p className="text-lg text-ink-muted">{chapter.lede}</p>
+            {chapter.status === "about" ? (
+              <p className="flex flex-wrap items-center gap-3 pt-1">
+                <Link
+                  href="/demo"
+                  className="inline-flex min-h-11 items-center gap-1 rounded bg-brand px-4 font-medium text-on-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                >
+                  Open the demo
+                  <ChevronRight aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMode("try")}
+                  className="inline-flex min-h-11 items-center rounded border border-line bg-raised px-3 text-ink focus-visible:outline-2 focus-visible:outline-ink"
+                >
+                  Try it in the phone
+                </button>
+              </p>
+            ) : null}
           </header>
 
           <div className="md:sticky md:top-6 md:col-start-2 md:row-span-2 md:row-start-1 md:self-start">
-            <PhoneFrame label={`Drawing of the ${chapter.title} screen`}>
-              <ChapterScreen id={chapter.screen} />
-            </PhoneFrame>
+            <PhonePanel chapter={chapter} mode={mode} onMode={setMode} />
           </div>
 
           <div className="flex flex-col gap-8 md:col-start-1">
@@ -119,5 +144,6 @@ export function Walkthrough() {
         </div>
       </nav>
     </PointContext.Provider>
+    </DemoStoreProvider>
   );
 }

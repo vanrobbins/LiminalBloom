@@ -16,6 +16,8 @@ describe("walkthrough chapters", () => {
   it("never names a project week or a numbered fixture, only places a team would say", () => {
     const text = JSON.stringify(CHAPTERS);
     expect(text).not.toMatch(/\bweeks? \d/i);
+    expect(text).not.toMatch(/\bw\d/i); // week shorthand, e.g. a "w65" branch name
+    expect(text).not.toMatch(/feedback|instructor/i);
     // Case matters: "which rack a product hangs on" is fine, "Rack 2" is not.
     expect(text).not.toMatch(/\b(Rack|Wall bay|Table|Frame run|Frame rack) [0-9A-Z]\b/);
   });

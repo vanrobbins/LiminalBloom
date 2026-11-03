@@ -15,9 +15,13 @@ export function Marker({ n }: { n: number }) {
       aria-label={`Point ${n}`}
       aria-pressed={isActive}
       onClick={() => choose(n)}
-      className="relative inline-flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-surface bg-ink font-mono text-xs font-medium text-surface before:absolute before:-inset-2.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink aria-pressed:bg-brand aria-pressed:text-on-brand"
+      // The button is the 44 px touch target; the negative margin keeps it
+      // taking only the dot's 24 px in the drawing's layout.
+      className="group -m-2.5 inline-flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:-outline-offset-8 focus-visible:outline-ink"
     >
-      {n}
+      <span className="inline-flex size-6 items-center justify-center rounded-full border-2 border-surface bg-ink font-mono text-xs font-medium text-surface group-aria-pressed:bg-brand group-aria-pressed:text-on-brand">
+        {n}
+      </span>
     </button>
   );
 }

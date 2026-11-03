@@ -9,6 +9,7 @@ export const CHAPTERS_LATER: Chapter[] = [
     title: "Quick Adjust: the core loop",
     lede: "A product sells out. The app lists every display it leaves a gap in, suggests what fits, and lets the team fix it from a phone in under two minutes.",
     screen: "quick-adjust",
+    live: { start: { name: "quick-adjust" } },
     points: [
       {
         title: "What it affects",
