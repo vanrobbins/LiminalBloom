@@ -6,7 +6,6 @@ import type { Chapter } from "./types";
 export const CHAPTERS_LIVE: Chapter[] = [
   {
     id: "welcome",
-    status: "about",
     title: "Keep the floor matching the plan",
     lede: "Liminal Bloom is a phone-first app for retail store teams. It answers two questions all day long: where does this product go, and how should the display look now that stock has changed?",
     screen: "core-loop",
@@ -32,7 +31,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
     why: [
       "Most stores get a new planogram (a drawing of where each product goes on a fixture) once a month. Between releases the product keeps changing and the plan doesn't. Each person improvises, the floor drifts, and the stockroom stops agreeing with the floor about where things live.",
       "The whole app is built around the loop on the right. Product search and Quick Adjust deliver it; the store map, planograms, roles and the scheduler exist to feed it. That is also the build order: the loop's pieces first, team features next, then testing with a real store and polish.",
-      "How to read this walkthrough: each chapter is one screen. The phone on the right shows a drawing of that screen; switch it to “Try it” to use the working demo there, or open the demo full screen. Numbered dots on it match the numbered points in the text; tap either one to link them. Each chapter's label says whether it's live today, being built now, or planned. Screens are drawn as the app will look once the current work is done, so Home already sits in the tabs.",
+      "How to read this walkthrough: each chapter is one screen. The phone on the right shows a drawing of that screen; switch it to “Try it” to use the working demo there, or open the demo full screen. Numbered dots on it match the numbered points in the text; tap either one to link them. Each chapter is labelled Included (what the project commits to), Planned, or Nice to have (if time allows). Screens are drawn as the app will look once the current work is done, so Home already sits in the tabs.",
       "Use the arrow keys, the Back and Next buttons, or the chapter list to move around. Each chapter has its own link, so you can send someone straight to one.",
     ],
     underTheHood: [
@@ -44,7 +43,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "sign-in",
-    status: "live",
+    scope: "included",
     title: "Getting in, and choosing a store",
     lede: "One account, several stores. Signing in opens the store you used last, and a single tap switches to another.",
     screen: "sign-in",
@@ -87,7 +86,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "store-map",
-    status: "live",
+    scope: "included",
     title: "The store map",
     lede: "A to-scale drawing of the sales floor: the walls, the doors, the zones and every table, rack and wall bay. Everything else in the app points back to it.",
     screen: "store-map",
@@ -133,7 +132,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "products",
-    status: "live",
+    scope: "included",
     title: "Products: search and catalog in one place",
     lede: "One screen finds any product in seconds and manages the catalog. It is the first thing a Sales Associate needs, so it's where sign-in lands until Home ships.",
     screen: "products",
@@ -161,7 +160,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
       },
     ],
     why: [
-      "There used to be two screens, Products and Search, that both listed products. They overlapped and made people guess which to open, so they merge into one Products screen. The /search address keeps working and forwards to it.",
+      "Finding a product and managing the catalog happen on one Products screen, so nobody has to guess where to look. The /search address forwards to it.",
       "Cards lead with location because the question on the floor is almost always “where is it?”, not “what is it?”. The photo and name confirm you've found the right thing; the location is what you came for.",
       "Show more keeps the page light on store Wi-Fi. Refreshing goes back to the first 30, which is predictable and cheap.",
       "Status changes save immediately and offer Undo. If another device changed the same product a moment earlier, the change is refused and the card shows the current status rather than silently overwriting it.",
@@ -175,7 +174,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "locator",
-    status: "live",
+    scope: "included",
     title: "Find a product: the location sheet",
     lede: "Tap a product and a sheet slides up with everything needed to walk to it: where on the map, where on the fixture, and how it should be presented.",
     screen: "locator",
@@ -223,7 +222,7 @@ export const CHAPTERS_LIVE: Chapter[] = [
   },
   {
     id: "planograms",
-    status: "live",
+    scope: "included",
     title: "Planograms and the builder",
     lede: "Every fixture has one planogram: a grid drawn to the half foot, where each product takes up real space. Lay it out on a phone, then publish it to the team.",
     screen: "planogram",

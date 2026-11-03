@@ -1,22 +1,8 @@
-// The chapter list, which doubles as the timeline: chapters in reading order,
-// grouped where neighbours share a standing (live, building now, planned).
+// The chapter list: every chapter in reading order, one numbered list, each
+// with its place in the proposal's scope (included, planned, nice to have).
 // A sidebar from 1024 px; a native picker below that.
 
-import { CHAPTERS, STATUS_LABEL } from "@/lib/prototype/chapters";
-import type { Chapter } from "@/lib/prototype/types";
-
-type Listed = Chapter & { index: number };
-
-/** Runs of neighbouring chapters with the same status, in order. */
-function groups(chapters: Listed[]) {
-  const runs: { label: string; chapters: Listed[] }[] = [];
-  for (const chapter of chapters) {
-    const last = runs.at(-1);
-    if (last && last.chapters[0].status === chapter.status) last.chapters.push(chapter);
-    else runs.push({ label: chapter.status === "about" ? (chapter.index === 0 ? "Overview" : "Architecture") : STATUS_LABEL[chapter.status], chapters: [chapter] });
-  }
-  return runs;
-}
+import { CHAPTERS, SCOPE_LABEL } from "@/lib/prototype/chapters";
 
 export function ChapterNav({ current, onGo }: { current: number; onGo: (index: number) => void }) {
   const chapters = CHAPTERS.map((chapter, index) => ({ ...chapter, index }));
@@ -33,30 +19,30 @@ export function ChapterNav({ current, onGo }: { current: number; onGo: (index: n
           {chapters.map((chapter) => (
             <option key={chapter.id} value={chapter.index}>
               {chapter.index + 1}. {chapter.title}
+              {chapter.scope ? ` · ${SCOPE_LABEL[chapter.scope]}` : ""}
             </option>
           ))}
         </select>
       </label>
 
       <nav aria-label="Chapters" className="hidden lg:block">
-        {groups(chapters).map((group) => (
-          <div key={group.chapters[0].id} className="mb-5">
-            <h2 className="mb-1 px-3 text-sm font-medium text-ink-muted">{group.label}</h2>
-            <ol>
-              {group.chapters.map((chapter) => (
-                <li key={chapter.id}>
-                  <a
-                    href={`#${chapter.id}`}
-                    aria-current={chapter.index === current ? "step" : undefined}
-                    className="flex min-h-11 items-center rounded px-3 py-1.5 text-ink hover:bg-line-subtle focus-visible:outline-2 focus-visible:outline-ink aria-[current=step]:bg-brand aria-[current=step]:text-on-brand"
-                  >
-                    <span className="text-sm leading-snug font-medium">{chapter.title}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </div>
-        ))}
+        <ol className="flex flex-col">
+          {chapters.map((chapter) => (
+            <li key={chapter.id}>
+              <a
+                href={`#${chapter.id}`}
+                aria-current={chapter.index === current ? "step" : undefined}
+                className="flex min-h-11 items-baseline gap-2 rounded px-3 py-1.5 text-ink hover:bg-line-subtle focus-visible:outline-2 focus-visible:outline-ink aria-[current=step]:bg-brand aria-[current=step]:text-on-brand"
+              >
+                <span className="w-5 shrink-0 text-right font-mono text-xs opacity-70">{chapter.index + 1}</span>
+                <span className="flex flex-col">
+                  <span className="text-sm leading-snug font-medium">{chapter.title}</span>
+                  {chapter.scope ? <span className="text-xs opacity-70">{SCOPE_LABEL[chapter.scope]}</span> : null}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
       </nav>
     </>
   );

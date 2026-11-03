@@ -22,6 +22,11 @@ describe("walkthrough chapters", () => {
     expect(text).not.toMatch(/\b(Rack|Wall bay|Table|Frame run|Frame rack) [0-9A-Z]\b/);
   });
 
+  it("labels every chapter but the overview as included, planned or nice to have", () => {
+    expect(CHAPTERS[0].scope).toBeUndefined();
+    expect(CHAPTERS.slice(1).filter((chapter) => !chapter.scope).map((chapter) => chapter.id)).toEqual([]);
+  });
+
   it("finds a chapter by its hash, with or without the #", () => {
     expect(chapterIndex("#store-map")).toBe(chapterIndex("store-map"));
     expect(CHAPTERS[chapterIndex("#store-map")].id).toBe("store-map");

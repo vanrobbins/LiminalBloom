@@ -16,7 +16,7 @@ import { ChapterPoints } from "./chapter-points";
 import { DemoStoreProvider } from "../demo/demo-store";
 import { PhonePanel, type PhoneMode } from "./phone-panel";
 import { PointContext } from "./point-context";
-import { StatusTag } from "./status-tag";
+import { ScopeTag } from "./scope-tag";
 import { useChapterHash } from "./use-chapter-hash";
 
 function go(index: number) {
@@ -81,13 +81,13 @@ export function Walkthrough() {
               <span className="font-mono">
                 {index + 1} / {CHAPTERS.length}
               </span>
-              {chapter.status === "about" ? null : <StatusTag status={chapter.status} />}
+              {chapter.scope ? <ScopeTag scope={chapter.scope} /> : null}
             </p>
             <h1 ref={heading} tabIndex={-1} className="text-3xl font-semibold tracking-tight text-ink outline-none md:text-4xl">
               {chapter.title}
             </h1>
             <p className="text-lg text-ink-muted">{chapter.lede}</p>
-            {chapter.status === "about" ? (
+            {index === 0 ? (
               <p className="flex flex-wrap items-center gap-3 pt-1">
                 <Link
                   href="/demo"

@@ -6,7 +6,7 @@ import type { Chapter } from "./types";
 export const CHAPTERS_NEXT: Chapter[] = [
   {
     id: "space-and-drawings",
-    status: "next",
+    scope: "included",
     title: "Space on the fixture, sizes and drawings",
     lede: "How much room a product takes, said in plain words with a drawing, and asked only when the product differs from its category.",
     screen: "space",
@@ -33,8 +33,8 @@ export const CHAPTERS_NEXT: Chapter[] = [
       },
     ],
     why: [
-      "The product page and everything about size were too convoluted. The fix is one model used twice: the category sets space and size range, the product inherits them live, and a product only asks when it's different. A category change then reaches every product that hasn't opted out.",
-      "Stack limits are dropped. Nobody set them, and the number on the fixture is better judged by the person folding.",
+      "Size works one way everywhere: the category sets space and size range, the product inherits them live, and a product only asks when it's different. A category change then reaches every product that hasn't opted out.",
+      "There's no stack limit to fill in: how many fit on the fixture is better judged by the person folding.",
       "Products without a photo are drawn as they really sit: laid flat on cards, hung or folded on planogram tiles. Folded has two drawings, from above on a table top and from the front on a shelf, because that's how you see them. Twelve garment shapes cover the catalog.",
       "Every drawing gets a thin ink outline, and its details (collar, placket, pockets) are the fill darkened. That keeps any swatch, even one close to the page colour, visible in both light and dark mode with one rule.",
     ],
@@ -46,7 +46,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
   },
   {
     id: "frame-racks",
-    status: "next",
+    scope: "planned",
     title: "Frame racks and runs",
     lede: "A new fixture: a frame with one hanging rail. Stores join several end to end into a straight line, an L, a U or a closed square, and plan the run as one display.",
     screen: "frame-run",
@@ -81,7 +81,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
   },
   {
     id: "palette-and-tooltips",
-    status: "next",
+    scope: "planned",
     title: "Command palette and tooltips",
     lede: "Jump anywhere from the keyboard, and get an explanation of any term without leaving the screen.",
     screen: "palette",
@@ -116,7 +116,7 @@ export const CHAPTERS_NEXT: Chapter[] = [
   },
   {
     id: "home",
-    status: "next",
+    scope: "included",
     title: "Roles and Home",
     lede: "Four roles, each opening to a Home screen built around its day. A VM Lead sees what's due and what's stuck; a Sales Associate sees search first.",
     screen: "home",

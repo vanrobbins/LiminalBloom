@@ -4,8 +4,8 @@
 
 import type { Route } from "@/lib/demo/route";
 
-/** Where a chapter's feature stands on 2026-11-02. */
-export type ChapterStatus = "about" | "live" | "next" | "planned";
+/** Where a chapter sits in the proposal's scope: Must, Should or Could. */
+export type ChapterScope = "included" | "planned" | "nice";
 
 export type ScreenId =
   | "core-loop"
@@ -34,7 +34,8 @@ export type Point = {
 export type Chapter = {
   /** Used as the URL hash: ASCII letters, digits and hyphens. */
   id: string;
-  status: ChapterStatus;
+  /** None on the overview. */
+  scope?: ChapterScope;
   title: string;
   lede: string;
   screen: ScreenId;

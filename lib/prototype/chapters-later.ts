@@ -5,7 +5,7 @@ import type { Chapter } from "./types";
 export const CHAPTERS_LATER: Chapter[] = [
   {
     id: "quick-adjust",
-    status: "planned",
+    scope: "included",
     title: "Quick Adjust: the core loop",
     lede: "A product sells out. The app lists every display it leaves a gap in, suggests what fits, and lets the team fix it from a phone in under two minutes.",
     screen: "quick-adjust",
@@ -51,7 +51,7 @@ export const CHAPTERS_LATER: Chapter[] = [
   },
   {
     id: "review",
-    status: "planned",
+    scope: "planned",
     title: "Review, sharing, price and bigger screens",
     lede: "The handoff between the people who draft and the people who publish, plus the extras that make the builder comfortable on a tablet or desk.",
     screen: "review",
@@ -86,7 +86,7 @@ export const CHAPTERS_LATER: Chapter[] = [
   },
   {
     id: "schedule",
-    status: "planned",
+    scope: "planned",
     title: "Tasks, the VM schedule and My Day",
     lede: "Display work, assigned to the people scheduled to do it. Each person gets their day in time order, with every task's location attached.",
     screen: "my-day",
@@ -130,7 +130,7 @@ export const CHAPTERS_LATER: Chapter[] = [
   },
   {
     id: "store-test",
-    status: "planned",
+    scope: "planned",
     title: "Testing with a real store",
     lede: "Two team members from a real store run the everyday flows on their own phones, without help, while the clock runs.",
     screen: "checklist",
@@ -164,7 +164,7 @@ export const CHAPTERS_LATER: Chapter[] = [
   },
   {
     id: "finish",
-    status: "planned",
+    scope: "nice",
     title: "AI Auto-Build, polish and the presentation",
     lede: "If time allows, a store connects its own AI provider and asks for a layout. Either way, the finish is polish, documentation and the final presentation.",
     screen: "ai-connection",
@@ -198,7 +198,7 @@ export const CHAPTERS_LATER: Chapter[] = [
   },
   {
     id: "under-the-hood",
-    status: "about",
+    scope: "included",
     title: "How a request travels",
     lede: "Every action takes the same path. Nothing reaches the database, files or an AI provider until the server has answered three questions.",
     screen: "request-path",
