@@ -22,7 +22,6 @@ type PlacementFormProps = {
   initial: PlacementFields;
   others: readonly Neighbour[];
   excludeId: string | null;
-  stackLimitFor: (presentation: Presentation) => number;
   /** When adding: switching presentation re-fills the size from the product's footprint. */
   footprints?: Record<Presentation, Footprint>;
   submitLabel: string;
@@ -34,7 +33,7 @@ type PlacementFormProps = {
 
 const whole = (text: string) => (/^\d+$/.test(text.trim()) ? Number(text) : NaN);
 
-export function PlacementForm({ faces, initial, others, excludeId, stackLimitFor, footprints, submitLabel, busy, onSubmit, onRemove }: PlacementFormProps) {
+export function PlacementForm({ faces, initial, others, excludeId, footprints, submitLabel, busy, onSubmit, onRemove }: PlacementFormProps) {
   const faceOf = (id: string) => faces.find((f) => f.faceId === id);
   const asRead = (cells: Cells, id: string) => {
     const f = faceOf(id);
@@ -81,7 +80,7 @@ export function PlacementForm({ faces, initial, others, excludeId, stackLimitFor
     const levelsOk = [read.row, read.rowSpan, pieceCount].every((n) => Number.isInteger(n) && n >= 0) && read.rowSpan >= 1 && pieceCount >= 1;
     if (!levelsOk) return setError(isTop ? "Use whole feet for from back and depth, and whole numbers for pieces." : "Use whole numbers from 1 for levels and pieces.");
     const fields: PlacementFields = { faceId, presentation, pieceCount, ...asRead(read, faceId) };
-    const refusal = checkPlacement({ ...fields, id: excludeId }, others, faces, stackLimitFor(presentation));
+    const refusal = checkPlacement({ ...fields, id: excludeId }, others, faces);
     if (refusal) return setError(refusal.message);
     setError(null);
     const refused = await onSubmit(fields);

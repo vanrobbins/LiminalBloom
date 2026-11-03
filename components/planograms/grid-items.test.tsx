@@ -8,7 +8,7 @@ const face = (faceId: string, label: string): PlanogramFace => ({ faceId, fixtur
 const scope: PlanogramScope = { fixtureId: "r", fixtureName: "Rack", isSet: false, faces: [face("front", "Front"), face("back", "Back")] };
 const at = (faceId: string, productId: string) => ({ faceId, productId, presentation: "hung" as const, col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 1 });
 const shown = [{ ...at("back", "pant"), faceLabel: "Back", side: "back", fixtureId: "r", fixtureName: "Rack", productName: "Pant", styleNumber: "P" } as SnapshotEntry];
-const draft: DraftState = { planogramVersion: 3, placements: [{ ...at("back", "tee"), id: "d", version: 1, productName: "Tee", styleNumber: "T", stackLimit: 8, imageKey: null, categoryName: "Denim" }] };
+const draft: DraftState = { planogramVersion: 3, placements: [{ ...at("back", "tee"), id: "d", version: 1, productName: "Tee", styleNumber: "T", imageKey: null, categoryName: "Denim" }] };
 const entry = (over: Partial<SnapshotEntry>): SnapshotEntry => ({ ...shown[0], ...over });
 
 describe("itemsFromSnapshot", () => {

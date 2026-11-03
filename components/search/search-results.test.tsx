@@ -8,7 +8,7 @@ import { SearchResults } from "./search-results";
 
 const base: SearchResult = {
   id: "p1", name: "High-Rise Pant", styleNumber: "HRP-01", color: "Black", sizeRange: "24–34", status: "in_stock",
-  version: 1, categoryId: "c", categoryName: "Pants", imageKey: null, locations: [],
+  version: 1, categoryId: "c", categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid", locations: [],
 };
 const floor = (id: string, label: string) => ({ id, productId: "p1", presentation: "hung" as const, label, detail: "", floor: null });
 

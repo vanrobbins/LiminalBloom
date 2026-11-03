@@ -22,7 +22,7 @@ export function ProductCard({ product }: { product: ProductRow }) {
       className="flex h-full flex-col overflow-hidden rounded-lg border border-line-subtle bg-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <div className="aspect-5/6 w-full bg-surface">
-        <ProductImage productId={product.id} name={product.name} categoryName={product.categoryName} imageKey={product.imageKey} size="fill" decorative />
+        <ProductImage productId={product.id} name={product.name} categoryName={product.categoryName} imageKey={product.imageKey} swatch={product.swatch} texture={product.texture} colorWord={product.color} size="fill" decorative />
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
         <span data-product-name className="font-medium text-ink wrap-anywhere">

@@ -58,7 +58,7 @@ async function oldScaleStore(label: string) {
   const store = await makeStore(label);
   const f = await seedStoreFixtures(store); // top face 6 × 3; location col 0, span 2
   await db.update(productCategories).set({ hungColumns: 1, foldedColumns: 2 }).where(eq(productCategories.id, f.categoryId));
-  await db.insert(productFootprints).values({ storeId: store, productId: f.productId, presentation: "hung", columns: 3, rows: 4, stackLimit: 8 });
+  await db.insert(productFootprints).values({ storeId: store, productId: f.productId, presentation: "hung", columns: 3, rows: 4 });
   const wide = await addFixture(store, { name: "Wide wall", type: "wall_bay", faces: [{ side: "front", columns: 24, rows: 5 }] });
   const planogramId = await rawPlanogram(store, f.fixtureId);
   await db.insert(planogramPlacements).values({

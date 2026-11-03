@@ -9,7 +9,7 @@ const valid = {
   color: "Black",
   sizeRange: "24–34",
   status: "in_stock",
-  overrides: { hung: null, folded: { columns: 2, rows: 2, stackLimit: 6 } },
+  overrides: { hung: null, folded: { columns: 2, rows: 2 } },
 };
 
 describe("product input", () => {
@@ -19,19 +19,33 @@ describe("product input", () => {
   });
 
   it("refuses an empty name and an out-of-range footprint, naming the field", () => {
-    const result = productInput.safeParse({ ...valid, name: "  ", overrides: { hung: { columns: 49, rows: 1, stackLimit: 1 }, folded: null } });
+    const result = productInput.safeParse({ ...valid, name: "  ", overrides: { hung: { columns: 49, rows: 1 }, folded: null } });
     expect(result.success).toBe(false);
     if (!result.success) {
       const errors = fieldErrors(result.error);
       expect(errors.name).toBe("Enter a name.");
-      expect(errors.overrides).toBe("Footprints are ½ to 24 ft wide and 1 to 24 rows tall.");
+      expect(errors.overrides).toBe("Space on the fixture is ½ to 24 ft wide and 1 to 24 rows high.");
     }
+  });
+
+  it("takes null for a size range that follows the category", () => {
+    expect(productInput.parse({ ...valid, sizeRange: null }).sizeRange).toBeNull();
+  });
+
+  it("keeps a swatch only as #rrggbb, lower case, and a known texture", () => {
+    expect(productInput.parse({ ...valid, swatch: "#1F3A5C", texture: "denim" })).toMatchObject({ swatch: "#1f3a5c", texture: "denim" });
+    expect(productInput.parse(valid)).toMatchObject({ swatch: null, texture: "solid" });
+    expect(productInput.safeParse({ ...valid, swatch: "navy" }).success).toBe(false);
+    expect(productInput.safeParse({ ...valid, swatch: "#12345" }).success).toBe(false);
+    expect(productInput.safeParse({ ...valid, texture: "plaid" }).success).toBe(false);
   });
 });
 
 describe("category input", () => {
-  it("refuses a stack limit over 99", () => {
-    expect(categoryInput.safeParse({ name: "Denim", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 100 }).success).toBe(false);
+  it("has no stack limit, and a size range that defaults to none", () => {
+    const parsed = categoryInput.parse({ name: "Denim", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 8 });
+    expect(parsed).not.toHaveProperty("stackLimit");
+    expect(parsed.sizeRange).toBe("");
   });
 });
 

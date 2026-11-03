@@ -12,35 +12,33 @@ const sock = (over = {}) => ({ id: null, faceId: "front", presentation: "hung" a
 
 describe("checkPlacement", () => {
   it("accepts a placement in open cells", () => {
-    expect(checkPlacement(sock(), [pant], [front], 8)).toBeNull();
+    expect(checkPlacement(sock(), [pant], [front])).toBeNull();
   });
 
   it("names the product in the way", () => {
-    expect(checkPlacement(sock({ col: 1 }), [pant], [front], 8)).toEqual({ kind: "overlap", message: "Blocked by High-Rise Pant", blockerId: "pant" });
+    expect(checkPlacement(sock({ col: 1 }), [pant], [front])).toEqual({ kind: "overlap", message: "Blocked by High-Rise Pant", blockerId: "pant" });
   });
 
   it("ignores the placement being edited and other faces", () => {
-    expect(checkPlacement({ ...sock({ col: 0 }), id: "pant" }, [pant], [front], 8)).toBeNull();
-    expect(checkPlacement(sock({ col: 0 }), [{ ...pant, faceId: "back" }], [front], 8)).toBeNull();
+    expect(checkPlacement({ ...sock({ col: 0 }), id: "pant" }, [pant], [front])).toBeNull();
+    expect(checkPlacement(sock({ col: 0 }), [{ ...pant, faceId: "back" }], [front])).toBeNull();
   });
 
   it("refuses cells off the edge of the face", () => {
-    expect(checkPlacement(sock({ col: 5, colSpan: 2 }), [], [front], 8)?.message).toBe("Off the edge of the face");
-    expect(checkPlacement(sock({ row: 2, rowSpan: 3 }), [], [front], 8)?.message).toBe("Off the edge of the face");
+    expect(checkPlacement(sock({ col: 5, colSpan: 2 }), [], [front])?.message).toBe("Off the edge of the face");
+    expect(checkPlacement(sock({ row: 2, rowSpan: 3 }), [], [front])?.message).toBe("Off the edge of the face");
   });
 
   it("refuses a face outside the planogram", () => {
-    expect(checkPlacement(sock({ faceId: "elsewhere" }), [], [front], 8)?.message).toBe("No longer in this set");
+    expect(checkPlacement(sock({ faceId: "elsewhere" }), [], [front])?.message).toBe("No longer in this set");
   });
 
-  it("caps folded pieces at the stack limit and hung pieces at 99", () => {
-    expect(checkPlacement(sock({ presentation: "folded", pieceCount: 9, colSpan: 2, rowSpan: 2 }), [], [front], 8)?.message).toBe(
-      "More than this product's stack limit (8)",
-    );
-    expect(checkPlacement(sock({ presentation: "folded", pieceCount: 8, colSpan: 2, rowSpan: 2 }), [], [front], 8)).toBeNull();
-    expect(checkPlacement(sock({ pieceCount: 40 }), [], [front], 8)).toBeNull();
-    expect(checkPlacement(sock({ pieceCount: 100 }), [], [front], 8)?.message).toBe("At most 99 pieces");
-    expect(checkPlacement(sock({ pieceCount: 0 }), [], [front], 8)?.message).toBe("At least 1 piece");
+  it("caps folded and hung pieces at 99, with no stack limit (Week 6.5 spec §3.3)", () => {
+    expect(checkPlacement(sock({ presentation: "folded", pieceCount: 40, colSpan: 2, rowSpan: 2 }), [], [front])).toBeNull();
+    expect(checkPlacement(sock({ presentation: "folded", pieceCount: 100, colSpan: 2, rowSpan: 2 }), [], [front])?.message).toBe("At most 99 pieces");
+    expect(checkPlacement(sock({ pieceCount: 40 }), [], [front])).toBeNull();
+    expect(checkPlacement(sock({ pieceCount: 100 }), [], [front])?.message).toBe("At most 99 pieces");
+    expect(checkPlacement(sock({ pieceCount: 0 }), [], [front])?.message).toBe("At least 1 piece");
   });
 
   it("never accepts a placement that overlaps another or leaves its face", () => {
@@ -49,7 +47,7 @@ describe("checkPlacement", () => {
       fc.property(fc.array(cell, { maxLength: 25 }), (candidates) => {
         const accepted: Neighbour[] = [];
         candidates.forEach((c, i) => {
-          if (!checkPlacement({ ...c, id: null, faceId: "front", presentation: "hung", pieceCount: 1 }, accepted, [front], 8)) {
+          if (!checkPlacement({ ...c, id: null, faceId: "front", presentation: "hung", pieceCount: 1 }, accepted, [front])) {
             accepted.push({ ...c, id: `p${i}`, faceId: "front", productName: `P${i}` });
           }
         });
@@ -61,7 +59,7 @@ describe("checkPlacement", () => {
 
 describe("draftIssues", () => {
   const view = (id: string, over: Partial<PlacementView> = {}): PlacementView => ({
-    id, faceId: "front", productId: id, productName: id, styleNumber: id, presentation: "folded", stackLimit: 8, imageKey: null, categoryName: "Denim",
+    id, faceId: "front", productId: id, productName: id, styleNumber: id, presentation: "folded", imageKey: null, categoryName: "Denim",
     col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 1, version: 1, ...over,
   });
 

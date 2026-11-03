@@ -12,7 +12,7 @@ vi.mock("@/lib/toast", () => toasts);
 
 const view = (id: string, col: number, version = 1): PlacementView => ({
   id, faceId: "f", productId: "pant", productName: "Pant", styleNumber: "P", presentation: "hung",
-  col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1, stackLimit: 8, version, imageKey: null, categoryName: "",
+  col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1, version, imageKey: null, categoryName: "",
 });
 const fields = (p: PlacementView, col: number): PlacementFields => ({ faceId: p.faceId, presentation: p.presentation, col, row: p.row, colSpan: p.colSpan, rowSpan: p.rowSpan, pieceCount: p.pieceCount });
 const state = (...placements: PlacementView[]): DraftState => ({ planogramVersion: 1, placements });

@@ -117,7 +117,8 @@ test("sorting is kept in the URL", async ({ page }) => {
   await hydrated(page);
   if (sizeOf(test.info()) === "phone") await page.getByRole("button", { name: /^Filters/ }).click();
   else await page.getByText("Filters", { exact: true }).click();
-  await page.getByRole("radio", { name: "Recently updated" }).check();
+  // The radio is visually hidden inside its chip; a person taps the chip.
+  await page.getByText("Recently updated", { exact: true }).click();
   await expect(page).toHaveURL(/sort=updated/);
 });
 

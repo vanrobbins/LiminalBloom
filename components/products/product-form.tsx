@@ -17,12 +17,15 @@ import { PRODUCT_STATUS, type ProductStatus } from "@/lib/product-status";
 import type { Overrides } from "@/lib/products/footprint";
 import { IMAGE_EXTENSION, type ImageType } from "@/lib/products/image-check";
 import type { CategoryRow, ProductRow } from "@/lib/products/queries";
-import { PRODUCT_STATUSES } from "@/lib/products/schemas";
+import { drawingFor } from "@/lib/products/drawings";
+import { PRODUCT_STATUSES, type Texture } from "@/lib/products/schemas";
 import { toast } from "@/lib/toast";
 
 import { CategorySelect } from "./category-select";
-import { FootprintFields } from "./footprint-fields";
+import { DrawingFields } from "./drawing-fields";
 import { ImagePicker } from "./image-picker";
+import { SizeRangeField } from "./size-range-field";
+import { SpaceFields } from "./space-fields";
 
 type ProductFormProps = {
   categories: CategoryRow[];
@@ -36,7 +39,14 @@ export function ProductForm({ categories: initialCategories, product, overrides:
   const [categories, setCategories] = useState(initialCategories);
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? initialCategories[0]?.id ?? "");
   const [overrides, setOverrides] = useState<Overrides>(initialOverrides);
+  // Null inherits the category's (Week 6.5 spec §3.4).
+  const [sizeRange, setSizeRange] = useState<string | null>(product?.sizeIsOwn ? product.sizeRange : null);
   const [image, setImage] = useState<Blob | null>(null);
+  // Live, so the drawing preview follows what is typed (Week 6.5 spec §4.5).
+  const [name, setName] = useState(product?.name ?? "");
+  const [color, setColor] = useState(product?.color ?? "");
+  const [swatch, setSwatch] = useState<string | null>(product?.swatch ?? null);
+  const [texture, setTexture] = useState<Texture>(product?.texture ?? "solid");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const category = categories.find((c) => c.id === categoryId);
@@ -49,8 +59,10 @@ export function ProductForm({ categories: initialCategories, product, overrides:
       styleNumber: String(data.get("styleNumber") ?? ""),
       categoryId,
       color: String(data.get("color") ?? ""),
-      sizeRange: String(data.get("sizeRange") ?? ""),
+      sizeRange,
       status: String(data.get("status") ?? "in_stock"),
+      swatch,
+      texture,
       overrides: { hung: overrides.hung ?? null, folded: overrides.folded ?? null },
     };
     setIsSaving(true);
@@ -88,7 +100,7 @@ export function ProductForm({ categories: initialCategories, product, overrides:
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-5">
-      <Input label="Name" name="name" defaultValue={product?.name} error={errors.name} required />
+      <Input label="Name" name="name" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} required />
       <Input label="Style number" name="styleNumber" defaultValue={product?.styleNumber} error={errors.styleNumber} required autoCapitalize="characters" />
       <CategorySelect
         categories={categories}
@@ -97,8 +109,12 @@ export function ProductForm({ categories: initialCategories, product, overrides:
         onAdded={(c) => setCategories((list) => [...list, c].sort((a, b) => a.name.localeCompare(b.name)))}
         error={errors.categoryId}
       />
-      <Input label="Color" name="color" defaultValue={product?.color} error={errors.color} required />
-      <Input label="Size range" name="sizeRange" defaultValue={product?.sizeRange} hint="For example XS–XL or 24–34." error={errors.sizeRange} />
+      <Input label="Color" name="color" value={color} onChange={(event) => setColor(event.target.value)} error={errors.color} required />
+      <DrawingFields shape={drawingFor(category?.name ?? "", name)} colorWord={color} swatch={swatch} texture={texture} onSwatch={setSwatch} onTexture={setTexture} />
+      {errors.swatch ? <p className="text-sm text-danger">{errors.swatch}</p> : null}
+      {category ? (
+        <SizeRangeField categoryName={category.name} categoryRange={category.sizeRange} value={sizeRange} onChange={setSizeRange} error={errors.sizeRange} />
+      ) : null}
       <div className="flex flex-col gap-1">
         <Label.Root htmlFor={statusId} className="text-sm text-ink">
           Status
@@ -118,7 +134,7 @@ export function ProductForm({ categories: initialCategories, product, overrides:
         imageKey={product?.imageKey ?? null}
         onChange={setImage}
       />
-      {category ? <FootprintFields category={category} overrides={overrides} onChange={setOverrides} /> : null}
+      {category ? <SpaceFields key={category.id} categoryName={category.name} category={category} overrides={overrides} onChange={setOverrides} /> : null}
       {errors.overrides ? <p className="text-sm text-danger">{errors.overrides}</p> : null}
       <Button type="submit" loading={isSaving} loadingText="Saving…">
         {product ? "Save changes" : "Add product"}

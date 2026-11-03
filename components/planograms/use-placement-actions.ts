@@ -10,7 +10,7 @@ import { keyTarget } from "@/lib/planograms/builder/keys";
 import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
 import { checkPlacement } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
-import { MAX_PIECES, type Change, type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
+import { type Change, type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
 import { shortSpot } from "@/lib/products/location-words";
 import { toast } from "@/lib/toast";
 
@@ -47,10 +47,9 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
   const added = useRef<string | null>(null);
 
   function check(item: GridItem, fields: PlacementFields): string | null {
-    // In the draft, its rows and stack limits; on the published version, its tiles (a move never changes pieces).
+    // In the draft, its rows; on the published version, its tiles.
     const others = isEditing ? placements : items;
-    const stackLimit = (isEditing ? placements.find((p) => p.id === item.id)?.stackLimit : undefined) ?? MAX_PIECES;
-    return checkPlacement({ ...fields, id: item.id }, others, scope.faces, stackLimit)?.message ?? null;
+    return checkPlacement({ ...fields, id: item.id }, others, scope.faces)?.message ?? null;
   }
 
   async function change(item: GridItem, fields: PlacementFields, verb: Verb, onFound?: (id: string) => void): Promise<string | null> {

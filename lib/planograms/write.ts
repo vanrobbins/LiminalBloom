@@ -149,8 +149,7 @@ export function saveChange(storeId: string, fixtureId: string, change: Change): 
     if (change.kind !== "remove") {
       const fit = (await productFits(storeId, [productId])).get(productId);
       if (!fit) return { status: "invalid", message: "That product is no longer in the library." };
-      const stackLimit = fit.footprints[change.fields.presentation].stackLimit;
-      const refusal = checkPlacement({ ...change.fields, id: target?.id ?? null }, draft.placements, scope.faces, stackLimit);
+      const refusal = checkPlacement({ ...change.fields, id: target?.id ?? null }, draft.placements, scope.faces);
       if (refusal) return { status: "invalid", message: refusal.message };
     }
     await withStore(storeId, changeStatements(storeId, row, change, productId));

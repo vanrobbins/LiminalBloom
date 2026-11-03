@@ -1,5 +1,5 @@
-// What a tile needs to draw a product: its photo key and category (for the
-// silhouette). Snapshots don't carry these, so a planogram joins them by id;
+// What a tile needs to draw a product: its photo key, and its category,
+// swatch, texture and colour word for the drawing (Week 6.5 spec §4.6). Snapshots don't carry these, so a planogram joins them by id;
 // a product deleted since simply has no look (spec §4.1).
 
 import "server-only";
@@ -20,10 +20,10 @@ export async function productLooks(storeId: string, ids: readonly string[]): Pro
   if (unique.length === 0) return {};
   const [rows] = await withStore(storeId, [
     db
-      .select({ id: products.id, imagePath: products.imagePath, categoryName: productCategories.name })
+      .select({ id: products.id, imagePath: products.imagePath, categoryName: productCategories.name, swatch: products.swatch, texture: products.texture, colorWord: products.color })
       .from(products)
       .innerJoin(productCategories, eq(productCategories.id, products.categoryId))
       .where(and(eq(products.storeId, storeId), inArray(products.id, unique))),
   ] as const);
-  return Object.fromEntries(rows.map((r) => [r.id, { imageKey: imageKeyOf(r.imagePath), categoryName: r.categoryName }]));
+  return Object.fromEntries(rows.map(({ id, imagePath, ...look }) => [id, { imageKey: imageKeyOf(imagePath), ...look }]));
 }

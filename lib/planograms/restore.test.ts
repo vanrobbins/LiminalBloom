@@ -8,9 +8,9 @@ const entry = (over: Partial<SnapshotEntry>): SnapshotEntry => ({
   faceId: "front", faceLabel: "Front", side: "front", fixtureId: "rack", fixtureName: "Rack", productId: "pant",
   productName: "High-Rise Pant", styleNumber: "HRP", presentation: "folded", col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 8, ...over,
 });
-const fit = (id: string, stackLimit = 8): ProductFit => ({
+const fit = (id: string): ProductFit => ({
   id, name: id, styleNumber: id,
-  footprints: { hung: { columns: 1, rows: 3, stackLimit }, folded: { columns: 2, rows: 2, stackLimit } },
+  footprints: { hung: { columns: 1, rows: 3 }, folded: { columns: 2, rows: 2 } },
 });
 
 describe("restoreRows", () => {
@@ -29,9 +29,10 @@ describe("restoreRows", () => {
     expect(skipped).toEqual({ product: 1, face: 1, fit: 1 });
   });
 
-  it("lowers a folded count to a stack limit that has since shrunk", () => {
-    const { rows } = restoreRows([entry({ pieceCount: 8 })], [front], new Map([["pant", fit("pant", 5)]]));
-    expect(rows[0].pieceCount).toBe(5);
+  // Stack limits are gone (Week 6.5 spec §3.3): the old limit of 8 would have cut this to 8.
+  it("keeps a folded count as stored, with no stack limit to clamp it", () => {
+    const { rows } = restoreRows([entry({ pieceCount: 20 })], [front], new Map([["pant", fit("pant")]]));
+    expect(rows[0].pieceCount).toBe(20);
   });
 });
 

@@ -25,8 +25,8 @@ describe("row-level security on the product library", () => {
     const fa = await seedStoreFixtures(a);
     const fb = await seedStoreFixtures(b);
     await db.insert(productFootprints).values([
-      { storeId: a, productId: fa.productId, presentation: "hung", columns: 1, rows: 3, stackLimit: 4 },
-      { storeId: b, productId: fb.productId, presentation: "hung", columns: 1, rows: 3, stackLimit: 4 },
+      { storeId: a, productId: fa.productId, presentation: "hung", columns: 1, rows: 3 },
+      { storeId: b, productId: fb.productId, presentation: "hung", columns: 1, rows: 3 },
     ]);
     // No store filter on purpose: only the policy narrows these.
     const [p, c, f, s, l] = await withStore(a, [

@@ -40,6 +40,9 @@ export const keyStatus = pgEnum("key_status", ["active", "retired"]);
 /** What happened to a key. Rotation lands in Week 8. */
 export const keyEvent = pgEnum("key_event", ["created", "rotated", "retired"]);
 
+/** The pattern drawn over a product's drawing (Week 6.5 spec §4.4). */
+export const productTexture = pgEnum("product_texture", ["solid", "stripes", "check", "dots", "denim", "rib"]);
+
 export const productStatus = pgEnum("product_status", [
   "in_stock",
   "sold_out",
@@ -64,7 +67,8 @@ export const productCategories = pgTable(
     hungRows: integer("hung_rows").notNull().default(3),
     foldedColumns: integer("folded_columns").notNull().default(4),
     foldedRows: integer("folded_rows").notNull().default(2),
-    stackLimit: integer("stack_limit").notNull().default(8),
+    // The default a product inherits while its own is null (Week 6.5 spec §3.4); "" means none.
+    sizeRange: text("size_range").notNull().default(""),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -78,7 +82,7 @@ export const productCategories = pgTable(
     // Columns are half a foot (DECISIONS 10-12); rows are levels.
     check(
       "product_categories_ranges",
-      sql`${t.hungColumns} between 1 and 48 and ${t.hungRows} between 1 and 24 and ${t.foldedColumns} between 1 and 48 and ${t.foldedRows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+      sql`${t.hungColumns} between 1 and 48 and ${t.hungRows} between 1 and 24 and ${t.foldedColumns} between 1 and 48 and ${t.foldedRows} between 1 and 24`,
     ),
   ],
 );
@@ -105,7 +109,11 @@ export const products = pgTable(
     // (store_id, category_id) so it can only name a category of this store.
     categoryId: uuid("category_id").notNull(),
     color: text("color").notNull(),
-    sizeRange: text("size_range").notNull().default(""),
+    // Null inherits the category's size range (Week 6.5 spec §3.4).
+    sizeRange: text("size_range"),
+    // A drawing's own colour, #rrggbb; null matches the colour word (spec §3.5, §4.3).
+    swatch: text("swatch"),
+    texture: productTexture("texture").notNull().default("solid"),
     // The private Blob pathname; served only through /api/images/[productId].
     imagePath: text("image_path"),
     status: productStatus("status").notNull().default("in_stock"),
@@ -123,6 +131,7 @@ export const products = pgTable(
   },
   (t) => [
     uniqueIndex("products_store_id_unique").on(t.storeId, t.id),
+    check("products_swatch_hex", sql`${t.swatch} ~ '^#[0-9a-f]{6}$'`),
     uniqueIndex("products_style_unique").on(t.storeId, sql`lower(${t.styleNumber})`),
     index("products_category_idx").on(t.categoryId),
     index("products_search_trgm").using("gin", sql`${t.searchText} gin_trgm_ops`),
@@ -384,7 +393,6 @@ export const productFootprints = pgTable(
     presentation: presentation("presentation").notNull(),
     columns: integer("grid_columns").notNull(),
     rows: integer("grid_rows").notNull(),
-    stackLimit: integer("stack_limit").notNull(),
   },
   (t) => [
     index("product_footprints_store_idx").on(t.storeId),
@@ -396,7 +404,7 @@ export const productFootprints = pgTable(
     }).onDelete("cascade"),
     check(
       "product_footprints_ranges",
-      sql`${t.columns} between 1 and 48 and ${t.rows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+      sql`${t.columns} between 1 and 48 and ${t.rows} between 1 and 24`,
     ),
   ],
 );

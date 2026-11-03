@@ -9,8 +9,7 @@ const faces: PlanogramFace[] = [
   { faceId: id(2), fixtureId: id(9), fixtureName: "4-way Rack 2", fixtureType: "rack", side: "back", setSide: null, label: "Back", columns: 6, rows: 4 },
 ];
 const view = (over: Partial<PlacementView>): PlacementView => ({
-  id: id(5), faceId: id(1), productId: id(7), productName: "Crew Sock", styleNumber: "CS-1", presentation: "hung",
-  stackLimit: 12, imageKey: null, categoryName: "Denim", col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 6, version: 1, ...over,
+  id: id(5), faceId: id(1), productId: id(7), productName: "Crew Sock", styleNumber: "CS-1", presentation: "hung", imageKey: null, categoryName: "Denim", col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 6, version: 1, ...over,
 });
 
 describe("snapshot", () => {

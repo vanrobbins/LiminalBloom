@@ -6,7 +6,7 @@ import { EMPTY_HISTORY, forget, prune, record, redo, sitsAt, undo, type Step } f
 
 const at = (col: number): PlacementFields => ({ faceId: "f", presentation: "hung", col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1 });
 const view = (id: string, col: number, version: number): PlacementView => ({
-  ...at(col), id, productId: id, productName: id, styleNumber: id, stackLimit: 8, imageKey: null, categoryName: "", version,
+  ...at(col), id, productId: id, productName: id, styleNumber: id, imageKey: null, categoryName: "", version,
 });
 const moved = (id: string, from: number, to: number): Step => ({ id, before: at(from), after: at(to) });
 

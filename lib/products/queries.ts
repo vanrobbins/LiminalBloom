@@ -22,7 +22,7 @@ import type { ProductStatus } from "@/lib/product-status";
 import type { CategoryDefaults, Overrides, Presentation } from "./footprint";
 import { locationDetail, locationLabel, type Cells } from "./location-label";
 import { readCells } from "./location-words";
-import type { Place, SearchInput, Sort } from "./schemas";
+import type { Place, SearchInput, Sort, Texture } from "./schemas";
 import { effectiveSort, isTextQuery, normalizeQuery } from "./search-params";
 
 export const SEARCH_LIMIT = 30;
@@ -44,7 +44,13 @@ export type ProductRow = {
   name: string;
   styleNumber: string;
   color: string;
+  /** The product's own size range, else its category's (Week 6.5 spec §3.4); "" means none. */
   sizeRange: string;
+  /** Whether `sizeRange` is the product's own rather than inherited. */
+  sizeIsOwn: boolean;
+  /** The drawing's own colour, or null to match the colour word. */
+  swatch: string | null;
+  texture: Texture;
   status: ProductStatus;
   version: number;
   categoryId: string;
@@ -67,7 +73,7 @@ export type LocationRow = {
 export type SearchResult = ProductRow & { locations: LocationRow[] };
 export type SearchPage = { results: SearchResult[]; total: number };
 
-export type CategoryRow = CategoryDefaults & { id: string; name: string; version: number; productCount: number };
+export type CategoryRow = CategoryDefaults & { id: string; name: string; sizeRange: string; version: number; productCount: number };
 
 export type ProductDetail = { product: ProductRow; category: CategoryRow; overrides: Overrides; locations: LocationRow[] };
 
@@ -76,7 +82,10 @@ const productColumns = {
   name: products.name,
   styleNumber: products.styleNumber,
   color: products.color,
-  sizeRange: products.sizeRange,
+  sizeRange: sql<string>`coalesce(${products.sizeRange}, ${productCategories.sizeRange})`,
+  sizeIsOwn: sql<boolean>`${products.sizeRange} is not null`,
+  swatch: products.swatch,
+  texture: products.texture,
   status: products.status,
   version: products.version,
   categoryId: products.categoryId,
@@ -213,7 +222,7 @@ const categoryColumns = {
   hungRows: productCategories.hungRows,
   foldedColumns: productCategories.foldedColumns,
   foldedRows: productCategories.foldedRows,
-  stackLimit: productCategories.stackLimit,
+  sizeRange: productCategories.sizeRange,
   version: productCategories.version,
   productCount: sql<number>`(select count(*)::int from ${products} p2 where p2.category_id = product_categories.id)`,
 };
@@ -257,7 +266,7 @@ export async function productDetail(storeId: string, productId: string): Promise
   const category = categoryRows[0];
   if (!product || !category) return null;
   const overrides: Overrides = {};
-  for (const f of footprintRows) overrides[f.presentation] = { columns: f.columns, rows: f.rows, stackLimit: f.stackLimit };
+  for (const f of footprintRows) overrides[f.presentation] = { columns: f.columns, rows: f.rows };
   return { product: toRow(product), category, overrides, locations: await locationsFor(storeId, [productId]) };
 }
 

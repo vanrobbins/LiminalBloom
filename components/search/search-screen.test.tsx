@@ -18,7 +18,7 @@ import { SearchScreen } from "./search-screen";
 
 const product = (id: string, name: string, overrides?: Partial<SearchResult>): SearchResult => ({
   id, name, styleNumber: `${id}-01`, color: "Black", sizeRange: "", status: "in_stock",
-  version: 1, categoryId: "c", categoryName: "Pants", imageKey: null, locations: [],
+  version: 1, categoryId: "c", categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid", locations: [],
   ...overrides,
 });
 const pant = product("p1", "High-Rise Pant");

@@ -26,23 +26,16 @@ export async function seedDemo({ isProduction, confirm }: Options): Promise<void
   }
 
   const { withStore } = await import("@/lib/db/with-store");
-  const { deleteImagesQuietly, imageExists, listImages, putImage } = await import("@/lib/products/images");
+  const { deleteImagesQuietly, listImages } = await import("@/lib/products/images");
   const { buildDemo, demoStatements } = await import("./build");
 
   const plan = buildDemo(found.storeId);
-  let uploaded = 0;
-  for (const [path, svg] of plan.images) {
-    if (await imageExists(path)) continue;
-    await putImage(path, svg, "image/svg+xml");
-    uploaded++;
-  }
-  console.log(`Images: ${uploaded} uploaded, ${plan.images.size - uploaded} already there.`);
-
   await withStore(found.storeId, demoStatements(found.storeId, plan));
 
-  // Every unreferenced file in the demo store goes, users' uploads included, on purpose: a reseed replaces every product.
-  const keep = new Set(plan.images.keys());
-  const stale = (await listImages(`stores/${found.storeId}/products/`)).filter((path) => !keep.has(path));
+  // The demo has no images any more (Week 6.5 spec §4.6), so every file in the
+  // store goes: the old seed- SVGs and users' uploads, on purpose, since a
+  // reseed replaces every product.
+  const stale = await listImages(`stores/${found.storeId}/products/`);
   await deleteImagesQuietly(stale);
 
   const floor = plan.locations.filter((l) => l.faceId).length;

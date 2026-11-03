@@ -32,7 +32,7 @@ const front = face("00000000-0000-4000-8000-000000000001", "Front");
 const back = face("00000000-0000-4000-8000-000000000002", "Back");
 const scope: PlanogramScope = { fixtureId: "r", fixtureName: "Rack 1", isSet: false, faces: [front, back] };
 const cells = { col: 0, row: 0, colSpan: 2, rowSpan: 1, presentation: "folded" as const, pieceCount: 4 };
-const pant: PlacementView = { ...cells, id: "d1", faceId: front.faceId, productId: "pant", productName: "Pant", styleNumber: "P-1", stackLimit: 8, version: 1, imageKey: null, categoryName: "Denim" };
+const pant: PlacementView = { ...cells, id: "d1", faceId: front.faceId, productId: "pant", productName: "Pant", styleNumber: "P-1", version: 1, imageKey: null, categoryName: "Denim" };
 const published: PublishedVersion = {
   number: 1,
   publishedAt: new Date("2026-10-08T12:00:00Z"),
@@ -48,7 +48,7 @@ function screenWith(latest: PublishedVersion | null, draft: DraftState | null) {
 
 const tile = () => screen.getByRole("button", { name: /^Pant, / });
 const tee: PlacementView = { ...pant, id: "d2", productId: "tee", productName: "Tee", styleNumber: "T-1", col: 2 };
-const teeFit = { id: "tee", name: "Tee", styleNumber: "T-1", footprints: { folded: { columns: 2, rows: 1, stackLimit: 8 }, hung: { columns: 2, rows: 1, stackLimit: 1 } } };
+const teeFit = { id: "tee", name: "Tee", styleNumber: "T-1", footprints: { folded: { columns: 2, rows: 1 }, hung: { columns: 2, rows: 1 } } };
 
 describe("PlanogramScreen", () => {
   beforeEach(() => {

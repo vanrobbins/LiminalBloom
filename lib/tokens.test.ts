@@ -167,7 +167,9 @@ describe("app/ and components/ use tokens, not literal colors", () => {
   it("has no hex colors", () => {
     // Six-digit hex, or a Tailwind arbitrary color like bg-[#…]. HTML entities
     // such as &#10052; have five digits and a leading &, so do not match.
-    expect(filesMatching(/(?<!&)#[0-9A-Fa-f]{6}\b|\[#/)).toEqual([]);
+    // Tests are skipped: there a hex is product data (a swatch typed into the
+    // colour wheel, Week 6.5 spec §4.5), never a colour the app styles with.
+    expect(filesMatching(/(?<!&)#[0-9A-Fa-f]{6}\b|\[#/).filter((file) => !file.includes(".test."))).toEqual([]);
   });
 
   it("has no Tailwind palette colors", () => {

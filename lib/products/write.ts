@@ -139,14 +139,32 @@ const productRow = (input: ProductInput) => ({
   styleNumber: input.styleNumber,
   categoryId: input.categoryId,
   color: input.color,
+  // Null inherits the category's (Week 6.5 spec §3.4).
   sizeRange: input.sizeRange,
+  swatch: input.swatch,
+  texture: input.texture,
   status: input.status,
 });
 
-function overrideInserts(storeId: string, productId: string, overrides: ProductInput["overrides"]): BatchItem<"pg">[] {
+/**
+ * A product's own space, stored only where it differs from its category's
+ * (Week 6.5 spec §3.2): the insert reads the category in the same statement,
+ * so numbers that match it store nothing, whatever the form sent.
+ */
+function overrideInserts(storeId: string, productId: string, categoryId: string, overrides: ProductInput["overrides"]): BatchItem<"pg">[] {
   return PRESENTATIONS.flatMap((presentation) => {
     const f = overrides[presentation];
-    return f ? [db.insert(productFootprints).values({ storeId, productId, presentation, ...f })] : [];
+    if (!f) return [];
+    const [columns, rows] =
+      presentation === "hung" ? [productCategories.hungColumns, productCategories.hungRows] : [productCategories.foldedColumns, productCategories.foldedRows];
+    return [
+      db.execute(sql`
+        insert into ${productFootprints} (store_id, product_id, presentation, grid_columns, grid_rows)
+        select ${storeId}, ${productId}, ${presentation}, ${f.columns}, ${f.rows}
+        from ${productCategories}
+        where ${productCategories.id} = ${categoryId} and ${productCategories.storeId} = ${storeId}
+          and not (${columns} = ${f.columns} and ${rows} = ${f.rows})`),
+    ];
   });
 }
 
@@ -156,7 +174,7 @@ export function createProduct(storeId: string, input: ProductInput): Promise<Sav
     const id = randomUUID();
     const statements: Statements = [
       db.insert(products).values({ id, storeId, ...productRow(input) }),
-      ...overrideInserts(storeId, id, input.overrides),
+      ...overrideInserts(storeId, id, input.categoryId, input.overrides),
     ];
     await withStore(storeId, statements);
     return { status: "saved" as const, id };
@@ -175,7 +193,7 @@ export function updateProduct(storeId: string, id: string, expectedVersion: numb
         "product",
       ),
       db.delete(productFootprints).where(and(eq(productFootprints.storeId, storeId), eq(productFootprints.productId, id))),
-      ...overrideInserts(storeId, id, input.overrides),
+      ...overrideInserts(storeId, id, input.categoryId, input.overrides),
     ];
     await withStore(storeId, statements);
     return { status: "saved" as const };

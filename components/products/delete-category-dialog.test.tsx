@@ -11,7 +11,7 @@ import type { CategoryRow } from "@/lib/products/queries";
 
 import { DeleteCategoryDialog } from "./delete-category-dialog";
 
-const denim = (productCount: number): CategoryRow => ({ id: "c1", name: "Denim", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 8, version: 4, productCount });
+const denim = (productCount: number): CategoryRow => ({ id: "c1", name: "Denim", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, sizeRange: "", version: 4, productCount });
 
 beforeEach(() => vi.clearAllMocks());
 

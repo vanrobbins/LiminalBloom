@@ -10,7 +10,7 @@ vi.mock("@/components/store-map/use-media-query", () => ({ PHONE_QUERY: "", useM
 
 const top: PlanogramFace = { faceId: "00000000-0000-4000-8000-000000000001", fixtureId: "t", fixtureName: "Table 1", fixtureType: "table", side: "top", setSide: null, label: "Top", columns: 6, rows: 3 };
 const placement: PlacementView = {
-  id: "p", productId: "pr", productName: "Pocket Tee", styleNumber: "PT-1", stackLimit: 8, version: 1, imageKey: null, categoryName: "Denim",
+  id: "p", productId: "pr", productName: "Pocket Tee", styleNumber: "PT-1", version: 1, imageKey: null, categoryName: "Denim",
   faceId: top.faceId, presentation: "hung", col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 20,
 };
 
@@ -34,12 +34,12 @@ describe("PlacementEditor", () => {
     expect(onRemove).toHaveBeenCalledWith(expect.objectContaining({ id: "p" }));
   });
 
-  it("checks hung → folded against the folded stack limit", async () => {
+  // No stack limit since Week 6.5 (spec §3.3): a folded switch keeps the piece count.
+  it("switches hung → folded without a stack limit in the way", async () => {
     const { onSave } = renderPanel();
     await userEvent.click(screen.getByRole("radio", { name: "Folded" }));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("More than this product's stack limit (8)");
-    expect(onSave).not.toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ presentation: "folded" }));
   });
 
   it("shows the server's refusal in the panel, not only behind it", async () => {

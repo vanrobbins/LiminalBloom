@@ -109,6 +109,6 @@ describe("planogram actions", () => {
 
   it("finds products with both footprints for the add form", async () => {
     const found = await pickerSearch("pocket tee");
-    expect(found[0]).toMatchObject({ name: "Pocket Tee", footprints: { folded: { columns: 4, rows: 2, stackLimit: 8 } } });
+    expect(found[0]).toMatchObject({ name: "Pocket Tee", footprints: { folded: { columns: 4, rows: 2 } } });
   });
 });

@@ -20,7 +20,7 @@ export function LocationDetails({ result, layout, onChanged }: LocationDetailsPr
   return (
     <div className="flex flex-col gap-5">
       <div className="flex gap-4">
-        <ProductImage productId={result.id} name={result.name} categoryName={result.categoryName} imageKey={result.imageKey} size="lg" />
+        <ProductImage productId={result.id} name={result.name} categoryName={result.categoryName} imageKey={result.imageKey} swatch={result.swatch} texture={result.texture} colorWord={result.color} size="lg" />
         <dl className="grid content-start gap-x-3 gap-y-1 text-sm [grid-template-columns:auto_1fr]">
           <dt className="text-ink-muted">Style</dt>
           <dd className="font-mono text-ink">{result.styleNumber}</dd>
