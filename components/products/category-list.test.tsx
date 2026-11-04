@@ -21,8 +21,7 @@ const mockCategory = (overrides?: Partial<CategoryRow>): CategoryRow => ({
   hungColumns: 2,
   hungRows: 3,
   foldedColumns: 4,
-  foldedRows: 2,
-  stackLimit: 8,
+  foldedRows: 2, sizeRange: "",
   productCount: 5,
   ...overrides,
 });
@@ -55,7 +54,7 @@ describe("CategoryList", () => {
     });
 
     it("shows defaults description including grid dimensions", () => {
-      render(<CategoryList categories={[mockCategory({ hungRows: 3, foldedRows: 2 }), mockCategory({ id: "cat-2", hungRows: 4, foldedRows: 1 })]} />);
+      render(<CategoryList categories={[mockCategory({ hungRows: 3, foldedRows: 2, sizeRange: "" }), mockCategory({ id: "cat-2", hungRows: 4, foldedRows: 1, sizeRange: "" })]} />);
       expect(screen.getByText(/Hung.*1.*3/)).toBeInTheDocument();
       expect(screen.getByText(/Folded.*2.*2/)).toBeInTheDocument();
       expect(screen.getByText(/Hung.*1.*4/)).toBeInTheDocument();

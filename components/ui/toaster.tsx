@@ -10,6 +10,7 @@ import { CircleAlert, CircleCheck, X, type LucideIcon } from "lucide-react";
 import { Toast } from "radix-ui";
 
 import { dismissToast, useToasts, type ToastTone } from "@/lib/toast";
+import { Tooltip } from "./tooltip";
 
 const TONES: Record<ToastTone, { icon: LucideIcon; className: string }> = {
   success: { icon: CircleCheck, className: "text-ok" },
@@ -62,12 +63,14 @@ export function Toaster() {
                 </Toast.Action>
               ) : null}
             </div>
-            <Toast.Close
-              aria-label="Dismiss"
-              className="-m-2 flex size-11 shrink-0 items-center justify-center text-ink-muted"
-            >
-              <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
-            </Toast.Close>
+            <Tooltip label="Dismiss">
+              <Toast.Close
+                aria-label="Dismiss"
+                className="-m-2 flex size-11 shrink-0 items-center justify-center text-ink-muted"
+              >
+                <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
+              </Toast.Close>
+            </Tooltip>
           </Toast.Root>
         );
       })}

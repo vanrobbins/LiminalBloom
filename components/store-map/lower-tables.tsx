@@ -4,6 +4,7 @@
 
 import type { SessionAction } from "@/lib/layout/session";
 import { SIDES, type Fixture } from "@/lib/layout/types";
+import { InfoPopover } from "@/components/ui/info-popover";
 
 type LowerTablesProps = { table: Fixture; lowers: Fixture[]; dispatch: (action: SessionAction) => void };
 
@@ -12,7 +13,12 @@ const WORD = { front: "front", back: "back", left: "left", right: "right" } as c
 export function LowerTables({ table, lowers, dispatch }: LowerTablesProps) {
   return (
     <fieldset>
-      <legend className="mb-2 text-sm text-ink">Lower tables</legend>
+      <legend className="mb-2 text-sm text-ink">
+        <span className="inline-flex items-center gap-1">
+          Lower tables
+          <InfoPopover term="tableSet" />
+        </span>
+      </legend>
       <div className="grid grid-cols-4 gap-2">
         {SIDES.map((side) => {
           const lower = lowers.find((f) => f.setSide === side);

@@ -6,7 +6,7 @@ import { matchPlacement } from "./match";
 
 const view = (id: string, over: Partial<PlacementView> = {}): PlacementView => ({
   id, faceId: "f", productId: "pant", productName: "Pant", styleNumber: "P", presentation: "folded",
-  col: 0, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 6, stackLimit: 8, version: 1, imageKey: null, categoryName: "", ...over,
+  col: 0, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 6, version: 1, imageKey: null, categoryName: "", ...over,
 });
 const tile = { faceId: "f", productId: "pant", presentation: "folded" as const, col: 0, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 6 };
 

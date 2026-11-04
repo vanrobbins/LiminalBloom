@@ -9,7 +9,7 @@ import { SearchCard } from "./search-card";
 const where = (id: string, label: string, detail = "") => ({ id, productId: "p1", presentation: "hung" as const, label, detail, floor: null });
 const result: SearchResult = {
   id: "p1", name: "High-Rise Pant", styleNumber: "HRP-01", color: "Black", sizeRange: "", status: "in_stock", version: 1,
-  categoryId: "c", categoryName: "Pants", imageKey: null,
+  categoryId: "c", categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid",
   locations: [where("l1", "Wall bay 3 · Left · Top rail", "0–2 ft from left · level 1 of 4"), where("l2", "Stockroom, bin B-12")],
 };
 

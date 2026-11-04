@@ -31,10 +31,13 @@ const fixture = z.object({
   rotation: whole(0, 359),
   tableSetId: id.nullable(),
   setSide: z.enum(SIDES).nullable(),
+  runId: id.nullable(),
+  runIndex: whole(0, 5).nullable(),
   version,
 });
 const face = z.object({ id, fixtureId: id, side: z.enum(FACE_SIDES), columns: whole(1, 99), rows: whole(1, 99), version });
 const tableSet = z.object({ id, upperFixtureId: id, version });
+const frameRun = z.object({ id, startIndex: whole(0, 5), version });
 
 const upsert = <T extends z.ZodType>(item: T) => z.object({ item, expectedVersion: version.nullable() });
 // Each list is capped so oversize input fails before anything else is checked.
@@ -48,8 +51,9 @@ export const changeSetSchema = z
     fixtures: list(upsert(fixture)),
     faces: list(upsert(face)),
     tableSets: list(upsert(tableSet)),
+    frameRuns: list(upsert(frameRun)),
     deletes: list(
-      z.object({ collection: z.enum(["entrances", "zones", "fixtures", "faces", "tableSets"]), id, expectedVersion: version }),
+      z.object({ collection: z.enum(["entrances", "zones", "fixtures", "faces", "tableSets", "frameRuns"]), id, expectedVersion: version }),
     ),
   })
   .refine((changes) => changeCount(changes) <= MAX_CHANGES_PER_SAVE, "Too many changes in one save.");

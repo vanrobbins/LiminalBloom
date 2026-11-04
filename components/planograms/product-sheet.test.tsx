@@ -25,7 +25,7 @@ describe("ProductSheet", () => {
     expect(screen.getByText("HR-1")).toBeInTheDocument();
     expect(screen.getByText("Left · Middle")).toBeInTheDocument();
     expect(screen.getByText("0–2 ft from left · 0–2 ft from back")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Find in Search" })).toHaveAttribute("href", "/search?q=HR-1");
+    expect(screen.getByRole("link", { name: "Find in Products" })).toHaveAttribute("href", "/products?q=HR-1");
   });
 
   it("holds the editor while editing", () => {
@@ -50,7 +50,7 @@ describe("ProductSheet", () => {
     expect(tile).toHaveFocus();
 
     await user.click(tile);
-    await user.click(screen.getByRole("link", { name: "Find in Search" }));
+    await user.click(screen.getByRole("link", { name: "Find in Products" }));
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("complementary")).toBeNull();
     expect(tile).toHaveFocus();

@@ -23,11 +23,11 @@ beforeEach(() => {
 });
 
 describe("NavLinks", () => {
-  it("puts Search first", () => {
+  it("puts Products first, and has no separate Search entry", () => {
     render(<NavLinks variant="tabs" />);
     const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
-    expect(links[0]).toHaveAccessibleName("Search");
-    expect(link("Search")).toHaveAttribute("href", "/search");
+    expect(links[0]).toHaveAccessibleName("Products");
+    expect(links.map((l) => l.textContent)).toEqual(["Products", "Layout", "Planograms", "Account"]);
   });
 
   it("is the main navigation landmark, in every form", () => {

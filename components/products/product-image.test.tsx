@@ -33,4 +33,39 @@ describe("ProductImage", () => {
     fireEvent.error(screen.getByRole("img", { name: "Tee" }));
     expect(screen.getByRole("img", { name: "Tee (no photo)" })).toBeInTheDocument();
   });
+
+  it("draws an old seed- image instead of loading it, so tiles get the right view", () => {
+    const { container } = render(<ProductImage productId={id} name="Pant" categoryName="Pants" imageKey="seed-0123456789abcdef.svg" view="folded-top" />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("svg")).toHaveAttribute("data-view", "folded-top");
+  });
+
+  it("draws laid flat by default, in the product's shape, colour word and texture", () => {
+    const { container } = render(<ProductImage productId={id} name="Chino Short" categoryName="Pants" imageKey={null} colorWord="Navy" texture="stripes" />);
+    const svg = container.querySelector("svg")!;
+    expect(svg).toHaveAttribute("data-view", "flat");
+    expect(svg).toHaveAttribute("data-drawing", "shorts");
+    expect(svg).toHaveAttribute("data-texture", "stripes");
+    expect(svg.getAttribute("data-fill")).toMatch(/^oklch\(32\.0% /);
+    expect(svg.querySelector("pattern")).not.toBeNull();
+  });
+
+  it("prefers the swatch to the colour word, and stays neutral with neither", () => {
+    const { container, rerender } = render(<ProductImage productId={id} name="Tee" categoryName="Tees" imageKey={null} swatch="#7a2e3b" colorWord="Navy" />);
+    expect(container.querySelector("svg")!.getAttribute("data-fill")).not.toMatch(/^oklch\(32\.0% /);
+    rerender(<ProductImage productId={id} name="Tee" categoryName="Tees" imageKey={null} colorWord="Sunset" />);
+    expect(container.querySelector("svg")).toHaveAttribute("data-fill", "var(--line)");
+  });
+
+  it("gives every drawing on a page its own pattern id", () => {
+    const { container } = render(
+      <>
+        <ProductImage productId={id} name="A" categoryName="Tees" imageKey={null} texture="dots" />
+        <ProductImage productId={id} name="B" categoryName="Tees" imageKey={null} texture="dots" />
+      </>,
+    );
+    const ids = [...container.querySelectorAll("pattern")].map((p) => p.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
 });

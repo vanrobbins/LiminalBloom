@@ -8,7 +8,7 @@ import { DEFAULT_LOWER_DEPTH } from "@/lib/layout/limits";
 import { lowerTableName, normalize } from "@/lib/layout/normalize";
 import type { Face, FaceSide, Fixture, FixtureType, Layout, Side, Zone, ZoneColor, ZoneType } from "@/lib/layout/types";
 
-export type FaceKind = "wall" | "rack" | "table";
+export type FaceKind = "wall" | "rack" | "table" | "rail";
 export type DemoMap = { layout: Layout; stockroomZoneId: string; faceKinds: Map<string, FaceKind> };
 
 export function demoMap(newId: () => string): DemoMap {
@@ -27,7 +27,7 @@ export function demoMap(newId: () => string): DemoMap {
     const f: Fixture = {
       id: newId(), zoneId: null, type, name, x, y,
       width: size?.width ?? rule.width, depth: size?.depth ?? rule.depth,
-      rotation: 0, tableSetId: null, setSide: null, version: 0,
+      rotation: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0,
     };
     fixtures.push(f);
     return f;
@@ -45,6 +45,18 @@ export function demoMap(newId: () => string): DemoMap {
   zone("Front tables", "display", "zone-1", 90, 320, 530, 130);
   zone("Fitting rooms", "fitting_room", "zone-5", 640, 300, 80, 180);
   zone("Cash wrap", "cash_wrap", "zone-6", 0, 300, 80, 180);
+
+  // A closed square of four frame racks in the middle aisle, fronts facing out
+  // (frame racks spec §7). First, so the packer hangs product on it first.
+  const runId = newId();
+  const square: [number, number, number][] = [[360, 171, 180], [336, 195, 90], [360, 219, 0], [384, 195, 270]];
+  square.forEach(([x, y, rotation], runIndex) => {
+    const rack = fixture("frame_rack", `Center run ${runIndex + 1}`, x, y);
+    rack.rotation = rotation;
+    rack.runId = runId;
+    rack.runIndex = runIndex;
+    face(rack, "front", 8, 1, "rail");
+  });
 
   // Back wall: eight bays facing into the store, two inches apart.
   for (let i = 0; i < 8; i++) face(fixture("wall_bay", `Wall bay ${i + 1}`, 150 + i * 50, 14), "front", 8, 5, "wall");
@@ -73,7 +85,7 @@ export function demoMap(newId: () => string): DemoMap {
     const lower: Fixture = {
       id: newId(), zoneId: null, type: "table", name: lowerTableName(upper.name, side),
       x: Math.round(pose.x), y: Math.round(pose.y), width, depth: DEFAULT_LOWER_DEPTH, rotation: pose.rotation,
-      tableSetId: setId, setSide: side, version: 0,
+      tableSetId: setId, setSide: side, runId: null, runIndex: null, version: 0,
     };
     fixtures.push(lower);
     tableTop(lower);
@@ -90,6 +102,7 @@ export function demoMap(newId: () => string): DemoMap {
     fixtures,
     faces,
     tableSets: [{ id: setId, upperFixtureId: upper.id, version: 0 }],
+    frameRuns: [{ id: runId, startIndex: 0, version: 0 }],
   });
   return { layout, stockroomZoneId: stockroom.id, faceKinds };
 }

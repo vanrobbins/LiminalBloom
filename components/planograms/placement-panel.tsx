@@ -53,7 +53,6 @@ export function PlacementEditor({ placement, isGone, faces, others, busy, onClos
       others={others}
       excludeId={placement.id}
       // The folded limit; hung product doesn't stack (rules.ts ignores it).
-      stackLimitFor={() => placement.stackLimit}
       submitLabel="Save"
       busy={busy}
       onSubmit={(fields) => onSave(placement, fields)}

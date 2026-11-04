@@ -9,9 +9,15 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 import type { SearchResult } from "@/lib/products/queries";
 
-type SearchCardProps = { result: SearchResult; isOpen: boolean; onOpen: (productId: string) => void };
+type SearchCardProps = {
+  result: SearchResult;
+  isOpen: boolean;
+  onOpen: (productId: string) => void;
+  /** Room in the top-right corner for the ⋯ menu beside it (1024 px and up). */
+  hasMenu?: boolean;
+};
 
-export function SearchCard({ result, isOpen, onOpen }: SearchCardProps) {
+export function SearchCard({ result, isOpen, onOpen, hasMenu = false }: SearchCardProps) {
   const [first, ...rest] = result.locations;
   const how = first ? [PRESENTATION_LABEL[first.presentation], first.detail, rest.length > 0 ? `+${rest.length} more` : ""].filter(Boolean).join(" · ") : "";
   return (
@@ -20,10 +26,10 @@ export function SearchCard({ result, isOpen, onOpen }: SearchCardProps) {
       data-result-id={result.id}
       aria-current={isOpen ? "true" : undefined}
       onClick={() => onOpen(result.id)}
-      className="flex h-full w-full flex-col gap-3 rounded-lg border border-line-subtle bg-raised p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink aria-[current=true]:border-ink aria-[current=true]:ring-2 aria-[current=true]:ring-brand"
+      className={`flex h-full w-full flex-col gap-3 rounded-lg border ${hasMenu ? "pr-16" : ""} border-line-subtle bg-raised p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink aria-[current=true]:border-ink aria-[current=true]:ring-2 aria-[current=true]:ring-brand`}
     >
       <span className="flex items-center gap-3">
-        <ProductImage productId={result.id} name={result.name} categoryName={result.categoryName} imageKey={result.imageKey} decorative />
+        <ProductImage productId={result.id} name={result.name} categoryName={result.categoryName} imageKey={result.imageKey} swatch={result.swatch} texture={result.texture} colorWord={result.color} decorative />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="font-medium text-ink wrap-anywhere">{result.name}</span>
           <span className="text-sm text-ink-muted">

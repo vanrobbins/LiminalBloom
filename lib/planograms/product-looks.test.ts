@@ -18,7 +18,7 @@ describe("productLooks", () => {
     await db.update(products).set({ imagePath: `stores/${a}/products/${fa.productId}/abc123.webp` }).where(eq(products.id, fa.productId));
 
     const looks = await productLooks(a, [fa.productId, fb.productId]);
-    expect(looks[fa.productId]).toEqual({ imageKey: "abc123.webp", categoryName: expect.any(String) });
+    expect(looks[fa.productId]).toEqual({ imageKey: "abc123.webp", categoryName: expect.any(String), swatch: null, texture: "solid", colorWord: "Black" });
     expect(looks[fb.productId]).toBeUndefined();
   });
 });

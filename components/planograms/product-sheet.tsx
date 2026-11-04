@@ -52,7 +52,7 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
       {item ? (
         <>
           <div className="flex gap-4">
-            <ProductImage productId={item.productId} name={item.productName} categoryName={item.categoryName} imageKey={item.imageKey} size="lg" />
+            <ProductImage productId={item.productId} name={item.productName} categoryName={item.categoryName} imageKey={item.imageKey} swatch={item.swatch} texture={item.texture} colorWord={item.colorWord} size="lg" />
             <dl className="grid content-start grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
               <dt className="text-ink-muted">Style</dt>
               <dd className="font-mono text-ink">{item.styleNumber}</dd>
@@ -71,9 +71,9 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
             </dl>
           </div>
           <Button asChild variant="secondary" className="self-start">
-            <Link href={`/search?q=${encodeURIComponent(item.styleNumber)}`}>
+            <Link href={`/products?q=${encodeURIComponent(item.styleNumber)}`}>
               <Search aria-hidden="true" strokeWidth={1.75} className="size-4" />
-              Find in Search
+              Find in Products
             </Link>
           </Button>
         </>

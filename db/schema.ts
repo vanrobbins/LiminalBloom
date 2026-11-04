@@ -20,6 +20,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -39,6 +40,9 @@ export const keyStatus = pgEnum("key_status", ["active", "retired"]);
 
 /** What happened to a key. Rotation lands in Week 8. */
 export const keyEvent = pgEnum("key_event", ["created", "rotated", "retired"]);
+
+/** The pattern drawn over a product's drawing (Week 6.5 spec §4.4). */
+export const productTexture = pgEnum("product_texture", ["solid", "stripes", "check", "dots", "denim", "rib"]);
 
 export const productStatus = pgEnum("product_status", [
   "in_stock",
@@ -64,7 +68,8 @@ export const productCategories = pgTable(
     hungRows: integer("hung_rows").notNull().default(3),
     foldedColumns: integer("folded_columns").notNull().default(4),
     foldedRows: integer("folded_rows").notNull().default(2),
-    stackLimit: integer("stack_limit").notNull().default(8),
+    // The default a product inherits while its own is null (Week 6.5 spec §3.4); "" means none.
+    sizeRange: text("size_range").notNull().default(""),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -78,7 +83,7 @@ export const productCategories = pgTable(
     // Columns are half a foot (DECISIONS 10-12); rows are levels.
     check(
       "product_categories_ranges",
-      sql`${t.hungColumns} between 1 and 48 and ${t.hungRows} between 1 and 24 and ${t.foldedColumns} between 1 and 48 and ${t.foldedRows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+      sql`${t.hungColumns} between 1 and 48 and ${t.hungRows} between 1 and 24 and ${t.foldedColumns} between 1 and 48 and ${t.foldedRows} between 1 and 24`,
     ),
   ],
 );
@@ -105,7 +110,11 @@ export const products = pgTable(
     // (store_id, category_id) so it can only name a category of this store.
     categoryId: uuid("category_id").notNull(),
     color: text("color").notNull(),
-    sizeRange: text("size_range").notNull().default(""),
+    // Null inherits the category's size range (Week 6.5 spec §3.4).
+    sizeRange: text("size_range"),
+    // A drawing's own colour, #rrggbb; null matches the colour word (spec §3.5, §4.3).
+    swatch: text("swatch"),
+    texture: productTexture("texture").notNull().default("solid"),
     // The private Blob pathname; served only through /api/images/[productId].
     imagePath: text("image_path"),
     status: productStatus("status").notNull().default("in_stock"),
@@ -123,6 +132,7 @@ export const products = pgTable(
   },
   (t) => [
     uniqueIndex("products_store_id_unique").on(t.storeId, t.id),
+    check("products_swatch_hex", sql`${t.swatch} ~ '^#[0-9a-f]{6}$'`),
     uniqueIndex("products_style_unique").on(t.storeId, sql`lower(${t.styleNumber})`),
     index("products_category_idx").on(t.categoryId),
     index("products_search_trgm").using("gin", sql`${t.searchText} gin_trgm_ops`),
@@ -219,6 +229,8 @@ export const fixtureType = pgEnum("fixture_type", [
   "mannequin",
   "platform",
   "prop",
+  // A frame with one hanging rail (Week 6.5 frame racks spec §2).
+  "frame_rack",
 ]);
 export const faceSide = pgEnum("face_side", ["front", "back", "left", "right", "top"]);
 export const tableSide = pgEnum("table_side", ["front", "back", "left", "right"]);
@@ -300,6 +312,10 @@ export const fixtures = pgTable(
       onDelete: "cascade",
     }),
     setSide: tableSide("set_side"),
+    // Frame racks joined end to end (frame racks spec §4.1). Index 0 is the
+    // anchor, which holds the run's planogram. Geometry is read from positions.
+    runId: uuid("run_id"),
+    runIndex: integer("run_index"),
     version: mapVersion(),
     createdAt: mapCreatedAt(),
     updatedAt: mapUpdatedAt(),
@@ -307,6 +323,20 @@ export const fixtures = pgTable(
   (t) => [
     // The target of fixture_faces' (store_id, fixture_id) composite FK.
     uniqueIndex("fixtures_store_id_unique").on(t.storeId, t.id),
+    // A constraint, not an index, so migration 0014 can make it DEFERRABLE:
+    // re-indexing a run in one save passes through duplicates mid-batch.
+    unique("fixtures_run_index_unique").on(t.runId, t.runIndex),
+    check("fixtures_run_index_range", sql`${t.runIndex} between 0 and 5`),
+    // A deleted run nulls run_id only (the composite FK can't null run_index
+    // too), so an index may outlive its run; the app ignores it then.
+    check("fixtures_run_has_index", sql`${t.runId} is null or ${t.runIndex} is not null`),
+    // Cast to text: the enum value is new in the same migration.
+    check("fixtures_run_frame_rack", sql`${t.runId} is null or ${t.type}::text = 'frame_rack'`),
+    foreignKey({
+      name: "fixtures_run_fk",
+      columns: [t.storeId, t.runId],
+      foreignColumns: [frameRuns.storeId, frameRuns.id],
+    }).onDelete("set null"),
     index("fixtures_store_idx").on(t.storeId),
     check("fixtures_rotation_range", sql`${t.rotation} between 0 and 359`),
     check("fixtures_size_range", sql`${t.width} between 12 and 600 and ${t.depth} between 12 and 600`),
@@ -365,6 +395,26 @@ export const tableSets = pgTable(
   (t) => [index("table_sets_store_idx").on(t.storeId)],
 );
 
+/** Frame racks joined end to end (frame racks spec §4.1). The racks name their run. */
+export const frameRuns = pgTable(
+  "frame_runs",
+  {
+    id: uuid("id").primaryKey(),
+    storeId: mapStoreId(),
+    /** Closed runs only: the rack the combined grid starts reading from. */
+    startIndex: integer("start_index").notNull().default(0),
+    version: mapVersion(),
+    createdAt: mapCreatedAt(),
+    updatedAt: mapUpdatedAt(),
+  },
+  (t) => [
+    index("frame_runs_store_idx").on(t.storeId),
+    // The target of fixtures' (store_id, run_id) key: a rack joins only its own store's run.
+    uniqueIndex("frame_runs_store_id_unique").on(t.storeId, t.id),
+    check("frame_runs_start_range", sql`${t.startIndex} between 0 and 5`),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // The product library and its places (docs/superpowers/specs/
 // 2026-10-04-product-library-search-design.md §4). Cross-table keys include
@@ -384,7 +434,6 @@ export const productFootprints = pgTable(
     presentation: presentation("presentation").notNull(),
     columns: integer("grid_columns").notNull(),
     rows: integer("grid_rows").notNull(),
-    stackLimit: integer("stack_limit").notNull(),
   },
   (t) => [
     index("product_footprints_store_idx").on(t.storeId),
@@ -396,7 +445,7 @@ export const productFootprints = pgTable(
     }).onDelete("cascade"),
     check(
       "product_footprints_ranges",
-      sql`${t.columns} between 1 and 48 and ${t.rows} between 1 and 24 and ${t.stackLimit} between 1 and 99`,
+      sql`${t.columns} between 1 and 48 and ${t.rows} between 1 and 24`,
     ),
   ],
 );

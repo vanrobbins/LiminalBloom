@@ -7,7 +7,7 @@ import { ProductCard } from "./product-card";
 
 const row: ProductRow = {
   id: "6f1c3b4e-8a43-4b8e-9b5d-4f7c2a1e9d10", name: "High-Rise Pant", styleNumber: "HRP-01", color: "Black", sizeRange: "24–34",
-  status: "sold_out", version: 3, categoryId: "c", categoryName: "Pants", imageKey: null,
+  status: "sold_out", version: 3, categoryId: "c", categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid",
 };
 
 describe("ProductCard", () => {

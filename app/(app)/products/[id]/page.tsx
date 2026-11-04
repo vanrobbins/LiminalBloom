@@ -18,7 +18,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <PageHeader title={detail.product.name} back={{ href: "/products", label: "Product library" }} />
+      <PageHeader title={detail.product.name} back={{ href: "/products", label: "Products" }} />
       {/* Keyed by version: after "changed on another device" the refreshed values replace the typed ones. */}
       <ProductForm key={detail.product.version} categories={categories} product={detail.product} overrides={detail.overrides} />
       <div className="mt-10 border-t border-line-subtle pt-6">

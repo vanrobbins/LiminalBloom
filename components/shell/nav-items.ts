@@ -2,14 +2,14 @@
 // listed (docs/DECISIONS.md, 2026-09-29): each feature adds its own line here
 // when it lands, and all three navigation forms pick it up.
 
-import { CircleUser, LayoutGrid, LayoutPanelTop, MapIcon, Search, type LucideIcon } from "lucide-react";
+import { CircleUser, LayoutPanelTop, MapIcon, Search, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
 export const NAV_ITEMS: NavItem[] = [
-  // First: search is the feature every role uses (§3.2), and a bottom tab on phones.
-  { href: "/search", label: "Search", icon: Search },
-  { href: "/products", label: "Products", icon: LayoutGrid },
+  // First: finding a product is what every role does (§3.2), so Products, which
+  // merged with Search (Week 6.5), takes the search icon.
+  { href: "/products", label: "Products", icon: Search },
   { href: "/layout", label: "Layout", icon: MapIcon },
   { href: "/planograms", label: "Planograms", icon: LayoutPanelTop },
   { href: "/account", label: "Account", icon: CircleUser },

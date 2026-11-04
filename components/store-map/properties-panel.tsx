@@ -15,7 +15,7 @@ import { ZoneProperties } from "./zone-properties";
 
 export function PropertiesPanel({ session, dispatch }: { session: Session; dispatch: (action: SessionAction) => void }) {
   const { layout, selection, vertex } = session;
-  if (selection.length > 1) return <SelectionProperties count={selection.length} dispatch={dispatch} />;
+  if (selection.length > 1) return <SelectionProperties layout={layout} ids={selection} dispatch={dispatch} />;
   const [id] = selection;
   if (!id) return null;
 

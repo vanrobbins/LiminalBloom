@@ -269,7 +269,6 @@ describe("server actions", () => {
         hungRows: 3,
         foldedColumns: 4,
         foldedRows: 2,
-        stackLimit: 8,
       });
     });
   });

@@ -11,7 +11,7 @@ const face = (faceId: string, columns: number, rows: number): PlanogramFace => (
 const front = face("front", 8, 3);
 const back = face("back", 8, 3);
 const blocker = (faceId: string, col: number, colSpan: number, rowSpan = 3): Neighbour => ({ id: `${faceId}-${col}`, faceId, productName: "X", col, row: 0, colSpan, rowSpan });
-const tee: ProductFit = { id: "tee", name: "Pocket Tee", styleNumber: "T", footprints: { folded: { columns: 4, rows: 2, stackLimit: 8 }, hung: { columns: 2, rows: 3, stackLimit: 8 } } };
+const tee: ProductFit = { id: "tee", name: "Pocket Tee", styleNumber: "T", footprints: { folded: { columns: 4, rows: 2 }, hung: { columns: 2, rows: 3 } } };
 
 describe("firstOpenSpot", () => {
   it("takes the first face in order with room, top-left first", () => {
@@ -34,5 +34,14 @@ describe("placeNew", () => {
     // Only a 2-column, full-height gap is left: folded (4 wide) can't fit, hung (2 × 3) can.
     expect(placeNew([front], [blocker("front", 0, 6)], tee)).toEqual({ faceId: "front", presentation: "hung", col: 6, row: 0, colSpan: 2, rowSpan: 3, pieceCount: 1 });
     expect(placeNew([front], [blocker("front", 0, 8)], tee)).toBeNull();
+  });
+});
+
+describe("placeNew on a frame rack", () => {
+  it("hangs the product one row high, never folded", async () => {
+    const { placeNew } = await import("./place");
+    const rail = { faceId: "rail", fixtureId: "r", fixtureName: "Frame rack 1", fixtureType: "frame_rack" as const, side: "front" as const, setSide: null, label: "Frame rack 1", columns: 8, rows: 1 };
+    const fit = { id: "p", name: "Pant", styleNumber: "P", footprints: { hung: { columns: 2, rows: 4 }, folded: { columns: 4, rows: 1 } } };
+    expect(placeNew([rail], [], fit)).toEqual({ faceId: "rail", col: 0, row: 0, presentation: "hung", colSpan: 2, rowSpan: 1, pieceCount: 1 });
   });
 });

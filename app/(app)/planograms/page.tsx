@@ -10,6 +10,7 @@ import { planogramList } from "@/lib/planograms/list";
 import { planogramSummaries } from "@/lib/planograms/queries";
 import { storeTimezone } from "@/lib/store-settings";
 import { storeToday } from "@/lib/time/format";
+import { InfoPopover } from "@/components/ui/info-popover";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function PlanogramsPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <PageHeader title="Planograms" />
+      <PageHeader title="Planograms" actions={<InfoPopover term="planogram" />} />
       {groups.length === 0 ? (
         <Card className="flex flex-col items-start gap-3">
           <p className="text-ink">No fixtures that show product yet.</p>

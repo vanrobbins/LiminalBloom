@@ -10,6 +10,7 @@ import { canManageStore, storeSettingsFor } from "@/lib/store-settings";
 import { DEFAULT_TIMEZONE, zoneLabel } from "@/lib/time/zones";
 
 import { TimezoneForm } from "./timezone-form";
+import { InfoPopover } from "@/components/ui/info-popover";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,10 @@ export default async function StorePage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <PageHeader title="Store settings" back={{ href: "/account", label: "Account" }} />
       <Card className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-ink">Time zone</h2>
+        <h2 className="inline-flex items-center gap-1 text-lg font-semibold text-ink">
+          Time zone
+          <InfoPopover term="storeTime" />
+        </h2>
         <p className="text-sm text-ink-muted">Due dates turn overdue at midnight here, wherever you are. Times like &ldquo;published at&rdquo; show in your own device&apos;s time.</p>
         {canManage ? (
           // Version 0 = no settings row yet; saving makes it.

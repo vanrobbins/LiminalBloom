@@ -3,6 +3,7 @@
 import type { FaceSide, FixtureType, Side } from "@/lib/layout/types";
 import type { Footprint, Presentation } from "@/lib/products/footprint";
 import type { Cells } from "@/lib/products/location-label";
+import type { Texture } from "@/lib/products/schemas";
 
 /** Hung product doesn't stack, so only this caps it (DECISIONS 10-08). */
 export const MAX_PIECES = 99;
@@ -15,11 +16,16 @@ export type PlacementFields = Cells & { faceId: string; presentation: Presentati
 /** A draft row. */
 export type Placement = PlacementFields & { id: string; productId: string; version: number };
 
-/** A draft row with what the screens show beside it. `stackLimit` is the product's folded one. */
-export type PlacementView = Placement & { productName: string; styleNumber: string; stackLimit: number; imageKey: string | null; categoryName: string };
+/**
+ * What a tile draws a product with (Week 6.5 spec §4.6): its photo key, else a
+ * drawing from its category, tinted by its swatch or colour word, with its
+ * texture. The drawing fields are optional: a product deleted since
+ * publishing has none and draws neutral.
+ */
+export type ProductLook = { imageKey: string | null; categoryName: string; swatch?: string | null; texture?: Texture; colorWord?: string };
 
-/** What a tile draws a product with: its photo key and category (for the silhouette). */
-export type ProductLook = { imageKey: string | null; categoryName: string };
+/** A draft row with what the screens show beside it. */
+export type PlacementView = Placement & ProductLook & { productName: string; styleNumber: string };
 
 /** One face a planogram covers. `label` names it on screen: "Front", "Upper", "Front table". */
 export type PlanogramFace = {
@@ -36,7 +42,8 @@ export type PlanogramFace = {
   rows: number;
 };
 
-export type PlanogramScope = { fixtureId: string; fixtureName: string; isSet: boolean; faces: PlanogramFace[] };
+/** `isSet` means the faces show together on one combined grid: a table set, or (with `isRun`) a frame rack run. */
+export type PlanogramScope = { fixtureId: string; fixtureName: string; isSet: boolean; isRun?: boolean; faces: PlanogramFace[] };
 
 /** What the map needs of a planogram: the latest published version, and whether a draft is under way. */
 export type FloorPlanogram = { hasDraft: boolean; dueDate: string | null; latest: { number: number; placements: SnapshotEntry[] } | null };

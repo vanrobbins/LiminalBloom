@@ -63,6 +63,8 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
       if (next) setDraft((current) => newer(current, next));
       if (reply.status === "saved") {
         setStatus({ kind: "saved" });
+        // Folded product moved onto a frame rack hangs instead (frame racks spec §3); Undo puts it back folded.
+        if (reply.notice) toast({ tone: "success", title: reply.notice });
         return { saved: true, draft: reply.draft };
       }
       if (!reply.draft) {

@@ -14,7 +14,7 @@ test("signing out ends the session and lands on sign-in", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/products");
   // loading.tsx draws its own PageHeader; open the menu on the page's, not the one that is replaced.
-  await expect(page.getByText(/in this store\./)).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search products" })).toBeVisible();
 
   await userMenuButton(page).click();
   await page
@@ -31,7 +31,7 @@ test("signing out ends the session and lands on sign-in", async ({ page }) => {
   await page.goBack();
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(page.getByText(TEST_ACCOUNT.email)).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Product library" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Products", level: 1 })).toHaveCount(0);
 
   // The session is gone, not just the page: protected pages send you back.
   await page.goto("/products");

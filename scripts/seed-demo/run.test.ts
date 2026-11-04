@@ -1,14 +1,13 @@
 // The seed's step order (spec §6, Review Focus 5), with the database and Blob
-// stood in: images go up first, and old ones come down only after the batch
-// has committed, so a failed batch never leaves rows pointing at missing files.
+// stood in. Since Week 6.5 the demo has no images (spec §4.6): the batch writes
+// first, and the store's old files come down only after it has committed, so a
+// failed batch never leaves rows pointing at missing files.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const calls = vi.hoisted(() => [] as string[]);
 const fake = vi.hoisted(() => ({
   withStore: vi.fn(),
-  imageExists: vi.fn(),
-  putImage: vi.fn(),
   listImages: vi.fn(),
   deleteImagesQuietly: vi.fn(),
 }));
@@ -20,18 +19,11 @@ vi.mock("./target", () => ({
   createDemoStore: vi.fn(),
 }));
 vi.mock("./build", () => ({
-  buildDemo: () => ({
-    products: [],
-    categories: [],
-    locations: [],
-    images: new Map([["stores/store_demo/products/seed-new.svg", "<svg/>"]]),
-  }),
+  buildDemo: () => ({ products: [], categories: [], locations: [] }),
   demoStatements: () => [],
 }));
 vi.mock("@/lib/db/with-store", () => ({ withStore: fake.withStore }));
 vi.mock("@/lib/products/images", () => ({
-  imageExists: fake.imageExists,
-  putImage: fake.putImage,
   listImages: fake.listImages,
   deleteImagesQuietly: fake.deleteImagesQuietly,
 }));
@@ -43,16 +35,12 @@ const run = () => seedDemo({ isProduction: false, confirm: async () => false });
 beforeEach(() => {
   calls.length = 0;
   vi.spyOn(console, "log").mockImplementation(() => {});
-  fake.imageExists.mockReset().mockResolvedValue(false);
-  fake.putImage.mockReset().mockImplementation(async () => {
-    calls.push("put");
-  });
   fake.withStore.mockReset().mockImplementation(async () => {
     calls.push("batch");
   });
   fake.listImages.mockReset().mockImplementation(async () => {
     calls.push("list");
-    return ["stores/store_demo/products/seed-new.svg", "stores/store_demo/products/seed-old.svg"];
+    return ["stores/store_demo/products/seed-old.svg", "stores/store_demo/products/upload.webp"];
   });
   fake.deleteImagesQuietly.mockReset().mockImplementation(async () => {
     calls.push("delete");
@@ -60,16 +48,15 @@ beforeEach(() => {
 });
 
 describe("seedDemo", () => {
-  it("uploads, then writes, then removes only the images nothing uses", async () => {
+  it("writes, then removes every old image in the store, the seed's SVGs included", async () => {
     await run();
-    expect(calls).toEqual(["put", "batch", "list", "delete"]);
-    expect(fake.deleteImagesQuietly).toHaveBeenCalledWith(["stores/store_demo/products/seed-old.svg"]);
+    expect(calls).toEqual(["batch", "list", "delete"]);
+    expect(fake.deleteImagesQuietly).toHaveBeenCalledWith(["stores/store_demo/products/seed-old.svg", "stores/store_demo/products/upload.webp"]);
   });
 
   it("deletes no images when the batch fails", async () => {
     fake.withStore.mockRejectedValue(new Error("boom"));
     await expect(run()).rejects.toThrow("boom");
-    expect(fake.putImage).toHaveBeenCalled();
     expect(fake.deleteImagesQuietly).not.toHaveBeenCalled();
   });
 });

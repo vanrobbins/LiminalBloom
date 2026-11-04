@@ -9,7 +9,7 @@ import type { CategoryRow } from "@/lib/products/queries";
 
 import { CategorySelect } from "./category-select";
 
-const pants: CategoryRow = { id: "6f1c3b4e-8a43-4b8e-9b5d-4f7c2a1e9d10", name: "Pants", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, stackLimit: 8, version: 1, productCount: 0 };
+const pants: CategoryRow = { id: "6f1c3b4e-8a43-4b8e-9b5d-4f7c2a1e9d10", name: "Pants", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, sizeRange: "", version: 1, productCount: 0 };
 
 beforeEach(() => vi.clearAllMocks());
 

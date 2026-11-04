@@ -25,10 +25,10 @@ export function restoreRows(
       skipped.face += 1;
       return;
     }
-    const stackLimit = product.footprints[e.presentation].stackLimit;
-    const pieceCount = e.presentation === "folded" ? Math.min(e.pieceCount, stackLimit) : e.pieceCount;
-    const fields: PlacementFields = { faceId: e.faceId, presentation: e.presentation, col: e.col, row: e.row, colSpan: e.colSpan, rowSpan: e.rowSpan, pieceCount };
-    if (checkPlacement({ ...fields, id: null }, placed, faces, stackLimit)) {
+    // Piece counts come back as stored: there is no stack limit to clamp to any
+    // more (Week 6.5 spec §3.3), and the snapshot schema already caps them at 99.
+    const fields: PlacementFields = { faceId: e.faceId, presentation: e.presentation, col: e.col, row: e.row, colSpan: e.colSpan, rowSpan: e.rowSpan, pieceCount: e.pieceCount };
+    if (checkPlacement({ ...fields, id: null }, placed, faces)) {
       skipped.fit += 1;
       return;
     }

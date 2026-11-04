@@ -25,6 +25,7 @@ import {
 import { storeInitials } from "@/lib/initials";
 
 import { type Store, useSwitchStore } from "./use-switch-store";
+import { NameTip, Tooltip } from "@/components/ui/tooltip";
 
 export type StoreMenuVariant = "sheet" | "initials" | "name";
 
@@ -56,20 +57,22 @@ export function StoreMenu({
   if (variant === "sheet") {
     return (
       <>
-        <button
-          type="button"
-          data-store-trigger={name}
-          aria-label={label}
-          aria-haspopup="dialog"
-          aria-expanded={isSheetOpen}
-          onClick={() => setIsSheetOpen(true)}
-          className={TRIGGER.sheet}
-        >
-          <span data-store-label className="min-w-0 truncate">
-            {name}
-          </span>
-          <ChevronDown aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
-        </button>
+        <Tooltip label={label}>
+          <button
+            type="button"
+            data-store-trigger={name}
+            aria-label={label}
+            aria-haspopup="dialog"
+            aria-expanded={isSheetOpen}
+            onClick={() => setIsSheetOpen(true)}
+            className={TRIGGER.sheet}
+          >
+            <span data-store-label className="min-w-0 truncate">
+              {name}
+            </span>
+            <ChevronDown aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
+          </button>
+        </Tooltip>
 
         <BottomSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} title="Stores">
           <StoreSwitcher
@@ -86,6 +89,7 @@ export function StoreMenu({
 
   return (
     <DropdownMenu>
+<NameTip label={variant === "initials" ? label : null}>
       <DropdownMenuTrigger data-store-trigger={name} aria-label={label} className={TRIGGER[variant]}>
         {variant === "initials" ? (
           <span aria-hidden="true">{storeInitials(name)}</span>
@@ -98,6 +102,7 @@ export function StoreMenu({
           </>
         )}
       </DropdownMenuTrigger>
+      </NameTip>
 
       <DropdownMenuContent side={variant === "initials" ? "right" : "bottom"}>
         <DropdownMenuLabel>Stores</DropdownMenuLabel>

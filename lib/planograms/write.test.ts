@@ -32,7 +32,7 @@ describe("startDraft", () => {
     const draft = await draftState(store, f.fixtureId);
     expect(draft?.planogramVersion).toBe(1);
     expect(draft?.placements).toEqual([
-      expect.objectContaining({ productId: f.productId, faceId: f.faceId, col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 1, productName: "High-Rise Pant", stackLimit: 8 }),
+      expect.objectContaining({ productId: f.productId, faceId: f.faceId, col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 1, productName: "High-Rise Pant" }),
     ]);
   });
 
@@ -59,30 +59,30 @@ describe("startDraft", () => {
 });
 
 describe("saveChange", () => {
-  it("adds, then refuses overlap, the edge, a stack over the limit and another fixture's face", async () => {
+  it("adds, then refuses overlap, the edge, more than 99 pieces and another fixture's face", async () => {
     const { store, f, tee } = await setUp("pg-save");
     await startDraft(store, f.fixtureId, null);
     expect(await saveChange(store, f.fixtureId, { kind: "add", productId: tee, fields: fields(f.faceId) })).toEqual({ status: "saved" });
     const add = (over: object) => saveChange(store, f.fixtureId, { kind: "add", productId: tee, fields: fields(f.faceId, over) });
     expect(await add({ col: 1 })).toEqual({ status: "invalid", message: "Blocked by High-Rise Pant" });
     expect(await add({ col: 5 })).toEqual({ status: "invalid", message: "Off the edge of the face" });
-    expect(await add({ row: 2, rowSpan: 1, col: 0, pieceCount: 9 })).toEqual({ status: "invalid", message: "More than this product's stack limit (8)" });
+    expect(await add({ row: 2, rowSpan: 1, col: 0, pieceCount: 100 })).toEqual({ status: "invalid", message: "At most 99 pieces" });
     expect(await add({ row: 2, rowSpan: 1, col: 0, colSpan: 1, presentation: "hung", pieceCount: 20 })).toEqual({ status: "saved" });
     const rack = await addFixture(store);
     expect(await add({ faceId: rack.faceIds.front, col: 0 })).toEqual({ status: "invalid", message: "No longer in this set" });
     expect((await draftState(store, f.fixtureId))?.placements).toHaveLength(3);
   });
 
-  it("a hung placement carries the product's folded stack limit, so hung → folded is checked against it", async () => {
+  it("places a hung product with its own space rows", async () => {
     const { store, f, tee } = await setUp("pg-save-limit");
     await db.insert(productFootprints).values([
-      { storeId: store, productId: tee, presentation: "folded", columns: 2, rows: 2, stackLimit: 5 },
-      { storeId: store, productId: tee, presentation: "hung", columns: 1, rows: 3, stackLimit: 1 },
+      { storeId: store, productId: tee, presentation: "folded", columns: 2, rows: 2 },
+      { storeId: store, productId: tee, presentation: "hung", columns: 1, rows: 3 },
     ]);
     await startDraft(store, f.fixtureId, null);
     await saveChange(store, f.fixtureId, { kind: "add", productId: tee, fields: fields(f.faceId, { col: 4, colSpan: 1, rowSpan: 3, presentation: "hung", pieceCount: 20 }) });
     const hung = (await draftState(store, f.fixtureId))?.placements.find((p) => p.productId === tee);
-    expect(hung).toMatchObject({ presentation: "hung", stackLimit: 5 });
+    expect(hung).toMatchObject({ presentation: "hung" });
   });
 
   it("refuses a stale edit of one placement and lands edits to different ones", async () => {

@@ -76,6 +76,16 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     resize: "both",
     round: false,
   },
+  // One face, one rail, hung only (frame racks spec §2–3). Columns follow the width.
+  frame_rack: {
+    label: "Frame rack",
+    width: 48,
+    depth: 24,
+    faces: ["front"],
+    defaultFaces: [{ side: "front", columns: 8, rows: 1 }],
+    resize: "width",
+    round: false,
+  },
 };
 
 export type Rect = Pose & { width: number; depth: number };
@@ -127,6 +137,8 @@ export function mayOverlap(a: Fixture, b: Fixture, sets: readonly TableSet[]): b
   if (types.has("mannequin") && types.has("platform")) {
     return true;
   }
+  // Racks in one run meet end to end, and overlap at a corner (frame racks spec §4.4).
+  if (a.runId !== null && a.runId === b.runId) return true;
   const setOf = (f: Fixture) =>
     f.tableSetId ?? sets.find((s) => s.upperFixtureId === f.id)?.id ?? null;
   const set = setOf(a);

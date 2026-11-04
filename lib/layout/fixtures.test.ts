@@ -27,6 +27,8 @@ const fixture = (over: Partial<Fixture> = {}): Fixture => ({
   rotation: 0,
   tableSetId: null,
   setSide: null,
+  runId: null,
+  runIndex: null,
   version: 0,
   ...over,
 });

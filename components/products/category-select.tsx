@@ -76,7 +76,7 @@ export function CategorySelect({ categories, value, onChange, onAdded, error }: 
           {error}
         </p>
       ) : null}
-      <Dialog open={isAdding} onOpenChange={setIsAdding} title="New category" description="It starts with the usual footprints; change them on the Categories page.">
+      <Dialog open={isAdding} onOpenChange={setIsAdding} title="New category" description="It starts with the usual space on the fixture; change it on the Categories page.">
         <Input label="Category name" value={name} onChange={(event) => setName(event.target.value)} error={addError} />
         <Button onClick={add} loading={isSaving} loadingText="Adding…">
           Add category

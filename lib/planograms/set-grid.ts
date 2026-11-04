@@ -86,6 +86,25 @@ export function setBlocks(faces: readonly PlanogramFace[]): GridLayout {
   return shifted(blocks);
 }
 
+/**
+ * A frame rack run (frame racks spec §5): every rack's rail in one row, in
+ * reading order, half a foot apart. A corner shows in the block's label.
+ */
+export function runBlocks(faces: readonly PlanogramFace[]): GridLayout {
+  let x = 0;
+  const blocks = faces.map((face) => {
+    const b = block(face, false, x, 0);
+    x += face.columns + SET_GAP;
+    return b;
+  });
+  return shifted(blocks);
+}
+
+/** The combined grid for a set or a run. */
+export function combinedBlocks(scope: { isRun?: boolean; faces: readonly PlanogramFace[] }): GridLayout {
+  return scope.isRun ? runBlocks(scope.faces) : setBlocks(scope.faces);
+}
+
 // A turned block's rows run from the table's own back (row 0), which is the
 // edge against the upper on a left lower and the outer edge on a right lower.
 export function spanRect(b: Block, c: Cells): Rect {

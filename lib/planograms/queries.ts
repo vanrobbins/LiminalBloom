@@ -3,7 +3,7 @@
 
 import "server-only";
 
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -76,10 +76,9 @@ function draftQuery(storeId: string, planogramId: string) {
       styleNumber: products.styleNumber,
       imagePath: products.imagePath,
       categoryName: productCategories.name,
-      // The folded stack limit whatever the presentation (only folded product
-      // stacks), so switching hung → folded is checked against the right one.
-      // The product's own folded footprint, else its category's.
-      stackLimit: sql<number>`coalesce((select pf.stack_limit from ${productFootprints} pf where pf.product_id = ${planogramPlacements.productId} and pf.presentation = 'folded'), ${productCategories.stackLimit})`,
+      swatch: products.swatch,
+      texture: products.texture,
+      colorWord: products.color,
     })
     .from(planogramPlacements)
     .innerJoin(products, eq(products.id, planogramPlacements.productId))
@@ -173,7 +172,6 @@ export async function productFits(storeId: string, ids: readonly string[]): Prom
         hungRows: productCategories.hungRows,
         foldedColumns: productCategories.foldedColumns,
         foldedRows: productCategories.foldedRows,
-        stackLimit: productCategories.stackLimit,
       })
       .from(products)
       .innerJoin(productCategories, eq(productCategories.id, products.categoryId))
@@ -187,11 +185,11 @@ export async function productFits(storeId: string, ids: readonly string[]): Prom
   for (const p of productRows) {
     const overrides: Overrides = {};
     for (const o of overrideRows.filter((r) => r.productId === p.id)) {
-      overrides[o.presentation] = { columns: o.columns, rows: o.rows, stackLimit: o.stackLimit };
+      overrides[o.presentation] = { columns: o.columns, rows: o.rows };
     }
     const [hung, folded] = PRESENTATIONS.map((presentation) => {
-      const { columns, rows, stackLimit } = effectiveFootprint(p, overrides, presentation);
-      return { columns, rows, stackLimit };
+      const { columns, rows } = effectiveFootprint(p, overrides, presentation);
+      return { columns, rows };
     });
     fits.set(p.id, { id: p.id, name: p.name, styleNumber: p.styleNumber, footprints: { hung, folded } });
   }

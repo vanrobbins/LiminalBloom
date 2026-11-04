@@ -55,3 +55,36 @@ describe("planogramScope", () => {
     expect(planogramScope(layout, "low-f")).toBeNull();
   });
 });
+
+describe("frame rack runs", () => {
+  const frame = (id: string, runIndex: number, x: number, y: number, rotation: number) =>
+    fixture({ id, type: "frame_rack", name: `Frame ${id}`, x, y, width: 48, depth: 24, rotation, runId: "run", runIndex });
+  // A closed square: a, then corners b, c, d.
+  const square: Layout = {
+    ...EMPTY_LAYOUT,
+    fixtures: [frame("a", 0, 0, 0, 0), frame("b", 1, 24, 24, 90), frame("c", 2, 0, 48, 180), frame("d", 3, -24, 24, 270)],
+    faces: ["a", "b", "c", "d"].map((id) => face({ id: `${id}-rail`, fixtureId: id, side: "front", columns: 8, rows: 1 })),
+    frameRuns: [{ id: "run", startIndex: 0, version: 1 }],
+  };
+
+  it("belongs to the anchor: any rack opens the anchor's planogram", () => {
+    expect(planogramOwner(square, "c")?.id).toBe("a");
+    expect(planogramScope(square, "c")).toBeNull();
+  });
+
+  it("covers every rack's rail in reading order, naming corners", () => {
+    const scope = planogramScope(square, "a")!;
+    expect(scope).toMatchObject({ isSet: true, isRun: true });
+    expect(scope.faces.map((f) => [f.faceId, f.label, f.fixtureType])).toEqual([
+      ["a-rail", "Frame a · corner", "frame_rack"],
+      ["b-rail", "Frame b · corner", "frame_rack"],
+      ["c-rail", "Frame c · corner", "frame_rack"],
+      ["d-rail", "Frame d · corner", "frame_rack"],
+    ]);
+  });
+
+  it("starts reading where a closed run says", () => {
+    const later = { ...square, frameRuns: [{ id: "run", startIndex: 2, version: 1 }] };
+    expect(planogramScope(later, "a")!.faces.map((f) => f.faceId)).toEqual(["c-rail", "d-rail", "a-rail", "b-rail"]);
+  });
+});

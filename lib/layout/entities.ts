@@ -1,18 +1,18 @@
 // A layout seen as a bag of keyed items, so diffs, undo patches and saves can
 // treat every kind of item the same way.
 
-import type { Entrance, Face, Fixture, Layout, Outline, TableSet, Zone } from "./types";
+import type { Entrance, Face, Fixture, FrameRun, Layout, Outline, TableSet, Zone } from "./types";
 import { OUTLINE_ID } from "./types";
 
-export type Collection = "outline" | "entrances" | "zones" | "fixtures" | "faces" | "tableSets";
+export type Collection = "outline" | "entrances" | "zones" | "fixtures" | "faces" | "tableSets" | "frameRuns";
 export type ListCollection = Exclude<Collection, "outline">;
-export const LIST_COLLECTIONS: readonly ListCollection[] = ["entrances", "zones", "fixtures", "faces", "tableSets"];
+export const LIST_COLLECTIONS: readonly ListCollection[] = ["entrances", "zones", "fixtures", "faces", "tableSets", "frameRuns"];
 
-export type Entity = Outline | Entrance | Zone | Fixture | Face | TableSet;
+export type Entity = Outline | Entrance | Zone | Fixture | Face | TableSet | FrameRun;
 /** `${collection}:${id}` */
 export type EntityKey = string;
 
-type ListItem = Entrance | Zone | Fixture | Face | TableSet;
+type ListItem = Entrance | Zone | Fixture | Face | TableSet | FrameRun;
 
 export function keyOf(collection: Collection, id: string): EntityKey {
   return `${collection}:${id}`;

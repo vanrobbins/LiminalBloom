@@ -85,6 +85,27 @@
       "when": 1793645009866,
       "tag": "0011_store_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793673020627,
+      "tag": "0012_space_sizes",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793675519673,
+      "tag": "0013_frame_racks",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793676160758,
+      "tag": "0014_run_index_deferrable",
+      "breakpoints": true
     }
   ]
 }

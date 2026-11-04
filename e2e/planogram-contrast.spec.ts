@@ -88,3 +88,38 @@ test("tile labels and status chips are readable", async ({ page }) => {
   await page.goto("/planograms");
   await check(page.getByText("Draft", { exact: true }).first(), "list Draft badge");
 });
+
+// Week 6.5 spec §4.2–4.3: a product without a photo is drawn as it sits, with a
+// thin outline that must stand out from the tile (WCAG 1.4.11, 3:1).
+test("a drawn tile shows folded-from-above on a table top, with an outline that stands out", async ({ page }) => {
+  await openDraft(page);
+  const tile = page.getByRole("button", { name: /^E2E High-Rise Pant, / });
+  const drawing = tile.locator("svg[data-view]");
+  await expect(drawing).toHaveAttribute("data-view", "folded-top");
+  await expect(drawing).toHaveAttribute("data-drawing", "pants");
+  const ratio = await drawing.evaluate((svg) => {
+    const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+    const rgb = (css: string) => {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = css;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+      return { r, g, b, a: a / 255 };
+    };
+    const outline = svg.querySelector("path:last-of-type")!;
+    const bg = rgb(getComputedStyle(svg).backgroundColor);
+    const stroke = rgb(getComputedStyle(outline).stroke);
+    const mixed = { r: stroke.r * stroke.a + bg.r * (1 - stroke.a), g: stroke.g * stroke.a + bg.g * (1 - stroke.a), b: stroke.b * stroke.a + bg.b * (1 - stroke.a) };
+    const lum = (c: { r: number; g: number; b: number }) => {
+      const [r, g, b] = [c.r, c.g, c.b].map((v) => {
+        const x = v / 255;
+        return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [hi, lo] = [lum(mixed), lum(bg)].sort((a, b) => b - a);
+    return (hi + 0.05) / (lo + 0.05);
+  });
+  test.info().annotations.push({ type: "contrast", description: `drawing outline: ${ratio.toFixed(2)}` });
+  expect(ratio).toBeGreaterThanOrEqual(3);
+});

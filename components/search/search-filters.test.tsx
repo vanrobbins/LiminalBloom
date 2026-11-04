@@ -19,6 +19,25 @@ const categories = [
 beforeEach(() => mediaQuery.useMediaQuery.mockReturnValue(false));
 
 describe("SearchFilters", () => {
+  describe("sort", () => {
+    it("offers Best match only with text, and marks the sort in use", () => {
+      const { unmount } = render(<SearchFilters input={searchInput.parse({})} categories={[]} colors={[]} onChange={() => {}} />);
+      expect(screen.queryByRole("radio", { name: "Best match" })).toBeNull();
+      expect(screen.getByRole("radio", { name: "Name A–Z" })).toBeChecked();
+      unmount();
+      render(<SearchFilters input={searchInput.parse({ q: "pant" })} categories={[]} colors={[]} onChange={() => {}} />);
+      expect(screen.getByRole("radio", { name: "Best match" })).toBeChecked();
+    });
+
+    it("changes the sort", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<SearchFilters input={searchInput.parse({})} categories={[]} colors={[]} onChange={onChange} />);
+      await user.click(screen.getByRole("radio", { name: "Recently updated" }));
+      expect(onChange).toHaveBeenCalledWith({ sort: "updated" });
+    });
+  });
+
   describe("filter limits", () => {
     it("stops at the max colors and disables extras", async () => {
       const user = userEvent.setup();

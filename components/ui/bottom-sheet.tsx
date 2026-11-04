@@ -17,6 +17,7 @@ import { useRef, useState } from "react";
 import { Drawer } from "vaul";
 
 import { Button } from "./button";
+import { Tooltip } from "./tooltip";
 
 type BottomSheetProps = {
   open: boolean;
@@ -148,31 +149,33 @@ function PeekPanel({ title, heading, expanded, onExpandedChange, onClose, childr
       style={{ height: expanded ? FULL_HEIGHT : PEEK_HEIGHT }}
       className="fixed inset-x-0 bottom-0 z-50 mx-auto flex w-full max-w-lg flex-col rounded-t-2xl border border-line-subtle bg-raised shadow-2xl"
     >
-      <button
-        type="button"
-        aria-label={expanded ? "Collapse" : "Expand"}
-        aria-expanded={expanded}
-        onPointerDown={(event) => {
-          startY.current = event.clientY;
-          swiped.current = false;
-        }}
-        onPointerUp={(event) => {
-          if (startY.current === null) return;
-          const travel = event.clientY - startY.current;
-          startY.current = null;
-          if (travel <= -SWIPE_PX) onExpandedChange(true);
-          else if (travel >= SWIPE_PX) onExpandedChange(false);
-          else return;
-          swiped.current = true;
-        }}
-        onClick={() => {
-          if (!swiped.current) onExpandedChange(!expanded);
-          swiped.current = false;
-        }}
-        className="flex min-h-11 w-full touch-none items-center justify-center"
-      >
-        <span aria-hidden="true" className="h-1.5 w-12 rounded-full bg-line" />
-      </button>
+      <Tooltip label={expanded ? "Collapse" : "Expand"}>
+        <button
+          type="button"
+          aria-label={expanded ? "Collapse" : "Expand"}
+          aria-expanded={expanded}
+          onPointerDown={(event) => {
+            startY.current = event.clientY;
+            swiped.current = false;
+          }}
+          onPointerUp={(event) => {
+            if (startY.current === null) return;
+            const travel = event.clientY - startY.current;
+            startY.current = null;
+            if (travel <= -SWIPE_PX) onExpandedChange(true);
+            else if (travel >= SWIPE_PX) onExpandedChange(false);
+            else return;
+            swiped.current = true;
+          }}
+          onClick={() => {
+            if (!swiped.current) onExpandedChange(!expanded);
+            swiped.current = false;
+          }}
+          className="flex min-h-11 w-full touch-none items-center justify-center"
+        >
+          <span aria-hidden="true" className="h-1.5 w-12 rounded-full bg-line" />
+        </button>
+      </Tooltip>
       <div className="flex items-center justify-between gap-4 px-6">
         {heading}
         <Button variant="ghost" className="ml-auto" onClick={onClose}>

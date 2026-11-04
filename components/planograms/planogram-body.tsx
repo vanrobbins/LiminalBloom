@@ -91,7 +91,7 @@ export function PlanogramBody({
         <PlanogramGrid
           layout={layout}
           items={items.filter((i) => shownFaces.some((f) => f.faceId === i.faceId))}
-          label={`${scope.fixtureName}, ${scope.isSet ? "table set" : face.label}`}
+          label={`${scope.fixtureName}, ${scope.isRun ? "run" : scope.isSet ? "table set" : face.label}`}
           selectedId={selectedId}
           highlightProductId={highlightProductId}
           issues={issues}

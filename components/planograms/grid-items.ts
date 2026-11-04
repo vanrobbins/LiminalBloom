@@ -13,13 +13,14 @@ export type GridItem = Cells & {
   styleNumber: string;
   presentation: Presentation;
   pieceCount: number;
-  imageKey: string | null;
-  categoryName: string;
-};
+} & ProductLook;
 
-/** A product deleted since publishing has no look: it keeps its snapshot name and gets the default silhouette. */
+/** A product deleted since publishing has no look: it keeps its snapshot name and draws the default shape, neutral. */
 export function itemsFromSnapshot(entries: readonly SnapshotEntry[], looks: Readonly<Record<string, ProductLook>>): GridItem[] {
-  return entries.map((e, i) => ({ ...e, id: `v-${i}`, imageKey: looks[e.productId]?.imageKey ?? null, categoryName: looks[e.productId]?.categoryName ?? "" }));
+  return entries.map((e, i) => {
+    const look = looks[e.productId];
+    return { ...e, id: `v-${i}`, imageKey: look?.imageKey ?? null, categoryName: look?.categoryName ?? "", swatch: look?.swatch, texture: look?.texture, colorWord: look?.colorWord };
+  });
 }
 
 export function itemsFromDraft(placements: readonly PlacementView[]): GridItem[] {

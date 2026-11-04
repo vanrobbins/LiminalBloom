@@ -1,4 +1,4 @@
-// A fixture's name, size, rotation, display sides and lower tables. Every
+// A fixture's name, size, rotation, display sides, lower tables and run. Every
 // field works without dragging (spec §10).
 
 "use client";
@@ -14,6 +14,7 @@ import type { Fixture, Layout } from "@/lib/layout/types";
 import { FaceSettings } from "./face-settings";
 import { LowerTables } from "./lower-tables";
 import { NameField } from "./name-field";
+import { RunControls } from "./run-controls";
 
 type FixturePropertiesProps = { layout: Layout; fixture: Fixture; dispatch: (action: SessionAction) => void };
 
@@ -76,6 +77,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
       ) : null}
       {rule.faces.length > 0 ? <FaceSettings fixture={fixture} faces={faces} dispatch={dispatch} /> : null}
       {fixture.type === "table" && !isLower ? <LowerTables table={fixture} lowers={lowers} dispatch={dispatch} /> : null}
+      {fixture.type === "frame_rack" ? <RunControls layout={layout} rack={fixture} dispatch={dispatch} /> : null}
       <div className="flex flex-wrap gap-2">
         {!isLower ? (
           <Button variant="secondary" onClick={() => dispatch({ type: "duplicate" })}>

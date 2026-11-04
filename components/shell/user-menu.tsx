@@ -25,6 +25,7 @@ import { personInitial } from "@/lib/initials";
 
 import { useSignOut } from "./use-sign-out";
 import { useThemeSwitch } from "./use-theme-switch";
+import { NameTip, Tooltip } from "@/components/ui/tooltip";
 
 export type UserMenuVariant = "sheet" | "rail" | "sidebar";
 
@@ -64,17 +65,19 @@ export function UserMenu({
   if (variant === "sheet") {
     return (
       <>
-        <button
-          type="button"
-          data-user-menu
-          aria-label="Account menu"
-          aria-haspopup="dialog"
-          aria-expanded={isSheetOpen}
-          onClick={() => setIsSheetOpen(true)}
-          className={TRIGGER.sheet}
-        >
-          {avatar}
-        </button>
+        <Tooltip label="Account menu">
+          <button
+            type="button"
+            data-user-menu
+            aria-label="Account menu"
+            aria-haspopup="dialog"
+            aria-expanded={isSheetOpen}
+            onClick={() => setIsSheetOpen(true)}
+            className={TRIGGER.sheet}
+          >
+            {avatar}
+          </button>
+        </Tooltip>
 
         <BottomSheet
           open={isSheetOpen}
@@ -118,14 +121,16 @@ export function UserMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        data-user-menu
-        aria-label={variant === "rail" || !user.name.trim() ? "Account menu" : undefined}
-        className={TRIGGER[variant]}
-      >
-        {avatar}
-        {variant === "sidebar" ? <span className="min-w-0 wrap-anywhere">{user.name}</span> : null}
-      </DropdownMenuTrigger>
+      <NameTip label={variant === "rail" ? "Account menu" : null}>
+        <DropdownMenuTrigger
+          data-user-menu
+          aria-label={variant === "rail" || !user.name.trim() ? "Account menu" : undefined}
+          className={TRIGGER[variant]}
+        >
+          {avatar}
+          {variant === "sidebar" ? <span className="min-w-0 wrap-anywhere">{user.name}</span> : null}
+        </DropdownMenuTrigger>
+      </NameTip>
 
       <DropdownMenuContent side={variant === "rail" ? "right" : "top"}>
         <DropdownMenuLabel>

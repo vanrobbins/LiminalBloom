@@ -1,9 +1,10 @@
 // The landing page's drawn planogram: a 6 ft rack face on the app's half-foot
-// grid, with garment silhouettes in tiles and one tile selected in gold. Drawn
+// grid, with garments drawn as they sit (hung, or folded seen from the front;
+// Week 6.5 spec §4.6) and one tile selected in gold. Drawn
 // from tokens (fill-*, stroke-*), so it follows the theme and stays sharp at any
 // size. Decorative: the caption beside it says the same in words.
 
-import { SILHOUETTE_PATHS, type Silhouette } from "@/lib/products/silhouettes";
+import { DRAWINGS, type Shape } from "@/lib/products/drawings";
 
 /** One half-foot column, in drawing units. */
 const U = 10;
@@ -13,20 +14,20 @@ const LEVELS = 3;
 const WIDTH = COLUMNS * U;
 const HEIGHT = LEVELS * 2 * U;
 
-type Tile = { x: number; y: number; w: number; kind: Silhouette; selected?: boolean };
+type Tile = { x: number; y: number; w: number; kind: Shape; view: "hung" | "folded-front"; selected?: boolean };
 
 // Columns and levels, as a planogram stores them. Two columns at the bottom
 // right stay open, so the grid shows through.
 export const TILES: Tile[] = [
-  { x: 0, y: 0, w: 4, kind: "tee" },
-  { x: 4, y: 0, w: 4, kind: "tee", selected: true },
-  { x: 8, y: 0, w: 4, kind: "knit" },
-  { x: 0, y: 1, w: 3, kind: "dress" },
-  { x: 3, y: 1, w: 3, kind: "dress" },
-  { x: 6, y: 1, w: 6, kind: "outerwear" },
-  { x: 0, y: 2, w: 4, kind: "pants" },
-  { x: 4, y: 2, w: 4, kind: "pants" },
-  { x: 8, y: 2, w: 2, kind: "accessory" },
+  { x: 0, y: 0, w: 4, kind: "tee", view: "hung" },
+  { x: 4, y: 0, w: 4, kind: "tee", view: "hung", selected: true },
+  { x: 8, y: 0, w: 4, kind: "knit", view: "hung" },
+  { x: 0, y: 1, w: 3, kind: "dress", view: "hung" },
+  { x: 3, y: 1, w: 3, kind: "dress", view: "hung" },
+  { x: 6, y: 1, w: 6, kind: "outerwear", view: "hung" },
+  { x: 0, y: 2, w: 4, kind: "pants", view: "folded-front" },
+  { x: 4, y: 2, w: 4, kind: "knit", view: "folded-front" },
+  { x: 8, y: 2, w: 2, kind: "bag", view: "folded-front" },
 ];
 
 const HAIRLINE = { vectorEffect: "non-scaling-stroke" } as const;
@@ -117,7 +118,7 @@ function TileShape({ tile }: { tile: Tile }) {
         return (
           <path
             key={i}
-            d={SILHOUETTE_PATHS[tile.kind]}
+            d={DRAWINGS[tile.kind][tile.view].body}
             fillRule="evenodd"
             className="fill-ink-muted"
             transform={`translate(${cx - 50 * scale} ${y + (h - 120 * scale) / 2}) scale(${scale})`}

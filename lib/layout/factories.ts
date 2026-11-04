@@ -92,6 +92,8 @@ export function newFixture(
     rotation: 0,
     tableSetId: null,
     setSide: null,
+    runId: null,
+    runIndex: null,
     version: 0,
   };
   const faces = rule.defaultFaces.map((face) => ({

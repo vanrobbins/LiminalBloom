@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({ changeStatus: vi.fn() }));
 const toasts = vi.hoisted(() => ({ toast: vi.fn() }));
-vi.mock("@/app/(app)/search/status-actions", () => actions);
+vi.mock("@/app/(app)/products/status-actions", () => actions);
 vi.mock("@/lib/toast", () => toasts);
 
 import type { ProductRow } from "@/lib/products/queries";
 
 import { StatusControl } from "./status-control";
 
-const product: ProductRow = { id: "p1", name: "High-Rise Pant", styleNumber: "HRP-01", color: "Black", sizeRange: "", status: "in_stock", version: 3, categoryId: "c", categoryName: "Pants", imageKey: null };
+const product: ProductRow = { id: "p1", name: "High-Rise Pant", styleNumber: "HRP-01", color: "Black", sizeRange: "", status: "in_stock", version: 3, categoryId: "c", categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid" };
 
 beforeEach(() => vi.clearAllMocks());
 

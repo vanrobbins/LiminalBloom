@@ -52,6 +52,14 @@ test.beforeEach(async () => {
   await seedCatalog();
 });
 
+/** Products card → its location sheet → Edit product. */
+async function openProduct(page: import("@playwright/test").Page, q: string, name: string) {
+  await page.goto(`/products?q=${q}`);
+  await page.getByRole("main").getByRole("button", { name: new RegExp(`^${name}`) }).click();
+  await page.getByRole("link", { name: "Edit product" }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/products\/[0-9a-f-]{36}$/);
+}
+
 test("adds a product with a photo, finds it, and deletes it", async ({ page }) => {
   test.skip(!process.env.BLOB_READ_WRITE_TOKEN, "Needs the dev Blob store (spec §6.5).");
   const name = `E2E Linen Shirt ${Date.now()}`;
@@ -59,15 +67,14 @@ test("adds a product with a photo, finds it, and deletes it", async ({ page }) =
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Style number").fill(`E2E-LS-${Date.now() % 100000}`);
   await page.getByLabel("Category").selectOption({ label: "E2E Tees" });
-  await page.getByLabel("Color").fill("White");
+  await page.getByLabel("Color", { exact: true }).fill("White");
   await page.getByLabel("Choose image").setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: PHOTO });
   await expect(page.getByRole("img", { name: "New image for New product" })).toBeVisible();
   await page.getByRole("button", { name: "Add product" }).click();
   await expect(page).toHaveURL(/\/products$/);
 
-  await page.getByLabel("Filter products").fill(name);
-  await page.getByLabel("Filter products").press("Enter");
-  const row = page.getByRole("main").getByRole("link", { name: new RegExp(name) });
+  await page.getByRole("main").getByLabel("Search products").fill(name);
+  const row = page.getByRole("main").getByRole("button", { name: new RegExp(`^${name}`) });
   // The card's photo is decorative (empty alt): the link's own name already says what it is.
   const image = row.locator("img");
   await expect(image).toBeVisible();
@@ -77,22 +84,56 @@ test("adds a product with a photo, finds it, and deletes it", async ({ page }) =
   await expect.poll(longSide).toBeGreaterThan(0);
   expect(await longSide()).toBeLessThanOrEqual(1200);
   await row.click();
+  await page.getByRole("link", { name: "Edit product" }).filter({ visible: true }).click();
   await page.getByRole("button", { name: "Delete product" }).first().click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete product" }).click();
   await expect(page).toHaveURL(/\/products$/);
 });
 
-test("overrides a footprint for one product", async ({ page }) => {
-  await page.goto("/products?q=E2E-HRP-01");
-  await page.getByRole("main").getByRole("link", { name: /E2E High-Rise Pant/ }).click();
-  await page.getByRole("button", { name: "Override hung for this product" }).click();
+test("gives one product its own space on the fixture, then uses the category's again", async ({ page }) => {
+  await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
+  const space = page.getByRole("group", { name: "Space on the fixture" });
+  await expect(space.getByRole("radio", { name: "Uses the E2E Pants’s" })).toBeChecked();
+  await space.getByRole("radio", { name: "Different for this product" }).check();
   await page.getByRole("button", { name: "More hung width" }).click();
+  await expect(space.getByText("Hung: 1½ ft wide, 3 rows high")).toBeVisible();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/\/products$/);
+
+  await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
+  await expect(space.getByRole("radio", { name: "Different for this product" })).toBeChecked();
+  await expect(page.getByRole("group", { name: "Hung width" })).toContainText("1½ ft");
+  await space.getByRole("radio", { name: "Uses the E2E Pants’s" }).check();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/\/products$/);
+
+  await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
+  await expect(space.getByRole("radio", { name: "Uses the E2E Pants’s" })).toBeChecked();
+  await expect(space.getByText("Hung: 1 ft wide, 3 rows high")).toBeVisible();
+});
+
+test("a product without its own size range shows its category's, in the location sheet too", async ({ page }) => {
+  await page.goto("/products?q=E2E-PT-01");
+  await page.getByRole("main").getByRole("button", { name: /^E2E Pocket Tee/ }).click();
+  await expect(page.getByText("XS–XL", { exact: true }).filter({ visible: true })).toBeVisible();
+  await page.getByRole("link", { name: "Edit product" }).filter({ visible: true }).click();
+  const size = page.getByRole("group", { name: "Size range" });
+  await expect(size.getByRole("radio", { name: "Uses the E2E Tees’s" })).toBeChecked();
+  await expect(size.getByText("XS–XL", { exact: true })).toBeVisible();
+});
+
+// Week 6.5 spec §4.5: a product without a photo is drawn in its swatch and texture.
+test("picks a swatch and a texture, and the product card draws it", async ({ page }) => {
+  await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
+  await page.getByRole("radio", { name: "Pick a color" }).check();
+  await page.getByLabel("Hex").fill("#7a2e3b");
+  await page.getByRole("group", { name: "Texture" }).getByRole("button", { name: "Denim" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(/\/products$/);
   await page.goto("/products?q=E2E-HRP-01");
-  await page.getByRole("main").getByRole("link", { name: /E2E High-Rise Pant/ }).click();
-  await expect(page.getByText("Hung (this product only)")).toBeVisible();
-  await expect(page.getByRole("group", { name: "Hung width" })).toContainText("1½ ft");
+  const drawing = page.locator('[data-result-id] svg[data-view="flat"]').first();
+  await expect(drawing).toHaveAttribute("data-texture", "denim");
+  await expect(drawing).not.toHaveAttribute("data-fill", "var(--line)");
 });
 
 test("deleting a category warns how many products go with it", async ({ page }) => {

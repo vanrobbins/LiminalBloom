@@ -12,6 +12,7 @@ import { AlertTriangle } from "lucide-react";
 import { ProductImage } from "@/components/products/product-image";
 import { resizeEdges, type Edge } from "@/lib/planograms/builder/resize";
 import { ROW_UNITS, type Block, type Rect } from "@/lib/planograms/set-grid";
+import { viewFor } from "@/lib/products/drawings";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 
 import type { GridItem } from "./grid-items";
@@ -112,7 +113,18 @@ export function GridTile({ item, block, rect, words, selected, highlighted, issu
         style={{ ...placed(rect), transform: offset ? `translate(${at(offset.dx)}, ${at(offset.dy)})` : undefined }}
         className="absolute overflow-hidden rounded-md border border-line bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none"
       >
-        <ProductImage productId={item.productId} name={item.productName} categoryName={item.categoryName} imageKey={item.imageKey} size="fill" decorative />
+        <ProductImage
+          productId={item.productId}
+          name={item.productName}
+          categoryName={item.categoryName}
+          imageKey={item.imageKey}
+          view={viewFor(item.presentation, block.side)}
+          swatch={item.swatch}
+          texture={item.texture}
+          colorWord={item.colorWord}
+          size="fill"
+          decorative
+        />
         <span aria-hidden="true" className="absolute top-1 right-1 rounded bg-raised/90 px-1 font-mono text-xs text-ink">
           {item.presentation === "hung" ? "H" : "F"} {item.pieceCount}
         </span>

@@ -7,6 +7,7 @@ import { isOnWall, wallSpan } from "./entrances";
 import { FIXTURE_RULES, corners, mayOverlap, rectsOverlap } from "./fixtures";
 import { SIDE_LABEL } from "./format";
 import { area, bounds, boundsOverlap, distance, edgesOf, polygonContains, polygonsOverlap, selfIntersects } from "./geometry";
+import { MAX_RUN_RACKS, MIN_RUN_RACKS, runShape } from "./runs";
 import {
   MAX_CORNERS,
   MAX_COORD,
@@ -21,7 +22,7 @@ import {
   MIN_ZONE_AREA,
   MIN_ZONE_EDGE,
 } from "./limits";
-import { OUTLINE_ID, type Issue, type IssueKind, type Layout, type Point } from "./types";
+import { OUTLINE_ID, type Fixture, type Issue, type IssueKind, type Layout, type Point } from "./types";
 
 type Wants = (id: string) => boolean;
 
@@ -175,6 +176,11 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
     if (rule.faces.length > 0 && faces.length === 0) {
       issues.push(issue(f.id, "faces", `${f.name} needs at least one display side.`));
     }
+    // A frame rack's one face is its rail: one row (frame racks spec §2).
+    if (f.type === "frame_rack" && faces.some((face) => face.rows !== 1)) {
+      issues.push(issue(f.id, "grid", `${f.name} has one rail, so one row.`));
+    }
+    issues.push(...runIssues(layout, f));
 
     if (f.tableSetId !== null) {
       const set = layout.tableSets.find((s) => s.id === f.tableSetId);
@@ -204,6 +210,21 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
     }
   }
   return issues;
+}
+
+/** Frame racks spec §4.4: 2–6 frame racks per run, indexes 0…n−1, joined end to end at 0° or 90°. */
+function runIssues(layout: Layout, f: Fixture): Issue[] {
+  if (f.runId === null && f.runIndex === null) return [];
+  const run = layout.frameRuns.find((r) => r.id === f.runId);
+  if (!run || f.runIndex === null) return [issue(f.id, "run", "This rack's run is missing.")];
+  if (f.type !== "frame_rack") return [issue(f.id, "run", "Only frame racks join a run.")];
+  const racks = layout.fixtures.filter((o) => o.runId === run.id);
+  if (racks.length < MIN_RUN_RACKS || racks.length > MAX_RUN_RACKS) return [issue(f.id, "run", `A run has ${MIN_RUN_RACKS} to ${MAX_RUN_RACKS} racks.`)];
+  const indexes = racks.map((o) => o.runIndex).sort((a, b) => (a ?? 0) - (b ?? 0));
+  if (!indexes.every((n, i) => n === i)) return [issue(f.id, "run", "The racks in a run are numbered from the anchor without gaps.")];
+  const shape = runShape(racks.map((o) => ({ ...o, runIndex: o.runIndex ?? 0 })));
+  if (!shape.joined) return [issue(f.id, "run", "Racks in a run must meet end to end, straight or at a corner.")];
+  return [];
 }
 
 function entranceIssues(layout: Layout, wants: Wants): Issue[] {

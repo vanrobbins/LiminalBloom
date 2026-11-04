@@ -3,6 +3,7 @@
 
 "use client";
 
+import { InfoPopover } from "@/components/ui/info-popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { PlanogramFace } from "@/lib/planograms/types";
 
@@ -10,5 +11,10 @@ type FaceSwitcherProps = { faces: readonly PlanogramFace[]; value: string; onCha
 
 export function FaceSwitcher({ faces, value, onChange }: FaceSwitcherProps) {
   if (faces.length <= 1) return null;
-  return <SegmentedControl label="Side" options={faces.map((f) => ({ value: f.faceId, label: f.label }))} value={value} onChange={onChange} />;
+  return (
+    <div className="flex max-w-full items-center gap-1">
+      <SegmentedControl label="Side" options={faces.map((f) => ({ value: f.faceId, label: f.label }))} value={value} onChange={onChange} />
+      <InfoPopover term="face" />
+    </div>
+  );
 }

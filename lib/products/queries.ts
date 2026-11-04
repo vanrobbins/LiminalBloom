@@ -22,7 +22,8 @@ import type { ProductStatus } from "@/lib/product-status";
 import type { CategoryDefaults, Overrides, Presentation } from "./footprint";
 import { locationDetail, locationLabel, type Cells } from "./location-label";
 import { readCells } from "./location-words";
-import type { Place, SearchInput } from "./schemas";
+import type { Place, SearchInput, Sort, Texture } from "./schemas";
+import { effectiveSort, isTextQuery, normalizeQuery } from "./search-params";
 
 export const SEARCH_LIMIT = 30;
 // pg_trgm's default (0.6) misses "hi rise pnt", which scores 0.533 against "high-rise pant ...". At 0.3
@@ -30,14 +31,8 @@ export const SEARCH_LIMIT = 30;
 // closer ones.
 export const WORD_SIMILARITY_THRESHOLD = "0.3";
 
-export function normalizeQuery(q: string): string {
-  return q.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-/** Fewer than two characters, or no letter or digit, browses instead. */
-export function isTextQuery(q: string): boolean {
-  return q.length >= 2 && /[\p{L}\p{N}]/u.test(q);
-}
+// Pure, so the screen can use them too; re-exported for the callers here.
+export { isTextQuery, normalizeQuery };
 
 /** The file name only: it changes whenever the image does, so it busts the browser cache. */
 export function imageKeyOf(path: string | null): string | null {
@@ -49,7 +44,13 @@ export type ProductRow = {
   name: string;
   styleNumber: string;
   color: string;
+  /** The product's own size range, else its category's (Week 6.5 spec §3.4); "" means none. */
   sizeRange: string;
+  /** Whether `sizeRange` is the product's own rather than inherited. */
+  sizeIsOwn: boolean;
+  /** The drawing's own colour, or null to match the colour word. */
+  swatch: string | null;
+  texture: Texture;
   status: ProductStatus;
   version: number;
   categoryId: string;
@@ -72,7 +73,7 @@ export type LocationRow = {
 export type SearchResult = ProductRow & { locations: LocationRow[] };
 export type SearchPage = { results: SearchResult[]; total: number };
 
-export type CategoryRow = CategoryDefaults & { id: string; name: string; version: number; productCount: number };
+export type CategoryRow = CategoryDefaults & { id: string; name: string; sizeRange: string; version: number; productCount: number };
 
 export type ProductDetail = { product: ProductRow; category: CategoryRow; overrides: Overrides; locations: LocationRow[] };
 
@@ -81,7 +82,10 @@ const productColumns = {
   name: products.name,
   styleNumber: products.styleNumber,
   color: products.color,
-  sizeRange: products.sizeRange,
+  sizeRange: sql<string>`coalesce(${products.sizeRange}, ${productCategories.sizeRange})`,
+  sizeIsOwn: sql<boolean>`${products.sizeRange} is not null`,
+  swatch: products.swatch,
+  texture: products.texture,
   status: products.status,
   version: products.version,
   categoryId: products.categoryId,
@@ -119,6 +123,13 @@ async function searchRows(storeId: string, input: SearchInput, limit: number): P
   if (input.places.length > 0) conditions.push(or(...input.places.map(placeCondition)) as SQL);
 
   const score = sql`greatest(word_similarity(${q}, ${products.searchText}), word_similarity(${q}, ${categoryName}))`;
+  // Ties break on name, then id, so Show more never repeats or skips a card.
+  const first: Record<Sort, SQL[]> = {
+    match: [desc(score)],
+    name: [],
+    updated: [desc(products.updatedAt)],
+    added: [desc(products.createdAt)],
+  };
   const [, rows] = await withStore(storeId, [
     db.execute(sql`select set_config('pg_trgm.word_similarity_threshold', ${WORD_SIMILARITY_THRESHOLD}, true)`),
     db
@@ -126,8 +137,9 @@ async function searchRows(storeId: string, input: SearchInput, limit: number): P
       .from(products)
       .innerJoin(productCategories, eq(productCategories.id, products.categoryId))
       .where(and(...conditions))
-      .orderBy(...(isText ? [desc(score), asc(products.name)] : [asc(products.name)]))
-      .limit(limit),
+      .orderBy(...first[effectiveSort(input)], asc(products.name), asc(products.id))
+      .limit(limit)
+      .offset(input.offset),
   ] as const);
   return { rows: rows.map(({ total, ...row }) => (void total, toRow(row))), total: rows[0]?.total ?? 0 };
 }
@@ -210,7 +222,7 @@ const categoryColumns = {
   hungRows: productCategories.hungRows,
   foldedColumns: productCategories.foldedColumns,
   foldedRows: productCategories.foldedRows,
-  stackLimit: productCategories.stackLimit,
+  sizeRange: productCategories.sizeRange,
   version: productCategories.version,
   productCount: sql<number>`(select count(*)::int from ${products} p2 where p2.category_id = product_categories.id)`,
 };
@@ -254,7 +266,7 @@ export async function productDetail(storeId: string, productId: string): Promise
   const category = categoryRows[0];
   if (!product || !category) return null;
   const overrides: Overrides = {};
-  for (const f of footprintRows) overrides[f.presentation] = { columns: f.columns, rows: f.rows, stackLimit: f.stackLimit };
+  for (const f of footprintRows) overrides[f.presentation] = { columns: f.columns, rows: f.rows };
   return { product: toRow(product), category, overrides, locations: await locationsFor(storeId, [productId]) };
 }
 

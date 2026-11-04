@@ -33,7 +33,8 @@ export async function seedCatalog(): Promise<void> {
   // Categories take their products, and products their places.
   await db`delete from product_categories where store_id = ${store} and name like 'E2E %'`;
   const [pants] = await db`insert into product_categories (store_id, name, hung_columns, folded_columns) values (${store}, 'E2E Pants', 2, 4) returning id`;
-  const [tees] = await db`insert into product_categories (store_id, name, hung_columns, folded_columns) values (${store}, 'E2E Tees', 2, 4) returning id`;
+  // Tees carry a size range that the Pocket Tee inherits (Week 6.5 spec §3.4).
+  const [tees] = await db`insert into product_categories (store_id, name, hung_columns, folded_columns, size_range) values (${store}, 'E2E Tees', 2, 4, 'XS–XL') returning id`;
   const [pant] = await db`
     insert into products (store_id, name, style_number, category_id, color, size_range)
     values (${store}, 'E2E High-Rise Pant', 'E2E-HRP-01', ${pants.id}, 'Black', '0–14') returning id`;

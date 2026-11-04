@@ -41,6 +41,8 @@ export function fixture(over: Partial<Fixture> = {}): Fixture {
     rotation: 0,
     tableSetId: null,
     setSide: null,
+    runId: null,
+    runIndex: null,
     version: 1,
     ...over,
   };

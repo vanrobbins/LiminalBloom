@@ -13,7 +13,7 @@ const pant = { id: "p", faceId: front.faceId, productName: "High-Rise Pant", col
 const initial = { faceId: front.faceId, presentation: "folded" as const, col: 4, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 1 };
 
 function renderForm({ onSubmit = vi.fn().mockResolvedValue(null), faces = [front] } = {}) {
-  render(<PlacementForm faces={faces} initial={initial} others={[pant]} excludeId={null} stackLimitFor={() => 8} submitLabel="Add" busy={false} onSubmit={onSubmit} />);
+  render(<PlacementForm faces={faces} initial={initial} others={[pant]} excludeId={null} submitLabel="Add" busy={false} onSubmit={onSubmit} />);
   return onSubmit;
 }
 
@@ -45,7 +45,7 @@ describe("PlacementForm", () => {
     const back: PlanogramFace = { ...top, setSide: "back", label: "Back table", rows: 2 };
     const onSubmit = vi.fn().mockResolvedValue(null);
     const stored = { ...initial, faceId: back.faceId, col: 0, row: 0, colSpan: 4, rowSpan: 1 };
-    render(<PlacementForm faces={[back]} initial={stored} others={[]} excludeId={null} stackLimitFor={() => 8} submitLabel="Add" busy={false} onSubmit={onSubmit} />);
+    render(<PlacementForm faces={[back]} initial={stored} others={[]} excludeId={null} submitLabel="Add" busy={false} onSubmit={onSubmit} />);
     expect(screen.getByLabelText("From left (ft)")).toHaveValue("4");
     expect(screen.getByLabelText("From back (ft)")).toHaveValue("1");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
@@ -76,9 +76,9 @@ describe("PlacementForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByText("Blocked by High-Rise Pant")).toBeInTheDocument();
     await type("From left (ft)", "2");
-    await type("Pieces", "9");
+    await type("Pieces", "100");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(screen.getByText("More than this product's stack limit (8)")).toBeInTheDocument();
+    expect(screen.getByText("At most 99 pieces")).toBeInTheDocument();
     await type("From left (ft)", "2.25");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByText("Use feet in half steps, like 4 or 4½.")).toBeInTheDocument();

@@ -9,18 +9,24 @@
 import { Label } from "radix-ui";
 import { useId } from "react";
 
+import type { Term } from "@/lib/glossary";
+
+import { InfoPopover } from "./info-popover";
 import { FIELD_CLASSES, PasswordField } from "./password-field";
 
 type InputProps = Omit<React.ComponentProps<"input">, "id"> & {
   label: string;
   hint?: string;
   error?: string;
+  /** A "What's this?" beside the label, outside it so a tap never lands on the field. */
+  info?: Term;
 };
 
 export function Input({
   label,
   hint,
   error,
+  info,
   type = "text",
   className = "",
   autoComplete,
@@ -39,9 +45,12 @@ export function Input({
 
   return (
     <div className={`flex flex-col gap-1 ${className}`.trim()}>
-      <Label.Root htmlFor={id} className="text-sm text-ink">
-        {label}
-      </Label.Root>
+      <div className="flex items-center gap-1">
+        <Label.Root htmlFor={id} className="text-sm text-ink">
+          {label}
+        </Label.Root>
+        {info ? <InfoPopover term={info} /> : null}
+      </div>
       {type === "password" ? (
         <PasswordField
           {...fieldProps}

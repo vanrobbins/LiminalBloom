@@ -24,8 +24,14 @@ export function firstOpenSpot(
 export function placeNew(faces: readonly PlanogramFace[], others: readonly Neighbour[], product: ProductFit): PlacementFields | null {
   for (const presentation of ["folded", "hung"] as const) {
     const { columns, rows } = product.footprints[presentation];
-    const spot = firstOpenSpot(faces, others, { colSpan: columns, rowSpan: rows }, null);
-    if (spot) return { ...spot, presentation, colSpan: columns, rowSpan: rows, pieceCount: 1 };
+    for (const face of faces) {
+      // A frame rack's rail takes hung product only, one row high (frame racks spec §3).
+      const rail = face.fixtureType === "frame_rack";
+      if (rail && presentation === "folded") continue;
+      const rowSpan = rail ? 1 : rows;
+      const spot = firstOpenSpot([face], others, { colSpan: columns, rowSpan }, null);
+      if (spot) return { ...spot, presentation, colSpan: columns, rowSpan, pieceCount: 1 };
+    }
   }
   return null;
 }

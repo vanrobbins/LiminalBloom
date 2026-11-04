@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { placementIssues } from "@/lib/products/placement";
 
-import { buildDemo } from "./build";
+import { buildDemo, textureFor } from "./build";
 import { DEMO_PRODUCTS } from "./catalog";
 
 let n = 0;
@@ -34,13 +34,27 @@ describe("buildDemo", () => {
     }
   });
 
-  it("gives every product a content-addressed SVG under the store's prefix", () => {
+  it("gives every product a swatch and a texture instead of an image", () => {
     for (const p of plan.products) {
-      expect(p.imagePath).toMatch(/^stores\/store_demo\/products\/seed-[0-9a-f]{16}\.svg$/);
-      expect(plan.images.get(p.imagePath)).toContain("<svg");
+      expect(p.imagePath).toBeNull();
+      expect(p.swatch).toMatch(/^#[0-9a-f]{6}$/);
     }
-    // Same color and silhouette, same file: the two black Everyday Crew Tees differ only by style.
-    expect(buildDemo("store_demo", newId).images.size).toBe(plan.images.size);
+    const textures = new Set(plan.products.map((p) => p.texture));
+    expect([...textures].sort()).toEqual(["check", "denim", "dots", "rib", "solid", "stripes"]);
+  });
+
+  it("picks textures by category and a few names", () => {
+    expect(textureFor("Denim", "Skinny Jean")).toBe("denim");
+    expect(textureFor("Knits", "Cable Cardigan")).toBe("rib");
+    expect(textureFor("Tees", "Ringer Tee")).toBe("stripes");
+    expect(textureFor("Tees", "Everyday Crew Tee")).toBe("solid");
+  });
+
+  it("hangs product on the frame rack run, one row high", () => {
+    const rails = new Set(plan.layout.faces.filter((f) => plan.layout.fixtures.find((x) => x.id === f.fixtureId)?.type === "frame_rack").map((f) => f.id));
+    const onRails = plan.locations.filter((l) => l.faceId && rails.has(l.faceId));
+    expect(onRails.length).toBeGreaterThanOrEqual(8);
+    expect(onRails.every((l) => l.presentation === "hung" && l.rowSpan === 1 && l.row === 0)).toBe(true);
   });
 
   it("includes products that are sold out and on sale for the Week 7 demo", () => {
