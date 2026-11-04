@@ -42,7 +42,8 @@ export type PlanogramFace = {
   rows: number;
 };
 
-export type PlanogramScope = { fixtureId: string; fixtureName: string; isSet: boolean; faces: PlanogramFace[] };
+/** `isSet` means the faces show together on one combined grid: a table set, or (with `isRun`) a frame rack run. */
+export type PlanogramScope = { fixtureId: string; fixtureName: string; isSet: boolean; isRun?: boolean; faces: PlanogramFace[] };
 
 /** What the map needs of a planogram: the latest published version, and whether a draft is under way. */
 export type FloorPlanogram = { hasDraft: boolean; dueDate: string | null; latest: { number: number; placements: SnapshotEntry[] } | null };

@@ -11,6 +11,7 @@ import { db } from "@/db";
 import {
   entrances,
   fixtures,
+  frameRuns,
   productCategories,
   productLocations,
   products,
@@ -50,7 +51,7 @@ export function textureFor(category: string, name: string): Texture {
   return "solid";
 }
 
-const ACCEPTS = { wall: ["hung", "folded"], rack: ["hung"], table: ["folded"] } as const;
+const ACCEPTS = { wall: ["hung", "folded"], rack: ["hung"], table: ["folded"], rail: ["hung"] } as const;
 
 export function buildDemo(storeId: string, newId: () => string = randomUUID): DemoPlan {
   const { layout, faceKinds, stockroomZoneId } = demoMap(newId);
@@ -70,7 +71,7 @@ export function buildDemo(storeId: string, newId: () => string = randomUUID): De
     const category = categoryOf.get(p.category)!;
     return wanted.map((presentation) => ({ productId: productRows[i].id, presentation, ...categoryFootprint(category, presentation) }));
   });
-  const slots: FaceSlot[] = layout.faces.map((f) => ({ faceId: f.id, grid: { columns: f.columns, rows: f.rows }, accepts: ACCEPTS[faceKinds.get(f.id)!] }));
+  const slots: FaceSlot[] = layout.faces.map((f) => ({ faceId: f.id, grid: { columns: f.columns, rows: f.rows }, accepts: ACCEPTS[faceKinds.get(f.id)!], rail: faceKinds.get(f.id) === "rail" }));
   const { placed } = pack(slots, requests);
   const floor = placed.map((p) => ({
     id: newId(), storeId, productId: p.productId, presentation: p.presentation,
@@ -93,6 +94,7 @@ export function demoStatements(storeId: string, plan: DemoPlan): [BatchItem<"pg"
     db.delete(stockroomBins).where(sql`${stockroomBins.storeId} = ${storeId}`),
     // Fixtures take their faces and table sets; then the rest of the map.
     db.delete(fixtures).where(sql`${fixtures.storeId} = ${storeId}`),
+    db.delete(frameRuns).where(sql`${frameRuns.storeId} = ${storeId}`),
     db.delete(zones).where(sql`${zones.storeId} = ${storeId}`),
     db.delete(entrances).where(sql`${entrances.storeId} = ${storeId}`),
     db.delete(storeLayouts).where(sql`${storeLayouts.storeId} = ${storeId}`),

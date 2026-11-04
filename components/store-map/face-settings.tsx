@@ -11,6 +11,7 @@ import { feetText } from "@/lib/feet";
 import { MAX_GRID_COLUMNS, MAX_GRID_ROWS } from "@/lib/layout/limits";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Face, Fixture } from "@/lib/layout/types";
+import { InfoPopover } from "@/components/ui/info-popover";
 
 type FaceSettingsProps = { fixture: Fixture; faces: Face[]; dispatch: (action: SessionAction) => void };
 
@@ -23,7 +24,12 @@ export function FaceSettings({ fixture, faces, dispatch }: FaceSettingsProps) {
     <div className="flex flex-col gap-3">
       {choosable ? (
         <fieldset>
-          <legend className="mb-2 text-sm text-ink">Display sides</legend>
+          <legend className="mb-2 text-sm text-ink">
+            <span className="inline-flex items-center gap-1">
+              Display sides
+              <InfoPopover term="face" />
+            </span>
+          </legend>
           <div className="grid grid-cols-4 gap-2">
             {rule.faces.map((side) => {
               const on = faces.some((face) => face.side === side);
@@ -54,13 +60,21 @@ export function FaceSettings({ fixture, faces, dispatch }: FaceSettingsProps) {
             format={(columns) => `${feetText(columns)} ft`}
             onChange={(columns) => run({ type: "setFaceGrid", faceId: face.id, columns, rows: face.rows })}
           />
-          <NumberStepper
-            label="Rows"
-            value={face.rows}
-            min={1}
-            max={MAX_GRID_ROWS}
-            onChange={(rows) => run({ type: "setFaceGrid", faceId: face.id, columns: face.columns, rows })}
-          />
+          {fixture.type === "frame_rack" ? (
+            // One rail, so one row (frame racks spec §2).
+            <p className="inline-flex items-center gap-1 text-sm text-ink">
+              1 rail
+              <InfoPopover term="frameRack" />
+            </p>
+          ) : (
+            <NumberStepper
+              label="Rows"
+              value={face.rows}
+              min={1}
+              max={MAX_GRID_ROWS}
+              onChange={(rows) => run({ type: "setFaceGrid", faceId: face.id, columns: face.columns, rows })}
+            />
+          )}
           {isAutoGrid(fixture, face) ? null : (
             <Button variant="secondary" onClick={() => run({ type: "setFaceGrid", faceId: face.id, ...autoGrid(fixture, face.side) })}>
               Fit to fixture ({feetText(autoGrid(fixture, face.side).columns)} ft × {autoGrid(fixture, face.side).rows})

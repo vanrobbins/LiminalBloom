@@ -72,3 +72,23 @@ describe("draftIssues", () => {
     ]);
   });
 });
+
+describe("frame racks", () => {
+  const rail = { ...front, faceId: "rail", fixtureType: "frame_rack" as const, rows: 1 };
+  it("hold hung product only, one row high", () => {
+    expect(checkPlacement(sock({ faceId: "rail", presentation: "folded", rowSpan: 1, colSpan: 2 }), [], [rail])?.message).toBe("Frame racks hold hung product only");
+    expect(checkPlacement(sock({ faceId: "rail", presentation: "hung", rowSpan: 1, colSpan: 2 }), [], [rail])).toBeNull();
+    expect(checkPlacement(sock({ faceId: "rail", presentation: "hung", rowSpan: 2, colSpan: 2 }), [], [rail])?.message).toBe("Off the edge of the face");
+  });
+});
+
+describe("onRail", () => {
+  it("hangs folded product moved onto a frame rack, at its hung width, one row", async () => {
+    const { onRail } = await import("./write");
+    const scope = { fixtureId: "run", fixtureName: "Run", isSet: true, isRun: true, faces: [{ ...front, faceId: "rail", fixtureType: "frame_rack" as const, rows: 1 }, front] };
+    const move = { kind: "update" as const, id: "p", version: 1, fields: { faceId: "rail", presentation: "folded" as const, col: 2, row: 1, colSpan: 4, rowSpan: 2, pieceCount: 6 } };
+    expect(onRail(move, scope, 3)).toEqual({ ...move, fields: { ...move.fields, presentation: "hung", colSpan: 3, row: 0, rowSpan: 1 } });
+    const elsewhere = { ...move, fields: { ...move.fields, faceId: "front" } };
+    expect(onRail(elsewhere, scope, 3)).toBe(elsewhere);
+  });
+});

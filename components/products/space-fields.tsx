@@ -58,7 +58,7 @@ export function SpaceFields({ categoryName, category, overrides, onChange }: Spa
   const nothingToSave = isOwn && PRESENTATIONS.every((p) => sameAsCategory(category, p, draft[p]));
 
   return (
-    <InheritChoice legend="Space on the fixture" categoryName={categoryName} isOwn={isOwn} onChange={choose}>
+    <InheritChoice legend="Space on the fixture" term="space" categoryName={categoryName} isOwn={isOwn} onChange={choose}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {PRESENTATIONS.map((p) => {
           const label = PRESENTATION_LABEL[p];

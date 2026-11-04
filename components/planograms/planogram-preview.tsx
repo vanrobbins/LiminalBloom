@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 
-import { setBlocks, singleBlock } from "@/lib/planograms/set-grid";
+import { combinedBlocks, singleBlock } from "@/lib/planograms/set-grid";
 import type { PlanogramScope, ProductLook, SnapshotEntry } from "@/lib/planograms/types";
 
 import { FaceSwitcher } from "./face-switcher";
@@ -25,9 +25,9 @@ export function PlanogramPreview({ scope, entries, looks }: PlanogramPreviewProp
     <div className="flex flex-col gap-3">
       {scope.isSet ? null : <FaceSwitcher faces={scope.faces} value={face.faceId} onChange={setFaceId} />}
       <PlanogramGrid
-        layout={scope.isSet ? setBlocks(scope.faces) : singleBlock(face)}
+        layout={scope.isSet ? combinedBlocks(scope) : singleBlock(face)}
         items={items.filter((i) => shown.some((f) => f.faceId === i.faceId))}
-        label={`${scope.fixtureName}, ${scope.isSet ? "table set" : face.label}`}
+        label={`${scope.fixtureName}, ${scope.isRun ? "run" : scope.isSet ? "table set" : face.label}`}
         selectedId={sheetId}
         onSelect={setSheetId}
       />

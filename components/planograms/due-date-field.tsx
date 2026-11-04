@@ -47,7 +47,7 @@ export function DueDateForm({ fixtureId, dueDate, onDone }: DueDateFormProps) {
         void send(value, "save");
       }}
     >
-      <Input label="Due date" type="date" min={EARLIEST_DUE_DATE} value={value} onChange={(e) => setValue(e.target.value)} error={error} />
+      <Input label="Due date" info="dueDate" type="date" min={EARLIEST_DUE_DATE} value={value} onChange={(e) => setValue(e.target.value)} error={error} />
       <div className="flex gap-3">
         <Button type="submit" loading={busy === "save"} loadingText="Saving…" disabled={busy !== null}>
           Save

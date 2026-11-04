@@ -3,7 +3,11 @@
 
 import "server-only";
 
+import { eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+
+import { db } from "@/db";
+import { planograms } from "@/db/schema";
 
 import { withStore } from "@/lib/db/with-store";
 
@@ -12,6 +16,7 @@ import { changedIds } from "./entities";
 import { loadLayout } from "./load";
 import { normalize } from "./normalize";
 import type { SaveResult } from "./replies";
+import type { Issue, Layout } from "./types";
 import { newIssues, validate } from "./validate";
 import { writeStatements } from "./write";
 
@@ -76,6 +81,26 @@ export function conflictsFrom(error: unknown, writes: ChangeSet): string[] | nul
   return null;
 }
 
+export const TWO_PLANOGRAMS = "Two of these racks have planograms. Only one rack in a run can.";
+
+/**
+ * A run has one planogram, on its anchor (frame racks spec §4.2): linking racks
+ * that each have one is refused rather than merged (spec §10 open point 1).
+ */
+export function twoPlanogramIssues(next: Layout, planogramFixtures: ReadonlySet<string>): Issue[] {
+  const issues: Issue[] = [];
+  for (const run of next.frameRuns) {
+    const holders = next.fixtures.filter((f) => f.runId === run.id && planogramFixtures.has(f.id));
+    if (holders.length >= 2) issues.push(...holders.map((f) => ({ itemId: f.id, kind: "run" as const, message: TWO_PLANOGRAMS })));
+  }
+  return issues;
+}
+
+async function planogramFixtureIds(storeId: string): Promise<Set<string>> {
+  const [rows] = await withStore(storeId, [db.select({ fixtureId: planograms.fixtureId }).from(planograms).where(eq(planograms.storeId, storeId))] as const);
+  return new Set(rows.map((r) => r.fixtureId));
+}
+
 export async function applyLayoutChanges(storeId: string, changes: ChangeSet): Promise<SaveResult> {
   const current = await loadLayout(storeId);
 
@@ -86,6 +111,10 @@ export async function applyLayoutChanges(storeId: string, changes: ChangeSet): P
   const changed = changedIds(current, next);
   const issues = newIssues(validate(current, changed), validate(next, changed), changed);
   if (issues.length > 0) return { status: "invalid", issues, layout: current };
+  if (next.frameRuns.length > 0 && (changes.frameRuns.length > 0 || changes.fixtures.some((u) => u.item.runId !== null))) {
+    const clashes = twoPlanogramIssues(next, await planogramFixtureIds(storeId));
+    if (clashes.length > 0) return { status: "invalid", issues: clashes, layout: current };
+  }
 
   // Write the normalized truth, not just what the browser sent.
   const writes = diff(current, next);

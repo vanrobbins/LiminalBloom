@@ -8,6 +8,7 @@
 import { useId } from "react";
 
 import { ColorWheel } from "@/components/ui/color-wheel";
+import { InfoPopover } from "@/components/ui/info-popover";
 import { colorWordTint, oklchToHex } from "@/lib/products/colors";
 import type { Shape } from "@/lib/products/drawings";
 import { TEXTURES, type Texture } from "@/lib/products/schemas";
@@ -34,7 +35,12 @@ export function DrawingFields({ shape, colorWord, swatch, texture, onSwatch, onT
   const start = swatch ?? oklchToHex(colorWordTint(colorWord) ?? { l: 0.6, c: 0, h: 0 });
   return (
     <fieldset className="flex flex-col gap-4 rounded-lg border border-line-subtle p-4">
-      <legend className="px-1 text-sm font-medium text-ink">Drawing (shown when there is no photo)</legend>
+      <legend className="px-1 text-sm font-medium text-ink">
+        <span className="inline-flex items-center gap-1">
+          Drawing (shown when there is no photo)
+          <InfoPopover term="swatch" />
+        </span>
+      </legend>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <ProductDrawing shape={shape} view="flat" swatch={swatch} colorWord={colorWord} texture={texture} label="Preview" className="h-40 w-32 shrink-0 rounded-md border border-line-subtle bg-surface p-1" />
         <div className="flex min-w-0 flex-col gap-3">

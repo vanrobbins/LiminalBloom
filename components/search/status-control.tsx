@@ -6,6 +6,7 @@
 import { useState } from "react";
 
 import { changeStatus } from "@/app/(app)/products/status-actions";
+import { InfoPopover } from "@/components/ui/info-popover";
 import { PRODUCT_STATUS, type ProductStatus } from "@/lib/product-status";
 import type { ProductRow } from "@/lib/products/queries";
 import { PRODUCT_STATUSES } from "@/lib/products/schemas";
@@ -58,27 +59,30 @@ export function StatusControl({ product, onChanged }: { product: ProductRow; onC
   }
 
   return (
-    <div role="radiogroup" aria-label="Status" onKeyDown={onKeyDown} className="grid grid-cols-3 gap-1 rounded-lg border border-line-subtle bg-surface p-1">
-      {PRODUCT_STATUSES.map((status) => {
-        const { label, icon: Icon } = PRODUCT_STATUS[status];
-        const isChecked = product.status === status;
-        return (
-          <button
-            key={status}
-            type="button"
-            role="radio"
-            aria-checked={isChecked}
-            tabIndex={isChecked ? 0 : -1}
-            // Not `disabled`: that would drop keyboard focus mid-save. choose() ignores taps meanwhile.
-            aria-disabled={isSaving}
-            onClick={() => void choose(status)}
-            className={`flex min-h-11 items-center justify-center gap-1.5 rounded-md text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${isChecked ? "bg-raised font-semibold text-ink shadow-sm" : "text-ink-muted"}`}
-          >
-            <Icon aria-hidden="true" strokeWidth={1.75} className="size-4" />
-            {label}
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-1">
+      <div role="radiogroup" aria-label="Status" onKeyDown={onKeyDown} className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-lg border border-line-subtle bg-surface p-1">
+        {PRODUCT_STATUSES.map((status) => {
+          const { label, icon: Icon } = PRODUCT_STATUS[status];
+          const isChecked = product.status === status;
+          return (
+            <button
+              key={status}
+              type="button"
+              role="radio"
+              aria-checked={isChecked}
+              tabIndex={isChecked ? 0 : -1}
+              // Not `disabled`: that would drop keyboard focus mid-save. choose() ignores taps meanwhile.
+              aria-disabled={isSaving}
+              onClick={() => void choose(status)}
+              className={`flex min-h-11 items-center justify-center gap-1.5 rounded-md text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${isChecked ? "bg-raised font-semibold text-ink shadow-sm" : "text-ink-muted"}`}
+            >
+              <Icon aria-hidden="true" strokeWidth={1.75} className="size-4" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <InfoPopover term="status" />
     </div>
   );
 }

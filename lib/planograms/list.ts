@@ -17,7 +17,8 @@ export type ListGroup = { zoneName: string; items: ListItem[] };
 export function planogramList(layout: Layout, summaries: readonly PlanogramSummary[]): ListGroup[] {
   const byFixture = new Map(summaries.map((s) => [s.fixtureId, s]));
   const shown = layout.fixtures
-    .filter((f) => f.tableSetId === null && layout.faces.some((face) => face.fixtureId === f.id))
+    // A run is listed once, by its anchor (frame racks spec §4.2).
+    .filter((f) => f.tableSetId === null && (f.runId === null || f.runIndex === 0) && layout.faces.some((face) => face.fixtureId === f.id))
     .sort((a, b) => a.name.localeCompare(b.name, "en"));
   const item = (f: (typeof shown)[number]): ListItem => {
     const s = byFixture.get(f.id);

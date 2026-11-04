@@ -14,6 +14,7 @@ import { ZONE_TYPES, type Zone, type ZoneType } from "@/lib/layout/types";
 
 import { NameField } from "./name-field";
 import { ZoneColorPicker } from "./zone-color-picker";
+import { InfoPopover } from "@/components/ui/info-popover";
 
 type ZonePropertiesProps = { zone: Zone; fixtureCount: number; cornerSelected: boolean; dispatch: (action: SessionAction) => void };
 
@@ -24,7 +25,10 @@ export function ZoneProperties({ zone, fixtureCount, cornerSelected, dispatch }:
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-ink">{zone.name}</h2>
+      <h2 className="inline-flex items-center gap-1 text-lg font-semibold text-ink">
+        {zone.name}
+        <InfoPopover term="zone" />
+      </h2>
       <NameField key={`${zone.id}:${zone.name}`} label="Zone name" value={zone.name} onCommit={(name) => update({ name })} />
       <label className="flex flex-col gap-1 text-sm text-ink">
         Type

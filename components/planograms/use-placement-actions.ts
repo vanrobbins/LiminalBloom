@@ -49,7 +49,10 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
   function check(item: GridItem, fields: PlacementFields): string | null {
     // In the draft, its rows; on the published version, its tiles.
     const others = isEditing ? placements : items;
-    return checkPlacement({ ...fields, id: item.id }, others, scope.faces)?.message ?? null;
+    // Folded product moved onto a frame rack hangs there (the server sets its hung width; frame racks spec §3).
+    const rail = scope.faces.find((f) => f.faceId === fields.faceId)?.fixtureType === "frame_rack";
+    const checked = rail && fields.presentation === "folded" ? { ...fields, presentation: "hung" as const, row: 0, rowSpan: 1 } : fields;
+    return checkPlacement({ ...checked, id: item.id }, others, scope.faces)?.message ?? null;
   }
 
   async function change(item: GridItem, fields: PlacementFields, verb: Verb, onFound?: (id: string) => void): Promise<string | null> {

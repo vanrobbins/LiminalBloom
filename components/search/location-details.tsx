@@ -6,6 +6,7 @@
 import Link from "next/link";
 
 import { ProductImage } from "@/components/products/product-image";
+import { InfoPopover } from "@/components/ui/info-popover";
 import type { Layout } from "@/lib/layout/types";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 import type { ProductRow, SearchResult } from "@/lib/products/queries";
@@ -51,7 +52,12 @@ export function LocationDetails({ result, layout, onChanged }: LocationDetailsPr
                   <span className="font-semibold text-ink">{l.label}</span>
                   <span className="text-sm text-ink-muted">{PRESENTATION_LABEL[l.presentation]}</span>
                 </p>
-                {l.detail ? <p className="text-sm text-ink-muted">{l.detail}</p> : null}
+                {l.detail ? (
+                  <p className="flex items-center gap-1 text-sm text-ink-muted">
+                    {l.detail}
+                    {l.detail.startsWith("Rail ·") ? <InfoPopover term="rail" /> : null}
+                  </p>
+                ) : null}
                 {l.floor ? (
                   <>
                     <LocationMap layout={layout} fixtureId={l.floor.fixtureId} />

@@ -7,6 +7,9 @@
 
 import { LoaderCircle } from "lucide-react";
 import { Slot } from "radix-ui";
+import { isValidElement } from "react";
+
+import { Tooltip } from "./tooltip";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -49,16 +52,25 @@ export function Button({
 }: ButtonProps) {
   const shape = icon ? ICON_ONLY : LABELLED;
   const classes = `${BASE} ${shape} ${VARIANT_CLASSES[variant]} ${className}`.trim();
+  // An icon-only button shows its name as a tooltip (Week 6.5 spec §5.1), read
+  // from the same aria-label, so the two can't drift. With asChild the label
+  // may sit on the child (a link).
+  const childLabel = isValidElement<{ "aria-label"?: string }>(children) ? children.props["aria-label"] : undefined;
+  const name = icon ? (props["aria-label"] ?? childLabel) : undefined;
+  if (icon && !name && process.env.NODE_ENV === "development") {
+    throw new Error("An icon-only Button needs an aria-label: it names the button and its tooltip.");
+  }
+  const named = (element: React.ReactElement) => (name ? <Tooltip label={name}>{element}</Tooltip> : element);
 
   if (asChild) {
-    return (
+    return named(
       <Slot.Root className={classes} {...props}>
         {children}
-      </Slot.Root>
+      </Slot.Root>,
     );
   }
 
-  return (
+  return named(
     <button
       type={type ?? "button"}
       disabled={disabled || loading}
@@ -78,6 +90,6 @@ export function Button({
       ) : (
         children
       )}
-    </button>
+    </button>,
   );
 }

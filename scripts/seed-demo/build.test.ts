@@ -50,6 +50,13 @@ describe("buildDemo", () => {
     expect(textureFor("Tees", "Everyday Crew Tee")).toBe("solid");
   });
 
+  it("hangs product on the frame rack run, one row high", () => {
+    const rails = new Set(plan.layout.faces.filter((f) => plan.layout.fixtures.find((x) => x.id === f.fixtureId)?.type === "frame_rack").map((f) => f.id));
+    const onRails = plan.locations.filter((l) => l.faceId && rails.has(l.faceId));
+    expect(onRails.length).toBeGreaterThanOrEqual(8);
+    expect(onRails.every((l) => l.presentation === "hung" && l.rowSpan === 1 && l.row === 0)).toBe(true);
+  });
+
   it("includes products that are sold out and on sale for the Week 7 demo", () => {
     expect(plan.products.some((p) => p.status === "sold_out")).toBe(true);
     expect(plan.products.some((p) => p.status === "on_sale")).toBe(true);

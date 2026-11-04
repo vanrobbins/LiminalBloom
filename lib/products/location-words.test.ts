@@ -112,3 +112,11 @@ describe("readCells", () => {
     expect(readCells(readCells(cells, lower("back")), lower("back"))).toEqual(cells);
   });
 });
+
+describe("frame racks", () => {
+  it("name the rail and the feet, with no level", () => {
+    const spot: Spot = { fixtureType: "frame_rack", side: "front", presentation: "hung", columns: 8, rows: 1, cells: { col: 4, row: 0, colSpan: 3, rowSpan: 1 } };
+    expect(heightWord(spot)).toBeNull();
+    expect(feetLine(spot)).toBe("Rail · 2–3½ ft from left");
+  });
+});

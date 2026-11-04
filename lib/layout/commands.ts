@@ -3,6 +3,7 @@
 // exactly. Commands never validate: the session and the server decide
 // whether to keep what they produce.
 
+import { addRackToRun, linkRun, removeFromRun, setRunStart } from "./commands-runs";
 import { attachLowerTable, duplicate } from "./commands-sets";
 import type { NewId } from "./factories";
 import { autoGrid, isAutoGrid } from "./fixtures";
@@ -33,6 +34,10 @@ export type Command =
   | { type: "setFace"; fixtureId: string; side: FaceSide; on: boolean }
   | { type: "setFaceGrid"; faceId: string; columns: number; rows: number }
   | { type: "attachLowerTable"; upperId: string; side: Side }
+  | { type: "addRackToRun"; rackId: string; side: "left" | "right" }
+  | { type: "removeFromRun"; rackId: string }
+  | { type: "linkRun"; ids: string[]; anchorId?: string }
+  | { type: "setRunStart"; runId: string; startIndex: number }
   | { type: "duplicate"; ids: string[]; offset: Point }
   | { type: "delete"; ids: string[] };
 
@@ -110,9 +115,15 @@ function applyRaw(layout: Layout, command: Command, newId: NewId): Layout {
       const before = layout.fixtures.find((f) => f.id === command.id);
       if (!before) return layout;
       const after = updateFixture(before, command.changes);
+      // Turning a run's anchor turns the whole run (frame racks spec §4.3); turning
+      // another rack makes or straightens a corner, which normalize() rounds.
+      const turn = before.runId !== null && before.runIndex === 0 ? after.rotation - before.rotation : 0;
       return {
         ...layout,
-        fixtures: layout.fixtures.map((f) => (f === before ? after : f)),
+        fixtures: layout.fixtures.map((f) => {
+          if (f === before) return after;
+          return turn !== 0 && f.runId === before.runId ? { ...f, rotation: normalizeAngle(f.rotation + turn) } : f;
+        }),
         // A grid nobody set by hand follows the new size (DECISIONS 10-10).
         faces: layout.faces.map((face) => followSize(face, before, after)),
       };
@@ -148,6 +159,18 @@ function applyRaw(layout: Layout, command: Command, newId: NewId): Layout {
 
     case "attachLowerTable":
       return attachLowerTable(layout, command.upperId, command.side, newId);
+
+    case "addRackToRun":
+      return addRackToRun(layout, command.rackId, command.side, newId);
+
+    case "removeFromRun":
+      return removeFromRun(layout, command.rackId);
+
+    case "linkRun":
+      return linkRun(layout, command.ids, newId, command.anchorId);
+
+    case "setRunStart":
+      return setRunStart(layout, command.runId, command.startIndex);
 
     case "duplicate":
       return duplicate(layout, command.ids, round(command.offset), newId);
@@ -191,6 +214,9 @@ function move(layout: Layout, ids: string[], delta: Point): Layout {
   if (delta.x === 0 && delta.y === 0) return layout;
   const wanted = new Set(ids);
   const upperOf = new Map(layout.tableSets.map((s) => [s.id, s.upperFixtureId]));
+  // A rack moves with its whole run (frame racks spec §4.3).
+  const runs = new Set(layout.fixtures.filter((f) => wanted.has(f.id) && f.runId !== null).map((f) => f.runId));
+  for (const f of layout.fixtures) if (f.runId !== null && runs.has(f.runId)) wanted.add(f.id);
   // A lower table moves with its set: move its upper instead.
   for (const f of layout.fixtures) {
     if (wanted.has(f.id) && f.tableSetId !== null) {

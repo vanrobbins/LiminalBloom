@@ -8,6 +8,8 @@ import { useState } from "react";
 
 import { useMediaQuery, PHONE_QUERY } from "@/components/store-map/use-media-query";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { InfoPopover } from "@/components/ui/info-popover";
+import type { Term } from "@/lib/glossary";
 import { Button } from "@/components/ui/button";
 import { PRODUCT_STATUS } from "@/lib/product-status";
 import { MAX_FILTER_CHOICES, PLACES, PRODUCT_STATUSES, SORTS, type Place, type SearchInput, type Sort } from "@/lib/products/schemas";
@@ -40,9 +42,14 @@ function Chip({ label, checked, disabled = false, type = "checkbox", name, onCha
 const isFull = (chosen: readonly string[]) => chosen.length >= MAX_FILTER_CHOICES;
 
 function Groups({ input, categories, colors, onChange }: SearchFiltersProps) {
-  const group = (legend: string, chips: React.ReactNode, limit?: string) => (
+  const group = (legend: string, chips: React.ReactNode, limit?: string, term?: Term) => (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 text-sm font-medium text-ink">{legend}</legend>
+      <legend className="mb-1 text-sm font-medium text-ink">
+        <span className="inline-flex items-center gap-1">
+          {legend}
+          {term ? <InfoPopover term={term} /> : null}
+        </span>
+      </legend>
       {limit ? <p className="text-sm text-ink-muted">{limit}</p> : null}
       <div className="flex flex-wrap gap-2">{chips}</div>
     </fieldset>
@@ -54,8 +61,8 @@ function Groups({ input, categories, colors, onChange }: SearchFiltersProps) {
   return (
     <div className="flex flex-col gap-4">
       {group("Sort", sorts.map((s) => <Chip key={s} type="radio" name="sort" label={SORT_LABEL[s]} checked={sort === s} onChange={() => onChange({ sort: s })} />))}
-      {group("Status", PRODUCT_STATUSES.map((s) => <Chip key={s} label={PRODUCT_STATUS[s].label} checked={input.statuses.includes(s)} onChange={() => onChange({ statuses: toggle(input.statuses, s) })} />))}
-      {group("Where", PLACES.map((p) => <Chip key={p} label={PLACE_LABEL[p]} checked={input.places.includes(p)} onChange={() => onChange({ places: toggle(input.places, p) })} />))}
+      {group("Status", PRODUCT_STATUSES.map((s) => <Chip key={s} label={PRODUCT_STATUS[s].label} checked={input.statuses.includes(s)} onChange={() => onChange({ statuses: toggle(input.statuses, s) })} />), undefined, "status")}
+      {group("Where", PLACES.map((p) => <Chip key={p} label={PLACE_LABEL[p]} checked={input.places.includes(p)} onChange={() => onChange({ places: toggle(input.places, p) })} />), undefined, "notPlaced")}
       {categories.length > 0
         ? group(
             "Category",

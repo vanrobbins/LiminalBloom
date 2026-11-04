@@ -75,8 +75,10 @@ export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, la
                 Publish…
               </Button>
               <DropdownMenu>
-                <DropdownMenuTrigger aria-label="More draft actions" className="inline-flex size-11 shrink-0 items-center justify-center rounded border border-line bg-raised text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
-                  <MoreHorizontal aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" icon aria-label="More draft actions" className="shrink-0">
+                    <MoreHorizontal aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="end">
                   <DropdownMenuItem onSelect={() => setDiscarding(true)}>

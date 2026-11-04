@@ -26,7 +26,19 @@ import { checkPlacement } from "./rules";
 import type { Change, PlacementFields, PlanogramScope } from "./types";
 
 export type Statements = [BatchItem<"pg">, ...BatchItem<"pg">[]];
-export type Outcome = { status: "saved" } | { status: "conflict" } | { status: "invalid"; message: string } | { status: "not-found" };
+export type Outcome = { status: "saved"; switchedToHung?: true } | { status: "conflict" } | { status: "invalid"; message: string } | { status: "not-found" };
+
+/**
+ * Moving folded product onto a frame rack hangs it instead (frame racks spec §3):
+ * hung, the product's own hung width, one row on the rail. Anything else is
+ * returned as it came.
+ */
+export function onRail(change: Change, scope: PlanogramScope, hungColumns: number): Change {
+  if (change.kind !== "update" || change.fields.presentation !== "folded") return change;
+  const face = scope.faces.find((f) => f.faceId === change.fields.faceId);
+  if (face?.fixtureType !== "frame_rack") return change;
+  return { ...change, fields: { ...change.fields, presentation: "hung", colSpan: hungColumns, row: 0, rowSpan: 1 } };
+}
 
 const SAVED = { status: "saved" } as const;
 const CONFLICT = { status: "conflict" } as const;
@@ -146,14 +158,17 @@ export function saveChange(storeId: string, fixtureId: string, change: Change): 
     if (change.kind !== "add" && !target) return CONFLICT;
     const productId = change.kind === "add" ? change.productId : (target?.productId ?? "");
 
+    let saved: Change = change;
     if (change.kind !== "remove") {
       const fit = (await productFits(storeId, [productId])).get(productId);
       if (!fit) return { status: "invalid", message: "That product is no longer in the library." };
-      const refusal = checkPlacement({ ...change.fields, id: target?.id ?? null }, draft.placements, scope.faces);
+      saved = onRail(change, scope, fit.footprints.hung.columns);
+      if (saved.kind === "remove") return CONFLICT;
+      const refusal = checkPlacement({ ...saved.fields, id: target?.id ?? null }, draft.placements, scope.faces);
       if (refusal) return { status: "invalid", message: refusal.message };
     }
-    await withStore(storeId, changeStatements(storeId, row, change, productId));
-    return SAVED;
+    await withStore(storeId, changeStatements(storeId, row, saved, productId));
+    return saved === change ? SAVED : { status: "saved", switchedToHung: true };
   });
 }
 

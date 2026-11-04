@@ -30,6 +30,8 @@ export function attachLowerTable(layout: Layout, upperId: string, side: Side, ne
     rotation: upper.rotation,
     tableSetId: set.id,
     setSide: side,
+    runId: null,
+    runIndex: null,
     version: 0,
   };
   const top: Face = { id: newId(), fixtureId: lowerId, side: "top", ...gridForSurface(width, DEFAULT_LOWER_DEPTH), version: 0 };
@@ -64,6 +66,9 @@ export function duplicate(layout: Layout, ids: string[], offset: Point, newId: N
       name: nextName(next.fixtures.map((x) => x.name), baseName(f.name)),
       x: f.x + offset.x,
       y: f.y + offset.y,
+      // A copy of a rack starts on its own, outside the run.
+      runId: null,
+      runIndex: null,
       version: 0,
     };
     next = { ...next, fixtures: [...next.fixtures, copy], faces: [...next.faces, ...copyFaces(layout, f.id, copyId, newId)] };

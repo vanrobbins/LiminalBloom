@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { Button } from "./button";
@@ -58,5 +59,24 @@ describe("Button", () => {
   it("keeps a caller's extra classes", () => {
     render(<Button className="w-full">Go</Button>);
     expect(screen.getByRole("button").className).toContain("w-full");
+  });
+});
+
+describe("Button tooltips (Week 6.5 spec §5.1)", () => {
+  it("shows an icon-only button's name as a tooltip on keyboard focus", async () => {
+    const user = userEvent.setup();
+    render(
+      <Button icon aria-label="Zoom in">
+        +
+      </Button>,
+    );
+    await user.tab();
+    expect(await screen.findByRole("tooltip", { name: "Zoom in" })).toBeInTheDocument();
+  });
+
+  it("gives a labelled button no tooltip", () => {
+    render(<Button>Save</Button>);
+    screen.getByRole("button", { name: "Save" }).focus();
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 });

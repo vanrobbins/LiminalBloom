@@ -14,7 +14,7 @@ test("signing out ends the session and lands on sign-in", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/products");
   // loading.tsx draws its own PageHeader; open the menu on the page's, not the one that is replaced.
-  await expect(page.getByText(/in this store\./)).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search products" })).toBeVisible();
 
   await userMenuButton(page).click();
   await page

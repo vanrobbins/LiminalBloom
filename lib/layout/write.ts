@@ -10,10 +10,10 @@ import { and, eq, sql, type SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { db } from "@/db";
-import { entrances, fixtureFaces, fixtures, storeLayouts, tableSets, zones } from "@/db/schema";
+import { entrances, fixtureFaces, fixtures, frameRuns, planograms, storeLayouts, tableSets, zones } from "@/db/schema";
 
 import type { ChangeSet, Upsert } from "./diff";
-import type { Entrance, Face, Fixture, Layout, TableSet, Zone } from "./types";
+import type { Entrance, Face, Fixture, FrameRun, Layout, TableSet, Zone } from "./types";
 
 // Drizzle already wraps an interpolated query builder in parentheses (plan
 // Task 1 spike), so the builder goes in bare: "as (${query})" would be a
@@ -39,9 +39,43 @@ const fixtureRow = (f: Fixture) => ({
   rotation: f.rotation,
   tableSetId: f.tableSetId,
   setSide: f.setSide,
+  runId: f.runId,
+  runIndex: f.runIndex,
 });
 const faceRow = (f: Face) => ({ fixtureId: f.fixtureId, side: f.side, columns: f.columns, rows: f.rows });
 const setRow = (s: TableSet) => ({ upperFixtureId: s.upperFixtureId });
+const runRow = (r: FrameRun) => ({ startIndex: r.startIndex });
+
+/**
+ * A run's planogram lives on its anchor (frame racks spec §4.2), so a save
+ * moves a planogram row whenever the anchor changes: from an anchor that left
+ * its run or stopped being index 0, and from a rack that joined a run behind
+ * the anchor (linking, "Add rack to the left"). An update that finds no row
+ * does nothing. The only planogram write the map makes.
+ */
+export function anchorMoves(changes: ChangeSet, current: Layout): { from: string; to: string }[] {
+  const before = new Map(current.fixtures.map((f) => [f.id, f]));
+  const after = new Map(current.fixtures.map((f) => [f.id, f]));
+  for (const { item } of changes.fixtures) after.set(item.id, item);
+  for (const d of changes.deletes) if (d.collection === "fixtures") after.delete(d.id);
+  const anchorOf = (runId: string, not: string) => [...after.values()].find((f) => f.runId === runId && f.runIndex === 0 && f.id !== not)?.id;
+  const moves: { from: string; to: string }[] = [];
+  for (const old of before.values()) {
+    if (old.runId === null || old.runIndex !== 0) continue;
+    const now = after.get(old.id);
+    if (now && now.runId === old.runId && now.runIndex === 0) continue;
+    const to = anchorOf(old.runId, old.id);
+    if (to) moves.push({ from: old.id, to });
+  }
+  for (const now of after.values()) {
+    if (now.runId === null || now.runIndex === 0) continue;
+    const old = before.get(now.id);
+    const joinedBehind = !old || old.runId !== now.runId;
+    const to = joinedBehind ? anchorOf(now.runId, now.id) : undefined;
+    if (to && !moves.some((m) => m.from === now.id)) moves.push({ from: now.id, to });
+  }
+  return moves;
+}
 
 export function writeStatements(storeId: string, changes: ChangeSet, current: Layout): BatchItem<"pg">[] {
   const statements: BatchItem<"pg">[] = [];
@@ -83,6 +117,7 @@ export function writeStatements(storeId: string, changes: ChangeSet, current: La
   // 5. Inserts, parents before children. A reused id fails the primary key.
   for (const z of inserts(changes.zones)) statements.push(db.insert(zones).values({ id: z.id, storeId, ...zoneRow(z) }));
   for (const e of inserts(changes.entrances)) statements.push(db.insert(entrances).values({ id: e.id, storeId, ...entranceRow(e) }));
+  for (const r of inserts(changes.frameRuns)) statements.push(db.insert(frameRuns).values({ id: r.id, storeId, ...runRow(r) }));
   const newFixtures = inserts(changes.fixtures);
   for (const f of newFixtures.filter((x) => x.tableSetId === null)) statements.push(db.insert(fixtures).values({ id: f.id, storeId, ...fixtureRow(f) }));
   for (const s of inserts(changes.tableSets)) statements.push(db.insert(tableSets).values({ id: s.id, storeId, ...setRow(s) }));
@@ -105,8 +140,18 @@ export function writeStatements(storeId: string, changes: ChangeSet, current: La
   for (const { item, expectedVersion } of updates(changes.tableSets)) {
     statements.push(guarded(db.update(tableSets).set({ ...setRow(item), version: sql`${tableSets.version} + 1`, updatedAt: now }).where(and(eq(tableSets.id, item.id), eq(tableSets.storeId, storeId), eq(tableSets.version, expectedVersion))).returning({ id: tableSets.id }), item.id));
   }
+  for (const { item, expectedVersion } of updates(changes.frameRuns)) {
+    statements.push(guarded(db.update(frameRuns).set({ ...runRow(item), version: sql`${frameRuns.version} + 1`, updatedAt: now }).where(and(eq(frameRuns.id, item.id), eq(frameRuns.storeId, storeId), eq(frameRuns.version, expectedVersion))).returning({ id: frameRuns.id }), item.id));
+  }
+  for (const move of anchorMoves(changes, current)) {
+    statements.push(db.update(planograms).set({ fixtureId: move.to, updatedAt: now }).where(and(eq(planograms.fixtureId, move.from), eq(planograms.storeId, storeId))));
+  }
 
-  // 7. The rest of the deletes, after fixtures have been moved out of deleted zones.
+  // 7. The rest of the deletes, after fixtures have been moved out of deleted zones
+  // and racks out of deleted runs.
+  for (const d of deletes("frameRuns")) {
+    statements.push(guarded(db.delete(frameRuns).where(and(eq(frameRuns.id, d.id), eq(frameRuns.storeId, storeId), eq(frameRuns.version, d.expectedVersion))).returning({ id: frameRuns.id }), d.id));
+  }
   for (const d of deletes("fixtures", false)) {
     statements.push(guarded(db.delete(fixtures).where(and(eq(fixtures.id, d.id), eq(fixtures.storeId, storeId), eq(fixtures.version, d.expectedVersion))).returning({ id: fixtures.id }), d.id));
   }

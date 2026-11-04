@@ -10,7 +10,7 @@ import { angleTowards } from "./frames";
 import { snapAngle, snapDelta, snapPoint, targetsFor, type Guide } from "./snap";
 import { OUTLINE_ID, type Layout, type Point } from "./types";
 
-/** Lower tables stand in for their whole set: the ids the move really acts on. */
+/** Lower tables stand in for their whole set, racks for their run: the ids the move really acts on. */
 function directIds(layout: Layout, ids: readonly string[]): Set<string> {
   const direct = new Set(ids);
   const upperOf = new Map(layout.tableSets.map((s) => [s.id, s.upperFixtureId]));
@@ -22,6 +22,9 @@ function directIds(layout: Layout, ids: readonly string[]): Set<string> {
   }
   const sets = new Set(layout.tableSets.filter((s) => direct.has(s.upperFixtureId)).map((s) => s.id));
   for (const f of layout.fixtures) if (f.tableSetId && sets.has(f.tableSetId)) direct.add(f.id);
+  // A frame rack stands in for its whole run (frame racks spec §4.3).
+  const runs = new Set(layout.fixtures.filter((f) => direct.has(f.id) && f.runId !== null).map((f) => f.runId));
+  for (const f of layout.fixtures) if (f.runId !== null && runs.has(f.runId)) direct.add(f.id);
   return direct;
 }
 

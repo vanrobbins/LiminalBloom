@@ -7,16 +7,17 @@
 import { useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import type { Term } from "@/lib/glossary";
 import { SIZE_PICKS } from "@/lib/products/footprint";
 
 import { InheritChoice } from "./inherit-choice";
 
-type SizeRangeInputProps = { value: string; onChange: (value: string) => void; error?: string };
+type SizeRangeInputProps = { value: string; onChange: (value: string) => void; error?: string; info?: Term };
 
-export function SizeRangeInput({ value, onChange, error }: SizeRangeInputProps) {
+export function SizeRangeInput({ value, onChange, error, info }: SizeRangeInputProps) {
   return (
     <div className="flex flex-col gap-2">
-      <Input label="Size range" value={value} onChange={(event) => onChange(event.target.value)} hint="For example XS–XL or 24–34." error={error} />
+      <Input label="Size range" info={info} value={value} onChange={(event) => onChange(event.target.value)} hint="For example XS–XL or 24–34." error={error} />
       <div role="group" aria-label="Quick picks" className="flex flex-wrap gap-2">
         {SIZE_PICKS.map((pick) => (
           <button
@@ -48,7 +49,7 @@ export function SizeRangeField({ categoryName, categoryRange, value, onChange, e
   const [draft, setDraft] = useState(value ?? categoryRange);
   const isOwn = value !== null;
   return (
-    <InheritChoice legend="Size range" categoryName={categoryName} isOwn={isOwn} onChange={(own) => onChange(own ? draft : null)}>
+    <InheritChoice legend="Size range" term="sizeRange" categoryName={categoryName} isOwn={isOwn} onChange={(own) => onChange(own ? draft : null)}>
       {isOwn ? (
         <SizeRangeInput
           value={draft}

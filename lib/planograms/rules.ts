@@ -9,7 +9,9 @@ import { MAX_PIECES, type PlacementFields, type PlacementView, type PlanogramFac
 
 export type Neighbour = Cells & { id: string; faceId: string; productName: string };
 
-export type Refusal = { kind: "face" | "off-edge" | "pieces" | "overlap"; message: string; blockerId?: string };
+export type Refusal = { kind: "face" | "presentation" | "off-edge" | "pieces" | "overlap"; message: string; blockerId?: string };
+
+export const HUNG_ONLY = "Frame racks hold hung product only";
 
 export function checkPlacement(
   candidate: PlacementFields & { id: string | null },
@@ -18,6 +20,8 @@ export function checkPlacement(
 ): Refusal | null {
   const face = faces.find((f) => f.faceId === candidate.faceId);
   if (!face) return { kind: "face", message: "No longer in this set" };
+  // One rail, so hung only (frame racks spec §3); its one row keeps rowSpan at 1 via the edge check.
+  if (face.fixtureType === "frame_rack" && candidate.presentation === "folded") return { kind: "presentation", message: HUNG_ONLY };
   if (!fitsGrid(candidate, face)) return { kind: "off-edge", message: "Off the edge of the face" };
   if (!Number.isInteger(candidate.pieceCount) || candidate.pieceCount < 1) return { kind: "pieces", message: "At least 1 piece" };
   // No per-product stack limit (Week 6.5 spec §3.3): hung and folded both stop at MAX_PIECES.

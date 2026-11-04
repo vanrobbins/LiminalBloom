@@ -30,7 +30,16 @@ describe("demo map", () => {
   it("gives racks two sides and knows each face's kind", () => {
     const rack = layout.fixtures.find((f) => f.name === "Rack 1")!;
     expect(layout.faces.filter((f) => f.fixtureId === rack.id).map((f) => f.side).sort()).toEqual(["back", "front"]);
-    expect(new Set(faceKinds.values())).toEqual(new Set(["wall", "rack", "table"]));
+    expect(new Set(faceKinds.values())).toEqual(new Set(["wall", "rack", "table", "rail"]));
     expect(faceKinds.size).toBe(layout.faces.length);
+  });
+
+  it("has a closed square of four frame racks, fronts out, that validates", async () => {
+    const { runShape } = await import("@/lib/layout/runs");
+    const { validate } = await import("@/lib/layout/validate");
+    const racks = layout.fixtures.filter((f) => f.type === "frame_rack").map((f) => ({ ...f, runIndex: f.runIndex ?? 0 }));
+    expect(racks).toHaveLength(4);
+    expect(runShape(racks)).toMatchObject({ closed: true, joined: true });
+    expect(validate(layout)).toEqual([]);
   });
 });

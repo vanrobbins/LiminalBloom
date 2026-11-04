@@ -22,6 +22,19 @@ function faceMarker(f: Fixture, side: Face["side"]) {
   return <line key={side} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--ink)" strokeWidth={3} vectorEffect="non-scaling-stroke" />;
 }
 
+/** A frame rack: the rail along its length and a post at each end (frame racks spec §2). */
+function FrameRail({ fixture: f }: { fixture: Fixture }) {
+  const half = f.width / 2;
+  const post = Math.min(6, f.depth / 3);
+  return (
+    <g data-rail aria-hidden="true">
+      <line x1={-half + post} y1={0} x2={half - post} y2={0} stroke="var(--ink-muted)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+      <rect x={-half} y={-post / 2} width={post} height={post} fill="var(--ink-muted)" />
+      <rect x={half - post} y={-post / 2} width={post} height={post} fill="var(--ink-muted)" />
+    </g>
+  );
+}
+
 export function FixtureShape({ fixture: f, faces, scale, muted, selected, problem }: FixtureShapeProps) {
   const rule = FIXTURE_RULES[f.type];
   const stroke = problem ? "var(--danger)" : selected ? "var(--brand)" : "var(--ink)";
@@ -46,6 +59,7 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
       ) : (
         <rect x={-f.width / 2} y={-f.depth / 2} width={f.width} height={f.depth} rx={2} {...common} />
       )}
+      {f.type === "frame_rack" ? <FrameRail fixture={f} /> : null}
       {faces.map((face) => faceMarker(f, face.side))}
       {labelFits ? (
         <text

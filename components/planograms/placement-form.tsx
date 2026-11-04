@@ -16,6 +16,7 @@ import { checkPlacement, type Neighbour } from "@/lib/planograms/rules";
 import type { PlacementFields, PlanogramFace } from "@/lib/planograms/types";
 import { PRESENTATION_LABEL, PRESENTATIONS, type Footprint, type Presentation } from "@/lib/products/footprint";
 import { readCells, type Cells } from "@/lib/products/location-words";
+import { InfoPopover } from "@/components/ui/info-popover";
 
 type PlacementFormProps = {
   faces: readonly PlanogramFace[];
@@ -52,6 +53,9 @@ export function PlacementForm({ faces, initial, others, excludeId, footprints, s
   const [error, setError] = useState<string | null>(null);
   const face = faces.find((f) => f.faceId === faceId);
   const isTop = face?.side === "top";
+  // A frame rack's rail holds hung product only, one row high (frame racks spec §3).
+  const isRailOf = (id: string) => faceOf(id)?.fixtureType === "frame_rack";
+  const isRail = isRailOf(faceId);
 
   function choosePresentation(next: Presentation) {
     setPresentation(next);
@@ -66,6 +70,12 @@ export function PlacementForm({ faces, initial, others, excludeId, footprints, s
     const row = whole(rowStart);
     if (!Number.isNaN(row) && isTopOf(next) !== isTop) setRowStart(String(isTopOf(next) ? Math.max(0, row - 1) : row + 1));
     setFaceId(next);
+    if (isRailOf(next)) {
+      setPresentation("hung");
+      if (footprints) setWidth(feetText(footprints.hung.columns));
+      setRowStart("1");
+      setRowSpan("1");
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -79,7 +89,8 @@ export function PlacementForm({ faces, initial, others, excludeId, footprints, s
     const pieceCount = whole(pieces);
     const levelsOk = [read.row, read.rowSpan, pieceCount].every((n) => Number.isInteger(n) && n >= 0) && read.rowSpan >= 1 && pieceCount >= 1;
     if (!levelsOk) return setError(isTop ? "Use whole feet for from back and depth, and whole numbers for pieces." : "Use whole numbers from 1 for levels and pieces.");
-    const fields: PlacementFields = { faceId, presentation, pieceCount, ...asRead(read, faceId) };
+    const onRail = isRail ? { row: 0, rowSpan: 1 } : {};
+    const fields: PlacementFields = { faceId, presentation: isRail ? "hung" : presentation, pieceCount, ...asRead({ ...read, ...onRail }, faceId) };
     const refusal = checkPlacement({ ...fields, id: excludeId }, others, faces);
     if (refusal) return setError(refusal.message);
     setError(null);
@@ -102,14 +113,20 @@ export function PlacementForm({ faces, initial, others, excludeId, footprints, s
         </label>
       ) : null}
       <fieldset className="flex gap-4">
-        <legend className="mb-1 text-sm text-ink">Presentation</legend>
+        <legend className="mb-1 text-sm text-ink">
+          <span className="inline-flex items-center gap-1">
+            Presentation
+            <InfoPopover term="presentation" />
+          </span>
+        </legend>
         {PRESENTATIONS.map((p) => (
-          <label key={p} className="flex min-h-11 items-center gap-2 text-ink">
-            <input type="radio" name="presentation" value={p} checked={presentation === p} onChange={() => choosePresentation(p)} className="size-5" />
+          <label key={p} className="flex min-h-11 items-center gap-2 text-ink has-disabled:opacity-60">
+            <input type="radio" name="presentation" value={p} checked={(isRail ? "hung" : presentation) === p} disabled={isRail} onChange={() => choosePresentation(p)} className="size-5" />
             {PRESENTATION_LABEL[p]}
           </label>
         ))}
       </fieldset>
+      {isRail ? <p className="-mt-2 text-sm text-ink-muted">Frame racks hold hung product only, on their one rail.</p> : null}
       <div className="grid grid-cols-2 gap-3">
         <Input label="From left (ft)" inputMode="decimal" value={fromLeft} onChange={(e) => setFromLeft(e.target.value)} hint="Half steps: 4 or 4½." />
         <Input label="Width (ft)" inputMode="decimal" value={width} onChange={(e) => setWidth(e.target.value)} />
@@ -124,7 +141,7 @@ export function PlacementForm({ faces, initial, others, excludeId, footprints, s
             <Input label="Levels tall" inputMode="numeric" value={rowSpan} onChange={(e) => setRowSpan(e.target.value)} />
           </>
         )}
-        <Input label="Pieces" inputMode="numeric" value={pieces} onChange={(e) => setPieces(e.target.value)} />
+        <Input label="Pieces" info="pieces" inputMode="numeric" value={pieces} onChange={(e) => setPieces(e.target.value)} />
       </div>
       {error ? (
         <p role="alert" className="text-sm text-danger">

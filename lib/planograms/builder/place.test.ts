@@ -36,3 +36,12 @@ describe("placeNew", () => {
     expect(placeNew([front], [blocker("front", 0, 8)], tee)).toBeNull();
   });
 });
+
+describe("placeNew on a frame rack", () => {
+  it("hangs the product one row high, never folded", async () => {
+    const { placeNew } = await import("./place");
+    const rail = { faceId: "rail", fixtureId: "r", fixtureName: "Frame rack 1", fixtureType: "frame_rack" as const, side: "front" as const, setSide: null, label: "Frame rack 1", columns: 8, rows: 1 };
+    const fit = { id: "p", name: "Pant", styleNumber: "P", footprints: { hung: { columns: 2, rows: 4 }, folded: { columns: 4, rows: 1 } } };
+    expect(placeNew([rail], [], fit)).toEqual({ faceId: "rail", col: 0, row: 0, presentation: "hung", colSpan: 2, rowSpan: 1, pieceCount: 1 });
+  });
+});

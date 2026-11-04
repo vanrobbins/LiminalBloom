@@ -18,7 +18,8 @@ export const ZONE_COLORS = [
 ] as const;
 export type ZoneColor = (typeof ZONE_COLORS)[number];
 
-export const FIXTURE_TYPES = ["table", "wall_bay", "rack", "mannequin", "platform", "prop"] as const;
+// Frame racks follow racks, so + Add offers them side by side (frame racks spec §2).
+export const FIXTURE_TYPES = ["table", "wall_bay", "rack", "frame_rack", "mannequin", "platform", "prop"] as const;
 export type FixtureType = (typeof FIXTURE_TYPES)[number];
 
 export const SIDES = ["front", "back", "left", "right"] as const;
@@ -58,6 +59,9 @@ export type Fixture = {
   /** Set only on lower tables. */
   tableSetId: string | null;
   setSide: Side | null;
+  /** Frame racks joined end to end (frame racks spec §4.1); index 0 is the anchor. Both null outside a run. */
+  runId: string | null;
+  runIndex: number | null;
   version: number;
 };
 
@@ -72,6 +76,9 @@ export type Face = {
 
 export type TableSet = { id: string; upperFixtureId: string; version: number };
 
+/** A run of frame racks. Its shape is read from the racks (lib/layout/runs.ts); `startIndex` matters only when closed. */
+export type FrameRun = { id: string; startIndex: number; version: number };
+
 export type Layout = {
   outline: Outline | null;
   entrances: Entrance[];
@@ -79,6 +86,7 @@ export type Layout = {
   fixtures: Fixture[];
   faces: Face[];
   tableSets: TableSet[];
+  frameRuns: FrameRun[];
 };
 
 export const EMPTY_LAYOUT: Layout = {
@@ -88,6 +96,7 @@ export const EMPTY_LAYOUT: Layout = {
   fixtures: [],
   faces: [],
   tableSets: [],
+  frameRuns: [],
 };
 
 /** The outline has no id of its own; this stands in for it in selections and issues. */
@@ -107,7 +116,8 @@ export type IssueKind =
   | "grid"
   | "size"
   | "off-wall"
-  | "table-set";
+  | "table-set"
+  | "run";
 
 /** A problem with one item. `blockerId` names the other item when two clash. */
 export type Issue = { itemId: string; kind: IssueKind; message: string; blockerId?: string };

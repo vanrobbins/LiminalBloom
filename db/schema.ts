@@ -20,6 +20,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -228,6 +229,8 @@ export const fixtureType = pgEnum("fixture_type", [
   "mannequin",
   "platform",
   "prop",
+  // A frame with one hanging rail (Week 6.5 frame racks spec §2).
+  "frame_rack",
 ]);
 export const faceSide = pgEnum("face_side", ["front", "back", "left", "right", "top"]);
 export const tableSide = pgEnum("table_side", ["front", "back", "left", "right"]);
@@ -309,6 +312,10 @@ export const fixtures = pgTable(
       onDelete: "cascade",
     }),
     setSide: tableSide("set_side"),
+    // Frame racks joined end to end (frame racks spec §4.1). Index 0 is the
+    // anchor, which holds the run's planogram. Geometry is read from positions.
+    runId: uuid("run_id"),
+    runIndex: integer("run_index"),
     version: mapVersion(),
     createdAt: mapCreatedAt(),
     updatedAt: mapUpdatedAt(),
@@ -316,6 +323,20 @@ export const fixtures = pgTable(
   (t) => [
     // The target of fixture_faces' (store_id, fixture_id) composite FK.
     uniqueIndex("fixtures_store_id_unique").on(t.storeId, t.id),
+    // A constraint, not an index, so migration 0014 can make it DEFERRABLE:
+    // re-indexing a run in one save passes through duplicates mid-batch.
+    unique("fixtures_run_index_unique").on(t.runId, t.runIndex),
+    check("fixtures_run_index_range", sql`${t.runIndex} between 0 and 5`),
+    // A deleted run nulls run_id only (the composite FK can't null run_index
+    // too), so an index may outlive its run; the app ignores it then.
+    check("fixtures_run_has_index", sql`${t.runId} is null or ${t.runIndex} is not null`),
+    // Cast to text: the enum value is new in the same migration.
+    check("fixtures_run_frame_rack", sql`${t.runId} is null or ${t.type}::text = 'frame_rack'`),
+    foreignKey({
+      name: "fixtures_run_fk",
+      columns: [t.storeId, t.runId],
+      foreignColumns: [frameRuns.storeId, frameRuns.id],
+    }).onDelete("set null"),
     index("fixtures_store_idx").on(t.storeId),
     check("fixtures_rotation_range", sql`${t.rotation} between 0 and 359`),
     check("fixtures_size_range", sql`${t.width} between 12 and 600 and ${t.depth} between 12 and 600`),
@@ -372,6 +393,26 @@ export const tableSets = pgTable(
     updatedAt: mapUpdatedAt(),
   },
   (t) => [index("table_sets_store_idx").on(t.storeId)],
+);
+
+/** Frame racks joined end to end (frame racks spec §4.1). The racks name their run. */
+export const frameRuns = pgTable(
+  "frame_runs",
+  {
+    id: uuid("id").primaryKey(),
+    storeId: mapStoreId(),
+    /** Closed runs only: the rack the combined grid starts reading from. */
+    startIndex: integer("start_index").notNull().default(0),
+    version: mapVersion(),
+    createdAt: mapCreatedAt(),
+    updatedAt: mapUpdatedAt(),
+  },
+  (t) => [
+    index("frame_runs_store_idx").on(t.storeId),
+    // The target of fixtures' (store_id, run_id) key: a rack joins only its own store's run.
+    uniqueIndex("frame_runs_store_id_unique").on(t.storeId, t.id),
+    check("frame_runs_start_range", sql`${t.startIndex} between 0 and 5`),
+  ],
 );
 
 // ---------------------------------------------------------------------------

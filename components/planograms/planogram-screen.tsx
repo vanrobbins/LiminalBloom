@@ -12,10 +12,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { InfoPopover } from "@/components/ui/info-popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { PlanogramRow, PublishedVersion } from "@/lib/planograms/queries";
 import { draftIssues } from "@/lib/planograms/rules";
-import { setBlocks, singleBlock } from "@/lib/planograms/set-grid";
+import { combinedBlocks, singleBlock } from "@/lib/planograms/set-grid";
 import type { DraftState, PlanogramScope, ProductLook } from "@/lib/planograms/types";
 
 import { AddProductDialog } from "./add-product-dialog";
@@ -56,7 +57,7 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
 
   const face = scope.faces.find((f) => f.faceId === faceId) ?? scope.faces[0];
   const shownFaces = scope.isSet ? scope.faces : [face];
-  const layout = scope.isSet ? setBlocks(scope.faces) : singleBlock(face);
+  const layout = scope.isSet ? combinedBlocks(scope) : singleBlock(face);
   const isEditing = draft !== null && view === "draft" && viewing === null;
   // The latest version is movable too: its first change starts a draft (Part 2 spec §4 "Draft").
   const canMove = viewing === null && (isEditing || (draft === null && latest !== null));
@@ -154,15 +155,18 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         {draft ? (
-          <SegmentedControl
-            label="Show"
-            options={[
-              { value: "draft", label: "Draft" },
-              { value: "published", label: "Published" },
-            ]}
-            value={view}
-            onChange={showView}
-          />
+          <span className="inline-flex max-w-full items-center gap-1">
+            <SegmentedControl
+              label="Show"
+              options={[
+                { value: "draft", label: "Draft" },
+                { value: "published", label: "Published" },
+              ]}
+              value={view}
+              onChange={showView}
+            />
+            <InfoPopover term="draft" />
+          </span>
         ) : null}
         <DueDateChip fixtureId={scope.fixtureId} dueDate={dueDate} today={today} />
         {isEditing ? <DraftStatusLine status={status} /> : null}

@@ -24,8 +24,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     // Next keeps client state when only the search params change, so a link to
     // /products?q=… would keep the old query. Keying on the URL remounts on real
     // navigations; typing only uses replaceState, which does not re-render here.
+    // A store switch keeps the URL, so the store is in the key too: otherwise the
+    // refreshed page keeps showing the last store's results under the new name.
     <SearchScreen
-      key={toSearchParams(initial).toString()}
+      key={`${activeStoreId}?${toSearchParams(initial)}`}
       initial={initial}
       initialResults={page.results}
       initialTotal={page.total}

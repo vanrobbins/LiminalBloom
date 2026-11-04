@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { saveCategory } from "@/app/(app)/products/categories/actions";
 import { Button } from "@/components/ui/button";
+import { InfoPopover } from "@/components/ui/info-popover";
 import { Input } from "@/components/ui/input";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { feetText } from "@/lib/feet";
@@ -54,7 +55,12 @@ export function CategoryForm({ category, onDone }: { category?: CategoryRow; onD
     <div className="flex flex-col gap-4">
       <Input label="Name" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} />
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-sm font-medium text-ink">Space on the fixture</legend>
+        <legend className="mb-1 text-sm font-medium text-ink">
+          <span className="inline-flex items-center gap-1">
+            Space on the fixture
+            <InfoPopover term="space" />
+          </span>
+        </legend>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {PRESENTATIONS.map((p) => {
             const label = PRESENTATION_LABEL[p];
@@ -70,7 +76,7 @@ export function CategoryForm({ category, onDone }: { category?: CategoryRow; onD
           })}
         </div>
       </fieldset>
-      <SizeRangeInput value={sizeRange} onChange={setSizeRange} error={errors.sizeRange} />
+      <SizeRangeInput info="sizeRange" value={sizeRange} onChange={setSizeRange} error={errors.sizeRange} />
       {errors.form ? (
         <p role="alert" className="text-sm text-danger">
           {errors.form}

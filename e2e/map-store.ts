@@ -32,8 +32,9 @@ async function storeId(name: string): Promise<string> {
 export async function resetLayout(storeName: string = HOME_STORE): Promise<void> {
   const db = sql();
   const store = await storeId(storeName);
-  // Faces and table sets go with their fixtures (cascade).
+  // Faces and table sets go with their fixtures (cascade); runs are cleared after.
   await db`delete from fixtures where store_id = ${store}`;
+  await db`delete from frame_runs where store_id = ${store}`;
   await db`delete from zones where store_id = ${store}`;
   await db`delete from entrances where store_id = ${store}`;
   await db`delete from store_layouts where store_id = ${store}`;
@@ -98,4 +99,20 @@ export async function seedRack(name = "Rack 1"): Promise<{ rackId: string }> {
     await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${rackId}, ${side}, 8, 3)`;
   }
   return { rackId };
+}
+
+/** Two frame racks joined straight into a run, "Frame A1" the anchor. Seed the layout first. */
+export async function seedFrameRun(): Promise<{ anchorId: string; secondId: string }> {
+  const db = sql();
+  const store = await storeId(HOME_STORE);
+  const runId = randomUUID();
+  const anchorId = randomUUID();
+  const secondId = randomUUID();
+  await db`insert into frame_runs (id, store_id) values (${runId}, ${store})`;
+  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, run_id, run_index) values (${anchorId}, ${store}, 'frame_rack', 'Frame A1', 300, 260, 48, 24, ${runId}, 0)`;
+  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, run_id, run_index) values (${secondId}, ${store}, 'frame_rack', 'Frame A2', 348, 260, 48, 24, ${runId}, 1)`;
+  for (const id of [anchorId, secondId]) {
+    await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${id}, 'front', 8, 1)`;
+  }
+  return { anchorId, secondId };
 }

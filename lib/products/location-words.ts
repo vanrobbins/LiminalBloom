@@ -37,6 +37,7 @@ const MANY_DEPTHS = ["Back", "Near back", "Middle", "Near front", "Front"];
 const NOUN: Partial<Record<FixtureType, Record<Presentation, string>>> = {
   wall_bay: { folded: "shelf", hung: "rail" },
   rack: { folded: "shelf", hung: "rail" },
+  frame_rack: { folded: "rail", hung: "rail" },
 };
 
 /** Which of `count` equal bands of `total` holds `centre`. */
@@ -72,6 +73,8 @@ function feetAcross({ col, colSpan }: Cells): string {
 export function feetLine(spot: Spot): string {
   const { row, rowSpan } = spot.cells;
   const across = `${feetAcross(spot.cells)} ft from left`;
+  // A frame rack has one level, its rail (frame racks spec §3).
+  if (spot.fixtureType === "frame_rack") return `Rail · ${across}`;
   if (spot.side === "top") return `${across} · ${row}–${row + rowSpan} ft from back`;
   const levels = rowSpan === 1 ? `level ${row + 1} of ${spot.rows}` : `levels ${row + 1}–${row + rowSpan} of ${spot.rows}`;
   return `${across} · ${levels}`;

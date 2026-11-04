@@ -11,7 +11,7 @@ import {
   type ListCollection,
   type Entity,
 } from "./entities";
-import { OUTLINE_ID, type Entrance, type Face, type Fixture, type Layout, type Outline, type TableSet, type Zone } from "./types";
+import { OUTLINE_ID, type Entrance, type Face, type Fixture, type FrameRun, type Layout, type Outline, type TableSet, type Zone } from "./types";
 
 export type Upsert<T> = { item: T; expectedVersion: number | null };
 export type Delete = { collection: ListCollection; id: string; expectedVersion: number };
@@ -23,13 +23,14 @@ export type ChangeSet = {
   fixtures: Upsert<Fixture>[];
   faces: Upsert<Face>[];
   tableSets: Upsert<TableSet>[];
+  frameRuns: Upsert<FrameRun>[];
   deletes: Delete[];
 };
 
 type Versioned = { id: string; version: number };
 
 export function emptyChanges(): ChangeSet {
-  return { outline: null, entrances: [], zones: [], fixtures: [], faces: [], tableSets: [], deletes: [] };
+  return { outline: null, entrances: [], zones: [], fixtures: [], faces: [], tableSets: [], frameRuns: [], deletes: [] };
 }
 
 export function diff(base: Layout, next: Layout): ChangeSet {
