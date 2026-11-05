@@ -17,6 +17,8 @@ describe("ThemeToggle", () => {
 
     const button = screen.getByRole("button", { name: "Switch to light" });
     expect(button.querySelector("svg")).not.toBeNull();
+    // Button reads its tooltip from this attribute, and throws in development without it.
+    expect(button).toHaveAttribute("aria-label", "Switch to light");
 
     await user.click(button);
     expect(mocks.setTheme).toHaveBeenCalledWith("light");

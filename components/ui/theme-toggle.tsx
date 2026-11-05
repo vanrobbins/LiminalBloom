@@ -35,7 +35,7 @@ export function ThemeToggle() {
   const Icon = target === "dark" ? Moon : Sun;
 
   return (
-    <Button variant="secondary" icon onClick={() => setTheme(target)}>
+    <Button variant="secondary" icon aria-label={`Switch to ${target}`} onClick={() => setTheme(target)}>
       <AccessibleIcon.Root label={`Switch to ${target}`}>
         <Icon strokeWidth={1.75} className="size-5" />
       </AccessibleIcon.Root>
