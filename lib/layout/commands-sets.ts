@@ -28,6 +28,7 @@ export function attachLowerTable(layout: Layout, upperId: string, side: Side, ne
     width,
     depth: DEFAULT_LOWER_DEPTH,
     rotation: upper.rotation,
+    curve: 0,
     tableSetId: set.id,
     setSide: side,
     runId: null,

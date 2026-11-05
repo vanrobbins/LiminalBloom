@@ -43,6 +43,7 @@ export function addRackToRun(layout: Layout, rackId: string, side: "left" | "rig
     type: "frame_rack",
     name: nextName(layout.fixtures.map((f) => f.name), rule.label),
     ...pose,
+    curve: 0,
     width: rule.width,
     depth: rule.depth,
     tableSetId: null,

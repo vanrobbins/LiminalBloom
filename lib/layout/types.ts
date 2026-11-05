@@ -56,6 +56,8 @@ export type Fixture = {
   depth: number;
   /** Whole degrees, clockwise; at 0 the front faces +y. */
   rotation: number;
+  /** Wall bays only (lib/layout/curves.ts): inches from the line between the ends to the middle, + toward the front. */
+  curve: number;
   /** Set only on lower tables. */
   tableSetId: string | null;
   setSide: Side | null;
@@ -115,6 +117,7 @@ export type IssueKind =
   | "faces"
   | "grid"
   | "size"
+  | "curve"
   | "off-wall"
   | "table-set"
   | "run";

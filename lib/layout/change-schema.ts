@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 import { changeCount, type ChangeSet } from "./diff";
-import { MAX_CHANGES_PER_SAVE, MAX_COORD, MAX_CORNERS, MAX_NAME } from "./limits";
+import { MAX_CHANGES_PER_SAVE, MAX_COORD, MAX_CORNERS, MAX_CURVE, MAX_NAME } from "./limits";
 import { FACE_SIDES, FIXTURE_TYPES, SIDES, ZONE_COLORS, ZONE_TYPES } from "./types";
 
 const whole = (min: number, max: number) => z.number().int().min(min).max(max);
@@ -29,6 +29,7 @@ const fixture = z.object({
   width: whole(1, MAX_COORD),
   depth: whole(1, MAX_COORD),
   rotation: whole(0, 359),
+  curve: whole(-MAX_CURVE, MAX_CURVE),
   tableSetId: id.nullable(),
   setSide: z.enum(SIDES).nullable(),
   runId: id.nullable(),

@@ -1,8 +1,8 @@
 // Duplicate (spec §7): the copy lands beside the original, on the first side
 // that has room, so duplicating a large table is not blocked by itself.
 
+import { footprint } from "./curves";
 import type { NewId } from "./factories";
-import { corners } from "./fixtures";
 import { bounds } from "./geometry";
 import { commit, type Session } from "./session-core";
 import { OUTLINE_ID, type Point } from "./types";
@@ -15,7 +15,7 @@ function offsets(session: Session, ids: readonly string[]): Point[] {
   const { layout } = session;
   const points = [
     ...layout.zones.filter((z) => wanted.has(z.id)).flatMap((z) => z.points),
-    ...layout.fixtures.filter((f) => wanted.has(f.id)).flatMap((f) => corners(f)),
+    ...layout.fixtures.filter((f) => wanted.has(f.id)).flatMap((f) => footprint(f)),
   ];
   if (points.length === 0) return [{ x: 24, y: 24 }];
   const b = bounds(points);

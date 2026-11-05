@@ -2,12 +2,13 @@
 // (top-most first), zones, and the outline's walls. What can be hit depends on
 // the focus level, so a tap is never ambiguous between a zone and the
 // fixtures in it. Every fixture test goes through its own frame
-// (distanceToRect → toLocal), so rotation can never skew a hit.
+// (distanceToFixture → toLocal), so rotation can never skew a hit.
 
 import { screenToWorld, worldToScreen, type Camera } from "./camera";
 import type { VertexOwner } from "./commands";
+import { distanceToFixture, halfChord, middleOffset } from "./curves";
 import { entranceEnds } from "./entrances";
-import { FIXTURE_RULES, distanceToRect, outerSide } from "./fixtures";
+import { FIXTURE_RULES, outerSide } from "./fixtures";
 import { toWorld } from "./frames";
 import { classify, closestPointOnSegment, distance, edgesOf, lerp } from "./geometry";
 import { OUTLINE_ID, type Fixture, type Layout, type Point, type Side } from "./types";
@@ -20,6 +21,7 @@ export type HandleRef =
   | { kind: "midpoint"; owner: VertexOwner; index: number }
   | { kind: "resize"; fixtureId: string; side: Side }
   | { kind: "rotate"; fixtureId: string }
+  | { kind: "curve"; fixtureId: string }
   | { kind: "entrance-end"; entranceId: string; end: "start" | "end" };
 
 export type HandleSpot = { ref: HandleRef; at: Point };
@@ -93,11 +95,13 @@ function fixtureHandles(f: Fixture, camera: Camera): HandleSpot[] {
         : rule.resize === "width"
           ? ["left", "right"]
           : [];
+  const half = halfChord(f);
+  const middle = middleOffset(f);
   const offset: Record<Side, Point> = {
     front: { x: 0, y: f.depth / 2 + out },
     back: { x: 0, y: -f.depth / 2 - out },
-    left: { x: -f.width / 2 - out, y: 0 },
-    right: { x: f.width / 2 + out, y: 0 },
+    left: { x: -half - out, y: 0 },
+    right: { x: half + out, y: 0 },
   };
   const spots: HandleSpot[] = sides.map((side) => ({
     ref: { kind: "resize", fixtureId: f.id, side },
@@ -106,8 +110,12 @@ function fixtureHandles(f: Fixture, camera: Camera): HandleSpot[] {
   if (f.tableSetId === null) {
     spots.push({
       ref: { kind: "rotate", fixtureId: f.id },
-      at: toWorld(f, { x: 0, y: -f.depth / 2 - out - ROTATE_OFFSET_PX * perPixel }),
+      // Clear of the bay whichever way it bends: behind the ends, or behind the middle.
+      at: toWorld(f, { x: 0, y: Math.min(middle, 0) - f.depth / 2 - out - ROTATE_OFFSET_PX * perPixel }),
     });
+  }
+  if (rule.curves) {
+    spots.push({ ref: { kind: "curve", fixtureId: f.id }, at: toWorld(f, { x: 0, y: middle + f.depth / 2 + out }) });
   }
   return spots;
 }
@@ -146,7 +154,7 @@ export function hitTest(
   }
 
   for (const f of [...layout.fixtures].reverse()) {
-    if (isEditableFixture(f, focus) && distanceToRect(f, world) <= FIXTURE_HIT_PX * perPixel) {
+    if (isEditableFixture(f, focus) && distanceToFixture(f, world) <= FIXTURE_HIT_PX * perPixel) {
       return { kind: "fixture", id: f.id };
     }
   }

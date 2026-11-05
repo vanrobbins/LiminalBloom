@@ -3,9 +3,10 @@
 // and the database can never disagree about what is allowed. Merch Mobile
 // saved self-crossing zones because its check lived in one screen only.
 
+import { fixturesOverlap, footprint, maxCurve } from "./curves";
 import { isOnWall, wallSpan } from "./entrances";
-import { FIXTURE_RULES, corners, mayOverlap, rectsOverlap } from "./fixtures";
-import { SIDE_LABEL } from "./format";
+import { FIXTURE_RULES, mayOverlap } from "./fixtures";
+import { SIDE_LABEL, formatLength } from "./format";
 import { area, bounds, boundsOverlap, distance, edgesOf, polygonContains, polygonsOverlap, selfIntersects } from "./geometry";
 import { MAX_RUN_RACKS, MIN_RUN_RACKS, runShape } from "./runs";
 import {
@@ -154,8 +155,13 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
     if ([f.width, f.depth].some((n) => n < MIN_FIXTURE_SIZE || n > MAX_FIXTURE_SIZE)) {
       issues.push(issue(f.id, "size", `${f.name} must be 1 ft to 50 ft on each side.`));
     }
+    if (f.curve !== 0 && !rule.curves) {
+      issues.push(issue(f.id, "curve", `A ${rule.label.toLowerCase()} can't curve.`));
+    } else if (Math.abs(f.curve) > maxCurve(f.width, f.depth)) {
+      issues.push(issue(f.id, "curve", `${f.name} can curve at most ${formatLength(maxCurve(f.width, f.depth))} at this size.`));
+    }
     if (offMap(f)) issues.push(issue(f.id, "out-of-bounds", `${f.name} runs off the map.`));
-    if (outline && !polygonContains(outline, corners(f))) {
+    if (outline && !polygonContains(outline, footprint(f))) {
       issues.push(issue(f.id, "outside-store", `${f.name} is outside the store.`, OUTLINE_ID));
     }
 
@@ -199,13 +205,13 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
   }
 
   const fixtures = layout.fixtures;
-  const boxes = fixtures.map((f) => bounds(corners(f)));
+  const boxes = fixtures.map((f) => bounds(footprint(f)));
   for (let i = 0; i < fixtures.length; i++) {
     for (let j = i + 1; j < fixtures.length; j++) {
       const a = fixtures[i];
       const b = fixtures[j];
       if (!wants(a.id) && !wants(b.id)) continue;
-      if (!boundsOverlap(boxes[i], boxes[j]) || !rectsOverlap(a, b) || mayOverlap(a, b, layout.tableSets)) continue;
+      if (!boundsOverlap(boxes[i], boxes[j]) || !fixturesOverlap(a, b) || mayOverlap(a, b, layout.tableSets)) continue;
       issues.push(issue(a.id, "overlap", `Blocked by ${b.name}.`, b.id), issue(b.id, "overlap", `Blocked by ${a.name}.`, a.id));
     }
   }

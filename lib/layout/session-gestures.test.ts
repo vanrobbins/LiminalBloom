@@ -120,3 +120,28 @@ describe("drawing a custom outline", () => {
     expect(s.layout.outline?.points).toHaveLength(4);
   });
 });
+
+describe("bending a wall bay on the map", () => {
+  const bay = fixture({ id: "bay", type: "wall_bay", x: 240, y: 180, width: 120, depth: 24 });
+  const front = face({ id: "bay-front", fixtureId: "bay", side: "front", columns: 20, rows: 5 });
+  const start = (f = bay): Session => ({
+    ...editing({ ...store(), fixtures: [f], faces: [front] }),
+    camera: { x: 0, y: 0, scale: 1 },
+    selection: ["bay"],
+  });
+
+  it("bends it with the pointer, leaving the pose and the grid alone", () => {
+    const target: HitTarget = { kind: "handle", ref: { kind: "curve", fixtureId: "bay" } };
+    const s = gesture(reducer(), start(), ...drag(target, [240, 192], [240, 222]));
+    expect(s.layout.fixtures[0]).toMatchObject({ x: 240, y: 180, width: 120, curve: 30 });
+    expect(s.layout.faces[0]).toMatchObject({ columns: 20, rows: 5 });
+  });
+
+  it("changes the length, not the curve, from an end of a curved bay", () => {
+    const target: HitTarget = { kind: "handle", ref: { kind: "resize", fixtureId: "bay", side: "right" } };
+    const s = gesture(reducer(), start({ ...bay, curve: 30 }), ...drag(target, [290, 180], [340, 180]));
+    const after = s.layout.fixtures[0];
+    expect(after).toMatchObject({ x: 240, y: 180, curve: 30 });
+    expect(after.width).toBeGreaterThan(120);
+  });
+});

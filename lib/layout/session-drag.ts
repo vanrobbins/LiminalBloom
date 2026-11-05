@@ -4,8 +4,9 @@
 
 import type { Session, Drag } from "./session-core";
 import { pointsOf, type Command } from "./commands";
+import { bendFromHandle, resizeCurved, snapPoints } from "./curves";
 import { dragEntranceEnd } from "./entrances";
-import { corners, resizeFromHandle, resizeLowerTable } from "./fixtures";
+import { resizeFromHandle, resizeLowerTable } from "./fixtures";
 import { angleTowards } from "./frames";
 import { snapAngle, snapDelta, snapPoint, targetsFor, type Guide } from "./snap";
 import { OUTLINE_ID, type Layout, type Point } from "./types";
@@ -40,7 +41,7 @@ export function movingPoints(layout: Layout, ids: readonly string[]): Point[] {
   const direct = directIds(layout, ids);
   return [
     ...layout.zones.filter((z) => direct.has(z.id)).flatMap((z) => z.points),
-    ...layout.fixtures.filter((f) => direct.has(f.id)).flatMap((f) => corners(f)),
+    ...layout.fixtures.filter((f) => direct.has(f.id)).flatMap((f) => snapPoints(f)),
     ...layout.entrances.filter((e) => direct.has(e.id)).map((e) => ({ x: e.x, y: e.y })),
   ];
 }
@@ -79,8 +80,15 @@ export function planDrag(session: Session, drag: Drag, pointer: Point): { comman
     case "resize": {
       const f = start.fixtures.find((x) => x.id === ref.fixtureId);
       if (!f) return null;
+      if (f.curve !== 0) return { command: { type: "updateFixture", id: f.id, changes: { width: resizeCurved(f, pointer) } }, guides: [] };
       const changes = f.tableSetId ? resizeLowerTable(f, ref.side, pointer) : resizeFromHandle(f, ref.side, pointer);
       return { command: { type: "updateFixture", id: f.id, changes }, guides: [] };
+    }
+    case "curve": {
+      const f = start.fixtures.find((x) => x.id === ref.fixtureId);
+      if (!f) return null;
+      const curve = bendFromHandle(f, drag.origin, pointer, session.snapping);
+      return { command: { type: "updateFixture", id: f.id, changes: { curve } }, guides: [] };
     }
     case "rotate": {
       const f = start.fixtures.find((x) => x.id === ref.fixtureId);
