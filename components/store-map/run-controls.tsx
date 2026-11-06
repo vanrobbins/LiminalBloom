@@ -38,6 +38,12 @@ export function RunControls({ layout, rack, dispatch }: RunControlsProps) {
           Add rack to the right
         </Button>
       </div>
+      {rack.runId === null ? (
+        // Shift-click does this with a keyboard; a phone has this and a long-press.
+        <Button variant="secondary" className="md:hidden" onClick={() => dispatch({ type: "selectMore", on: true })}>
+          Select more
+        </Button>
+      ) : null}
       {full ? <p className="text-sm text-ink-muted">A run holds up to {MAX_RUN_RACKS} racks.</p> : null}
       {rack.runId ? (
         <>

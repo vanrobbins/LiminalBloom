@@ -12,6 +12,7 @@ import type { ChangeSet } from "@/lib/layout/diff";
 import { canRedo, canUndo } from "@/lib/layout/history";
 import { OVERVIEW, handlesFor, hitTest, isDraggable } from "@/lib/layout/hit-test";
 import { previewCorner } from "@/lib/layout/outline-draw";
+import { findJoin } from "@/lib/layout/run-join";
 import type { FetchReply, SaveReply } from "@/lib/layout/replies";
 import type { AddKind } from "@/lib/layout/session-core";
 import type { Layout } from "@/lib/layout/types";
@@ -24,8 +25,10 @@ import { DrawingBar } from "./drawing-bar";
 import { EditorBottomBar } from "./editor-bottom-bar";
 import { EditorTopBar } from "./editor-top-bar";
 import { LayoutList } from "./layout-list";
+import { LinkOffer } from "./link-offer";
 import { OutlineSetup } from "./outline-setup";
 import { PropertiesPanel } from "./properties-panel";
+import { SelectMoreBar } from "./select-more-bar";
 import { StoreMap } from "./store-map";
 import { TypeTiles } from "./type-tiles";
 import { useEditorKeys } from "./use-editor-keys";
@@ -58,6 +61,10 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
   const handles = session.drag ? [] : handlesFor(session.layout, session.selection, session.camera);
   const layoutIssues = useMemo(() => validate(session.layout), [session.layout]);
   const issues = session.preview?.issues ?? layoutIssues;
+
+  // Worked out afresh each time, so it goes by itself if the racks stop being near.
+  const offered = session.linkOffer && !session.drag ? findJoin(session.layout, new Set(session.linkOffer.ids)) : null;
+  const join = session.preview?.join ?? offered;
 
   const pointer = usePointerInput({
     hit: (screen, shift) => {
@@ -129,12 +136,17 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
             drawing={session.drawing}
             drawPreview={drawPreview}
             marquee={session.marquee}
+            joinOutline={join?.outline}
             svgProps={pointer.handlers}
           />
           <ZoomControls onZoom={(factor) => dispatch({ type: "zoom", factor })} onFit={() => dispatch({ type: "fit" })} />
           <div className="absolute bottom-3 left-3 hidden md:block lg:hidden">
             <AddMenu focus={focus} onAdd={add} />
           </div>
+          {session.linkOffer && offered ? (
+            <LinkOffer offer={session.linkOffer} join={offered} camera={session.camera} viewport={session.viewport} dispatch={dispatch} />
+          ) : null}
+          {session.selectingMore && session.selection.length > 0 ? <SelectMoreBar count={session.selection.length} dispatch={dispatch} /> : null}
           {session.drawing ? (
             <DrawingBar
               corners={session.drawing.points.length}

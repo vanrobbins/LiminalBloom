@@ -102,6 +102,15 @@ export async function seedRack(name = "Rack 1"): Promise<{ rackId: string }> {
 }
 
 /** Two frame racks joined straight into a run, "Frame A1" the anchor. Seed the layout first. */
+/** A frame rack on its own, for dragging up to a run. */
+export async function seedLoneRack(name: string, x: number, y: number): Promise<void> {
+  const db = sql();
+  const store = await storeId(HOME_STORE);
+  const id = randomUUID();
+  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth) values (${id}, ${store}, 'frame_rack', ${name}, ${x}, ${y}, 48, 24)`;
+  await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${id}, 'front', 8, 1)`;
+}
+
 export async function seedFrameRun(): Promise<{ anchorId: string; secondId: string }> {
   const db = sql();
   const store = await storeId(HOME_STORE);

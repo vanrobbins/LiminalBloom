@@ -130,10 +130,13 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
       }
       return { ok: false, message: result.message };
     }
-    setHistory((h) => record(h, { id: target.id, before: fieldsOf(target), after: fields }));
-    say(`${verb} to ${describe(fields)}`);
+    // What the server kept, which isn't what was sent when folded product hangs on a rail.
+    const kept = result.draft.placements.find((p) => p.id === target.id);
+    const after = kept ? fieldsOf(kept) : fields;
+    setHistory((h) => record(h, { id: target.id, before: fieldsOf(target), after }));
+    say(`${result.notice ?? verb} to ${describe(after)}`);
     if (undoToast.current !== null) dismissToast(undoToast.current);
-    undoToast.current = toast({ tone: "success", title: verb, action: { label: "Undo", onSelect: () => void travel("undo") } });
+    undoToast.current = toast({ tone: "success", title: result.notice ?? verb, action: { label: "Undo", onSelect: () => void travel("undo") } });
     return { ok: true, id: target.id };
   }
 

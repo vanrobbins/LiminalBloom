@@ -9,12 +9,13 @@ import { bounds, type Bounds } from "./geometry";
 import { EMPTY_HISTORY, record, type History } from "./history";
 import { OVERVIEW, type Focus, type HitTarget } from "./hit-test";
 import type { Drawing } from "./outline-draw";
+import type { RunJoin } from "./run-join";
 import type { Guide } from "./snap";
 import { OUTLINE_ID, type FixtureType, type Issue, type Layout, type Point } from "./types";
 import { newIssues, validate } from "./validate";
 
 export type VertexRef = { owner: VertexOwner; index: number };
-export type Preview = { layout: Layout; issues: Issue[]; guides: Guide[] };
+export type Preview = { layout: Layout; issues: Issue[]; guides: Guide[]; join: RunJoin | null };
 export type Drag = { target: HitTarget; start: Layout; origin: Point; ids: string[] };
 export type Marquee = { from: Point; to: Point };
 export type AddKind = "zone" | "entrance" | FixtureType;
@@ -35,6 +36,10 @@ export type Session = {
   snapping: boolean;
   readOnly: boolean;
   notice: string | null;
+  /** Long-press started "Select more": taps add to the selection until Done. */
+  selectingMore: boolean;
+  /** The racks just dropped near an open end, while the Link button shows. */
+  linkOffer: { ids: string[] } | null;
 };
 
 /** A 40 ft square, for a store with no outline yet. */
@@ -57,6 +62,8 @@ export function createSession(layout: Layout, readOnly: boolean): Session {
     snapping: true,
     readOnly,
     notice: null,
+    selectingMore: false,
+    linkOffer: null,
   };
 }
 

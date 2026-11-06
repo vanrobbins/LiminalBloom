@@ -53,7 +53,7 @@ function runScope(layout: Layout, anchor: Fixture): PlanogramScope {
     const corner = before === "corner";
     return layout.faces
       .filter((face) => face.fixtureId === id && face.side === "front")
-      .map((face) => toFace(face, rack, rack.name, corner ? `${rack.name} · corner` : rack.name));
+      .map((face) => (corner ? { ...toFace(face, rack, rack.name, `${rack.name} · corner`), corner } : toFace(face, rack, rack.name, rack.name)));
   });
   return { fixtureId: anchor.id, fixtureName: anchor.name, isSet: true, isRun: true, faces };
 }

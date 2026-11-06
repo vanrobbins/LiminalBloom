@@ -28,6 +28,8 @@ export type Block = {
   columns: number;
   rows: number;
   turned: boolean;
+  /** A frame rack that turns a corner from the rack before it. */
+  corner?: boolean;
   x: number;
   y: number;
   width: number;
@@ -46,6 +48,7 @@ function block(face: PlanogramFace, turned: boolean, x: number, y: number): Bloc
     columns: face.columns,
     rows: face.rows,
     turned,
+    ...(face.corner ? { corner: true } : {}),
     x,
     y,
     width: turned ? face.rows * ROW_UNITS : face.columns,

@@ -23,7 +23,14 @@ export function SelectionProperties({ layout, ids, dispatch }: SelectionProperti
       <p className="text-sm text-ink-muted">Drag any of them to move them together.</p>
       <div className="flex flex-wrap gap-2">
         {canLink ? (
-          <Button onClick={() => dispatch({ type: "command", command: { type: "linkRun", ids: [...ids] } })}>Link into run</Button>
+          <Button
+            onClick={() => {
+              dispatch({ type: "command", command: { type: "linkRun", ids: [...ids] } });
+              dispatch({ type: "selectMore", on: false });
+            }}
+          >
+            Link into run
+          </Button>
         ) : null}
         <Button variant="secondary" onClick={() => dispatch({ type: "duplicate" })}>
           Duplicate

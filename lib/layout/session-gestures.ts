@@ -8,7 +8,8 @@ import type { NewId } from "./factories";
 import type { GestureEffect } from "./gesture";
 import { isEditableFixture, type HandleRef, type HitTarget } from "./hit-test";
 import { accept, commit, limitsFor, type Marquee, type Session } from "./session-core";
-import { planDrag } from "./session-drag";
+import { findJoin } from "./run-join";
+import { movedIds, planDrag } from "./session-drag";
 import { placeDrawingCorner } from "./session-edits";
 import { focusOn } from "./session-view";
 import { OUTLINE_ID, type Point } from "./types";
@@ -17,11 +18,11 @@ import { newIssues, validate } from "./validate";
 export function onGesture(session: Session, effect: GestureEffect<HitTarget>, newId: NewId): Session {
   switch (effect.type) {
     case "tap":
-      return onTap(session, effect.target, effect.point, effect.shift, newId);
+      return onTap(withoutOffer(session), effect.target, effect.point, effect.shift, newId);
     case "longPress":
-      return session.readOnly ? session : toggle(session, effect.target);
+      return session.readOnly ? session : startSelecting(session, effect.target);
     case "dragStart":
-      return startDrag(session, effect.target, effect.origin);
+      return startDrag(withoutOffer(session), effect.target, effect.origin);
     case "drag":
       return moveDrag(session, effect.point, newId);
     case "dragEnd":
@@ -37,8 +38,10 @@ export function onGesture(session: Session, effect: GestureEffect<HitTarget>, ne
   }
 }
 
+const withoutOffer = (session: Session): Session => (session.linkOffer ? { ...session, linkOffer: null } : session);
+
 function selectOne(session: Session, id: string): Session {
-  return { ...session, selection: [id], vertex: null };
+  return { ...session, selection: [id], vertex: null, selectingMore: false };
 }
 
 /** Shift+click and long-press add to or take from the selection. The outline never joins a group. */
@@ -54,6 +57,12 @@ function toggle(session: Session, target: HitTarget): Session {
     : session;
 }
 
+/** A long-press picks the item and keeps picking: taps add more until Done. */
+function startSelecting(session: Session, target: HitTarget): Session {
+  const next = toggle(session, target);
+  return next === session ? session : { ...next, selectingMore: next.selection.length > 0 };
+}
+
 function onTap(session: Session, target: HitTarget, screen: Point, shift: boolean, newId: NewId): Session {
   if (session.drawing) return placeDrawingCorner(session, screenToWorld(session.camera, screen), newId);
 
@@ -63,23 +72,24 @@ function onTap(session: Session, target: HitTarget, screen: Point, shift: boolea
     return { ...session, selection: [] };
   }
 
+  const adding = shift || (session.selectingMore && session.selection.length > 0);
   switch (target.kind) {
     case "handle":
       return tapHandle(session, target.ref, newId);
     case "zone": {
       // Tap selects; tapping the selected zone again opens it (spec §7).
       const onlyThis = session.selection.length === 1 && session.selection[0] === target.id;
-      if (onlyThis && !shift) return focusOn(session, { kind: "zone", id: target.id });
-      return shift ? toggleId(session, target.id) : selectOne(session, target.id);
+      if (onlyThis && !adding) return focusOn(session, { kind: "zone", id: target.id });
+      return adding ? toggleId(session, target.id) : selectOne(session, target.id);
     }
     case "fixture":
     case "entrance":
-      return shift ? toggleId(session, target.id) : selectOne(session, target.id);
+      return adding ? toggleId(session, target.id) : selectOne(session, target.id);
     case "outline":
       return selectOne(session, OUTLINE_ID);
     case "empty":
     case "marquee":
-      return shift ? session : { ...session, selection: [], vertex: null };
+      return shift ? session : { ...session, selection: [], vertex: null, selectingMore: false };
   }
 }
 
@@ -125,7 +135,8 @@ function moveDrag(session: Session, pointerScreen: Point, newId: NewId): Session
   const layout = apply(drag.start, plan.command, newId);
   const changed = changedIds(drag.start, layout);
   const issues = newIssues(validate(drag.start, changed), validate(layout, changed), changed);
-  return { ...session, preview: { layout, issues, guides: plan.guides } };
+  const join = drag.target.kind === "fixture" ? findJoin(layout, movedIds(drag.start, drag.ids)) : null;
+  return { ...session, preview: { layout, issues, guides: plan.guides, join } };
 }
 
 function endDrag(session: Session): Session {
@@ -133,7 +144,11 @@ function endDrag(session: Session): Session {
   if (!drag) return session;
   const cleared: Session = { ...session, drag: null, preview: null, marquee: null };
   if (drag.target.kind === "marquee") return marquee ? selectInBox(cleared, marquee) : cleared;
-  return preview ? accept(cleared, drag.start, preview.layout) : cleared;
+  if (!preview) return cleared;
+  const next = accept(cleared, drag.start, preview.layout);
+  // A refused drop goes back where it was, with nothing to offer.
+  const dropped = preview.join !== null && next.layout === preview.layout;
+  return dropped ? { ...next, linkOffer: { ids: [...movedIds(drag.start, drag.ids)] } } : next;
 }
 
 function selectInBox(session: Session, box: Marquee): Session {

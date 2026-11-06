@@ -13,7 +13,7 @@ import { toast } from "@/lib/toast";
 
 export type DraftStatus = { kind: "idle" | "saving" | "saved" } | { kind: "refused"; message: string };
 /** A refusal's words go to the form that sent it; null when there's nothing to say there. */
-export type SaveResult = { saved: true; draft: DraftState } | { saved: false; message: string | null };
+export type SaveResult = { saved: true; draft: DraftState; notice?: string } | { saved: false; message: string | null };
 
 export const refusalOf = (result: SaveResult) => (result.saved ? null : result.message);
 
@@ -63,9 +63,8 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
       if (next) setDraft((current) => newer(current, next));
       if (reply.status === "saved") {
         setStatus({ kind: "saved" });
-        // Folded product moved onto a frame rack hangs instead (frame racks spec §3); Undo puts it back folded.
-        if (reply.notice) toast({ tone: "success", title: reply.notice });
-        return { saved: true, draft: reply.draft };
+        // Folded product moved onto a frame rack hangs instead (frame racks spec §3); the builder says so, with its Undo.
+        return { saved: true, draft: reply.draft, ...(reply.notice ? { notice: reply.notice } : {}) };
       }
       if (!reply.draft) {
         // Published or discarded on another device: the page reloads to what's there now.

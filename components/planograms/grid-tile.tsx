@@ -48,6 +48,11 @@ export function BlockView({ block, labelled, onEmpty }: { block: Block; labelled
     >
       {labelled ? (
         <span aria-hidden="true" className="absolute -top-px left-0 -translate-y-full pb-0.5 text-xs whitespace-nowrap text-ink-muted">
+          {block.corner ? (
+            <svg data-corner-mark viewBox="0 0 10 10" className="mr-1 inline size-2.5 align-baseline">
+              <path d="M2 1 V8 H9" fill="none" stroke="currentColor" strokeWidth={2} />
+            </svg>
+          ) : null}
           {block.label}
         </span>
       ) : null}

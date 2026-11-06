@@ -3,11 +3,12 @@
 // place that reads pointer events.
 
 import { worldToScreen, type Camera, type Viewport } from "@/lib/layout/camera";
+import { selectedRunRacks } from "@/lib/layout/commands-runs";
 import { isEditableFixture, type Focus, type HandleSpot } from "@/lib/layout/hit-test";
 import type { Drawing } from "@/lib/layout/outline-draw";
 import type { Marquee, VertexRef } from "@/lib/layout/session-core";
 import type { Guide } from "@/lib/layout/snap";
-import { OUTLINE_ID, type Face, type Issue, type Layout, type Point } from "@/lib/layout/types";
+import { OUTLINE_ID, type Face, type Fixture, type Issue, type Layout, type Point } from "@/lib/layout/types";
 
 import { DrawingOverlay } from "./drawing-overlay";
 import { EntranceShape } from "./entrance-shape";
@@ -31,8 +32,25 @@ type StoreMapProps = {
   drawing: Drawing | null;
   drawPreview: Point | null;
   marquee: Marquee | null;
+  /** Where dragged racks would join a run. */
+  joinOutline?: readonly Fixture[];
   svgProps?: React.SVGProps<SVGSVGElement> & { ref?: React.Ref<SVGSVGElement> };
 };
+
+/** A rack's rectangle with no fill, for the outlines drawn around racks. */
+function rackBox(f: Fixture) {
+  return {
+    x: -f.width / 2,
+    y: -f.depth / 2,
+    width: f.width,
+    height: f.depth,
+    rx: 2,
+    fill: "none",
+    vectorEffect: "non-scaling-stroke" as const,
+    transform: `translate(${f.x} ${f.y}) rotate(${f.rotation})`,
+    className: "pointer-events-none",
+  };
+}
 
 export function StoreMap({
   layout,
@@ -47,6 +65,7 @@ export function StoreMap({
   drawing,
   drawPreview,
   marquee,
+  joinOutline = [],
   svgProps,
 }: StoreMapProps) {
   const selected = new Set(selection);
@@ -72,6 +91,10 @@ export function StoreMap({
             problem={problems.has(zone.id)}
           />
         ))}
+        {/* Under the racks, so only the run's outside edge shows, whatever shape it makes. */}
+        {selectedRunRacks(layout, selection).map((f) => (
+          <rect key={f.id} data-run-outline {...rackBox(f)} stroke="var(--brand)" strokeWidth={8} />
+        ))}
         {layout.fixtures.map((fixture) => (
           <FixtureShape
             key={fixture.id}
@@ -94,6 +117,9 @@ export function StoreMap({
               />
             ))
           : null}
+        {joinOutline.map((f) => (
+          <rect key={f.id} data-join-outline {...rackBox(f)} stroke="var(--brand-strong)" strokeWidth={2} strokeDasharray="6 4" />
+        ))}
       </g>
       <SnapGuides guides={guides} camera={camera} viewport={viewport} />
       <SelectionHandles handles={handles} camera={camera} vertex={vertex} />
