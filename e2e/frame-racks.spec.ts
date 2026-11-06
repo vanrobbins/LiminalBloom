@@ -2,7 +2,7 @@
 // as one display with hung product only, and find a product on its rail.
 
 import { expect, hydrated, sizeOf, test } from "./fixtures";
-import { seedFrameRun, seedLayout } from "./map-store";
+import { seedFrameRun, seedLayout, seedLoneRack } from "./map-store";
 import { seedCatalog } from "./product-store";
 
 type Page = import("@playwright/test").Page;
@@ -63,6 +63,60 @@ test("a run is one planogram: both rails on one grid, hung only", async ({ page 
   await page.getByRole("button", { name: "Edit numbers" }).click();
   await expect(page.getByRole("radio", { name: "Folded" })).toBeDisabled();
   await expect(page.getByText("Frame racks hold hung product only, on their one rail.")).toBeVisible();
+});
+
+const rackBox = async (page: Page, name: string) => (await page.locator(`[data-fixture-name="${name}"]`).boundingBox())!;
+
+test("dragging a rack near a run's end shows the join, and only Link links it", async ({ page }) => {
+  test.skip(sizeOf(test.info()) !== "desktop", "The mouse drag is the desktop form; touch shares the same gesture code.");
+  await seedFrameRun();
+  await seedLoneRack("Frame B", 420, 260);
+  await page.goto("/layout/edit");
+  await hydrated(page);
+
+  const box = await rackBox(page, "Frame B");
+  const inch = box.width / 48;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 16 * inch, y, { steps: 10 });
+  await expect(page.locator("[data-join-outline]")).toHaveCount(1);
+  await page.mouse.up();
+
+  await expect(page.locator("[data-run-outline]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Link", exact: true }).click();
+  await expect(page.locator("[data-join-outline]")).toHaveCount(0);
+
+  // Selecting any rack outlines the whole run, now three racks.
+  const a1 = await rackBox(page, "Frame A1");
+  await page.mouse.click(a1.x + a1.width / 2, a1.y + a1.height / 2);
+  await expect(page.locator("[data-run-outline]")).toHaveCount(3);
+  await expect(page.getByText("Run of 3 racks").filter({ visible: true })).toBeVisible();
+  await expect(page.getByText("Saved", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+});
+
+test("a long-press starts Select more, and two racks link from a phone", async ({ page }) => {
+  test.skip(sizeOf(test.info()) !== "phone", "Long-press is the touch form; shift-click is the desktop one.");
+  await seedLoneRack("Frame B", 200, 200);
+  await seedLoneRack("Frame C", 200, 280);
+  await page.goto("/layout/edit");
+  await hydrated(page);
+
+  const first = await rackBox(page, "Frame B");
+  const second = await rackBox(page, "Frame C");
+  const touch = await page.context().newCDPSession(page);
+  const point = { x: first.x + first.width / 2, y: first.y + first.height / 2 };
+  await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+  await expect(page.getByText("Select more · 1 selected")).toBeVisible();
+  await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+  await page.touchscreen.tap(second.x + second.width / 2, second.y + second.height / 2);
+  await expect(page.getByText("Select more · 2 selected")).toBeVisible();
+  await page.getByRole("region", { name: "Selected" }).getByRole("button", { name: "Expand" }).click();
+  await page.getByRole("button", { name: "Link into run" }).filter({ visible: true }).click();
+  await expect(page.getByText(/^Select more/)).toHaveCount(0);
+  await expect(page.locator("[data-run-outline]")).toHaveCount(2);
 });
 
 test("opening a rack's own id lands on its run's planogram", async ({ page }) => {

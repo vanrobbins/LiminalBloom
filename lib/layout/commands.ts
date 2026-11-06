@@ -3,7 +3,7 @@
 // exactly. Commands never validate: the session and the server decide
 // whether to keep what they produce.
 
-import { addRackToRun, linkRun, removeFromRun, setRunStart } from "./commands-runs";
+import { addRackToRun, joinRun, linkRun, removeFromRun, setRunStart } from "./commands-runs";
 import { attachLowerTable, duplicate } from "./commands-sets";
 import type { NewId } from "./factories";
 import { autoGrid, isAutoGrid } from "./fixtures";
@@ -39,6 +39,7 @@ export type Command =
   | { type: "addRackToRun"; rackId: string; side: "left" | "right" }
   | { type: "removeFromRun"; rackId: string }
   | { type: "linkRun"; ids: string[]; anchorId?: string }
+  | { type: "joinRun"; rackId: string; targetId: string; side: "left" | "right" }
   | { type: "setRunStart"; runId: string; startIndex: number }
   | { type: "duplicate"; ids: string[]; offset: Point }
   | { type: "delete"; ids: string[] };
@@ -168,6 +169,8 @@ function applyRaw(layout: Layout, command: Command, newId: NewId): Layout {
     case "removeFromRun":
       return removeFromRun(layout, command.rackId);
 
+    case "joinRun":
+      return joinRun(layout, command.rackId, command.targetId, command.side, newId);
     case "linkRun":
       return linkRun(layout, command.ids, newId, command.anchorId);
 

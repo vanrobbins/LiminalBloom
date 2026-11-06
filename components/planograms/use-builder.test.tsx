@@ -43,6 +43,23 @@ describe("useBuilder", () => {
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: fields(pant, 0) });
   });
 
+  it("says Switched to hung with the Undo, and Undo puts folded product back (frame racks spec §3)", async () => {
+    const folded = { ...view("a", 0, 4), presentation: "folded" as const, faceId: "shelf", colSpan: 4, rowSpan: 2 };
+    const hung = { ...folded, presentation: "hung" as const, faceId: "rail", col: 2, colSpan: 2, rowSpan: 1, version: 5 };
+    const save = vi.fn().mockResolvedValue({ saved: true, draft: state(hung), notice: "Switched to hung" });
+    const { result, rerender } = setup(state(folded), save);
+    await act(() => result.current.commit(folded, { ...fields(folded, 2), faceId: "rail" }, "Moved"));
+
+    expect(toasts.toast).toHaveBeenCalledTimes(1);
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Switched to hung", action: expect.objectContaining({ label: "Undo" }) }));
+    expect(result.current.announcement).toBe("Switched to hung to here");
+
+    rerender({ d: state(hung) });
+    await act(() => result.current.undo());
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: fields(folded, 0) });
+    expect(toasts.toast).toHaveBeenCalledTimes(1);
+  });
+
   it("drops a placement's undo steps when another device changed it (Review Focus 2)", async () => {
     const pant = view("a", 0);
     const save = vi.fn().mockResolvedValueOnce({ saved: true, draft: state() }).mockResolvedValueOnce({ saved: false, message: "Changed on another device" });

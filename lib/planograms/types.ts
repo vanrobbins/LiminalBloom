@@ -38,6 +38,8 @@ export type PlanogramFace = {
   /** The lower table's side of its set; null for the planogram fixture's own faces. */
   setSide: Side | null;
   label: string;
+  /** A frame rack that turns a corner from the rack before it. */
+  corner?: boolean;
   columns: number;
   rows: number;
 };

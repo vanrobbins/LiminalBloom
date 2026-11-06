@@ -145,3 +145,77 @@ describe("bending a wall bay on the map", () => {
     expect(after.width).toBeGreaterThan(120);
   });
 });
+
+describe("dragging a rack near an open end", () => {
+  const rack = (id: string, x: number) => fixture({ id, type: "frame_rack", name: id, x, y: 120, width: 48, depth: 24, rotation: 0 });
+  const racks = () => editing({ ...store(), fixtures: [rack("a", 100), rack("b", 300)] });
+  const target: HitTarget = { kind: "fixture", id: "b" };
+
+  it("shows the join during the drag and offers it on the drop, without linking", () => {
+    const reduce = reducer();
+    const [start, move, end] = drag(target, [300, 120], [156, 120]);
+    const dragging = gesture(reduce, racks(), start, move);
+    expect(dragging.preview?.join).toMatchObject({ rackId: "b", targetId: "a", side: "right" });
+    const dropped = gesture(reduce, dragging, end);
+    expect(dropped.linkOffer).toEqual({ ids: ["b"] });
+    expect(dropped.layout.fixtures.every((f) => f.runId === null)).toBe(true);
+    expect(dropped.layout.frameRuns).toEqual([]);
+  });
+
+  it("offers nothing when dropped far away", () => {
+    const s = gesture(reducer(), racks(), ...drag(target, [300, 120], [250, 120]));
+    expect(s.linkOffer).toBeNull();
+  });
+
+  it("offers nothing when the drop is refused", () => {
+    // Within reach of a's end, but overlapping it.
+    const s = gesture(reducer(), { ...racks(), snapping: false }, ...drag(target, [300, 120], [140, 120]));
+    expect(s.layout.fixtures[1].x).toBe(300);
+    expect(s.linkOffer).toBeNull();
+  });
+
+  it("drops the offer on the next tap or drag", () => {
+    const reduce = reducer();
+    const offered = gesture(reduce, racks(), ...drag(target, [300, 120], [156, 120]));
+    expect(gesture(reduce, offered, tap({ kind: "empty" })).linkOffer).toBeNull();
+    expect(gesture(reduce, offered, { type: "dragStart", target, origin: at(156, 120) }).linkOffer).toBeNull();
+  });
+});
+
+describe("Select more", () => {
+  const two = () => editing({ ...store(), fixtures: [fixture({ id: "a" }), fixture({ id: "b", x: 300 })] });
+  const a: HitTarget = { kind: "fixture", id: "a" };
+  const b: HitTarget = { kind: "fixture", id: "b" };
+  const longPress = (target: HitTarget): GestureEffect<HitTarget> => ({ type: "longPress", target, point: at(0, 0) });
+
+  it("starts on a long-press, and taps then add and remove", () => {
+    const reduce = reducer();
+    const s = gesture(reduce, two(), longPress(a), tap(b));
+    expect(s.selection).toEqual(["a", "b"]);
+    expect(s.selectingMore).toBe(true);
+    expect(gesture(reduce, s, tap(a)).selection).toEqual(["b"]);
+  });
+
+  it("does not start on a long-press of empty floor", () => {
+    expect(gesture(reducer(), two(), longPress({ kind: "empty" })).selectingMore).toBe(false);
+  });
+
+  it("ends on Done, and a tap selects one thing again", () => {
+    const reduce = reducer();
+    const s = reduce(gesture(reduce, two(), longPress(a)), { type: "selectMore", on: false });
+    expect(gesture(reduce, s, tap(b)).selection).toEqual(["b"]);
+  });
+
+  it("ends when the selection empties, so the next tap picks one thing", () => {
+    const reduce = reducer();
+    const s = gesture(reduce, two(), longPress(a), tap(a), tap(b), tap(a));
+    expect(s.selection).toEqual(["a"]);
+    expect(s.selectingMore).toBe(false);
+  });
+
+  it("ends on a tap of empty floor", () => {
+    const s = gesture(reducer(), two(), longPress(a), tap({ kind: "empty" }));
+    expect(s.selection).toEqual([]);
+    expect(s.selectingMore).toBe(false);
+  });
+});

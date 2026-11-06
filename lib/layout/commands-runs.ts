@@ -148,3 +148,44 @@ export function linkRun(layout: Layout, ids: readonly string[], newId: NewId, an
 export function setRunStart(layout: Layout, runId: string, startIndex: number): Layout {
   return { ...layout, frameRuns: layout.frameRuns.map((r) => (r.id === runId ? { ...r, startIndex: Math.round(startIndex) } : r)) };
 }
+
+/** Every rack of the runs a selection touches: what the map outlines (spec §4.3). */
+export function selectedRunRacks(layout: Layout, selection: readonly string[]): Fixture[] {
+  const runs = new Set(layout.fixtures.filter((f) => f.runId !== null && selection.includes(f.id)).map((f) => f.runId));
+  return layout.fixtures.filter((f) => f.runId !== null && runs.has(f.runId));
+}
+
+/**
+ * Joins a rack's chain onto `targetId`'s open end (the Link button, spec §4.3).
+ * The rack's chain moves to meet it; the target's stays put. The left chain's
+ * anchor leads the merged run, and normalize() drops the run left empty.
+ */
+export function joinRun(layout: Layout, rackId: string, targetId: string, side: "left" | "right", newId: NewId): Layout {
+  const rack = layout.fixtures.find((f) => f.id === rackId);
+  const target = layout.fixtures.find((f) => f.id === targetId);
+  if (!rack || !target || rack.type !== "frame_rack" || !openEnds(layout, targetId)[side]) return layout;
+  if (rack.runId !== null && rack.runId === target.runId) return layout;
+  const chainOf = (f: Fixture) => (f.runId ? runRacks(layout, f.runId) : [f]);
+  const moving = chainOf(rack);
+  const staying = chainOf(target);
+  const [first, second] = side === "right" ? [staying, moving] : [moving, staying];
+  if (first.length + second.length > MAX_RUN_RACKS) return layout;
+
+  const from = rackEnds(asRack(rack))[side === "right" ? "left" : "right"];
+  const to = rackEnds(asRack(target))[side];
+  const dx = Math.round(to.x - from.x);
+  const dy = Math.round(to.y - from.y);
+  const movingIds = new Set(moving.map((f) => f.id));
+  const index = new Map([...first, ...second].map((f, i) => [f.id, i]));
+  const runId = first[0].runId ?? second[0].runId ?? newId();
+  const known = layout.frameRuns.some((r) => r.id === runId);
+  return {
+    ...layout,
+    frameRuns: known ? layout.frameRuns : [...layout.frameRuns, { id: runId, startIndex: 0, version: 0 }],
+    fixtures: layout.fixtures.map((f) => {
+      if (!index.has(f.id)) return f;
+      const placed = movingIds.has(f.id) ? { ...f, x: f.x + dx, y: f.y + dy } : f;
+      return { ...placed, runId, runIndex: index.get(f.id)! };
+    }),
+  };
+}

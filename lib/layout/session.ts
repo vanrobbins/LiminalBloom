@@ -17,6 +17,8 @@ export type SessionAction =
   | { type: "gesture"; effect: GestureEffect<HitTarget> }
   | { type: "command"; command: Command }
   | { type: "select"; ids: string[] }
+  | { type: "selectMore"; on: boolean }
+  | { type: "dropLinkOffer" }
   | { type: "undo" }
   | { type: "redo" }
   | { type: "rebase"; base: Layout; server: Layout; skip: readonly string[]; sent?: readonly string[]; notice?: string }
@@ -34,7 +36,11 @@ export function createReducer(newId: NewId) {
       case "command":
         return commit(session, action.command, newId);
       case "select":
-        return { ...session, selection: action.ids.filter((id) => exists(session.layout, id)), vertex: null };
+        return { ...session, selection: action.ids.filter((id) => exists(session.layout, id)), vertex: null, selectingMore: false };
+      case "selectMore":
+        return { ...session, selectingMore: action.on };
+      case "dropLinkOffer":
+        return { ...session, linkOffer: null };
       case "undo":
       case "redo":
         return onHistory(session, action.type);

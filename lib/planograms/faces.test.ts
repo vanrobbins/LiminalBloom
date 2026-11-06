@@ -83,6 +83,11 @@ describe("frame rack runs", () => {
     ]);
   });
 
+  it("marks the racks that turn a corner, and only those", () => {
+    const straight: Layout = { ...square, fixtures: [frame("a", 0, 0, 0, 0), frame("b", 1, 48, 0, 0), frame("c", 2, 72, 24, 90)], faces: square.faces.slice(0, 3) };
+    expect(planogramScope(straight, "a")!.faces.map((f) => f.corner ?? false)).toEqual([false, false, true]);
+  });
+
   it("starts reading where a closed run says", () => {
     const later = { ...square, frameRuns: [{ id: "run", startIndex: 2, version: 1 }] };
     expect(planogramScope(later, "a")!.faces.map((f) => f.faceId)).toEqual(["c-rail", "d-rail", "a-rail", "b-rail"]);
