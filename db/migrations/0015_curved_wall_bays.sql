@@ -1,0 +1,2 @@
+ALTER TABLE "fixtures" ADD COLUMN "curve" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "fixtures" ADD CONSTRAINT "fixtures_curve_range" CHECK ("fixtures"."curve" between -190 and 190);

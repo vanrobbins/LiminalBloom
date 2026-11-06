@@ -17,6 +17,13 @@ export const MIN_ZONE_AREA = 576;
 export const MIN_FIXTURE_SIZE = 12;
 export const MAX_FIXTURE_SIZE = 600;
 
+/** A curve's limit at the longest bay: a half circle of 50 ft (curved wall bays spec §2). */
+export const MAX_CURVE = 190;
+/** The inner edge of a curved bay keeps this radius, so the band never folds over. */
+export const MIN_CURVE_RADIUS = 6;
+/** Dragged this close to straight, a bay goes straight. */
+export const CURVE_SNAP = 3;
+
 export const MIN_ENTRANCE_WIDTH = 36;
 export const MAX_ENTRANCE_WIDTH = 240;
 export const DEFAULT_ENTRANCE_WIDTH = 72;

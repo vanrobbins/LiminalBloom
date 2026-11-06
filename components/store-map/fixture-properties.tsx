@@ -11,6 +11,7 @@ import { MAX_FIXTURE_SIZE, MIN_FIXTURE_SIZE } from "@/lib/layout/limits";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Fixture, Layout } from "@/lib/layout/types";
 
+import { CurveField } from "./curve-field";
 import { FaceSettings } from "./face-settings";
 import { LowerTables } from "./lower-tables";
 import { NameField } from "./name-field";
@@ -26,7 +27,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
   const upperId = layout.tableSets.find((s) => s.id === fixture.tableSetId)?.upperFixtureId;
   const upper = layout.fixtures.find((f) => f.id === upperId);
   const faces = layout.faces.filter((face) => face.fixtureId === fixture.id);
-  const update = (changes: Partial<Pick<Fixture, "name" | "width" | "depth" | "rotation">>) =>
+  const update = (changes: Partial<Pick<Fixture, "name" | "width" | "depth" | "rotation" | "curve">>) =>
     dispatch({ type: "command", command: { type: "updateFixture", id: fixture.id, changes } });
 
   return (
@@ -43,7 +44,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
       ) : null}
       <FeetInchesInput
         key={`w:${fixture.id}:${fixture.width}`}
-        label={isLower ? "Length" : "Width"}
+        label={isLower ? "Length" : fixture.curve !== 0 ? "Width along the curve" : "Width"}
         value={fixture.width}
         min={MIN_FIXTURE_SIZE}
         max={MAX_FIXTURE_SIZE}
@@ -57,6 +58,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
         max={MAX_FIXTURE_SIZE}
         onCommit={(depth) => update({ depth })}
       />
+      {rule.curves ? <CurveField fixture={fixture} onChange={(curve) => update({ curve })} /> : null}
       {!isLower ? (
         <div className="flex items-end gap-2">
           <div className="flex-1">

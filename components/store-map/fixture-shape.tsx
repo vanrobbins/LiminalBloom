@@ -1,6 +1,7 @@
 // A fixture in its own frame: translated and rotated as one group, so its
 // rectangle, face markers and label all turn together (spec §6).
 
+import { bandPath, edgePath, middleOffset } from "@/lib/layout/curves";
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import type { Face, Fixture } from "@/lib/layout/types";
 
@@ -9,6 +10,9 @@ type FixtureShapeProps = { fixture: Fixture; faces: Face[]; scale: number; muted
 /** A short bar just inside each displaying side, so you can see which way it faces. */
 function faceMarker(f: Fixture, side: Face["side"]) {
   const inset = Math.min(3, f.depth / 6, f.width / 6);
+  if (f.curve !== 0 && side === "front") {
+    return <path key={side} d={edgePath(f, f.depth / 2 - inset, inset)} fill="none" stroke="var(--ink)" strokeWidth={3} vectorEffect="non-scaling-stroke" />;
+  }
   const w = f.width / 2 - inset;
   const d = f.depth / 2 - inset;
   const ends = {
@@ -54,7 +58,9 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
       opacity={muted ? 0.35 : 1}
       transform={`translate(${f.x} ${f.y}) rotate(${f.rotation})`}
     >
-      {rule.round ? (
+      {f.curve !== 0 ? (
+        <path data-curved d={bandPath(f)} {...common} />
+      ) : rule.round ? (
         <circle r={Math.min(f.width, f.depth) / 2} {...common} />
       ) : (
         <rect x={-f.width / 2} y={-f.depth / 2} width={f.width} height={f.depth} rx={2} {...common} />
@@ -67,8 +73,8 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
           textAnchor="middle"
           dominantBaseline="middle"
           fill="var(--ink)"
-          // Counter-rotate so the name always reads upright.
-          transform={`rotate(${-f.rotation})`}
+          // On the bay's middle, counter-rotated so the name always reads upright.
+          transform={`translate(0 ${middleOffset(f)}) rotate(${-f.rotation})`}
           className="pointer-events-none select-none"
         >
           {f.name}

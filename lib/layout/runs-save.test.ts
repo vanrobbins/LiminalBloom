@@ -31,7 +31,7 @@ afterAll(async () => {
 });
 
 const rack = (x: number, over: Partial<Fixture> = {}): Fixture => ({
-  id: randomUUID(), zoneId: null, type: "frame_rack", name: `Frame rack ${x}`, x, y: 120, width: 48, depth: 24, rotation: 0,
+  id: randomUUID(), zoneId: null, type: "frame_rack", name: `Frame rack ${x}`, x, y: 120, width: 48, depth: 24, rotation: 0, curve: 0,
   tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0, ...over,
 });
 const base: Layout = { ...EMPTY_LAYOUT, outline: { points: rectanglePoints(480, 360), version: 0 } };

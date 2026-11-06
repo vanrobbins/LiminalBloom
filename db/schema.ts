@@ -307,6 +307,8 @@ export const fixtures = pgTable(
     width: integer("width").notNull(),
     depth: integer("depth").notNull(),
     rotation: integer("rotation").notNull().default(0),
+    // Wall bays only: inches from the line between the ends to the middle, + toward the front.
+    curve: integer("curve").notNull().default(0),
     // Lower tables only. Deleting the set deletes them.
     tableSetId: uuid("table_set_id").references((): AnyPgColumn => tableSets.id, {
       onDelete: "cascade",
@@ -339,6 +341,7 @@ export const fixtures = pgTable(
     }).onDelete("set null"),
     index("fixtures_store_idx").on(t.storeId),
     check("fixtures_rotation_range", sql`${t.rotation} between 0 and 359`),
+    check("fixtures_curve_range", sql`${t.curve} between -190 and 190`),
     check("fixtures_size_range", sql`${t.width} between 12 and 600 and ${t.depth} between 12 and 600`),
     // Composite FK: a fixture can only reference a zone in its own store.
     foreignKey({

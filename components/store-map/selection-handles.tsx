@@ -24,6 +24,9 @@ export function SelectionHandles({ handles, camera, vertex }: SelectionHandlesPr
         if (ref.kind === "rotate") {
           return <circle key={i} data-handle="rotate" cx={p.x} cy={p.y} r={6} fill="var(--raised)" stroke="var(--ink)" strokeWidth={1.5} />;
         }
+        if (ref.kind === "curve") {
+          return <rect key={i} data-handle="curve" x={-5} y={-5} width={10} height={10} transform={`translate(${p.x} ${p.y}) rotate(45)`} fill="var(--raised)" stroke="var(--brand-strong)" strokeWidth={2} />;
+        }
         return (
           <rect
             key={i}

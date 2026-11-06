@@ -3,8 +3,9 @@
 
 import { fit, viewCentre } from "./camera";
 import { pointsOf } from "./commands";
+import { fixturesOverlap, footprint } from "./curves";
 import { findFreeSpot, newEntrance, newFixture, newZone, rectanglePoints, type NewId } from "./factories";
-import { corners, mayOverlap, rectsOverlap } from "./fixtures";
+import { mayOverlap } from "./fixtures";
 import { classify, polygonContains, polygonsOverlap } from "./geometry";
 import { OVERVIEW } from "./hit-test";
 import { EMPTY_DRAWING, placeCorner, undoCorner } from "./outline-draw";
@@ -133,14 +134,14 @@ function add(session: Session, kind: AddKind, at: Point | undefined, newId: NewI
   const { fixture, faces } = newFixture(layout, kind, id, centre, newId);
   const fits = (p: Point) => {
     const placed = { ...fixture, x: p.x, y: p.y };
-    const shape = corners(placed);
+    const shape = footprint(placed);
     // At the overview a zone's fixtures can't be picked up, so a new one there stays on the store floor.
     const onFloor = !overview || layout.zones.every((z) => classify(p, z.points) === "outside");
     return (
       onFloor &&
       polygonContains(region, shape) &&
       polygonContains(outline, shape) &&
-      !layout.fixtures.some((other) => rectsOverlap(other, placed) && !mayOverlap(other, placed, layout.tableSets))
+      !layout.fixtures.some((other) => fixturesOverlap(other, placed) && !mayOverlap(other, placed, layout.tableSets))
     );
   };
   const spot = findFreeSpot(centre, radius, fits);

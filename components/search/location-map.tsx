@@ -8,7 +8,8 @@ import { useCallback, useState } from "react";
 import { StoreMap } from "@/components/store-map/store-map";
 import { useElementSize } from "@/components/store-map/use-element-size";
 import { fit, worldToScreen, type Viewport } from "@/lib/layout/camera";
-import { corners, FIXTURE_RULES } from "@/lib/layout/fixtures";
+import { bandPath, footprint } from "@/lib/layout/curves";
+import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import { bounds, interiorPoint, type Bounds } from "@/lib/layout/geometry";
 import { OVERVIEW } from "@/lib/layout/hit-test";
 import type { Fixture, Layout, Point } from "@/lib/layout/types";
@@ -48,7 +49,7 @@ function FixtureMap({ layout, fixture }: { layout: Layout; fixture: Fixture }) {
   const onSize = useCallback((v: Viewport) => setViewport(v), []);
   const ref = useElementSize<HTMLDivElement>(onSize);
 
-  const b = bounds(corners(fixture));
+  const b = bounds(footprint(fixture));
   const area = { minX: b.minX - CONTEXT, minY: b.minY - CONTEXT, maxX: b.maxX + CONTEXT, maxY: b.maxY + CONTEXT };
   const camera = viewport.width > 0 ? fit(area, viewport, 8) : { x: 0, y: 0, scale: 1 };
 
@@ -101,7 +102,9 @@ function FixtureMap({ layout, fixture }: { layout: Layout; fixture: Fixture }) {
               {/* §5.5: gold for the current selection, filled so it shows at a glance on a phone. */}
               <g transform={`scale(${camera.scale}) translate(${-camera.x} ${-camera.y})`}>
                 <g transform={`translate(${f.x} ${f.y}) rotate(${f.rotation})`}>
-                  {FIXTURE_RULES[f.type].round ? (
+                  {f.curve !== 0 ? (
+                    <path data-highlight d={bandPath(f)} fill="var(--brand)" fillOpacity={0.45} stroke="var(--brand-strong)" strokeWidth={3} vectorEffect="non-scaling-stroke" />
+                  ) : FIXTURE_RULES[f.type].round ? (
                     <circle data-highlight r={Math.min(f.width, f.depth) / 2} fill="var(--brand)" fillOpacity={0.45} stroke="var(--brand-strong)" strokeWidth={3} vectorEffect="non-scaling-stroke" />
                   ) : (
                     <rect data-highlight x={-f.width / 2} y={-f.depth / 2} width={f.width} height={f.depth} rx={2} fill="var(--brand)" fillOpacity={0.45} stroke="var(--brand-strong)" strokeWidth={3} vectorEffect="non-scaling-stroke" />

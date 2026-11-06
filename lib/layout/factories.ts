@@ -90,6 +90,7 @@ export function newFixture(
     width: rule.width,
     depth: rule.depth,
     rotation: 0,
+    curve: 0,
     tableSetId: null,
     setSide: null,
     runId: null,

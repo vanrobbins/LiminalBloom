@@ -15,6 +15,8 @@ import type { Entrance, Face, FaceSide, Fixture, Layout, Point, Side, Zone } fro
 
 export type VertexOwner = { kind: "outline" } | { kind: "zone"; id: string };
 
+type FixtureChanges = Partial<Pick<Fixture, "name" | "x" | "y" | "width" | "depth" | "rotation" | "curve">>;
+
 export type Command =
   | { type: "setOutline"; points: Point[] }
   | { type: "moveVertex"; owner: VertexOwner; index: number; to: Point }
@@ -28,7 +30,7 @@ export type Command =
   | {
       type: "updateFixture";
       id: string;
-      changes: Partial<Pick<Fixture, "name" | "x" | "y" | "width" | "depth" | "rotation">>;
+      changes: FixtureChanges;
     }
   | { type: "updateEntrance"; id: string; changes: Partial<Pick<Entrance, "x" | "y" | "width">> }
   | { type: "setFace"; fixtureId: string; side: FaceSide; on: boolean }
@@ -189,11 +191,12 @@ function applyRaw(layout: Layout, command: Command, newId: NewId): Layout {
   }
 }
 
-function updateFixture(f: Fixture, changes: Partial<Pick<Fixture, "name" | "x" | "y" | "width" | "depth" | "rotation">>): Fixture {
+function updateFixture(f: Fixture, changes: FixtureChanges): Fixture {
   const isLower = f.tableSetId !== null;
   const next = { ...f };
   if (changes.width !== undefined) next.width = Math.round(changes.width);
   if (changes.depth !== undefined) next.depth = Math.round(changes.depth);
+  if (changes.curve !== undefined) next.curve = Math.round(changes.curve);
   // A lower table's place, turn and name come from its upper (normalize).
   if (!isLower) {
     if (changes.x !== undefined) next.x = Math.round(changes.x);

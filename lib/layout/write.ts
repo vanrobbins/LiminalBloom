@@ -37,6 +37,7 @@ const fixtureRow = (f: Fixture) => ({
   width: f.width,
   depth: f.depth,
   rotation: f.rotation,
+  curve: f.curve,
   tableSetId: f.tableSetId,
   setSide: f.setSide,
   runId: f.runId,

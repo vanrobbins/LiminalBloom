@@ -104,6 +104,7 @@ describe("targetsFor", () => {
           width: 48,
           depth: 48,
           rotation: 0, // square-on
+          curve: 0,
           tableSetId: null,
           setSide: null, runId: null, runIndex: null,
           version: 0,
@@ -118,6 +119,7 @@ describe("targetsFor", () => {
           width: 48,
           depth: 48,
           rotation: 45, // slanted
+          curve: 0,
           tableSetId: null,
           setSide: null, runId: null, runIndex: null,
           version: 0,

@@ -104,7 +104,7 @@ describe("applyLayoutChanges", () => {
     const firstFace = randomUUID();
     const layout: Layout = {
       ...withOutline,
-      fixtures: [{ id: rackId, zoneId: null, type: "rack", name: "Rack 1", x: 200, y: 200, width: 48, depth: 24, rotation: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0 }],
+      fixtures: [{ id: rackId, zoneId: null, type: "rack", name: "Rack 1", x: 200, y: 200, width: 48, depth: 24, rotation: 0, curve: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0 }],
       faces: [{ id: firstFace, fixtureId: rackId, side: "front", columns: 4, rows: 3, version: 0 }],
     };
     await applyLayoutChanges(store, diff(EMPTY_LAYOUT, layout));
@@ -112,6 +112,22 @@ describe("applyLayoutChanges", () => {
     const swapped = { ...saved, faces: [{ id: randomUUID(), fixtureId: rackId, side: "front" as const, columns: 6, rows: 2, version: 0 }] };
     expect((await applyLayoutChanges(store, diff(saved, swapped))).status).toBe("saved");
     expect((await loadLayout(store)).faces).toMatchObject([{ columns: 6, rows: 2 }]);
+  });
+
+  it("saves a curved wall bay, loads it curved, and refuses one past its limit", async () => {
+    const store = await makeStore("save-curve");
+    const bayId = randomUUID();
+    const layout: Layout = {
+      ...withOutline,
+      fixtures: [{ id: bayId, zoneId: null, type: "wall_bay", name: "Curved wall", x: 200, y: 200, width: 120, depth: 24, rotation: 0, curve: -30, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0 }],
+      faces: [{ id: randomUUID(), fixtureId: bayId, side: "front", columns: 20, rows: 5, version: 0 }],
+    };
+    expect((await applyLayoutChanges(store, diff(EMPTY_LAYOUT, layout))).status).toBe("saved");
+    const saved = await loadLayout(store);
+    expect(saved.fixtures[0].curve).toBe(-30);
+    const tooFar = { ...saved, fixtures: [{ ...saved.fixtures[0], curve: -60 }] };
+    expect((await applyLayoutChanges(store, diff(saved, tooFar))).status).not.toBe("saved");
+    expect((await loadLayout(store)).fixtures[0].curve).toBe(-30);
   });
 });
 
@@ -132,7 +148,7 @@ describe("cross-store references", () => {
     const a = await makeStore("xref-a");
     const b = await makeStore("xref-b");
     const bZone = newZone();
-    const bUpper: Fixture = { id: randomUUID(), zoneId: bZone.id, type: "table", name: "Table B", x: 60, y: 60, width: 48, depth: 24, rotation: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0 };
+    const bUpper: Fixture = { id: randomUUID(), zoneId: bZone.id, type: "table", name: "Table B", x: 60, y: 60, width: 48, depth: 24, rotation: 0, curve: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0 };
     const bSet = { id: randomUUID(), upperFixtureId: bUpper.id, version: 0 };
     const bLower: Fixture = { ...bUpper, id: randomUUID(), name: "Table B lower", y: 100, tableSetId: bSet.id, setSide: "front" };
     const bRack: Fixture = { ...bUpper, id: randomUUID(), type: "rack", name: "Rack B", x: 300, y: 250, zoneId: null };
@@ -227,7 +243,7 @@ describe("cross-store update", () => {
     const b = await makeStore("xupd-b");
     const bZone = newZone();
     await applyLayoutChanges(b, diff(EMPTY_LAYOUT, { ...withOutline, zones: [bZone] }));
-    const rack: Fixture = { id: randomUUID(), zoneId: null, type: "prop", name: "Plant", x: 400, y: 300, width: 24, depth: 24, rotation: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0 };
+    const rack: Fixture = { id: randomUUID(), zoneId: null, type: "prop", name: "Plant", x: 400, y: 300, width: 24, depth: 24, rotation: 0, curve: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0 };
     await applyLayoutChanges(a, diff(EMPTY_LAYOUT, { ...withOutline, fixtures: [rack] }));
     const saved = await loadLayout(a);
     await applyLayoutChanges(a, diff(saved, { ...saved, fixtures: [{ ...saved.fixtures[0], zoneId: bZone.id }] }));

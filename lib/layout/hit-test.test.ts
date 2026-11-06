@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { OVERVIEW, handlesFor, hitTest } from "./hit-test";
 import { entrance, fixture, store, zone } from "./test-layouts";
-import { OUTLINE_ID } from "./types";
+import { OUTLINE_ID, type Fixture } from "./types";
 
 const camera = { x: 0, y: 0, scale: 1 };
 const layout = {
@@ -58,10 +58,10 @@ describe("handlesFor", () => {
     expect(handles.filter((h) => h.ref.kind === "midpoint")).toHaveLength(4);
   });
 
-  it("gives a wall bay only width handles and a rotate handle", () => {
+  it("gives a wall bay width handles, a rotate handle and a curve handle", () => {
     const bay = { ...layout, fixtures: [fixture({ id: "b", type: "wall_bay", width: 48, depth: 24 })] };
     const kinds = handlesFor(bay, ["b"], camera).map((h) => (h.ref.kind === "resize" ? h.ref.side : h.ref.kind));
-    expect(kinds.sort()).toEqual(["left", "right", "rotate"]);
+    expect(kinds.sort()).toEqual(["curve", "left", "right", "rotate"]);
   });
 
   it("moves handles outside a fixture that is small on screen", () => {
@@ -75,5 +75,44 @@ describe("handlesFor", () => {
     expect(handlesFor(layout, ["zone-a", "loose"], camera)).toEqual([]);
     expect(handlesFor(layout, [], camera)).toEqual([]);
     expect(handlesFor(layout, [OUTLINE_ID], camera)).toHaveLength(8);
+  });
+});
+
+describe("curved wall bays", () => {
+  // Zoomed in enough that the handles sit on the shape.
+  const zoomed = { x: 0, y: 0, scale: 2 };
+  const bay = (over: Partial<Fixture> = {}) =>
+    fixture({ id: "bay", type: "wall_bay", x: 240, y: 180, width: 120, depth: 24, ...over });
+  const spots = (f: Fixture) => handlesFor({ ...store(), fixtures: [f] }, ["bay"], zoomed);
+  const at = (f: Fixture, kind: string, side?: string) =>
+    spots(f).find((h) => h.ref.kind === kind && (side === undefined || (h.ref.kind === "resize" && h.ref.side === side)))?.at;
+
+  it("gives every wall bay a curve handle on the front edge, and nothing else one", () => {
+    expect(at(bay(), "curve")).toEqual({ x: 240, y: 192 });
+    const table = fixture({ id: "bay", x: 240, y: 180 });
+    expect(at(table, "curve")).toBeUndefined();
+  });
+
+  it("keeps the handle on the middle of the curve", () => {
+    expect(at(bay({ curve: 30 }), "curve")?.y).toBeCloseTo(222);
+    expect(at(bay({ curve: -30 }), "curve")?.y).toBeCloseTo(162);
+  });
+
+  it("puts the end handles on the ends of the arc", () => {
+    const right = at(bay({ curve: 30 }), "resize", "right");
+    expect(right?.x).toBeLessThan(300);
+    expect(right?.y).toBeCloseTo(180);
+  });
+
+  it("keeps the rotate handle clear when the bay bends back", () => {
+    const straight = at(bay(), "rotate");
+    const bent = at(bay({ curve: -30 }), "rotate");
+    expect(bent?.y).toBeCloseTo((straight?.y ?? 0) - 30);
+  });
+
+  it("hits the band, not the pocket", () => {
+    const layout = { ...store(), fixtures: [bay({ curve: 30 })] };
+    expect(hitTest(layout, OVERVIEW, camera, { x: 240, y: 210 }, [], true)).toEqual({ kind: "fixture", id: "bay" });
+    expect(hitTest(layout, OVERVIEW, camera, { x: 240, y: 182 }, [], true)).toEqual({ kind: "empty" });
   });
 });

@@ -27,7 +27,7 @@ export function demoMap(newId: () => string): DemoMap {
     const f: Fixture = {
       id: newId(), zoneId: null, type, name, x, y,
       width: size?.width ?? rule.width, depth: size?.depth ?? rule.depth,
-      rotation: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0,
+      rotation: 0, curve: 0, tableSetId: null, setSide: null, runId: null, runIndex: null, version: 0,
     };
     fixtures.push(f);
     return f;
@@ -84,7 +84,7 @@ export function demoMap(newId: () => string): DemoMap {
     const pose = lowerTablePose(upper, side, DEFAULT_LOWER_DEPTH);
     const lower: Fixture = {
       id: newId(), zoneId: null, type: "table", name: lowerTableName(upper.name, side),
-      x: Math.round(pose.x), y: Math.round(pose.y), width, depth: DEFAULT_LOWER_DEPTH, rotation: pose.rotation,
+      x: Math.round(pose.x), y: Math.round(pose.y), width, depth: DEFAULT_LOWER_DEPTH, rotation: pose.rotation, curve: 0,
       tableSetId: setId, setSide: side, runId: null, runIndex: null, version: 0,
     };
     fixtures.push(lower);

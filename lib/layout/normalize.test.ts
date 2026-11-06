@@ -64,3 +64,11 @@ describe("normalize", () => {
     expect(normalize(once)).toBe(once);
   });
 });
+
+describe("a curved bay's zone", () => {
+  it("is read from the middle of the bay, which is on it, not the line between its ends", () => {
+    const bay = fixture({ type: "wall_bay", x: 300, y: 170, width: 120, depth: 12, curve: 30 });
+    const zones = [zone({ points: rectangle(0, 190, 480, 170) })];
+    expect(normalize({ ...store(), zones, fixtures: [bay] }).fixtures[0].zoneId).toBe("zone-a");
+  });
+});

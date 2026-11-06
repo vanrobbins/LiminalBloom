@@ -28,7 +28,7 @@ export async function loadLayout(storeId: string): Promise<Layout> {
     outline: outline ? { points: outline.outline, version: outline.version } : null,
     entrances: entranceRows.map(({ id, x, y, width, version }) => ({ id, x, y, width, version })),
     zones: zoneRows.map(({ id, name, type, color, points, version }) => ({ id, name, type, color, points, version })),
-    fixtures: fixtureRows.map(({ id, zoneId, type, name, x, y, width, depth, rotation, tableSetId, setSide, runId, runIndex, version }) => ({
+    fixtures: fixtureRows.map(({ id, zoneId, type, name, x, y, width, depth, rotation, curve, tableSetId, setSide, runId, runIndex, version }) => ({
       id,
       zoneId,
       type,
@@ -38,6 +38,7 @@ export async function loadLayout(storeId: string): Promise<Layout> {
       width,
       depth,
       rotation,
+      curve,
       tableSetId,
       setSide,
       // A run deleted under a rack nulls run_id only (migration 0013): drop the stale index too.

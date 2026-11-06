@@ -25,6 +25,7 @@ const fixture = (over: Partial<Fixture> = {}): Fixture => ({
   width: 72,
   depth: 36,
   rotation: 0,
+  curve: 0,
   tableSetId: null,
   setSide: null,
   runId: null,

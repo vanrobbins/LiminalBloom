@@ -28,7 +28,7 @@ export function FixturePanel({ layout, fixtureId, planograms, looks }: FixturePa
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-ink-muted">
-        {FIXTURE_RULES[fixture.type].label} · {formatLength(fixture.width)} × {formatLength(fixture.depth)} · {zone?.name ?? "Store floor"}
+        {FIXTURE_RULES[fixture.type].label} · {formatLength(fixture.width)} × {formatLength(fixture.depth)}{fixture.curve !== 0 ? " · curved" : ""} · {zone?.name ?? "Store floor"}
       </p>
       {owner && scope && scope.faces.length > 0 ? (
         <>

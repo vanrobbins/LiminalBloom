@@ -19,6 +19,8 @@ export type FixtureRule = {
   resize: "both" | "width" | "none";
   /** Drawn as a circle; still collides as its square. */
   round: boolean;
+  /** May bend along its length (curved wall bays spec §1). */
+  curves: boolean;
 };
 
 export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
@@ -30,6 +32,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     defaultFaces: [{ side: "top", columns: 12, rows: 3 }],
     resize: "both",
     round: false,
+    curves: false,
   },
   wall_bay: {
     label: "Wall bay",
@@ -39,6 +42,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     defaultFaces: [{ side: "front", columns: 8, rows: 5 }],
     resize: "width",
     round: false,
+    curves: true,
   },
   rack: {
     label: "Rack",
@@ -48,6 +52,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     defaultFaces: [{ side: "front", columns: 8, rows: 3 }],
     resize: "both",
     round: false,
+    curves: false,
   },
   mannequin: {
     label: "Mannequin",
@@ -57,6 +62,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     defaultFaces: [],
     resize: "none",
     round: true,
+    curves: false,
   },
   platform: {
     label: "Platform",
@@ -66,6 +72,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     defaultFaces: [],
     resize: "both",
     round: false,
+    curves: false,
   },
   prop: {
     label: "Prop",
@@ -75,6 +82,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     defaultFaces: [],
     resize: "both",
     round: false,
+    curves: false,
   },
   // One face, one rail, hung only (frame racks spec §2–3). Columns follow the width.
   frame_rack: {
@@ -85,6 +93,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
     defaultFaces: [{ side: "front", columns: 8, rows: 1 }],
     resize: "width",
     round: false,
+    curves: false,
   },
 };
 
@@ -175,7 +184,7 @@ export function outerSide(side: Side): "front" | "back" {
   return side === "front" || side === "left" ? "front" : "back";
 }
 
-function clampSize(n: number): number {
+export function clampSize(n: number): number {
   return Math.min(MAX_FIXTURE_SIZE, Math.max(MIN_FIXTURE_SIZE, Math.round(n)));
 }
 

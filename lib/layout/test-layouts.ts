@@ -43,6 +43,7 @@ export function fixture(over: Partial<Fixture> = {}): Fixture {
     setSide: null,
     runId: null,
     runIndex: null,
+    curve: 0,
     version: 1,
     ...over,
   };

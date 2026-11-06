@@ -5,6 +5,7 @@
 // Merch Mobile stored a zone's position and its shape separately, and the two
 // disagreed.
 
+import { middleOf } from "./curves";
 import { placeOnWall } from "./entrances";
 import { lowerTablePose } from "./fixtures";
 import { classify } from "./geometry";
@@ -24,7 +25,7 @@ function keep<T>(original: T[], next: T[]): T[] {
 }
 
 function zoneOf(f: Fixture, zones: Zone[]): string | null {
-  const centre = { x: f.x, y: f.y };
+  const centre = middleOf(f);
   return zones.find((z) => z.points.length >= 3 && classify(centre, z.points) !== "outside")?.id ?? null;
 }
 

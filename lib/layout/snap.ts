@@ -3,7 +3,7 @@
 // gone in total. Nothing is added to the previous frame's result, which is
 // what made Merch Mobile's zone snapping glitch and collide.
 
-import { corners } from "./fixtures";
+import { snapPoints } from "./curves";
 import { normalizeAngle } from "./frames";
 import { GRID_STEP, ROTATION_STEP, SNAP_PX } from "./limits";
 import type { Layout, Point } from "./types";
@@ -24,7 +24,7 @@ export function targetsFor(layout: Layout, exclude: ReadonlySet<string>): SnapTa
     if (!exclude.has(zone.id)) points.push(...zone.points);
   }
   for (const fixture of layout.fixtures) {
-    if (!exclude.has(fixture.id) && fixture.rotation % 90 === 0) points.push(...corners(fixture));
+    if (!exclude.has(fixture.id) && fixture.rotation % 90 === 0) points.push(...snapPoints(fixture));
   }
   return {
     xs: [...new Set(points.map((p) => p.x))],
