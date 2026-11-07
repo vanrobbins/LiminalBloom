@@ -41,9 +41,18 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const [openId, setOpenId] = useState<string | null>(null);
   const pendingFocus = useRef<string | null>(null);
+  const searchBox = useRef<HTMLInputElement>(null);
   const [announcement, setAnnouncement] = useState("");
   // Past the offset cap the server would refuse the next page.
   const canShowMore = results.length < total && results.length <= MAX_OFFSET;
+
+  // Straight to typing on a touch screen: the 10-second find starts here (§1.5).
+  // With a keyboard, the first Tab belongs to the skip link.
+  useEffect(() => {
+    if (initial.q === "" && window.matchMedia("(pointer: coarse)").matches) searchBox.current?.focus();
+    // Once, on opening: typing changes the query, not the initial one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // After Show more, focus goes to the first new card: now if it has rendered,
   // else as soon as it does.
@@ -90,8 +99,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
             hint="Name, style number, category or color."
             autoComplete="off"
             enterKeyHint="search"
-            // Straight to typing: the 10-second find starts here (§1.5).
-            autoFocus={initial.q === ""}
+            ref={searchBox}
           />
         </form>
         <SearchFilters input={input} categories={categories} colors={colors} onChange={update} />

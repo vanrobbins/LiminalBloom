@@ -21,9 +21,11 @@ describe("itemsFromSnapshot", () => {
 });
 
 describe("startFace", () => {
-  it("opens on the face holding the highlighted product: the shown version first, else the draft", () => {
+  it("opens on the face holding the highlighted product: the draft first, else the shown version", () => {
     expect(startFace(scope, shown, null, "pant")).toBe("back");
     expect(startFace(scope, [], draft, "tee")).toBe("back");
+    const moved: DraftState = { ...draft, placements: [{ ...draft.placements[0], productId: "pant", faceId: "front" }] };
+    expect(startFace(scope, shown, moved, "pant")).toBe("front");
   });
 
   it("falls back to the first face", () => {

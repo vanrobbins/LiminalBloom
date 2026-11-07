@@ -104,6 +104,15 @@ describe("PlanogramScreen", () => {
     expect(screen.queryByLabelText("From left (ft)")).toBeNull();
   });
 
+  it("closing Edit numbers clears the selection, so a phone gets Publish back", async () => {
+    const user = userEvent.setup();
+    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
+    await user.click(tile());
+    await user.click(screen.getByRole("button", { name: "Edit numbers" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("toolbar", { name: "Pant selected" })).not.toBeInTheDocument();
+  });
+
   it("Edit numbers opens the form in feet", async () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
