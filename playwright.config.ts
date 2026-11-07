@@ -20,11 +20,11 @@ const SIZES = [
 const THEMES = ["light", "dark"] as const;
 
 // Behaviour flows run in light at every size; dark runs the specs that check
-// colour. Products and shell keep their colour tests in theme.spec.ts. Planograms joined the light-only set once planogram-contrast.spec.ts
+// colour. Layout, products and shell keep their colour tests in theme.spec.ts. Planograms joined the light-only set once planogram-contrast.spec.ts
 // began checking its colours in both themes; builder.spec.ts is behaviour only
 // (drag, undo, touch) and joined it; cards.spec.ts checks layout only (columns, name
 // widths), no colors. Anchored to whole file names.
-const LIGHT_ONLY = /(?:^|[\\/])(products|shell|library|store-map|frame-racks|curved-bays|tooltips|sign-in|sign-out|planograms|builder|cards|store-time)\.spec\.ts$/;
+const LIGHT_ONLY = /(?:^|[\\/])(layout|products|shell|library|store-map|frame-racks|curved-bays|tooltips|sign-in|sign-out|planograms|builder|cards|store-time)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "e2e",

@@ -11,13 +11,13 @@ import { HOME_STORE, TEST_ACCOUNT } from "./test-account";
 
 config({ path: ".env.local" });
 
-function sql() {
+export function sql() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set (.env.local).");
   return neon(url);
 }
 
-async function storeId(name: string): Promise<string> {
+export async function storeId(name: string): Promise<string> {
   const rows = await sql()`
     select o.id from organization o
     join member m on m.organization_id = o.id
