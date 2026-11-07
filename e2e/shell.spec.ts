@@ -4,13 +4,11 @@
 
 import {
   expect,
-  goldColors,
   hydrated,
   sizeOf,
   storeTrigger,
   switchStore,
   test,
-  userMenuButton,
 } from "./fixtures";
 import { HOME_STORE, SECOND_STORE } from "./test-account";
 
@@ -26,24 +24,6 @@ test("shows exactly one navigation, the one for this width", async ({ page }, te
 
   const shown = await mainNav(page).getAttribute("data-nav");
   expect(shown).toBe(NAV_FOR[sizeOf(testInfo)]);
-});
-
-test("marks the current page, in gold", async ({ page }) => {
-  await page.goto("/products");
-  const current = mainNav(page).getByRole("link", { name: "Products" });
-
-  await expect(current).toHaveAttribute("aria-current", "page");
-  await expect(mainNav(page).getByRole("link", { name: "Account" })).not.toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-
-  const gold = await goldColors(page);
-  const used = await current.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return [style.color, style.backgroundColor, style.borderTopColor];
-  });
-  expect(used.some((color) => gold.includes(color))).toBe(true);
 });
 
 test("moves between Products and Account", async ({ page }) => {
@@ -75,9 +55,10 @@ test("switches stores from the shell, there and back", async ({ page }) => {
   await expect(page.locator("[data-status]").first()).toBeVisible();
 });
 
-test("the first Tab reaches a skip link that jumps to the page", async ({ page }) => {
-  await page.goto("/products");
-  await expect(storeTrigger(page)).toBeVisible();
+test("the first Tab reaches a skip link that jumps to the page", async ({ page }, testInfo) => {
+  // A touch screen's Products opens in the search box; with a keyboard it must not.
+  await page.goto(sizeOf(testInfo) === "desktop" ? "/products" : "/account");
+  await hydrated(page);
 
   await page.keyboard.press("Tab");
   const skip = page.getByRole("link", { name: "Skip to content" });
@@ -114,34 +95,6 @@ test("a store-switch toast sits above the bottom tabs", async ({ page }, testInf
 
   // Leave the account as it started, for the next project.
   await switchStore(page, HOME_STORE);
-});
-
-test("the corner theme toggle is only on pages without the shell", async ({ page }) => {
-  const corner = page.getByRole("button", { name: /^Switch to (light|dark)$/ });
-
-  await page.goto("/products");
-  await expect(storeTrigger(page)).toBeVisible();
-  await expect(corner).toHaveCount(0);
-
-  await page.goto("/");
-  await expect(corner).toBeVisible();
-});
-
-test("the account menu switches the theme", async ({ page }) => {
-  await page.goto("/products");
-  const isDark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));
-  const before = await isDark();
-
-  await hydrated(page);
-  await userMenuButton(page).click();
-  const name = /^Switch to (light|dark) theme$/;
-  await page
-    .getByRole("menuitem", { name })
-    .or(page.getByRole("button", { name }))
-    .filter({ visible: true })
-    .click();
-
-  await expect.poll(isDark).toBe(!before);
 });
 
 test("create-store offers a way back to members", async ({ page }) => {

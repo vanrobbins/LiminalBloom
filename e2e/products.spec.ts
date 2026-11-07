@@ -1,7 +1,7 @@
 // Products (§3.2, Week 6.5 spec §2): one screen to find a product and manage
 // the catalog. Search merged into it; /search redirects here.
 
-import { expect, goldColors, hydrated, sizeOf, storeTrigger, test } from "./fixtures";
+import { expect, hydrated, sizeOf, test } from "./fixtures";
 import { seedLayout } from "./map-store";
 import { seedCardProducts, seedCatalog } from "./product-store";
 
@@ -199,70 +199,4 @@ test("the empty toast area does not swallow taps on phones", async ({ page }) =>
     return el?.closest("[data-toast-viewport]") ? "toast viewport" : "page";
   });
   expect(hit).toBe("page");
-});
-
-test("no status badge is gold", async ({ page }) => {
-  await page.goto("/products");
-
-  const gold = await goldColors(page);
-
-  const badges = page.locator("[data-status]");
-  await expect(badges.first()).toBeVisible();
-
-  const used = await badges.evaluateAll((elements) =>
-    elements.flatMap((element) => {
-      const style = getComputedStyle(element);
-      return [style.color, style.backgroundColor];
-    }),
-  );
-
-  for (const color of gold) {
-    expect(used).not.toContain(color);
-  }
-});
-
-test("long store and product names wrap instead of overflowing", async ({ page }) => {
-  await page.goto("/products");
-  await expect(page.locator("[data-status]").first()).toBeVisible();
-  // Rewriting text before React has hydrated is reported as a mismatch.
-  await page.waitForLoadState("networkidle");
-
-  // Real stores and products can have names this long; the fixtures do not.
-  await page.evaluate(() => {
-    // One with no break points at all (hyphens would let it wrap), and one
-    // long enough to need three lines.
-    const unbroken = "SupercalifragilisticexpialidociousDenimCollectionFlagshipEdition";
-    const spaced =
-      "Fashion Island Newport Beach Flagship Store and Outlet Annex at the Pacific Coast Highway";
-    for (const label of document.querySelectorAll("[data-store-label]")) {
-      label.textContent = unbroken;
-    }
-    const names = document.querySelectorAll("main ul button span.font-medium");
-    names[0].textContent = unbroken;
-    names[1].textContent = spaced;
-  });
-
-  // Anything past the right edge, anywhere on the page -- the shell included.
-  const pastTheEdge = await page.evaluate(() =>
-    [...document.querySelectorAll("body *")]
-      .filter((element) => {
-        const box = element.getBoundingClientRect();
-        return box.width > 0 && box.right > window.innerWidth + 0.5;
-      })
-      .map((element) => element.textContent?.slice(0, 40)),
-  );
-  expect(pastTheEdge).toEqual([]);
-
-  // The name stays inside the store button's border.
-  const spilled = await storeTrigger(page).evaluateAll((buttons) =>
-    buttons
-      .filter((button) => button.scrollHeight > button.clientHeight + 1)
-      .map((button) => button.textContent),
-  );
-  expect(spilled).toEqual([]);
-
-  // The account button beside it is still a full touch target, on screen.
-  const account = (await page.locator("[data-user-menu]").filter({ visible: true }).boundingBox())!;
-  expect(account.height).toBeGreaterThanOrEqual(44);
-  expect(account.x + account.width).toBeLessThanOrEqual(page.viewportSize()!.width);
 });

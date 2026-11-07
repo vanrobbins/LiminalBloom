@@ -54,6 +54,15 @@ export async function seedLayout(): Promise<void> {
   await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${table}, 'top', 12, 3)`;
 }
 
+/** Makes the home store this worker's active store again, on every session it has. */
+export async function backToHomeStore(): Promise<void> {
+  const db = sql();
+  const store = await storeId(HOME_STORE);
+  await db`update session set active_organization_id = ${store}
+    where user_id = (select id from "user" where email = ${TEST_ACCOUNT.email})`;
+  await db`update "user" set last_active_store_id = ${store} where email = ${TEST_ACCOUNT.email}`;
+}
+
 /** Puts the home store back on Pacific time after a test changed it. */
 export async function resetStoreZone(): Promise<void> {
   const store = await storeId(HOME_STORE);
