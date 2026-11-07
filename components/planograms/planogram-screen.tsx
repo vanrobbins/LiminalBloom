@@ -84,6 +84,11 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
       openSheet(null);
     },
     describe: (fields) => spotWords(scope.faces, fields),
+    reveal: (fields) => {
+      if (scope.isSet || fields.faceId === face.faceId) return null;
+      showFace(fields.faceId);
+      return scope.faces.find((f) => f.faceId === fields.faceId)?.label ?? null;
+    },
   });
 
   // Draft and Published are different placements: the open sheet and the mark don't carry over.

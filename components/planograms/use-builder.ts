@@ -36,6 +36,8 @@ type Options = {
   describe: (fields: PlacementFields) => string;
   /** False while the draft isn't the one shown (Published, a past version): Undo and Ctrl+Z do nothing. */
   enabled?: boolean;
+  /** Undo or Redo landed: shows the face it landed on and names it, if that wasn't the one showing. */
+  reveal?: (fields: PlacementFields) => string | null;
 };
 
 /** Only a placement's own fields: a tile carries names and looks too. */
@@ -52,7 +54,7 @@ const fieldsOf = (p: PlacementFields): PlacementFields => ({
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], [role=dialog]") !== null;
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, onStale, describe, enabled = true }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, onStale, describe, enabled = true, reveal }: Options) {
   const [history, setHistory] = useState<History>(EMPTY_HISTORY);
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
@@ -61,9 +63,9 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
   // One start at a time: a second change before it's back waits for the same reply.
   const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
   // Toast actions and the key listener outlive the render that made them.
-  const latest = useRef({ history, draft, enabled });
+  const latest = useRef({ history, draft, enabled, reveal });
   useEffect(() => {
-    latest.current = { history, draft, enabled };
+    latest.current = { history, draft, enabled, reveal };
   });
 
   async function placementFor(item: GridItem): Promise<{ placement: PlacementView } | { message: string | null }> {
@@ -156,7 +158,13 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
     const result = await save(step.change);
     if (result.saved) {
       setHistory(step.history);
-      say(`${direction === "undo" ? "Undone" : "Redone"}: ${describe(step.change.fields)}`);
+      const done = direction === "undo" ? "Undone" : "Redone";
+      const faceName = latest.current.reveal?.(step.change.fields);
+      say(`${done}: ${describe(step.change.fields)}${faceName ? `, on ${faceName}` : ""}`);
+      // A phone has no Ctrl+Shift+Z: the way back is in the toast.
+      const back = direction === "undo" ? "redo" : "undo";
+      if (undoToast.current !== null) dismissToast(undoToast.current);
+      undoToast.current = toast({ tone: "success", title: done, action: { label: back === "redo" ? "Redo" : "Undo", onSelect: () => void travel(back) } });
       return;
     }
     setHistory(result.message ? forget(pruned, step.step.id) : pruned);

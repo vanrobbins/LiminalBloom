@@ -74,7 +74,8 @@ export function singleBlock(face: PlanogramFace): GridLayout {
 
 export function setBlocks(faces: readonly PlanogramFace[]): GridLayout {
   const upper = faces.find((f) => f.setSide === null);
-  if (!upper) return shifted([]);
+  // The upper's top can be switched off on the map: the lowers still need a place.
+  if (!upper) return runBlocks(faces);
   const lower = (side: "front" | "back" | "left" | "right") => faces.find((f) => f.setSide === side);
   const upperHeight = upper.rows * ROW_UNITS;
   const blocks = [block(upper, false, 0, 0)];

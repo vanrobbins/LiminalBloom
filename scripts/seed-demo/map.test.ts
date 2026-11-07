@@ -34,6 +34,10 @@ describe("demo map", () => {
     expect(faceKinds.size).toBe(layout.faces.length);
   });
 
+  it("has a curved wall bay, so the demo shows one", () => {
+    expect(layout.fixtures.filter((f) => f.type === "wall_bay" && f.curve !== 0)).toHaveLength(1);
+  });
+
   it("has a closed square of four frame racks, fronts out, that validates", async () => {
     const { runShape } = await import("@/lib/layout/runs");
     const { validate } = await import("@/lib/layout/validate");

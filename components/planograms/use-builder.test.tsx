@@ -57,7 +57,36 @@ describe("useBuilder", () => {
     rerender({ d: state(hung) });
     await act(() => result.current.undo());
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: fields(folded, 0) });
-    expect(toasts.toast).toHaveBeenCalledTimes(1);
+    expect(toasts.toast).toHaveBeenCalledTimes(2);
+  });
+
+  it("Undo offers Redo in its toast, for a phone with no keyboard, and Redo offers Undo", async () => {
+    const pant = view("a", 0, 4);
+    const { result, rerender, save } = setup(state(pant));
+    await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
+    rerender({ d: state({ ...pant, col: 4, version: 5 }) });
+    await act(() => result.current.undo());
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Undone", action: expect.objectContaining({ label: "Redo" }) }));
+
+    rerender({ d: state({ ...pant, col: 0, version: 6 }) });
+    const { action } = toasts.toast.mock.lastCall![0];
+    await act(async () => action.onSelect());
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 6, fields: fields(pant, 4) });
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Redone", action: expect.objectContaining({ label: "Undo" }) }));
+  });
+
+  it("Undo onto another face shows that face and names it", async () => {
+    const pant = view("a", 0, 4);
+    const reveal = vi.fn().mockReturnValue("Back");
+    const save = vi.fn().mockResolvedValue({ saved: true, draft: state() });
+    const { result, rerender } = renderHook(({ d }: { d: DraftState }) => useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save, adopt: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal }), {
+      initialProps: { d: state(pant) },
+    });
+    await act(() => result.current.commit(pant, { ...fields(pant, 0), faceId: "other" }, "Moved"));
+    rerender({ d: state({ ...pant, faceId: "other", version: 5 }) });
+    await act(() => result.current.undo());
+    expect(reveal).toHaveBeenCalledWith(expect.objectContaining({ faceId: "f" }));
+    expect(result.current.announcement).toBe("Undone: here, on Back");
   });
 
   it("drops a placement's undo steps when another device changed it (Review Focus 2)", async () => {

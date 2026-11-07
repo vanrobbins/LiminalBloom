@@ -259,6 +259,13 @@ describe("curved wall bays", () => {
     expect(bayKinds(withBay({ y: 30, depth: 12, curve: -38 }))).toContain("outside-store");
   });
 
+  it("says why a bay flat on a wall can't bend backward", () => {
+    const refusal = (over: Partial<Fixture>) => validate(withBay(over)).find((i) => i.kind === "outside-store")?.message;
+    expect(refusal({ y: 12, curve: 0 })).toBeUndefined();
+    expect(refusal({ y: 12, curve: -20 })).toBe("Curved wall bends past the wall. Move it forward, or flip the curve.");
+    expect(refusal({ y: -40, curve: -20 })).toBe("Curved wall is outside the store.");
+  });
+
   it("checks overlap by the band: the pocket of a curve is free floor", () => {
     const table = fixture({ id: "t", x: 240, y: 180, width: 30, depth: 30 });
     expect(bayKinds(withBay({ curve: -38 }, [table]))).not.toContain("overlap");
