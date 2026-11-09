@@ -69,7 +69,9 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
       onFound?.(id);
     });
     const refocus = renamed;
-    if (hadFocus && refocus) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(refocus)}"]`)?.focus());
+    // Only while focus was lost with the old tile: focus moved elsewhere since stays there (B10).
+    const lost = () => document.activeElement === null || document.activeElement === document.body;
+    if (hadFocus && refocus) requestAnimationFrame(() => (lost() ? document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(refocus)}"]`)?.focus() : undefined));
     if (!result.ok) return result.message;
     setSelectedId(result.id);
     if (!scope.isSet && fields.faceId !== face.faceId) showFace(fields.faceId);
@@ -116,10 +118,17 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
 
   function remove(p: PlacementView) {
     select(null);
-    // The tile is gone once this lands: leave focus on the grid, not the page top.
-    void save({ kind: "remove", id: p.id, version: p.version }).then((result) => {
-      if (result.saved) requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-planogram-grid]")?.focus());
-    });
+    // The button pressed goes with the selection: focus the tile if it's still there (refused),
+    // else the grid, else the page's main area, never the page top (B8).
+    void save({ kind: "remove", id: p.id, version: p.version }).then((result) =>
+      requestAnimationFrame(() =>
+        (
+          (result.saved ? null : document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(p.id)}"]`)) ??
+          document.querySelector<HTMLElement>("[data-planogram-grid]") ??
+          document.getElementById("content")
+        )?.focus(),
+      ),
+    );
   }
 
   function moveToFace(target: string) {

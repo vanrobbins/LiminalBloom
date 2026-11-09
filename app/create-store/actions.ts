@@ -67,8 +67,9 @@ export async function createStore(
       });
       // The hook gave it Pacific; the creator owns it, so their choice replaces that.
       if (created) {
-        const outcome = await setStoreTimezone(created.id, session.user.id, timezone, 1);
-        // The store exists either way; it keeps Pacific, which /store can change.
+        // The store exists either way; it keeps Pacific, which /store can change. A thrown
+        // error must not reach the catch below either: "try again" would make a second store (B4).
+        const outcome = await setStoreTimezone(created.id, session.user.id, timezone, 1).catch((error: unknown) => ({ status: error }));
         if (outcome.status !== "saved") console.error("create-store: time zone not saved", created.id, outcome.status);
       }
 

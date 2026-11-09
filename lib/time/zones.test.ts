@@ -23,6 +23,8 @@ describe("time zones", () => {
 
   it("gives no canonical zone for names that are not zones", () => {
     for (const name of ["", "Mars/Olympus", "PST", "+05:00", "not a zone"]) expect(canonicalZone(name)).toBeNull();
+    // Real to Intl, but not in the picker's list, so /store could never show it (B5).
+    for (const name of ["Etc/GMT+5", "etc/gmt-3"]) expect(canonicalZone(name), name).toBeNull();
   });
 
   it("lists US zones first, then the rest, narrowed by what's typed", () => {

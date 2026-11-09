@@ -8,7 +8,6 @@
 
 import { ChevronDown, ChevronsUpDown, Plus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 import { StoreSwitcher } from "@/components/store-switcher";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { storeInitials } from "@/lib/initials";
 
+import { useShellSheet } from "./shell-context";
 import { type Store, useSwitchStore } from "./use-switch-store";
 import { NameTip, Tooltip } from "@/components/ui/tooltip";
 
@@ -47,7 +47,7 @@ export function StoreMenu({
   activeStoreId: string;
   variant: StoreMenuVariant;
 }) {
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useShellSheet("stores");
   const { switchingTo, switchTo } = useSwitchStore(stores, activeStoreId);
 
   const name = stores.find((store) => store.id === activeStoreId)?.name ?? "Your store";

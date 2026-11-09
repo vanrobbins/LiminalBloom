@@ -1,12 +1,13 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Change, DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 
 import { useBuilder } from "./use-builder";
+import { usePlanogramDraft } from "./use-planogram-draft";
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
-const actions = vi.hoisted(() => ({ beginDraftAction: vi.fn() }));
+const actions = vi.hoisted(() => ({ beginDraftAction: vi.fn(), saveChangeAction: vi.fn(), reloadDraftAction: vi.fn() }));
 vi.mock("@/app/(app)/planograms/actions", () => actions);
 const toasts = vi.hoisted(() => ({ toast: vi.fn(), dismissToast: vi.fn() }));
 vi.mock("@/lib/toast", () => toasts);
@@ -315,5 +316,38 @@ describe("useBuilder", () => {
     expect(result.current.announcement).not.toBe(first);
     expect(result.current.announcement.startsWith("Blocked by Tee")).toBe(true);
     expect(first).toBe("Blocked by Tee");
+  });
+
+  it("an Undo pressed while this device's move is still saving undoes that move, not \"Changed on another device\" (B3)", async () => {
+    const pant = view("a", 0, 1);
+    let release: () => void = () => {};
+    actions.saveChangeAction
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (release = () => resolve({ status: "saved", draft: state({ ...pant, col: 4, version: 2 }) }))),
+      )
+      .mockResolvedValueOnce({ status: "saved", draft: state({ ...pant, col: 0, version: 3 }) });
+    // The real draft queue under the builder: the order the two hooks hand off in is what's tested.
+    const { result } = renderHook(() => {
+      const draft = usePlanogramDraft("fx", state(pant), vi.fn());
+      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
+      return builder;
+    });
+
+    let moved: Promise<unknown> = Promise.resolve();
+    let undone: Promise<unknown> = Promise.resolve();
+    act(() => {
+      moved = result.current.commit(pant, fields(pant, 4), "Moved");
+    });
+    await waitFor(() => expect(actions.saveChangeAction).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      undone = result.current.undo();
+      release();
+      await Promise.all([moved, undone]);
+    });
+
+    expect(actions.saveChangeAction).toHaveBeenCalledTimes(2);
+    expect(actions.saveChangeAction).toHaveBeenLastCalledWith("fx", { kind: "update", id: "a", version: 2, fields: { ...fields(pant, 0), depth: 0 } });
+    expect(toasts.toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: "Changed on another device" }));
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Undone" }));
   });
 });

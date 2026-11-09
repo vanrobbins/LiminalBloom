@@ -81,3 +81,29 @@ export async function rememberActiveStore(
     .set({ lastActiveStoreId: storeId })
     .where(eq(user.id, userId));
 }
+
+/**
+ * For the sign-in hook (lib/auth.ts). A database error here must not fail the
+ * sign-in itself (B6): with no store chosen, resolveActiveStore makes the same
+ * choice on the next request.
+ */
+export async function storeForNewSession(userId: string): Promise<string | null> {
+  try {
+    return await chooseActiveStore(userId);
+  } catch (error) {
+    console.error("sign-in: no store chosen", error);
+    return null;
+  }
+}
+
+/**
+ * For the session-update hook: the switch has already happened, so failing to
+ * remember it only means the next sign-in may open another store (B6).
+ */
+export async function rememberSwitch(userId: string, storeId: string): Promise<void> {
+  try {
+    await rememberActiveStore(userId, storeId);
+  } catch (error) {
+    console.error("store switch: not remembered", error);
+  }
+}

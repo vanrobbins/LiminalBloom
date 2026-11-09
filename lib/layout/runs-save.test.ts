@@ -10,6 +10,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { organization } from "@/db/auth-schema";
 import { fixtures, frameRuns, planograms } from "@/db/schema";
+import { dbRefusal } from "@/lib/db/test-errors";
 import { withStore } from "@/lib/db/with-store";
 
 import { apply } from "./commands";
@@ -50,9 +51,9 @@ describe("migration 0013", () => {
     const store = await makeStore("run-checks");
     const [run] = await db.insert(frameRuns).values({ id: randomUUID(), storeId: store }).returning();
     const row = (over: object) => ({ id: randomUUID(), storeId: store, type: "frame_rack" as const, name: "R", x: 0, y: 0, width: 48, depth: 24, ...over });
-    await expect(db.insert(fixtures).values(row({ runId: run.id }))).rejects.toThrow();
-    await expect(db.insert(fixtures).values(row({ runId: run.id, runIndex: 0, type: "rack" }))).rejects.toThrow();
-    await expect(db.insert(fixtures).values(row({ runId: run.id, runIndex: 6 }))).rejects.toThrow();
+    expect(await dbRefusal(db.insert(fixtures).values(row({ runId: run.id })))).toMatch(/"fixtures_run_has_index"/);
+    expect(await dbRefusal(db.insert(fixtures).values(row({ runId: run.id, runIndex: 0, type: "rack" })))).toMatch(/"fixtures_run_frame_rack"/);
+    expect(await dbRefusal(db.insert(fixtures).values(row({ runId: run.id, runIndex: 6 })))).toMatch(/"fixtures_run_index_range"/);
     await db.insert(fixtures).values(row({ runId: run.id, runIndex: 0 }));
   });
 
@@ -61,7 +62,7 @@ describe("migration 0013", () => {
     const b = await makeStore("run-b");
     const [run] = await db.insert(frameRuns).values({ id: randomUUID(), storeId: b }).returning();
     const row = { storeId: a, type: "frame_rack" as const, name: "R", x: 0, y: 0, width: 48, depth: 24, runIndex: 0 };
-    await expect(db.insert(fixtures).values({ id: randomUUID(), ...row, runId: run.id })).rejects.toThrow();
+    expect(await dbRefusal(db.insert(fixtures).values({ id: randomUUID(), ...row, runId: run.id }))).toMatch(/"fixtures_run_fk"/);
     const [own] = await db.insert(frameRuns).values({ id: randomUUID(), storeId: a }).returning();
     const id = randomUUID();
     await db.insert(fixtures).values({ id, ...row, runId: own.id });

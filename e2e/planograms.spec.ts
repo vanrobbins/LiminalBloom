@@ -210,8 +210,7 @@ test("the due date is set from its chip, and saved only by Save", async ({ page 
   await expect(page.getByRole("button", { name: "Set due date" })).toHaveCount(0);
   await startDraft(page);
   await page.getByRole("button", { name: "Set due date" }).click();
-  // The dialog is titled "Due date" too.
-  await page.locator("input[type=date]").fill("2099-10-14");
+  await page.getByLabel("Due date", { exact: true }).fill("2099-10-14");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("button", { name: "Due Oct 14" })).toBeVisible();
 });

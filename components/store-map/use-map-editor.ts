@@ -8,7 +8,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
-import { applyChanges, changeIds, type ChangeSet } from "@/lib/layout/diff";
+import { applyChanges, changeCount, changeIds, type ChangeSet } from "@/lib/layout/diff";
+import { MAX_CHANGES_PER_SAVE } from "@/lib/layout/limits";
 import type { FetchReply, SaveReply } from "@/lib/layout/replies";
 import { SAVE_DELAY_MS, begin, createQueue, failed, hasPending, type Queue } from "@/lib/layout/save-queue";
 import { createReducer } from "@/lib/layout/session";
@@ -28,6 +29,8 @@ type Options = {
 };
 
 const RELOADED = "Couldn't save that change. The layout was reloaded.";
+const TOO_MANY = "Too many changes to save at once.";
+const TOO_MANY_HOW = "Nothing is lost yet. Undo some changes so the rest can save, then Redo them.";
 
 export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Options) {
   const router = useRouter();
@@ -50,6 +53,7 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
   const reload = useRef<number | undefined>(undefined);
   const saveRef = useRef<() => Promise<void>>(async () => {});
   const invalidInARow = useRef(0);
+  const tooMany = useRef(false);
 
   useEffect(() => {
     latest.current = session.layout;
@@ -127,6 +131,15 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
       setOffline(false);
       return;
     }
+    // The server refuses an oversize save outright, and a reload would throw the changes away (B1).
+    // Hold them instead, once say how to get under the cap, and let Done be pressed again later.
+    if (changeCount(started.request) > MAX_CHANGES_PER_SAVE) {
+      if (!tooMany.current) toast({ tone: "error", title: TOO_MANY, description: TOO_MANY_HOW });
+      tooMany.current = true;
+      setLeaving(false);
+      return;
+    }
+    tooMany.current = false;
     setQueue(started.queue);
     let reply: SaveReply;
     try {

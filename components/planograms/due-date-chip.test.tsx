@@ -9,8 +9,6 @@ vi.mock("@/lib/toast", () => ({ toast: mocks.toast }));
 
 import { DueDateChip } from "./due-date-chip";
 
-// The dialog is titled "Due date" too, so the field is found as the input.
-
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.setDue.mockResolvedValue({ status: "saved", message: "Due date saved" });
@@ -21,7 +19,9 @@ describe("DueDateChip", () => {
     const user = userEvent.setup();
     render(<DueDateChip fixtureId="f" dueDate={null} today="2026-10-10" />);
     await user.click(screen.getByRole("button", { name: "Set due date" }));
-    const field = screen.getByLabelText("Due date", { selector: "input" });
+    // Titled for what it does, not the field's own label (B9): "Due date" finds only the field.
+    expect(screen.getByRole("dialog", { name: "Set due date" })).toBeInTheDocument();
+    const field = screen.getByLabelText("Due date");
     await user.type(field, "2026-10-14");
     await user.tab(); // blur saves nothing now
     expect(mocks.setDue).not.toHaveBeenCalled();
@@ -42,7 +42,7 @@ describe("DueDateChip", () => {
     const user = userEvent.setup();
     render(<DueDateChip fixtureId="f" dueDate={null} today="2026-10-10" />);
     await user.click(screen.getByRole("button", { name: "Set due date" }));
-    await user.type(screen.getByLabelText("Due date", { selector: "input" }), "0002-10-14");
+    await user.type(screen.getByLabelText("Due date"), "0002-10-14");
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByText("Choose a date from 2000 on.")).toBeInTheDocument();
     expect(mocks.setDue).not.toHaveBeenCalled();

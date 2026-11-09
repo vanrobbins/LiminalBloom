@@ -11,6 +11,7 @@ import { db } from "@/db";
 import { organization } from "@/db/auth-schema";
 import { zones } from "@/db/schema";
 
+import { dbRefusal } from "./test-errors";
 import { withStore } from "./with-store";
 
 const created: string[] = [];
@@ -79,8 +80,7 @@ describe("withStore", () => {
     const a = await makeStore("rls-ins-a");
     const b = await makeStore("rls-ins-b");
 
-    await expect(
-      withStore(a, [
+    expect(await dbRefusal(withStore(a, [
         db.insert(zones).values({
           id: randomUUID(),
           storeId: b,
@@ -89,8 +89,7 @@ describe("withStore", () => {
           color: "zone-1",
           points: [],
         }),
-      ]),
-    ).rejects.toThrow();
+      ]))).toMatch(/row-level security policy for table "zones"/);
   });
 
   it("sees nothing at all when the role is set but no store is", async () => {

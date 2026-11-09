@@ -80,6 +80,8 @@ type GridTileProps = {
   movable: boolean;
   /** How far it follows the pointer, in units, while moved. */
   offset: { dx: number; dy: number } | null;
+  /** Dropped and waiting on its save: it sits still where it landed instead of sliding back from the pointer, but is out of the hand, handles and all (B10). */
+  held?: boolean;
   invalid: boolean;
   /** The drawing space's size, in units: a handle at its edge turns inward. */
   bounds: { width: number; height: number };
@@ -90,7 +92,7 @@ type GridTileProps = {
   onEscape?: () => void;
 };
 
-export function GridTile({ item, layer = null, block, rect, words, selected, highlighted, issue, movable, offset, invalid, bounds, gestures, onSelect, onKey, onReorder, onEscape }: GridTileProps) {
+export function GridTile({ item, layer = null, block, rect, words, selected, highlighted, issue, movable, offset, held = false, invalid, bounds, gestures, onSelect, onKey, onReorder, onEscape }: GridTileProps) {
   // Under 2 ft wide there is room for the photo and stock only; the name is in the sheet and the card.
   // Sharing a rail, the name strip would hide the product behind: its name is in the label and the Layers list.
   const named = rect.width >= 2 * ROW_UNITS && !layer;
@@ -114,6 +116,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         data-issue={issue ? "" : undefined}
         data-lifted={movable ? "" : undefined}
         data-dragging={offset ? "" : undefined}
+        data-held={held ? "" : undefined}
         data-invalid={invalid ? "" : undefined}
         data-layered={layer ? "" : undefined}
         data-depth={layer ? layer.depth : undefined}
@@ -139,7 +142,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         }}
         {...grab}
         style={{ ...placed(rect), transform, zIndex, pointerEvents: passThrough ? "none" : undefined }}
-        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface data-layered:border-transparent data-layered:bg-transparent data-layered:hover:outline-1 data-layered:hover:outline-dashed data-layered:hover:outline-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none"
+        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface data-layered:border-transparent data-layered:bg-transparent data-layered:hover:outline-1 data-layered:hover:outline-dashed data-layered:hover:outline-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none data-held:transition-none"
       >
         <span className={`min-h-0 w-full flex-1 ${passThrough ? "[&_img]:pointer-events-auto [&_path]:pointer-events-auto [&_rect]:pointer-events-auto" : ""}`}>
           <ProductImage

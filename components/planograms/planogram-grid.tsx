@@ -29,8 +29,6 @@ import { useTileGesture, type Gesture } from "./use-tile-gesture";
 /** Room above the grid for a table set's labels, the ruler and the drag chip. */
 const GUTTER = "1.5rem";
 const OFF_FACE = "Off the edge of the face";
-// A landed tile waiting on its save sits still, rather than sliding back from where the pointer let go.
-const STILL = { dx: 0, dy: 0 };
 
 export type GridBuilder = {
   /** The selected tile may be dragged, resized and moved with the arrow keys. */
@@ -198,7 +196,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   highlighted={item.productId === highlightProductId}
                   issue={issues?.get(item.id)}
                   movable={isMoving}
-                  offset={isMoving && drag?.mode === "move" ? drag : landed.isHeld(item.id) ? STILL : null}
+                  offset={isMoving && drag?.mode === "move" ? drag : null}
+                  held={landed.isHeld(item.id)}
                   invalid={isMoving && refusal !== null}
                   bounds={layout}
                   gestures={gestures}

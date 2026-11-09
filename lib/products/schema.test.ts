@@ -12,6 +12,7 @@ import {
   products,
   stockroomBins,
 } from "@/db/schema";
+import { dbRefusal } from "@/lib/db/test-errors";
 import { withStore } from "@/lib/db/with-store";
 
 import { dropStores, makeStore, seedStoreFixtures } from "./test-stores";
@@ -46,11 +47,9 @@ describe("row-level security on the product library", () => {
     const a = await makeStore("rls-write-a");
     const b = await makeStore("rls-write-b");
     const fb = await seedStoreFixtures(b);
-    await expect(
-      withStore(a, [
+    expect(await dbRefusal(withStore(a, [
         db.insert(products).values({ storeId: b, name: "Smuggled", styleNumber: "X-1", categoryId: fb.categoryId, color: "Red" }),
-      ]),
-    ).rejects.toThrow();
+      ]))).toMatch(/row-level security policy for table "products"/);
   });
 });
 
@@ -59,9 +58,7 @@ describe("store-scoped keys", () => {
     const a = await makeStore("fk-a");
     const b = await makeStore("fk-b");
     const fb = await seedStoreFixtures(b);
-    await expect(
-      db.insert(products).values({ storeId: a, name: "Crossed", styleNumber: "X-2", categoryId: fb.categoryId, color: "Red" }),
-    ).rejects.toThrow();
+    expect(await dbRefusal(db.insert(products).values({ storeId: a, name: "Crossed", styleNumber: "X-2", categoryId: fb.categoryId, color: "Red" }))).toMatch(/"products_category_fk"/);
   });
 
   it("refuses a location on another store's face", async () => {
@@ -69,9 +66,7 @@ describe("store-scoped keys", () => {
     const b = await makeStore("fk-face-b");
     const fa = await seedStoreFixtures(a);
     const fb = await seedStoreFixtures(b);
-    await expect(
-      db.insert(productLocations).values({ storeId: a, productId: fa.productId, presentation: "hung", faceId: fb.faceId, col: 0, row: 0, colSpan: 1, rowSpan: 1 }),
-    ).rejects.toThrow();
+    expect(await dbRefusal(db.insert(productLocations).values({ storeId: a, productId: fa.productId, presentation: "hung", faceId: fb.faceId, col: 0, row: 0, colSpan: 1, rowSpan: 1 }))).toMatch(/"product_locations_face_fk"/);
   });
 
   it("deleting a category deletes its products and their locations", async () => {
@@ -87,15 +82,13 @@ describe("location shape", () => {
   it("refuses a location with both a face and a bin", async () => {
     const a = await makeStore("shape-both");
     const fa = await seedStoreFixtures(a);
-    await expect(
-      db.insert(productLocations).values({ storeId: a, productId: fa.productId, presentation: "hung", faceId: fa.faceId, col: 0, row: 0, colSpan: 1, rowSpan: 1, binId: fa.binId }),
-    ).rejects.toThrow();
+    expect(await dbRefusal(db.insert(productLocations).values({ storeId: a, productId: fa.productId, presentation: "hung", faceId: fa.faceId, col: 0, row: 0, colSpan: 1, rowSpan: 1, binId: fa.binId }))).toMatch(/"product_locations_shape"/);
   });
 
   it("refuses a location with neither", async () => {
     const a = await makeStore("shape-none");
     const fa = await seedStoreFixtures(a);
-    await expect(db.insert(productLocations).values({ storeId: a, productId: fa.productId, presentation: "hung" })).rejects.toThrow();
+    expect(await dbRefusal(db.insert(productLocations).values({ storeId: a, productId: fa.productId, presentation: "hung" }))).toMatch(/"product_locations_shape"/);
   });
 
   it("accepts a bin location", async () => {

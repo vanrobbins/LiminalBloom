@@ -10,7 +10,7 @@ const FONT = 13;
 const MIN_FONT = 10;
 const PAD = 6;
 /** A name's width per character, as a share of its font size (a fair average for the UI font). */
-const CHAR = 0.56;
+export const CHAR = 0.56;
 
 export type ZoneLabel = { x: number; y: number; fontSize: number; text: string };
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -63,6 +63,15 @@ describe("PlanogramScreen", () => {
     await user.click(tile());
     await user.click(screen.getByRole("button", { name: "Remove" }));
     await waitFor(() => expect(screen.getByRole("region", { name: /Rack 1, Front/ })).toHaveFocus());
+  });
+
+  it("when Remove is refused, focus goes back to the tile, which is still there (B8)", async () => {
+    hook.save = vi.fn().mockResolvedValue({ saved: false, message: "Changed on another device" });
+    const user = userEvent.setup();
+    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
+    await user.click(tile());
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(tile()).toHaveFocus());
   });
 
   it("closes the sheet when Draft | Published switches, instead of leaving it open and empty", async () => {
@@ -264,5 +273,36 @@ describe("PlanogramScreen", () => {
     await waitFor(() => expect(tile()).toHaveFocus());
     expect(tile()).toHaveAttribute("data-placement", "d1");
     expect(screen.getByRole("toolbar", { name: "Pant selected" })).toBeInTheDocument();
+  });
+
+  it("after a draft starts, focus isn't pulled back to the tile if it moved elsewhere meanwhile (B10)", async () => {
+    const started = { planogramVersion: 3, placements: [pant] };
+    const moved = { planogramVersion: 4, placements: [{ ...pant, col: 1, version: 2 }] };
+    actions.beginDraftAction = vi.fn().mockResolvedValue({ status: "saved", draft: started });
+    let settle: () => void = () => {};
+    hook.save = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          settle = () => {
+            hook.draft = moved;
+            resolve({ saved: true, draft: moved });
+          };
+        }),
+    );
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Elsewhere</button>
+        {screenWith(published, null)}
+      </>,
+    );
+    await user.click(tile());
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(hook.save).toHaveBeenCalledTimes(1));
+    const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+    elsewhere.focus();
+    await act(async () => settle());
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(elsewhere).toHaveFocus();
   });
 });

@@ -14,7 +14,7 @@ import { organization } from "better-auth/plugins";
 import * as authSchema from "@/db/auth-schema";
 import { db } from "@/db";
 
-import { chooseActiveStore, rememberActiveStore } from "./active-store";
+import { rememberSwitch, storeForNewSession } from "./active-store";
 import { optionalEnv } from "./env";
 
 export const auth = betterAuth({
@@ -43,7 +43,7 @@ export const auth = betterAuth({
         before: async (session) => ({
           data: {
             ...session,
-            activeOrganizationId: await chooseActiveStore(session.userId),
+            activeOrganizationId: await storeForNewSession(session.userId),
           },
         }),
       },
@@ -55,7 +55,7 @@ export const auth = betterAuth({
           // The plugin adds this field at runtime; its type here is `{}`.
           const storeId = session.activeOrganizationId;
           if (typeof storeId === "string" && storeId) {
-            await rememberActiveStore(session.userId, storeId);
+            await rememberSwitch(session.userId, storeId);
           }
         },
       },
