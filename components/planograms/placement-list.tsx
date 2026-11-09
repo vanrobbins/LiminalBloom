@@ -56,7 +56,7 @@ export function PlacementList({ faces, items, orphans = [], issues, highlightPro
                         <span className="truncate font-medium text-ink">{item.productName}</span>
                         <span className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
                           {face ? <span className="rounded bg-line-subtle px-1.5 text-ink">{spotSummary(spotOf(face, item))}</span> : null}
-                          {PRESENTATION_LABEL[item.presentation]} · {item.pieceCount} pcs
+                          {PRESENTATION_LABEL[item.presentation]} · {item.pieceCount} {item.pieceCount === 1 ? "piece" : "pieces"}
                         </span>
                         {issue ? (
                           <span className="flex items-center gap-1 text-sm text-danger">

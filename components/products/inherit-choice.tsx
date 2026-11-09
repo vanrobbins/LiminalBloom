@@ -1,4 +1,4 @@
-// "Uses the {category}'s" or "Different for this product" (Week 6.5 spec §3.2,
+// "Same as {category}" or "Different for this product" (Week 6.5 spec §3.2,
 // §3.4): the radio pair at the top of the product form's space and size
 // sections. The section's own fields go in `children`.
 
@@ -36,7 +36,7 @@ export function InheritChoice({ legend, categoryName, isOwn, onChange, term, chi
       <div className="flex flex-col gap-2 sm:flex-row">
         <label className={OPTION}>
           <input type="radio" name={name} checked={!isOwn} onChange={() => onChange(false)} className="size-4 accent-ink" />
-          Uses the {categoryName}’s
+          Same as {categoryName}
         </label>
         <label className={OPTION}>
           <input type="radio" name={name} checked={isOwn} onChange={() => onChange(true)} className="size-4 accent-ink" />

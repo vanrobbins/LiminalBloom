@@ -32,7 +32,7 @@ export default async function PlanogramsPage() {
           </Button>
         </Card>
       ) : (
-        <PlanogramList groups={groups} today={today} />
+        <PlanogramList groups={groups} today={today} storeKey={activeStoreId} />
       )}
     </div>
   );

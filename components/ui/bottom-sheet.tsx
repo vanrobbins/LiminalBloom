@@ -12,6 +12,7 @@
 
 "use client";
 
+import { X } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import { Drawer } from "vaul";
@@ -113,9 +114,12 @@ export function BottomSheet({
           onInteractOutside={(event) => {
             if (event.target instanceof Element && event.target.closest("[data-toast-viewport]")) event.preventDefault();
           }}
-          onOpenAutoFocus={() => {
+          onOpenAutoFocus={(event) => {
             // Runs before focus moves in, so this is still the opener.
             returnFocusTo.current = document.activeElement as HTMLElement | null;
+            // The sheet itself, not its × (whose tooltip would open and take the first Escape).
+            event.preventDefault();
+            (event.target as HTMLElement).focus();
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
@@ -127,8 +131,8 @@ export function BottomSheet({
           <div className="flex items-center justify-between gap-4 px-6 pt-4">
             {hideTitle ? <VisuallyHidden.Root>{heading}</VisuallyHidden.Root> : heading}
             <Drawer.Close asChild>
-              <Button variant="ghost" className="ml-auto">
-                Close
+              <Button variant="ghost" icon aria-label="Close" className="-mr-2 ml-auto">
+                <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
               </Button>
             </Drawer.Close>
           </div>
@@ -193,8 +197,8 @@ function PeekPanel({ title, heading, expanded, onExpandedChange, onClose, childr
       </Tooltip>
       <div className="flex items-center justify-between gap-4 px-6">
         {heading}
-        <Button variant="ghost" className="ml-auto" onClick={onClose}>
-          Close
+        <Button variant="ghost" icon aria-label="Close" className="-mr-2 ml-auto" onClick={onClose}>
+          <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-8">{children}</div>

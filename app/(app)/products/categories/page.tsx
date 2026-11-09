@@ -11,7 +11,7 @@ export default async function CategoriesPage() {
   return (
     <div className="mx-auto w-full max-w-2xl">
       <PageHeader title="Categories" back={{ href: "/products", label: "Products" }} />
-      <p className="mb-6 text-ink-muted">Each category sets the cells its products cover; a product only needs its own when it differs.</p>
+      <p className="mb-6 text-ink-muted">Each category sets how much room its products take on a fixture; a product only needs its own when it differs.</p>
       <CategoryList categories={categories} />
     </div>
   );

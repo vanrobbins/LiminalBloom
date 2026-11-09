@@ -35,10 +35,6 @@ export default async function AccountPage() {
             <dt className="text-ink-muted">Email</dt>
             <dd className="break-all text-ink">{user.email}</dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">User id</dt>
-            <dd className="break-all font-mono text-xs text-ink-muted">{user.id}</dd>
-          </div>
         </dl>
       </Card>
 
@@ -52,10 +48,15 @@ export default async function AccountPage() {
 
             return (
               <li key={store.id} aria-current={isActive ? "true" : undefined}>
-                <Card compact className="flex justify-between gap-4 text-sm">
-                  <span className="text-ink wrap-anywhere">{store.name}</span>
+                <Card compact className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-ink wrap-anywhere">{store.name}</span>
+                    {isActive ? <span className="text-ink-muted">Working in</span> : null}
+                  </span>
                   {isActive ? (
-                    <span className="shrink-0 font-medium text-brand-strong">Working in</span>
+                    <Button asChild variant="secondary">
+                      <Link href="/store">Store settings</Link>
+                    </Button>
                   ) : null}
                 </Card>
               </li>

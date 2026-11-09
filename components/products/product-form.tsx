@@ -37,7 +37,10 @@ export function ProductForm({ categories: initialCategories, product, overrides:
   const router = useRouter();
   const statusId = useId();
   const [categories, setCategories] = useState(initialCategories);
-  const [categoryId, setCategoryId] = useState(product?.categoryId ?? initialCategories[0]?.id ?? "");
+  const [categoryId, setCategoryId] = useState(
+    // A lone category is the only answer; with several, ask (UX audit U14).
+    product?.categoryId ?? (initialCategories.length === 1 ? initialCategories[0].id : ""),
+  );
   const [overrides, setOverrides] = useState<Overrides>(initialOverrides);
   // Null inherits the category's (Week 6.5 spec §3.4).
   const [sizeRange, setSizeRange] = useState<string | null>(product?.sizeIsOwn ? product.sizeRange : null);

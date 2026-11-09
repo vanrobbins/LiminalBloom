@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -229,6 +229,22 @@ describe("PlanogramScreen", () => {
     render(screenWith(null, null));
     expect(screen.getByText("No planogram yet")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+  });
+
+  it("with nothing yet, Start draft sits in the empty box, said once, and no due date is offered", () => {
+    render(screenWith(null, null));
+    const box = screen.getByText("No planogram yet").closest("[data-empty]") as HTMLElement;
+    expect(within(box).getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+    expect(screen.getAllByText(/what.s on the floor now/)).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Set due date" })).toBeNull();
+  });
+
+  it("puts the status, Draft | Published and Publish… on one row", () => {
+    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
+    const row = screen.getByRole("button", { name: "Publish…" }).closest("[data-status-row]") as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(within(row).getByText(/Version 1 · published/)).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Published" })).toBeInTheDocument();
   });
 
   it("on Published, an arrow that starts a draft keeps the tile selected and focused, so the next arrow works", async () => {

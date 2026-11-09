@@ -43,7 +43,7 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
               <Button variant="secondary" onClick={() => setOpen({ kind: "edit", category: c })} aria-label={`Edit ${c.name}`}>
                 Edit
               </Button>
-              <Button variant="ghost" onClick={() => setOpen({ kind: "delete", category: c })} aria-label={`Delete ${c.name}`}>
+              <Button variant="quiet-danger" onClick={() => setOpen({ kind: "delete", category: c })} aria-label={`Delete ${c.name}`}>
                 Delete
               </Button>
             </li>

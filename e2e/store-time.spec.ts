@@ -32,6 +32,7 @@ test("the store's time zone decides when a due date is overdue", async ({ page }
   await page.goto("/planograms");
   await page.getByRole("link", { name: /Table 1/ }).click();
   await hydrated(page);
+  await page.getByRole("button", { name: "Start draft" }).click();
   await page.getByRole("button", { name: "Set due date" }).click();
   await page.locator("input[type=date]").fill(due);
   await page.getByRole("button", { name: "Save" }).click();

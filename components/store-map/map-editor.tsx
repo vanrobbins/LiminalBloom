@@ -86,7 +86,7 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
   const focus = session.focus;
   const zone = focus.kind === "zone" ? session.layout.zones.find((z) => z.id === focus.id) : undefined;
   const drawPreview = session.drawing && session.pointer ? previewCorner(session.drawing, session.pointer, session.camera.scale).point : null;
-  const list = <LayoutList layout={session.layout} selection={session.selection} issues={issues} dispatch={dispatch} />;
+  const list = <LayoutList layout={session.layout} selection={session.selection} issues={issues} dispatch={dispatch} storeKey={storeId} />;
   const properties = <PropertiesPanel session={session} dispatch={dispatch} />;
 
   return (
@@ -187,6 +187,7 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
               layout={session.layout}
               selection={session.selection}
               issues={issues}
+              storeKey={storeId}
               dispatch={(action) => {
                 dispatch(action);
                 if (action.type === "reveal") setListOpen(false);

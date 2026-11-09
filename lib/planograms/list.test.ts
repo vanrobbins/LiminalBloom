@@ -28,4 +28,21 @@ describe("planogramList", () => {
     expect(groups[0].items[0]).toMatchObject({ typeLabel: "Wall bay", publishedVersion: 4, hasDraft: true, dueDate: "2026-10-15" });
     expect(groups[1].items[0]).toMatchObject({ publishedVersion: null, hasDraft: false, dueDate: null });
   });
+
+  it("sorts zones and fixtures by name the way people count: Rack 2 before Rack 10", () => {
+    const racks: Layout = {
+      ...EMPTY_LAYOUT,
+      zones: [
+        { id: "zb", name: "Women", type: "display", color: "zone-1", points: [], version: 1 },
+        { id: "za", name: "Men", type: "display", color: "zone-2", points: [], version: 1 },
+      ],
+      fixtures: ["Rack 10", "Rack 2", "Rack 7"].map((name, i) => fixture({ id: `r${i}`, type: "rack", name, zoneId: "za" })).concat(fixture({ id: "w", type: "rack", name: "Rack 1", zoneId: "zb" })),
+      faces: ["r0", "r1", "r2", "w"].map((id) => face({ id: `f-${id}`, fixtureId: id, side: "front" })),
+    };
+    const groups = planogramList(racks, []);
+    expect(groups.map((g) => [g.zoneName, g.items.map((i) => i.name)])).toEqual([
+      ["Men", ["Rack 2", "Rack 7", "Rack 10"]],
+      ["Women", ["Rack 1"]],
+    ]);
+  });
 });

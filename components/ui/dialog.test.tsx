@@ -15,6 +15,17 @@ describe("Dialog", () => {
     expect(dialog).toHaveAccessibleDescription("Its 5 fixtures stay on the map.");
   });
 
+  it("closes from an × icon button, not a text link (UX audit U1)", () => {
+    render(
+      <Dialog open onOpenChange={() => {}} title="New category">
+        <p>Body</p>
+      </Dialog>,
+    );
+    const close = screen.getByRole("button", { name: "Close" });
+    expect(close).not.toHaveTextContent("Close");
+    expect(close.querySelector("svg")).not.toBeNull();
+  });
+
   it("closes on Escape", async () => {
     const onOpenChange = vi.fn();
     render(

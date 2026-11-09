@@ -1,4 +1,4 @@
-// The one button. Four variants, all at least 44 px tall (§5.4). Gold is
+// The one button. Five variants, all at least 44 px tall (§5.4). Gold is
 // the primary action only (§5.5).
 //
 // `asChild` hands the styling to its child through Radix Slot, so a link can
@@ -11,7 +11,7 @@ import { isValidElement } from "react";
 
 import { Tooltip } from "./tooltip";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "quiet-danger";
 
 const BASE =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60";
@@ -24,8 +24,11 @@ const ICON_ONLY = "size-11 shrink-0";
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-brand font-medium text-on-brand",
   secondary: "border border-line bg-raised text-ink",
-  ghost: "text-brand-strong underline underline-offset-4",
+  // Ink, not gold: gold underline read as decoration (UX audit U2).
+  ghost: "text-ink underline underline-offset-4",
   danger: "bg-danger font-medium text-raised",
+  // A destructive action that isn't the page's main one, e.g. Delete beside Edit.
+  "quiet-danger": "border border-line bg-raised text-danger",
 };
 
 type ButtonProps = React.ComponentProps<"button"> & {

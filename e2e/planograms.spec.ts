@@ -17,7 +17,7 @@ async function openTable(page: Page) {
 }
 
 async function startDraft(page: Page) {
-  await expect(page.getByText("Not published")).toBeVisible();
+  await expect(page.getByText("No planogram yet")).toBeVisible();
   await page.getByRole("button", { name: "Start draft" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^E2E High-Rise Pant, / })).toBeVisible();
@@ -206,6 +206,9 @@ test("discarding a draft goes through the ⋯ menu and a confirmation", async ({
 
 test("the due date is set from its chip, and saved only by Save", async ({ page }) => {
   await openTable(page);
+  // Nothing to be due until a draft exists (UX audit U19).
+  await expect(page.getByRole("button", { name: "Set due date" })).toHaveCount(0);
+  await startDraft(page);
   await page.getByRole("button", { name: "Set due date" }).click();
   // The dialog is titled "Due date" too.
   await page.locator("input[type=date]").fill("2099-10-14");

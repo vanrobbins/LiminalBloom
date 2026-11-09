@@ -52,7 +52,7 @@ describe("ProductForm", () => {
     const user = userEvent.setup();
     render(<ProductForm categories={[pants]} />);
     const space = screen.getByRole("group", { name: "Space on the fixture" });
-    expect(within(space).getByRole("radio", { name: "Uses the Pants’s" })).toBeChecked();
+    expect(within(space).getByRole("radio", { name: "Same as Pants" })).toBeChecked();
     expect(within(space).getByText("Hung: ½ ft wide, 3 rows high")).toBeInTheDocument();
     expect(within(space).queryByRole("group", { name: "Hung width" })).toBeNull();
     await user.click(within(space).getByRole("radio", { name: "Different for this product" }));
@@ -71,10 +71,10 @@ describe("ProductForm", () => {
     );
     const space = screen.getByRole("group", { name: "Space on the fixture" });
     expect(within(space).getByRole("radio", { name: "Different for this product" })).toBeChecked();
-    await user.click(within(space).getByRole("radio", { name: "Uses the Pants’s" }));
+    await user.click(within(space).getByRole("radio", { name: "Same as Pants" }));
     await user.click(within(space).getByRole("radio", { name: "Different for this product" }));
     expect(within(space).getByText("Hung: 2 ft wide, 3 rows high")).toBeInTheDocument();
-    await user.click(within(space).getByRole("radio", { name: "Uses the Pants’s" }));
+    await user.click(within(space).getByRole("radio", { name: "Same as Pants" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     expect(actions.saveProduct).toHaveBeenCalledWith("p", 2, expect.objectContaining({ overrides: { hung: null, folded: null } }));
   });
@@ -170,5 +170,17 @@ describe("ProductForm", () => {
     expect(screen.getByRole("radio", { name: "Match the color word" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Add product" }));
     expect(actions.saveProduct).toHaveBeenCalledWith(null, null, expect.objectContaining({ swatch: null, texture: "solid" }));
+  });
+
+  it("asks for a category when there are several, instead of quietly picking the first", async () => {
+    const user = userEvent.setup();
+    const tees: CategoryRow = { ...pants, id: "0b7f8e2a-1c3d-4e5f-8a9b-0c1d2e3f4a5b", name: "Tees" };
+    render(<ProductForm categories={[pants, tees]} />);
+    const select = screen.getByLabelText("Category");
+    expect(select).toHaveValue("");
+    expect(within(select).getByRole("option", { name: "Choose a category" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Space on the fixture" })).not.toBeInTheDocument();
+    await user.selectOptions(select, "Tees");
+    expect(screen.getByRole("group", { name: "Space on the fixture" })).toBeInTheDocument();
   });
 });
