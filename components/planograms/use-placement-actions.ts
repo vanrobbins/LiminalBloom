@@ -10,14 +10,14 @@ import { keyTarget } from "@/lib/planograms/builder/keys";
 import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
 import { checkPlacement } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
-import { type Change, type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
+import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
 import { shortSpot } from "@/lib/products/location-words";
 import { toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
 import type { GridBuilder } from "./planogram-grid";
 import type { useBuilder, Verb } from "./use-builder";
-import type { SaveResult } from "./use-planogram-draft";
+import type { Pending, SaveResult } from "./use-planogram-draft";
 
 /** Where a placement sits, for a screen reader: "4–6 ft, Top shelf". */
 export function spotWords(faces: readonly PlanogramFace[], fields: PlacementFields): string {
@@ -35,7 +35,7 @@ type Options = {
   canMove: boolean;
   selectedPlacement: PlacementView | null;
   builder: ReturnType<typeof useBuilder>;
-  save: (change: Change) => Promise<SaveResult>;
+  save: (pending: Pending) => Promise<SaveResult>;
   setSelectedId: (id: string | null) => void;
   /** Selects and keeps the open panel on the selection; null also closes it. */
   select: (id: string | null) => void;
@@ -81,12 +81,16 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
         check,
         onCommit: (item, fields, verb, onFound) => change(item, fields, verb, onFound),
         onRefused: (message) => toast({ tone: "error", title: message }),
+        // The grid holds the nudge where it lands, so a press while it saves starts from there (DECISIONS 11-09).
         onKey: (item, key, shift) => {
           const next = keyTarget(layout, item, key, shift);
-          if (!next) return;
+          if (!next) return null;
           const reason = check(item, next);
-          if (reason) return builder.say(reason);
-          void change(item, next, shift ? "Resized" : "Moved");
+          if (reason) {
+            builder.say(reason);
+            return null;
+          }
+          return { fields: next, verb: shift ? "Resized" : "Moved" };
         },
         onEmpty: () => select(null),
         onDragging: builder.setDragging,

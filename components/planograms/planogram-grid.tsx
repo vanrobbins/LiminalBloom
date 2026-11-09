@@ -40,7 +40,8 @@ export type GridBuilder = {
   onCommit: (item: GridItem, fields: PlacementFields, verb: "Moved" | "Resized", onFound: (id: string) => void) => Promise<unknown>;
   /** An invalid drop: it has already snapped back; say why. */
   onRefused: (message: string) => void;
-  onKey: (item: GridItem, key: string, shift: boolean) => void;
+  /** An arrow key on the selected tile: where it goes, or null (it can't; the builder has said why). Held and saved like a drop. */
+  onKey: (item: GridItem, key: string, shift: boolean) => { fields: PlacementFields; verb: "Moved" | "Resized" } | null;
   /** Tap on empty space, or Escape on the selected tile. */
   onEmpty: () => void;
   onDragging: (isDragging: boolean) => void;
@@ -193,7 +194,14 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   bounds={layout}
                   gestures={gestures}
                   onSelect={onSelect}
-                  onKey={builder && isMoving ? (key, shift) => builder.onKey(item, key, shift) : undefined}
+                  onKey={
+                    builder && isMoving
+                      ? (key, shift) => {
+                          const nudge = builder.onKey(item, key, shift);
+                          if (nudge) landed.hold(item.id, nudge.fields, (onFound) => builder.onCommit(item, nudge.fields, nudge.verb, onFound));
+                        }
+                      : undefined
+                  }
                   onEscape={builder?.onEmpty}
                 />
               );

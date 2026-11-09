@@ -8,7 +8,7 @@ import type { DraftState, PlacementView, PlanogramFace, PlanogramScope } from "@
 const hook = vi.hoisted(() => ({ draft: null as DraftState | null, save: (() => {}) as (...args: unknown[]) => unknown }));
 vi.mock("./use-planogram-draft", async (original) => ({
   ...(await original<typeof import("./use-planogram-draft")>()),
-  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (...args: unknown[]) => hook.save(...args), adopt: (next: DraftState) => (hook.draft = next) }),
+  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (pending: unknown) => hook.save(typeof pending === "function" ? pending(hook.draft) : pending), adopt: (next: DraftState) => (hook.draft = next) }),
 }));
 const actions = vi.hoisted(() => ({
   pickerSearch: (() => Promise.resolve([])) as (q: string) => Promise<unknown[]>,

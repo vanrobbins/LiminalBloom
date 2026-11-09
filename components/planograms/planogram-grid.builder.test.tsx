@@ -131,6 +131,17 @@ describe("PlanogramGrid as the builder's surface", () => {
     expect(builder.onEmpty).toHaveBeenCalled();
   });
 
+  it("an arrow press is drawn where it lands while it saves, so the next press starts from there (DECISIONS 11-09)", () => {
+    const onKey = vi.fn((item: GridItem) => ({ fields: { ...item, col: item.col + 1 }, verb: "Moved" as const }));
+    const onCommit = vi.fn(() => new Promise<unknown>(() => {}));
+    render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builderWith({ onKey, onCommit })} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: /High-Rise Pant/ }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("button", { name: /High-Rise Pant/ }), { key: "ArrowRight" });
+    expect(onKey).toHaveBeenLastCalledWith(expect.objectContaining({ col: pant.col + 1 }), "ArrowRight", false);
+    expect(onCommit).toHaveBeenCalledTimes(2);
+    expect(onCommit).toHaveBeenLastCalledWith(expect.objectContaining({ col: pant.col + 1 }), expect.objectContaining({ col: pant.col + 2 }), "Moved", expect.any(Function));
+  });
+
   it("a handle on the drawing space's edge turns inward, and still resizes that edge", () => {
     sized();
     const last = { ...pant, id: "p2", productId: "tee", productName: "Tee", col: 8 };
