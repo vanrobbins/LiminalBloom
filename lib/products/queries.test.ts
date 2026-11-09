@@ -9,7 +9,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { fixtures, productCategories, productLocations, products, tableSets } from "@/db/schema";
 
-import { WORD_SIMILARITY_THRESHOLD, isTextQuery, listCategories, locationsFor, productDetail, search, searchProducts } from "./queries";
+import { locationsFor } from "./locations";
+import { WORD_SIMILARITY_THRESHOLD, isTextQuery, listCategories, productDetail, search, searchProducts } from "./queries";
 import { searchInput } from "./schemas";
 import { dropStores, makeStore, seedStoreFixtures, type StoreFixtures } from "./test-stores";
 

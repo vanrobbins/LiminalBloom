@@ -12,7 +12,8 @@ import { dropStores, makeStore, seedStoreFixtures } from "@/lib/products/test-st
 import { publishDraft, publishStatements, previewPublish, restoreVersion } from "./publish";
 import { draftState, loadPlanogram } from "./queries";
 import { addFixture, addProduct, addTableSet } from "./test-planograms";
-import { saveChange, scopeFor, startDraft } from "./write";
+import { saveChange, startDraft } from "./write";
+import { scopeFor } from "./write-core";
 
 afterAll(dropStores);
 

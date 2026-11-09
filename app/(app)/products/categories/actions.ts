@@ -8,7 +8,7 @@ import { z } from "zod";
 import { requireMember } from "@/lib/current-member";
 import { deleteImagesQuietly, withoutSeedImages } from "@/lib/products/images";
 import { categoryInput, fieldErrors } from "@/lib/products/schemas";
-import { createCategory, deleteCategory, updateCategory } from "@/lib/products/write";
+import { createCategory, deleteCategory, updateCategory } from "@/lib/products/category-write";
 
 export type CategoryFormResult =
   | { status: "saved" }

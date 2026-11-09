@@ -1,13 +1,14 @@
-// The product library's writes (spec §5.2–5.3). Each runs as one store-scoped
-// batch, and every update or delete is guarded by the version the form read:
-// if another device saved first, the guard matches nothing, layout_assert
-// raises, and the whole batch rolls back, so nothing is half-written.
+// The product library's product writes (spec §5.2; categories are in
+// category-write.ts). Each runs as one store-scoped batch, and every update or
+// delete is guarded by the version the form read: if another device saved
+// first, the guard matches nothing, layout_assert raises, and the whole batch
+// rolls back, so nothing is half-written.
 
 import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, eq, isNotNull, sql, type SQLWrapper } from "drizzle-orm";
+import { and, eq, sql, type SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { db } from "@/db";
@@ -18,7 +19,7 @@ import type { ProductStatus } from "@/lib/product-status";
 
 import { databaseError } from "./errors";
 import { PRESENTATIONS } from "./footprint";
-import type { CategoryInput, ProductInput } from "./schemas";
+import type { ProductInput } from "./schemas";
 
 export type Refusal =
   | { status: "conflict" }
@@ -26,11 +27,6 @@ export type Refusal =
   | { status: "not-found" };
 
 export type SaveOutcome<T extends object = object> = ({ status: "saved" } & T) | Refusal;
-
-export type DeleteCategoryOutcome =
-  | { status: "saved"; imagePaths: string[] }
-  | { status: "conflict" }
-  | { status: "count-changed"; count: number };
 
 type Statements = [BatchItem<"pg">, ...BatchItem<"pg">[]];
 
@@ -50,7 +46,7 @@ function refusal(error: unknown): Refusal | null {
   return null;
 }
 
-async function attempt<T extends object>(run: () => Promise<{ status: "saved" } & T>): Promise<SaveOutcome<T>> {
+export async function attempt<T extends object>(run: () => Promise<{ status: "saved" } & T>): Promise<SaveOutcome<T>> {
   try {
     return await run();
   } catch (error) {
@@ -60,79 +56,8 @@ async function attempt<T extends object>(run: () => Promise<{ status: "saved" } 
   }
 }
 
-const categoryWhere = (storeId: string, id: string, version: number) =>
-  and(eq(productCategories.id, id), eq(productCategories.storeId, storeId), eq(productCategories.version, version));
 const productWhere = (storeId: string, id: string, version: number) =>
   and(eq(products.id, id), eq(products.storeId, storeId), eq(products.version, version));
-
-export function createCategory(storeId: string, input: CategoryInput): Promise<SaveOutcome<{ id: string }>> {
-  return attempt(async () => {
-    const [rows] = await withStore(storeId, [
-      db.insert(productCategories).values({ storeId, ...input }).returning({ id: productCategories.id }),
-    ] as const);
-    return { status: "saved" as const, id: rows[0].id };
-  });
-}
-
-export function updateCategory(storeId: string, id: string, expectedVersion: number, input: CategoryInput): Promise<SaveOutcome> {
-  return attempt(async () => {
-    await withStore(storeId, [
-      guarded(
-        db
-          .update(productCategories)
-          .set({ ...input, version: sql`${productCategories.version} + 1`, updatedAt: new Date() })
-          .where(categoryWhere(storeId, id, expectedVersion))
-          .returning({ id: productCategories.id }),
-        "category",
-      ),
-    ]);
-    return { status: "saved" as const };
-  });
-}
-
-export async function deleteCategory(
-  storeId: string,
-  id: string,
-  expectedVersion: number,
-  expectedCount: number,
-): Promise<DeleteCategoryOutcome> {
-  try {
-    const [images] = await withStore(storeId, [
-      db
-        .select({ path: products.imagePath })
-        .from(products)
-        .where(and(eq(products.storeId, storeId), eq(products.categoryId, id), isNotNull(products.imagePath))),
-      // The count the dialog showed must still be true, or more would go than the person agreed to.
-      guarded(
-        db
-          .delete(productCategories)
-          .where(
-            and(
-              categoryWhere(storeId, id, expectedVersion),
-              sql`(select count(*) from ${products} where ${products.categoryId} = ${id}) = ${expectedCount}`,
-            ),
-          )
-          .returning({ id: productCategories.id }),
-        "category",
-      ),
-    ] as const);
-    return { status: "saved", imagePaths: images.flatMap((r) => (r.path ? [r.path] : [])) };
-  } catch (error) {
-    if (conflictLabel(error) === null) throw error;
-    const [rows] = await withStore(storeId, [
-      db
-        .select({
-          version: productCategories.version,
-          count: sql<number>`(select count(*)::int from ${products} where ${products.categoryId} = ${id})`,
-        })
-        .from(productCategories)
-        .where(and(eq(productCategories.id, id), eq(productCategories.storeId, storeId))),
-    ] as const);
-    const current = rows[0];
-    if (!current || current.version !== expectedVersion) return { status: "conflict" };
-    return { status: "count-changed", count: current.count };
-  }
-}
 
 const productRow = (input: ProductInput) => ({
   name: input.name,

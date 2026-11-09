@@ -2,7 +2,7 @@
 // editor's own rules, then writes one store-scoped batch guarded by
 // layout_assert: the planogram's version (nothing saved between this check and
 // this write) and, for an edit, the placement's version (the two-device rule).
-// Any guard raising rolls the whole batch back.
+// Any guard raising rolls the whole batch back (write-core.ts).
 
 import "server-only";
 
@@ -14,19 +14,25 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { db } from "@/db";
 import { planogramPlacements, planograms } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
-import { loadLayout } from "@/lib/layout/load";
-import { conflictLabel } from "@/lib/layout/save";
-import { databaseError } from "@/lib/products/errors";
 import { guarded } from "@/lib/products/write";
 
-import { planogramScope } from "./faces";
-import { floorLocations, loadPlanogram, productFits, type PlanogramRow } from "./queries";
-import { restoreRows, type RestoredRow } from "./restore";
+import { floorLocations, productFits } from "./draft-sources";
+import { loadPlanogram, type PlanogramRow } from "./queries";
+import { restoreRows } from "./restore";
 import { checkPlacement } from "./rules";
 import type { Change, PlacementFields, PlanogramScope } from "./types";
-
-export type Statements = [BatchItem<"pg">, ...BatchItem<"pg">[]];
-export type Outcome = { status: "saved"; switchedToHung?: true } | { status: "conflict" } | { status: "invalid"; message: string } | { status: "not-found" };
+import {
+  attempt,
+  bumped,
+  CONFLICT,
+  NOT_FOUND,
+  placementInserts,
+  planogramWhere,
+  SAVED,
+  scopeFor,
+  type Outcome,
+  type Statements,
+} from "./write-core";
 
 /**
  * Moving folded product onto a frame rack hangs it instead (frame racks spec §3):
@@ -40,38 +46,6 @@ export function onRail(change: Change, scope: PlanogramScope, hungColumns: numbe
   return { ...change, fields: { ...change.fields, presentation: "hung", colSpan: hungColumns, row: 0, rowSpan: 1 } };
 }
 
-const SAVED = { status: "saved" } as const;
-const CONFLICT = { status: "conflict" } as const;
-const NOT_FOUND = { status: "not-found" } as const;
-
-export async function scopeFor(storeId: string, fixtureId: string): Promise<PlanogramScope | null> {
-  return planogramScope(await loadLayout(storeId), fixtureId);
-}
-
-/** Another device got there first; anything else is a real failure. */
-export function isClash(error: unknown): boolean {
-  if (conflictLabel(error) !== null) return true;
-  const failure = databaseError(error);
-  return (
-    failure?.code === "23505" &&
-    (failure.constraint === "planograms_fixture_unique" || failure.constraint === "planogram_versions_number_unique")
-  );
-}
-
-async function attempt(run: () => Promise<Outcome>): Promise<Outcome> {
-  try {
-    return await run();
-  } catch (error) {
-    if (isClash(error)) return CONFLICT;
-    throw error;
-  }
-}
-
-export const bumped = () => ({ version: sql`${planograms.version} + 1`, updatedAt: new Date() });
-
-export const planogramWhere = (storeId: string, id: string, version: number) =>
-  and(eq(planograms.storeId, storeId), eq(planograms.id, id), eq(planograms.version, version));
-
 const placementWhere = (storeId: string, row: PlanogramRow, id: string, version: number) =>
   and(
     eq(planogramPlacements.storeId, storeId),
@@ -79,12 +53,6 @@ const placementWhere = (storeId: string, row: PlanogramRow, id: string, version:
     eq(planogramPlacements.id, id),
     eq(planogramPlacements.version, version),
   );
-
-export function placementInserts(storeId: string, planogramId: string, rows: readonly RestoredRow[]): BatchItem<"pg">[] {
-  return rows.length === 0
-    ? []
-    : [db.insert(planogramPlacements).values(rows.map((r) => ({ id: randomUUID(), storeId, planogramId, ...r })))];
-}
 
 export function startDraft(storeId: string, fixtureId: string, expectedVersion: number | null): Promise<Outcome> {
   return attempt(async () => {

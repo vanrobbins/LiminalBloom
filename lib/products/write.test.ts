@@ -9,19 +9,11 @@ import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { productCategories, productFootprints, products } from "@/db/schema";
 
+import { createCategory, deleteCategory, updateCategory } from "./category-write";
 import { productDetail } from "./queries";
 import type { ProductInput } from "./schemas";
 import { dropStores, makeStore, productCount, seedStoreFixtures } from "./test-stores";
-import {
-  createCategory,
-  createProduct,
-  deleteCategory,
-  deleteProduct,
-  setProductImage,
-  setProductStatus,
-  updateCategory,
-  updateProduct,
-} from "./write";
+import { createProduct, deleteProduct, setProductImage, setProductStatus, updateProduct } from "./write";
 
 afterAll(dropStores);
 
