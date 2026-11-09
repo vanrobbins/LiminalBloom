@@ -25,7 +25,7 @@ export function ProductCard({ product }: { product: ProductRow }) {
         <ProductImage productId={product.id} name={product.name} categoryName={product.categoryName} imageKey={product.imageKey} swatch={product.swatch} texture={product.texture} colorWord={product.color} size="fill" decorative />
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <span data-product-name className="font-medium text-ink wrap-anywhere">
+        <span data-product-name className="font-medium text-ink wrap-break-word">
           {product.name}
         </span>
         <span className="text-sm text-ink-muted">

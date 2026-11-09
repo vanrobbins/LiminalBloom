@@ -1,12 +1,13 @@
-// A zone: its fill colour, its name, and how it shows selection and problems.
+// A zone: its fill colour, its name (top-left, fitted: UX audit U5), and how
+// it shows selection and problems.
 
-import { interiorPoint } from "@/lib/layout/geometry";
+import { zoneLabel } from "@/lib/layout/zone-label";
 import type { Zone } from "@/lib/layout/types";
 
 type ZoneShapeProps = { zone: Zone; scale: number; dimmed: boolean; selected: boolean; problem: boolean };
 
 export function ZoneShape({ zone, scale, dimmed, selected, problem }: ZoneShapeProps) {
-  const label = zone.points.length >= 3 ? interiorPoint(zone.points) : null;
+  const label = zoneLabel(zone.points, zone.name, scale);
   return (
     <g data-zone-id={zone.id} data-zone-name={zone.name} data-problem={problem || undefined} opacity={dimmed ? 0.35 : 1}>
       <polygon
@@ -21,13 +22,14 @@ export function ZoneShape({ zone, scale, dimmed, selected, problem }: ZoneShapeP
         <text
           x={label.x}
           y={label.y}
-          fontSize={13 / scale}
-          textAnchor="middle"
+          fontSize={label.fontSize}
           dominantBaseline="middle"
           fill="var(--ink)"
+          fontWeight={500}
           className="pointer-events-none select-none"
         >
-          {zone.name}
+          {label.text !== zone.name ? <title>{zone.name}</title> : null}
+          {label.text}
         </text>
       ) : null}
     </g>

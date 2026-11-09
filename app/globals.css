@@ -96,6 +96,8 @@
   --animate-slide-from-right: slide-from-right var(--duration-base) var(--ease-out-soft);
   --animate-slide-from-left: slide-from-left var(--duration-base) var(--ease-out-soft);
   --animate-fade-in: fade-in var(--duration-base) var(--ease-out-soft);
+  /* A panel that opens out of the button that opened it (A3); set its transform-origin. */
+  --animate-grow-in: grow-in var(--duration-base) var(--ease-out-soft);
 
   @keyframes tile-pulse {
     50% { transform: scale(1.06); }
@@ -108,6 +110,9 @@
   }
   @keyframes fade-in {
     from { opacity: 0; }
+  }
+  @keyframes grow-in {
+    from { transform: scale(0.6); opacity: 0; }
   }
 }
 

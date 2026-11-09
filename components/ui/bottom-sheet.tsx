@@ -34,6 +34,8 @@ type BottomSheetProps = {
   peek?: boolean;
   /** 75 dvh tall instead of fitting its content (the map's fixture panel). */
   tall?: boolean;
+  /** On closing: `event.preventDefault()` to put focus somewhere else than the opener. */
+  onCloseAutoFocus?: (event: Event) => void;
   children: React.ReactNode;
 };
 
@@ -49,6 +51,7 @@ export function BottomSheet({
   hideTitle = false,
   peek = false,
   tall = false,
+  onCloseAutoFocus,
   children,
 }: BottomSheetProps) {
   const returnFocusTo = useRef<HTMLElement | null>(null);
@@ -122,6 +125,8 @@ export function BottomSheet({
             (event.target as HTMLElement).focus();
           }}
           onCloseAutoFocus={(event) => {
+            onCloseAutoFocus?.(event);
+            if (event.defaultPrevented) return;
             event.preventDefault();
             returnFocusTo.current?.focus();
           }}

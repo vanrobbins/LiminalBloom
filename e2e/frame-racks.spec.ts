@@ -12,20 +12,12 @@ test.beforeEach(async () => {
   await seedCatalog();
 });
 
-/** + Add a fixture in whichever form the screen size has. */
+/** + Add a fixture from the one + Add in the top bar (A3). */
 async function add(page: Page, label: string) {
-  const size = sizeOf(test.info());
-  if (size === "desktop") {
-    await page.getByRole("region", { name: "Add to the map" }).getByRole("button", { name: label, exact: true }).click();
-  } else if (size === "tablet") {
-    await page.getByRole("button", { name: "Add", exact: true }).click();
-    await page.getByRole("menuitem", { name: label, exact: true }).click();
-  } else {
-    await page.getByRole("navigation", { name: "Editor" }).getByRole("button", { name: "Add", exact: true }).click();
-    const sheet = page.getByRole("dialog", { name: "Add to the map" });
-    await sheet.getByRole("button", { name: label, exact: true }).click();
-    await expect(sheet).toBeHidden();
-  }
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const panel = page.getByRole("dialog", { name: "Add to the map" });
+  await panel.getByRole("button", { name: label, exact: true }).click();
+  await expect(panel).toBeHidden();
 }
 
 test("adds a frame rack and builds a run from it", async ({ page }) => {

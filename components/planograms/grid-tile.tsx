@@ -7,7 +7,7 @@
 
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Layers, Shirt } from "lucide-react";
 
 import { ProductImage } from "@/components/products/product-image";
 import { resizeEdges, type Edge } from "@/lib/planograms/builder/resize";
@@ -116,26 +116,36 @@ export function GridTile({ item, block, rect, words, selected, highlighted, issu
         }}
         {...grab}
         style={{ ...placed(rect), transform: offset ? `translate(${at(offset.dx)}, ${at(offset.dy)})` : undefined }}
-        className="absolute overflow-hidden rounded-md border border-line bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none"
+        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none"
       >
-        <ProductImage
-          productId={item.productId}
-          name={item.productName}
-          categoryName={item.categoryName}
-          imageKey={item.imageKey}
-          view={viewFor(item.presentation, block.side)}
-          swatch={item.swatch}
-          texture={item.texture}
-          colorWord={item.colorWord}
-          size="fill"
-          decorative
-        />
-        <span aria-hidden="true" className="absolute top-1 right-1 rounded bg-raised/90 px-1 font-mono text-xs text-ink">
-          {item.presentation === "hung" ? "H" : "F"} {item.pieceCount}
+        <span className="min-h-0 w-full flex-1">
+          <ProductImage
+            productId={item.productId}
+            name={item.productName}
+            categoryName={item.categoryName}
+            imageKey={item.imageKey}
+            view={viewFor(item.presentation, block.side)}
+            swatch={item.swatch}
+            texture={item.texture}
+            colorWord={item.colorWord}
+            size="fill"
+            decorative
+          />
+        </span>
+        {/* An icon for hung or folded and the piece count, not "F 1" (UX audit U21); the words are in the label and on hover. */}
+        <span
+          aria-hidden="true"
+          data-count-badge
+          title={`${PRESENTATION_LABEL[item.presentation]} · ${item.pieceCount} ${item.pieceCount === 1 ? "piece" : "pieces"}`}
+          className="absolute top-1 right-1 inline-flex items-center gap-0.5 rounded bg-raised/90 px-1 text-xs text-ink"
+        >
+          {item.presentation === "hung" ? <Shirt strokeWidth={1.75} className="size-3" /> : <Layers strokeWidth={1.75} className="size-3" />}
+          {item.pieceCount}
         </span>
         {issue ? <AlertTriangle aria-hidden="true" strokeWidth={2} className="absolute top-1 left-1 size-4 text-danger" /> : null}
         {named ? (
-          <span aria-hidden="true" className="absolute inset-x-0 bottom-0 line-clamp-2 bg-raised/90 px-1 py-0.5 text-center text-xs leading-tight font-medium text-ink">
+          // Under the drawing, not over it (UX audit U21).
+          <span aria-hidden="true" className="line-clamp-2 shrink-0 border-t border-line-subtle bg-raised px-1 py-0.5 text-center text-xs leading-tight font-medium text-ink">
             {item.productName}
           </span>
         ) : null}

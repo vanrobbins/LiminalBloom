@@ -27,4 +27,16 @@ describe("MapEditor", () => {
     render(<MapEditor storeId="s" initialLayout={{ ...store(), fixtures: [fixture()] }} {...actions} />);
     expect(screen.getByText("Select something to see its properties.")).toBeInTheDocument();
   });
+
+  it("has one + Add, in the top bar, and no other add spots (A3)", () => {
+    render(<MapEditor storeId="s" initialLayout={{ ...store(), fixtures: [fixture()] }} {...actions} />);
+    expect(screen.getAllByRole("button", { name: "Add" })).toHaveLength(1);
+    expect(screen.getByRole("banner")).toContainElement(screen.getByRole("button", { name: "Add" }));
+    expect(screen.queryByRole("region", { name: "Add to the map" })).toBeNull();
+  });
+
+  it("can open with the + Add panel showing", () => {
+    render(<MapEditor storeId="s" initialLayout={{ ...store(), fixtures: [fixture()] }} {...actions} startWithAdd embedded />);
+    expect(screen.getByRole("dialog", { name: "Add to the map" })).toBeInTheDocument();
+  });
 });

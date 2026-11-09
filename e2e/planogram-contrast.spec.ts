@@ -76,7 +76,7 @@ test("tile labels and status chips are readable", async ({ page }) => {
   const tile = page.getByRole("button", { name: /^E2E High-Rise Pant, / });
   await expect(tile).toBeVisible();
   await check(tile.locator("span").filter({ hasText: "E2E High-Rise Pant" }), "tile label");
-  await check(tile.locator("span").filter({ hasText: /^[HF] \d+$/ }), "tile count badge");
+  await check(tile.locator("[data-count-badge]"), "tile count badge");
 
   const chip = page.getByRole("button", { name: "Set due date" });
   await check(chip, "due date chip");

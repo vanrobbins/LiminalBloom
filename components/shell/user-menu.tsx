@@ -128,7 +128,7 @@ export function UserMenu({
           className={TRIGGER[variant]}
         >
           {avatar}
-          {variant === "sidebar" ? <span className="min-w-0 wrap-anywhere">{user.name}</span> : null}
+          {variant === "sidebar" ? <span className="min-w-0 wrap-break-word">{user.name}</span> : null}
         </DropdownMenuTrigger>
       </NameTip>
 

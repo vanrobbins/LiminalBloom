@@ -1,6 +1,7 @@
 // The map editor (spec §10): one canvas, panels by screen size, everything
 // driven through the session reducer. This file only arranges parts; the
-// rules live in lib/layout/.
+// rules live in lib/layout/. Full screen on /layout/edit, or `embedded` in
+// /layout's own area when + Add or Edit starts editing there (A3).
 
 "use client";
 
@@ -18,9 +19,8 @@ import type { AddKind } from "@/lib/layout/session-core";
 import type { Layout } from "@/lib/layout/types";
 import { validate } from "@/lib/layout/validate";
 
-import { AddMenu } from "./add-menu";
 import { TILE_TYPE } from "./add-options";
-import { AddSheet } from "./add-sheet";
+import { AddPanel } from "./add-panel";
 import { DrawingBar } from "./drawing-bar";
 import { EditorBottomBar } from "./editor-bottom-bar";
 import { EditorTopBar } from "./editor-top-bar";
@@ -30,7 +30,6 @@ import { OutlineSetup } from "./outline-setup";
 import { PropertiesPanel } from "./properties-panel";
 import { SelectMoreBar } from "./select-more-bar";
 import { StoreMap } from "./store-map";
-import { TypeTiles } from "./type-tiles";
 import { useEditorKeys } from "./use-editor-keys";
 import { useElementSize } from "./use-element-size";
 import { useMapEditor } from "./use-map-editor";
@@ -43,15 +42,20 @@ type MapEditorProps = {
   initialLayout: Layout;
   save: (storeId: string, changes: ChangeSet) => Promise<SaveReply>;
   fetchLatest: (storeId: string) => Promise<FetchReply>;
+  /** Opens with the + Add panel showing (the viewer's + started editing). */
+  startWithAdd?: boolean;
+  /** Fills its parent instead of the screen, and Done calls `onLeft`. */
+  embedded?: boolean;
+  onLeft?: () => void;
 };
 
 const ADD_KINDS: readonly string[] = ["zone", "entrance", "table", "wall_bay", "rack", "mannequin", "platform", "prop"];
 
-export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEditorProps) {
-  const { session, dispatch, status, leaving, done } = useMapEditor({ storeId, initial: initialLayout, save, fetchLatest });
+export function MapEditor({ storeId, initialLayout, save, fetchLatest, startWithAdd = false, embedded = false, onLeft }: MapEditorProps) {
+  const { session, dispatch, status, leaving, done } = useMapEditor({ storeId, initial: initialLayout, save, fetchLatest, onLeft });
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [listOpen, setListOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(startWithAdd);
 
   const onSize = useCallback((viewport: { width: number; height: number }) => dispatch({ type: "viewport", viewport }), [dispatch]);
   const container = useElementSize<HTMLDivElement>(onSize);
@@ -90,7 +94,7 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
   const properties = <PropertiesPanel session={session} dispatch={dispatch} />;
 
   return (
-    <div className="flex h-dvh flex-col bg-surface">
+    <div className={`flex flex-col bg-surface ${embedded ? "h-full min-h-0" : "h-dvh"}`}>
       <EditorTopBar
         title={zone?.name ?? "Store layout"}
         inZone={zone !== undefined}
@@ -102,11 +106,11 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
         onLeaveZone={() => dispatch({ type: "focus", focus: OVERVIEW })}
         onUndo={() => dispatch({ type: "undo" })}
         onRedo={() => dispatch({ type: "redo" })}
+        add={<AddPanel focus={focus} onAdd={add} open={addOpen} onOpenChange={setAddOpen} />}
       />
       <div className="flex min-h-0 flex-1">
         <aside className="hidden w-[260px] shrink-0 overflow-y-auto border-r border-line-subtle bg-raised lg:block">
           {list}
-          <TypeTiles focus={focus} onAdd={add} />
         </aside>
         <main
           ref={container}
@@ -140,9 +144,6 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
             svgProps={pointer.handlers}
           />
           <ZoomControls onZoom={(factor) => dispatch({ type: "zoom", factor })} onFit={() => dispatch({ type: "fit" })} />
-          <div className="absolute bottom-3 left-3 hidden md:block lg:hidden">
-            <AddMenu focus={focus} onAdd={add} />
-          </div>
           {session.linkOffer && offered ? (
             <LinkOffer offer={session.linkOffer} join={offered} camera={session.camera} viewport={session.viewport} dispatch={dispatch} />
           ) : null}
@@ -155,7 +156,8 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
             />
           ) : null}
         </main>
-        <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-line-subtle bg-raised p-4 md:block lg:w-[300px]">
+        {/* Narrower on tablet, so the map keeps most of the width (UX audit U9). */}
+        <aside className="hidden w-72 shrink-0 overflow-y-auto border-l border-line-subtle bg-raised p-4 md:block lg:w-[300px]">
           {session.selection.length > 0 ? (
             properties
           ) : (
@@ -166,7 +168,7 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
           )}
         </aside>
       </div>
-      <EditorBottomBar status={status} onList={() => setListOpen(true)} onAdd={() => setAddOpen(true)} />
+      <EditorBottomBar status={status} onList={() => setListOpen(true)} />
 
       {isPhone ? (
         <>
@@ -194,7 +196,6 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest }: MapEdit
               }}
             />
           </BottomSheet>
-          <AddSheet open={addOpen} onOpenChange={setAddOpen} focus={focus} onAdd={add} />
         </>
       ) : null}
 

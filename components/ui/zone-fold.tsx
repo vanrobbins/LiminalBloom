@@ -37,14 +37,14 @@ export function ZoneFold({ title, count, summary, open, canFold = true, onToggle
               className="flex min-h-11 w-full items-center gap-2 rounded px-2 text-left focus-visible:outline-2 focus-visible:outline-ink"
             >
               <ChevronRight aria-hidden="true" strokeWidth={1.75} className={`size-4 shrink-0 text-ink-muted motion-safe:transition-transform ${open ? "rotate-90" : ""}`} />
-              <span id={`${id}-title`} className="min-w-0 font-medium text-ink wrap-anywhere">
+              <span id={`${id}-title`} className="min-w-0 font-medium text-ink wrap-break-word">
                 {title}
               </span>
               <span className="shrink-0 text-sm text-ink-muted">{count}</span>
             </button>
           ) : (
             <span className="flex min-h-11 items-center gap-2 px-2">
-              <span id={`${id}-title`} className="min-w-0 font-medium text-ink wrap-anywhere">
+              <span id={`${id}-title`} className="min-w-0 font-medium text-ink wrap-break-word">
                 {title}
               </span>
               <span className="shrink-0 text-sm text-ink-muted">{count}</span>

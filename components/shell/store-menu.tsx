@@ -95,7 +95,7 @@ export function StoreMenu({
           <span aria-hidden="true">{storeInitials(name)}</span>
         ) : (
           <>
-            <span data-store-label className="min-w-0 wrap-anywhere">
+            <span data-store-label className="min-w-0 wrap-break-word">
               {name}
             </span>
             <ChevronsUpDown aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />

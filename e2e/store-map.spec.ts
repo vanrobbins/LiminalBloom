@@ -52,25 +52,13 @@ async function expandPeek(page: Page) {
 	).toHaveAttribute("aria-expanded", "true");
 }
 
-/** + Add in whichever form the screen size has. */
+/** + Add from the one + Add in the top bar, at every size (A3). */
 async function add(page: Page, label: string) {
-	const size = sizeOf(test.info());
-	if (size === "desktop") {
-		await page
-			.getByRole("region", { name: "Add to the map" })
-			.getByRole("button", { name: label, exact: true })
-			.click();
-	} else if (size === "tablet") {
-		await page.getByRole("button", { name: "Add", exact: true }).click();
-		await page.getByRole("menuitem", { name: label, exact: true }).click();
-	} else {
-		await closePeek(page);
-		await page.getByRole("navigation", { name: "Editor" }).getByRole("button", { name: "Add", exact: true }).click();
-		const sheet = page.getByRole("dialog", { name: "Add to the map" });
-		await sheet.getByRole("button", { name: label, exact: true }).click();
-		// Until the sheet has gone, its overlay takes the presses meant for the map.
-		await expect(sheet).toBeHidden();
-	}
+	if (sizeOf(test.info()) === "phone") await closePeek(page);
+	await page.getByRole("button", { name: "Add", exact: true }).click();
+	const panel = page.getByRole("dialog", { name: "Add to the map" });
+	await panel.getByRole("button", { name: label, exact: true }).click();
+	await expect(panel).toBeHidden();
 }
 
 /** Select an item from the list in whichever form the screen size has. */
@@ -126,8 +114,25 @@ test.describe("read-only map", () => {
 		await page.goto("/layout");
 		const content = (await page.locator("#content").boundingBox())!;
 		const shown = (await map(page).boundingBox())!;
+		// On desktop the list of everything sits beside the map (UX audit U7), 16 px apart.
+		const list = page.getByRole("navigation", { name: "Everything on the map" });
+		const beside = (await list.isVisible()) ? (await list.boundingBox())!.width + 16 : 0;
 		// The content area has 32 px of padding a side at tablet and desktop widths.
-		expect(shown.width).toBeGreaterThan(content.width - 80);
+		expect(shown.width + beside).toBeGreaterThan(content.width - 80);
+	});
+
+	test("+ Add starts editing in the same place with the panel open; Done comes back (A3)", async ({ page }) => {
+		await page.goto("/layout");
+		await hydrated(page);
+		await page.getByRole("button", { name: "Add", exact: true }).click();
+		const panel = page.getByRole("dialog", { name: "Add to the map" });
+		await expect(panel).toBeVisible();
+		await expect(page).toHaveURL(/\/layout$/);
+		await panel.getByRole("button", { name: "Rack", exact: true }).click();
+		await saved(page);
+		await page.getByRole("button", { name: "Done" }).click();
+		await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
+		await expect(page.locator('[data-fixture-name="Rack 1"]')).toHaveCount(1);
 	});
 });
 

@@ -35,7 +35,7 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
           {categories.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="font-medium text-ink wrap-anywhere">{c.name}</span>
+                <span className="font-medium text-ink wrap-break-word">{c.name}</span>
                 <span className="text-sm text-ink-muted">
                   {describeDefaults(c)} · {c.productCount} {c.productCount === 1 ? "product" : "products"}
                 </span>

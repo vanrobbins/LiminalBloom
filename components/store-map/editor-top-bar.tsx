@@ -1,4 +1,4 @@
-// Done, where you are, undo/redo and save status (spec §10).
+// Done, where you are, + Add (A3), undo/redo and save status (spec §10).
 
 "use client";
 
@@ -20,9 +20,11 @@ type EditorTopBarProps = {
   onLeaveZone: () => void;
   onUndo: () => void;
   onRedo: () => void;
+  /** The one + Add (A3). */
+  add: React.ReactNode;
 };
 
-export function EditorTopBar({ title, inZone, status, leaving, canUndo, canRedo, onDone, onLeaveZone, onUndo, onRedo }: EditorTopBarProps) {
+export function EditorTopBar({ title, inZone, status, leaving, canUndo, canRedo, onDone, onLeaveZone, onUndo, onRedo, add }: EditorTopBarProps) {
   return (
     <header className="flex items-center gap-2 border-b border-line-subtle bg-raised px-2 py-1">
       <Button variant="secondary" loading={leaving} loadingText="Saving…" onClick={onDone}>
@@ -37,6 +39,7 @@ export function EditorTopBar({ title, inZone, status, leaving, canUndo, canRedo,
       <div className="hidden sm:block">
         <SaveStatus status={status} />
       </div>
+      {add}
       <Button variant="secondary" icon aria-label="Undo" disabled={!canUndo} onClick={onUndo}>
         <Undo2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>

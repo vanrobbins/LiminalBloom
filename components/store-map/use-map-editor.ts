@@ -23,11 +23,13 @@ type Options = {
   initial: Layout;
   save: (storeId: string, changes: ChangeSet) => Promise<SaveReply>;
   fetchLatest: (storeId: string) => Promise<FetchReply>;
+  /** Done, once everything is saved. Unset, it goes to /layout (the full-screen editor). */
+  onLeft?: () => void;
 };
 
 const RELOADED = "Couldn't save that change. The layout was reloaded.";
 
-export function useMapEditor({ storeId, initial, save, fetchLatest }: Options) {
+export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Options) {
   const router = useRouter();
   const reduce = useMemo(() => createReducer(() => crypto.randomUUID()), []);
   const [session, dispatch] = useReducer(reduce, initial, (layout) => createSession(layout, false));
@@ -156,8 +158,10 @@ export function useMapEditor({ storeId, initial, save, fetchLatest }: Options) {
 
   // Done waits for the queue to empty.
   useEffect(() => {
-    if (leaving && !pending) router.push("/layout");
-  }, [leaving, pending, router]);
+    if (!leaving || pending) return;
+    if (onLeft) onLeft();
+    else router.push("/layout");
+  }, [leaving, pending, router, onLeft]);
 
   // Messages from the session (a blocked drop, a conflict) become toasts.
   useEffect(() => {

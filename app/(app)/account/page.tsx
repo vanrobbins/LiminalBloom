@@ -50,7 +50,7 @@ export default async function AccountPage() {
               <li key={store.id} aria-current={isActive ? "true" : undefined}>
                 <Card compact className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                   <span className="flex min-w-0 flex-col">
-                    <span className="text-ink wrap-anywhere">{store.name}</span>
+                    <span className="text-ink wrap-break-word">{store.name}</span>
                     {isActive ? <span className="text-ink-muted">Working in</span> : null}
                   </span>
                   {isActive ? (

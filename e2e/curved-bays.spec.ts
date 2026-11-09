@@ -10,21 +10,13 @@ test.beforeEach(async () => {
   await seedLayout();
 });
 
-/** + Add a wall bay in whichever form the screen size has, and open its properties. */
+/** + Add a wall bay from the one + Add in the top bar (A3), and open its properties. */
 async function addWallBay(page: Page) {
-  const size = sizeOf(test.info());
-  if (size === "desktop") {
-    await page.getByRole("region", { name: "Add to the map" }).getByRole("button", { name: "Wall bay", exact: true }).click();
-  } else if (size === "tablet") {
-    await page.getByRole("button", { name: "Add", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Wall bay", exact: true }).click();
-  } else {
-    await page.getByRole("navigation", { name: "Editor" }).getByRole("button", { name: "Add", exact: true }).click();
-    const sheet = page.getByRole("dialog", { name: "Add to the map" });
-    await sheet.getByRole("button", { name: "Wall bay", exact: true }).click();
-    await expect(sheet).toBeHidden();
-    await page.getByRole("region", { name: "Selected" }).getByRole("button", { name: "Expand" }).click();
-  }
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const panel = page.getByRole("dialog", { name: "Add to the map" });
+  await panel.getByRole("button", { name: "Wall bay", exact: true }).click();
+  await expect(panel).toBeHidden();
+  if (sizeOf(test.info()) === "phone") await page.getByRole("region", { name: "Selected" }).getByRole("button", { name: "Expand" }).click();
 }
 
 const saved = (page: Page) => expect(page.getByText("Saved", { exact: true }).filter({ visible: true }).first()).toBeVisible();

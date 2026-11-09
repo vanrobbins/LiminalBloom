@@ -54,7 +54,7 @@ export function PlanogramList({ groups, today, storeKey }: { groups: ListGroup[]
                   <li key={item.fixtureId}>
                     <Link href={`/planograms/${item.fixtureId}`} className="flex min-h-11 flex-col gap-1 px-4 py-3 md:flex-row md:items-center md:justify-between">
                       <span className="flex flex-col">
-                        <span className="font-medium text-ink wrap-anywhere">{item.name}</span>
+                        <span className="font-medium text-ink wrap-break-word">{item.name}</span>
                         {type ? <span className="text-sm text-ink-muted">{type}</span> : null}
                       </span>
                       <span className="flex flex-wrap items-center gap-2 text-sm">
