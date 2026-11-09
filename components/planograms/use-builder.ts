@@ -4,7 +4,8 @@
 // another device got there first, its draft is adopted and the tile found in
 // it, or the change is refused (Review Focus 3). A refusal drops that
 // placement's undo steps (Review Focus 2). Undo is ignored while a drag is
-// held (store-map rule, DECISIONS 10-01).
+// held (store-map rule, DECISIONS 10-01). Undo and Redo pressed while a save is
+// out pick their step when their turn comes (DECISIONS 11-09).
 
 "use client";
 
@@ -12,12 +13,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { beginDraftAction } from "@/app/(app)/planograms/actions";
 import { matchPlacement } from "@/lib/planograms/builder/match";
-import { EMPTY_HISTORY, forget, prune, record, redo as redoStep, sitsAt, undo as undoStep, type History } from "@/lib/planograms/builder/undo";
-import type { Change, DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
+import { EMPTY_HISTORY, forget, prune, record, redo as redoStep, sitsAt, undo as undoStep, type History, type Travel } from "@/lib/planograms/builder/undo";
+import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 import { dismissToast, toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
-import type { SaveResult } from "./use-planogram-draft";
+import type { Pending, SaveResult } from "./use-planogram-draft";
 
 export type Verb = "Moved" | "Resized" | "Changed";
 export type CommitResult = { ok: true; id: string } | { ok: false; message: string | null };
@@ -28,7 +29,7 @@ type Options = {
   fixtureId: string;
   draft: DraftState | null;
   expectedVersion: number | null;
-  save: (change: Change) => Promise<SaveResult>;
+  save: (pending: Pending) => Promise<SaveResult>;
   adopt: (draft: DraftState) => void;
   onStarted: () => void;
   /** The first change was refused with no draft to work in: this screen is out of date, so reload it. */
@@ -36,6 +37,8 @@ type Options = {
   describe: (fields: PlacementFields) => string;
   /** False while the draft isn't the one shown (Published, a past version): Undo and Ctrl+Z do nothing. */
   enabled?: boolean;
+  /** Undo or Redo landed: shows the face it landed on and names it, if that wasn't the one showing. */
+  reveal?: (fields: PlacementFields) => string | null;
 };
 
 /** Only a placement's own fields: a tile carries names and looks too. */
@@ -52,8 +55,14 @@ const fieldsOf = (p: PlacementFields): PlacementFields => ({
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], [role=dialog]") !== null;
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, onStale, describe, enabled = true }: Options) {
-  const [history, setHistory] = useState<History>(EMPTY_HISTORY);
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, onStale, describe, enabled = true, reveal }: Options) {
+  const [history, setHistoryState] = useState<History>(EMPTY_HISTORY);
+  // Read by a queued Undo on its turn, before React has rendered the step a save just recorded.
+  const historyRef = useRef(history);
+  const setHistory = (next: History | ((h: History) => History)) => {
+    historyRef.current = typeof next === "function" ? next(historyRef.current) : next;
+    setHistoryState(historyRef.current);
+  };
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
   // Only the latest change offers Undo: an older toast's Undo would undo the newest step.
@@ -61,9 +70,9 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
   // One start at a time: a second change before it's back waits for the same reply.
   const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
   // Toast actions and the key listener outlive the render that made them.
-  const latest = useRef({ history, draft, enabled });
+  const latest = useRef({ draft, enabled, reveal });
   useEffect(() => {
-    latest.current = { history, draft, enabled };
+    latest.current = { draft, enabled, reveal };
   });
 
   async function placementFor(item: GridItem): Promise<{ placement: PlacementView } | { message: string | null }> {
@@ -130,10 +139,11 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
       }
       return { ok: false, message: result.message };
     }
-    // What the server kept, which isn't what was sent when folded product hangs on a rail.
+    // What the server kept, which isn't what was sent when folded product hangs on a rail;
+    // and where it sat when this change went, which a change queued behind another moved.
     const kept = result.draft.placements.find((p) => p.id === target.id);
     const after = kept ? fieldsOf(kept) : fields;
-    setHistory((h) => record(h, { id: target.id, before: fieldsOf(target), after }));
+    setHistory((h) => record(h, { id: target.id, before: fieldsOf(result.before ?? target), after }));
     say(`${result.notice ?? verb} to ${describe(after)}`);
     if (undoToast.current !== null) dismissToast(undoToast.current);
     undoToast.current = toast({ tone: "success", title: result.notice ?? verb, action: { label: "Undo", onSelect: () => void travel("undo") } });
@@ -141,22 +151,41 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
   }
 
   async function travel(direction: "undo" | "redo") {
-    const { history: held, draft: current, enabled: on } = latest.current;
-    if (!on || dragging.current || !current) return;
-    const pruned = prune(held, current.placements);
-    const step = direction === "undo" ? undoStep(pruned, current.placements) : redoStep(pruned, current.placements);
-    if (!step) return setHistory(pruned);
-    // Moved since by another device, though the draft now holds its fresh version.
-    const placement = current.placements.find((p) => p.id === step.step.id);
-    if (placement && !sitsAt(placement, direction === "undo" ? step.step.after : step.step.before)) {
-      setHistory(forget(pruned, step.step.id));
+    if (!latest.current.enabled || dragging.current) return;
+    // Picked on its turn: a change still saving is on the stack by then.
+    const picked: { travel: Travel | null; pruned: History | null; moved: string | null } = { travel: null, pruned: null, moved: null };
+    const result = await save((current) => {
+      if (!current) return null;
+      const pruned = prune(historyRef.current, current.placements);
+      picked.pruned = pruned;
+      const step = direction === "undo" ? undoStep(pruned, current.placements) : redoStep(pruned, current.placements);
+      if (!step) return null;
+      // Moved since by another device, though the draft now holds its fresh version.
+      const placement = current.placements.find((p) => p.id === step.step.id);
+      if (placement && !sitsAt(placement, direction === "undo" ? step.step.after : step.step.before)) {
+        picked.moved = step.step.id;
+        return null;
+      }
+      picked.travel = step;
+      return step.change;
+    });
+    const { travel: step, pruned, moved } = picked;
+    if (!pruned) return;
+    if (moved) {
+      setHistory(forget(pruned, moved));
       toast({ tone: "error", title: CONFLICT });
       return;
     }
-    const result = await save(step.change);
+    if (!step) return setHistory(pruned);
     if (result.saved) {
       setHistory(step.history);
-      say(`${direction === "undo" ? "Undone" : "Redone"}: ${describe(step.change.fields)}`);
+      const done = direction === "undo" ? "Undone" : "Redone";
+      const faceName = latest.current.reveal?.(step.change.fields);
+      say(`${done}: ${describe(step.change.fields)}${faceName ? `, on ${faceName}` : ""}`);
+      // A phone has no Ctrl+Shift+Z: the way back is in the toast.
+      const back = direction === "undo" ? "redo" : "undo";
+      if (undoToast.current !== null) dismissToast(undoToast.current);
+      undoToast.current = toast({ tone: "success", title: done, action: { label: back === "redo" ? "Redo" : "Undo", onSelect: () => void travel(back) } });
       return;
     }
     setHistory(result.message ? forget(pruned, step.step.id) : pruned);

@@ -9,6 +9,12 @@ const face = (faceId: string, setSide: PlanogramFace["setSide"], columns: number
 });
 
 describe("setBlocks", () => {
+  it("still shows the lower tops when the upper's top is switched off on the map", () => {
+    const { blocks } = setBlocks([face("f", "front", 12, 2), face("b", "back", 6, 2)]);
+    expect(blocks.map((b) => b.faceId)).toEqual(["f", "b"]);
+    expect(blocks[1].x).toBe(12 + SET_GAP);
+  });
+
   it("joins each lower top on its side of the upper, in half feet", () => {
     const { blocks, width, height } = setBlocks([face("u", null, 12, 3), face("f", "front", 12, 2), face("l", "left", 6, 2)]);
     const by = (id: string) => blocks.find((b) => b.faceId === id);

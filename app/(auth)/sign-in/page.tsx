@@ -33,7 +33,7 @@ export default function SignInPage() {
       });
       // Deliberately vague: saying which of the two was wrong tells an
       // attacker whether an email address has an account here.
-      if (error) failure = "That email and password do not match.";
+      if (error) failure = error.status === 429 ? "Too many sign-in attempts. Wait a moment, then try again." : "That email and password do not match.";
     } catch {
       failure = CONNECTION_ERROR;
     }

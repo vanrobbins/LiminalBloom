@@ -24,12 +24,15 @@ export function CurveField({ fixture, onChange }: CurveFieldProps) {
         onCommit={(inches) => onChange(inches * sign)}
       />
       {curve !== 0 ? (
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm text-ink-muted">Bends toward the {curve > 0 ? "front" : "back"}</p>
-          <Button variant="secondary" onClick={() => onChange(-curve)}>
-            Flip curve
-          </Button>
-        </div>
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-ink-muted">Bends toward the {curve > 0 ? "front" : "back"}</p>
+            <Button variant="secondary" onClick={() => onChange(-curve)}>
+              Flip curve
+            </Button>
+          </div>
+          <p className="text-sm text-ink-muted">Width is measured along the curve&apos;s centre.</p>
+        </>
       ) : null}
     </div>
   );

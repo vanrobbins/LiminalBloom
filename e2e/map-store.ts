@@ -11,13 +11,13 @@ import { HOME_STORE, TEST_ACCOUNT } from "./test-account";
 
 config({ path: ".env.local" });
 
-function sql() {
+export function sql() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set (.env.local).");
   return neon(url);
 }
 
-async function storeId(name: string): Promise<string> {
+export async function storeId(name: string): Promise<string> {
   const rows = await sql()`
     select o.id from organization o
     join member m on m.organization_id = o.id
@@ -52,6 +52,15 @@ export async function seedLayout(): Promise<void> {
   await db`insert into zones (id, store_id, name, type, color, points) values (${randomUUID()}, ${store}, 'Front tables', 'display', 'zone-1', ${zone}::jsonb)`;
   await db`insert into fixtures (id, store_id, type, name, x, y, width, depth) values (${table}, ${store}, 'table', 'Table 1', 360, 100, 72, 36)`;
   await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${table}, 'top', 12, 3)`;
+}
+
+/** Makes the home store this worker's active store again, on every session it has. */
+export async function backToHomeStore(): Promise<void> {
+  const db = sql();
+  const store = await storeId(HOME_STORE);
+  await db`update session set active_organization_id = ${store}
+    where user_id = (select id from "user" where email = ${TEST_ACCOUNT.email})`;
+  await db`update "user" set last_active_store_id = ${store} where email = ${TEST_ACCOUNT.email}`;
 }
 
 /** Puts the home store back on Pacific time after a test changed it. */
@@ -111,15 +120,15 @@ export async function seedLoneRack(name: string, x: number, y: number): Promise<
   await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${id}, 'front', 8, 1)`;
 }
 
-export async function seedFrameRun(): Promise<{ anchorId: string; secondId: string }> {
+export async function seedFrameRun(names: [string, string] = ["Frame A1", "Frame A2"], x = 300): Promise<{ anchorId: string; secondId: string }> {
   const db = sql();
   const store = await storeId(HOME_STORE);
   const runId = randomUUID();
   const anchorId = randomUUID();
   const secondId = randomUUID();
   await db`insert into frame_runs (id, store_id) values (${runId}, ${store})`;
-  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, run_id, run_index) values (${anchorId}, ${store}, 'frame_rack', 'Frame A1', 300, 260, 48, 24, ${runId}, 0)`;
-  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, run_id, run_index) values (${secondId}, ${store}, 'frame_rack', 'Frame A2', 348, 260, 48, 24, ${runId}, 1)`;
+  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, run_id, run_index) values (${anchorId}, ${store}, 'frame_rack', ${names[0]}, ${x}, 260, 48, 24, ${runId}, 0)`;
+  await db`insert into fixtures (id, store_id, type, name, x, y, width, depth, run_id, run_index) values (${secondId}, ${store}, 'frame_rack', ${names[1]}, ${x + 48}, 260, 48, 24, ${runId}, 1)`;
   for (const id of [anchorId, secondId]) {
     await db`insert into fixture_faces (id, store_id, fixture_id, side, grid_columns, grid_rows) values (${randomUUID()}, ${store}, ${id}, 'front', 8, 1)`;
   }

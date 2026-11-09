@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { toast } from "@/lib/toast";
+import { dismissToast, toast } from "@/lib/toast";
 
 import { BottomSheet } from "./bottom-sheet";
 import { Toaster } from "./toaster";
@@ -179,6 +179,26 @@ describe("BottomSheet", () => {
       </BottomSheet>,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("Escape closes the sheet first, even with a toast showing", async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <>
+        <Toaster />
+        <BottomSheet open onOpenChange={onOpenChange} title="Straight jean">
+          <p>Details</p>
+        </BottomSheet>
+      </>,
+    );
+    let id = 0;
+    act(() => {
+      id = toast({ tone: "success", title: "Moved", action: { label: "Undo", onSelect: () => {} } });
+    });
+    await userEvent.keyboard("{Escape}");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+    act(() => dismissToast(id));
   });
 
   it("keeps toasts visible to assistive tech and tappable above the modal sheet", () => {

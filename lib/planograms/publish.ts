@@ -14,12 +14,13 @@ import { databaseError } from "@/lib/products/errors";
 import { guarded } from "@/lib/products/write";
 
 import { comparableDraft, diffPlacements, sortByFaceOrder, type FaceChanges } from "./diff";
-import { loadPlanogram, loadVersion, productFits, type PlanogramRow } from "./queries";
+import { productFits } from "./draft-sources";
+import { loadPlanogram, loadVersion, type PlanogramRow } from "./queries";
 import { restoreRows, type Skipped } from "./restore";
 import { draftIssues } from "./rules";
 import { buildSnapshot } from "./snapshot";
 import type { DraftState, PlanogramScope } from "./types";
-import { bumped, isClash, placementInserts, planogramWhere, scopeFor, type Statements } from "./write";
+import { bumped, isClash, placementInserts, planogramWhere, scopeFor, type Statements } from "./write-core";
 
 export type Preview = {
   planogramVersion: number;

@@ -1,9 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
+import type { Change, DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 
 import { useBuilder } from "./use-builder";
+import type { Pending, SaveResult } from "./use-planogram-draft";
 
 const actions = vi.hoisted(() => ({ beginDraftAction: vi.fn() }));
 vi.mock("@/app/(app)/planograms/actions", () => actions);
@@ -17,12 +18,25 @@ const view = (id: string, col: number, version = 1): PlacementView => ({
 const fields = (p: PlacementView, col: number): PlacementFields => ({ faceId: p.faceId, presentation: p.presentation, col, row: p.row, colSpan: p.colSpan, rowSpan: p.rowSpan, pieceCount: p.pieceCount });
 const state = (...placements: PlacementView[]): DraftState => ({ planogramVersion: 1, placements });
 
+/** The draft hook's queue, one change at a time: a picked change is picked from the draft shown; `save` sees what's sent. */
+function queued(save: (change: Change) => Promise<SaveResult>, shown: () => DraftState | null) {
+  return (pending: Pending): Promise<SaveResult> => {
+    const change = typeof pending === "function" ? pending(shown()) : pending;
+    return change ? save(change) : Promise.resolve({ saved: false, message: null });
+  };
+}
+
 function setup(draft: DraftState | null, save = vi.fn().mockResolvedValue({ saved: true, draft: state() })) {
   const adopt = vi.fn();
   const onStarted = vi.fn();
   const onStale = vi.fn();
+  let shown = draft;
+  const send = queued(save, () => shown);
   const hook = renderHook(
-    ({ d, on }: { d: DraftState | null; on?: boolean }) => useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save, adopt, onStarted, onStale, describe: () => "here", enabled: on }),
+    ({ d, on }: { d: DraftState | null; on?: boolean }) => {
+      shown = d;
+      return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt, onStarted, onStale, describe: () => "here", enabled: on });
+    },
     { initialProps: { d: draft } as { d: DraftState | null; on?: boolean } },
   );
   return { ...hook, save, adopt, onStarted, onStale };
@@ -57,7 +71,42 @@ describe("useBuilder", () => {
     rerender({ d: state(hung) });
     await act(() => result.current.undo());
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: fields(folded, 0) });
-    expect(toasts.toast).toHaveBeenCalledTimes(1);
+    expect(toasts.toast).toHaveBeenCalledTimes(2);
+  });
+
+  it("Undo offers Redo in its toast, for a phone with no keyboard, and Redo offers Undo", async () => {
+    const pant = view("a", 0, 4);
+    const { result, rerender, save } = setup(state(pant));
+    await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
+    rerender({ d: state({ ...pant, col: 4, version: 5 }) });
+    await act(() => result.current.undo());
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Undone", action: expect.objectContaining({ label: "Redo" }) }));
+
+    rerender({ d: state({ ...pant, col: 0, version: 6 }) });
+    const { action } = toasts.toast.mock.lastCall![0];
+    await act(async () => action.onSelect());
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 6, fields: fields(pant, 4) });
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Redone", action: expect.objectContaining({ label: "Undo" }) }));
+  });
+
+  it("Undo onto another face shows that face and names it", async () => {
+    const pant = view("a", 0, 4);
+    const reveal = vi.fn().mockReturnValue("Back");
+    const save = vi.fn().mockResolvedValue({ saved: true, draft: state() });
+    let shown = state(pant);
+    const send = queued(save, () => shown);
+    const { result, rerender } = renderHook(
+      ({ d }: { d: DraftState }) => {
+        shown = d;
+        return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal });
+      },
+      { initialProps: { d: state(pant) } },
+    );
+    await act(() => result.current.commit(pant, { ...fields(pant, 0), faceId: "other" }, "Moved"));
+    rerender({ d: state({ ...pant, faceId: "other", version: 5 }) });
+    await act(() => result.current.undo());
+    expect(reveal).toHaveBeenCalledWith(expect.objectContaining({ faceId: "f" }));
+    expect(result.current.announcement).toBe("Undone: here, on Back");
   });
 
   it("drops a placement's undo steps when another device changed it (Review Focus 2)", async () => {
@@ -228,6 +277,21 @@ describe("useBuilder", () => {
     const { result } = setup(null, save);
     await act(() => result.current.commit(published, fields(published, 4), "Moved", found));
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("a change queued behind another records where the tile sat when it went, so Undo steps back one press (DECISIONS 11-09)", async () => {
+    const pant = view("a", 0, 4);
+    // The second press was made before the first was back: its target still says col 0, version 4.
+    const save = vi
+      .fn()
+      .mockResolvedValue({ saved: true, draft: state() })
+      .mockResolvedValueOnce({ saved: true, draft: state({ ...pant, col: 1, version: 5 }) })
+      .mockResolvedValueOnce({ saved: true, draft: state({ ...pant, col: 2, version: 6 }), before: { ...pant, col: 1, version: 5 } });
+    const { result, rerender } = setup(state(pant), save);
+    await act(() => Promise.all([result.current.commit(pant, fields(pant, 1), "Moved"), result.current.commit(pant, fields(pant, 2), "Moved")]));
+    rerender({ d: state({ ...pant, col: 2, version: 6 }) });
+    await act(() => result.current.undo());
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 6, fields: fields(pant, 1) });
   });
 
   it("only the latest change offers Undo: the toast before it goes", async () => {

@@ -9,7 +9,8 @@ import { requireMember } from "@/lib/current-member";
 import { deleteImagesQuietly, withoutSeedImages } from "@/lib/products/images";
 import { listCategories, type CategoryRow } from "@/lib/products/queries";
 import { categoryInput, fieldErrors, productInput } from "@/lib/products/schemas";
-import { createCategory, createProduct, deleteProduct, updateProduct } from "@/lib/products/write";
+import { createCategory } from "@/lib/products/category-write";
+import { createProduct, deleteProduct, updateProduct } from "@/lib/products/write";
 
 export type FormResult =
   | { status: "saved"; id: string }

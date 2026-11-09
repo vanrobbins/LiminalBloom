@@ -6,8 +6,9 @@
 import { z } from "zod";
 
 import { requireMember } from "@/lib/current-member";
+import { productFits } from "@/lib/planograms/draft-sources";
 import { previewPublish, publishDraft, restoreVersion, type Preview } from "@/lib/planograms/publish";
-import { draftState, productFits } from "@/lib/planograms/queries";
+import { draftState } from "@/lib/planograms/queries";
 import { restoreMessage } from "@/lib/planograms/restore";
 import { changeInput, dueDateInput, summaryInput, versionInput } from "@/lib/planograms/schemas";
 import type { DraftState, ProductFit } from "@/lib/planograms/types";

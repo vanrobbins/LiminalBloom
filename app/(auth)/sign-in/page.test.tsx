@@ -40,6 +40,13 @@ describe("SignInPage", () => {
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
+  it("a sign-in limit (429) says to wait, not that the password is wrong", async () => {
+    mocks.email.mockResolvedValue({ error: { status: 429 } });
+    await submit();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Too many sign-in attempts. Wait a moment, then try again.");
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  });
+
   it("a request that throws (offline) clears the button and names the connection", async () => {
     mocks.email.mockRejectedValue(new TypeError("Failed to fetch"));
     await submit();

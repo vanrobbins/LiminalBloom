@@ -27,6 +27,11 @@ describe("the Curve field", () => {
     expect(dispatch).toHaveBeenCalledWith(curveTo(18));
   });
 
+  it("says the width runs along the curve, once there is one", () => {
+    panel({ curve: 18 });
+    expect(screen.getByText("Width is measured along the curve's centre.")).toBeInTheDocument();
+  });
+
   it("offers no direction while the bay is straight", () => {
     panel();
     expect(screen.queryByRole("button", { name: "Flip curve" })).toBeNull();

@@ -2,30 +2,10 @@
 // tests. Written as the owner, which row-level security does not restrict,
 // like map-store.ts. Run seedLayout() first: the location needs Table 1.
 
-import { neon } from "@neondatabase/serverless";
-import { config } from "dotenv";
+import { sql, storeId } from "./map-store";
+import { HOME_STORE } from "./test-account";
 
-import { HOME_STORE, TEST_ACCOUNT } from "./test-account";
-
-config({ path: ".env.local", quiet: true });
-
-function sql() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set (.env.local).");
-  return neon(url);
-}
-
-async function homeStoreId(): Promise<string> {
-  const rows = await sql()`
-    select o.id from organization o
-    join member m on m.organization_id = o.id
-    join "user" u on u.id = m.user_id
-    where u.email = ${TEST_ACCOUNT.email} and o.name = ${HOME_STORE}
-    limit 1`;
-  const id = rows[0]?.id;
-  if (typeof id !== "string") throw new Error(`No store called ${HOME_STORE}.`);
-  return id;
-}
+const homeStoreId = () => storeId(HOME_STORE);
 
 export async function seedCatalog(): Promise<void> {
   const db = sql();

@@ -13,7 +13,7 @@
 "use client";
 
 import { VisuallyHidden } from "radix-ui";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Drawer } from "vaul";
 
 import { Button } from "./button";
@@ -65,6 +65,20 @@ export function BottomSheet({
     if (!next && document.activeElement instanceof HTMLElement) document.activeElement.blur();
     onOpenChange(next);
   }
+
+  // A toast is the top layer, so it would take Escape and leave the sheet open.
+  // Popovers and menus inside the sheet still close first.
+  useEffect(() => {
+    if (!open || peek) return;
+    function onEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape" || !document.querySelector("[data-toast-viewport] li")) return;
+      if (document.querySelector("[data-radix-popper-content-wrapper]")) return;
+      event.stopPropagation();
+      changeOpen(false);
+    }
+    window.addEventListener("keydown", onEscape, true);
+    return () => window.removeEventListener("keydown", onEscape, true);
+  });
 
   const heading = (
     <Drawer.Title className="text-xl font-semibold tracking-tight text-ink">
@@ -141,6 +155,7 @@ function PeekPanel({ title, heading, expanded, onExpandedChange, onClose, childr
 
   return (
     <section
+      data-peek-panel=""
       aria-label={title}
       // Escape only counts while focus is inside, so it never steals the map's own Escape.
       onKeyDown={(event) => {

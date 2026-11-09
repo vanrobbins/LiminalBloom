@@ -7,11 +7,27 @@
 
 import { test as base, expect, type Page, type TestInfo } from "@playwright/test";
 
+import { backToHomeStore } from "./map-store";
+import { authFileFor, ipFor } from "./test-account";
+
 export const test = base.extend<{
   allowedConsoleError: RegExp | undefined;
   consoleErrors: string[];
+  homeStoreAfterFailure: void;
 }>({
+  // Each worker signs in as its own account (test-account.ts).
+  storageState: async ({}, provide, testInfo) => provide(authFileFor(testInfo.parallelIndex)),
+  extraHTTPHeaders: async ({}, provide, testInfo) => provide({ "x-forwarded-for": ipFor(testInfo.parallelIndex) }),
   allowedConsoleError: [undefined, { option: true }],
+  // A test that fails halfway through a store switch must not strand the next
+  // ones in the wrong store (11-04). Costs nothing when a test passes.
+  homeStoreAfterFailure: [
+    async ({}, use, testInfo) => {
+      await use();
+      if (testInfo.status !== testInfo.expectedStatus) await backToHomeStore().catch(() => {}); // Database down: the test has already said so.
+    },
+    { auto: true },
+  ],
   consoleErrors: [
     async ({ page, allowedConsoleError }, use) => {
       const errors: string[] = [];

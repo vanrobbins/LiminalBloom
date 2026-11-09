@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { worldToScreen, type Camera, type Viewport } from "@/lib/layout/camera";
@@ -24,9 +24,18 @@ export function LinkOffer({ offer, join, camera, viewport, dispatch }: LinkOffer
     return () => window.clearTimeout(timer);
   }, [offer, dispatch]);
 
+  // A phone's panel covers the bottom of the map: the button stays above it.
+  const self = useRef<HTMLDivElement>(null);
+  const [clearHeight, setClearHeight] = useState(viewport.height);
+  useLayoutEffect(() => {
+    const panel = document.querySelector("[data-peek-panel]");
+    const mapTop = self.current?.offsetParent?.getBoundingClientRect().top ?? 0;
+    setClearHeight(panel ? Math.min(viewport.height, panel.getBoundingClientRect().top - mapTop) : viewport.height);
+  }, [viewport.height, offer]);
+
   const at = worldToScreen(camera, join.at);
   return (
-    <div role="status" className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: clamp(at.x, viewport.width), top: clamp(at.y - EDGE, viewport.height) }}>
+    <div ref={self} role="status" className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: clamp(at.x, viewport.width), top: clamp(at.y - EDGE, clearHeight) }}>
       <Button
         onClick={() => {
           dispatch({ type: "command", command: { type: "joinRun", rackId: join.rackId, targetId: join.targetId, side: join.side } });

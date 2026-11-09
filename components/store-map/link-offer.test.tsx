@@ -30,6 +30,16 @@ describe("LinkOffer", () => {
     expect(dispatch.mock.calls).toEqual([[{ type: "dropLinkOffer" }]]);
   });
 
+  it("stays above the phone's panel when the join is low on screen", () => {
+    const panel = document.createElement("div");
+    panel.setAttribute("data-peek-panel", "");
+    panel.getBoundingClientRect = () => ({ top: 360 }) as DOMRect;
+    document.body.append(panel);
+    render(<LinkOffer offer={{}} join={{ ...join, at: { x: 100, y: 550 } }} camera={camera} viewport={viewport} dispatch={vi.fn()} />);
+    expect(screen.getByRole("status")).toHaveStyle({ top: "312px" });
+    panel.remove();
+  });
+
   it("stays on the map when the join is off screen", () => {
     render(<LinkOffer offer={{}} join={{ ...join, at: { x: 5000, y: -500 } }} camera={camera} viewport={viewport} dispatch={vi.fn()} />);
     expect(screen.getByRole("status")).toHaveStyle({ left: "752px", top: "48px" });

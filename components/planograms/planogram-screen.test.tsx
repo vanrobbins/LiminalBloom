@@ -8,7 +8,7 @@ import type { DraftState, PlacementView, PlanogramFace, PlanogramScope } from "@
 const hook = vi.hoisted(() => ({ draft: null as DraftState | null, save: (() => {}) as (...args: unknown[]) => unknown }));
 vi.mock("./use-planogram-draft", async (original) => ({
   ...(await original<typeof import("./use-planogram-draft")>()),
-  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (...args: unknown[]) => hook.save(...args), adopt: (next: DraftState) => (hook.draft = next) }),
+  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (pending: unknown) => hook.save(typeof pending === "function" ? pending(hook.draft) : pending), adopt: (next: DraftState) => (hook.draft = next) }),
 }));
 const actions = vi.hoisted(() => ({
   pickerSearch: (() => Promise.resolve([])) as (q: string) => Promise<unknown[]>,
@@ -102,6 +102,15 @@ describe("PlanogramScreen", () => {
     await user.click(screen.getByRole("button", { name: "Details" }));
     expect(screen.getByRole("complementary", { name: "Pant" })).toBeInTheDocument();
     expect(screen.queryByLabelText("From left (ft)")).toBeNull();
+  });
+
+  it("closing Edit numbers clears the selection, so a phone gets Publish back", async () => {
+    const user = userEvent.setup();
+    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
+    await user.click(tile());
+    await user.click(screen.getByRole("button", { name: "Edit numbers" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("toolbar", { name: "Pant selected" })).not.toBeInTheDocument();
   });
 
   it("Edit numbers opens the form in feet", async () => {

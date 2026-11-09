@@ -96,6 +96,43 @@ test("dragging a rack near a run's end shows the join, and only Link links it", 
   await expect(page.getByText("Saved", { exact: true }).filter({ visible: true }).first()).toBeVisible();
 });
 
+test("Link merges two runs, and the right-hand run's planogram moves to the new anchor", async ({ page }) => {
+  test.skip(sizeOf(test.info()) !== "desktop", "The mouse drag is the desktop form; the merge is the same at every size.");
+  const left = await seedFrameRun();
+  const right = await seedFrameRun(["Frame B1", "Frame B2"], 420);
+
+  // The right-hand run has the planogram, holding one product.
+  await page.goto(`/planograms/${right.anchorId}`);
+  await hydrated(page);
+  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Add product" }).click();
+  await page.getByLabel("Find a product").fill("E2E High");
+  await page.getByRole("button", { name: /E2E High-Rise Pant/ }).click();
+  await expect(page.locator("[data-draft-status]")).toHaveText("Saved");
+
+  await page.goto("/layout/edit");
+  await hydrated(page);
+  const box = await rackBox(page, "Frame B1");
+  const inch = box.width / 48;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 16 * inch, y, { steps: 10 });
+  await page.mouse.up();
+  await page.getByRole("button", { name: "Link", exact: true }).click();
+  await expect(page.getByText("Run of 4 racks").filter({ visible: true })).toBeVisible();
+  await expect(page.getByText("Saved", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+
+  // One run, listed once by its anchor, with the draft and its product intact on all four rails.
+  await page.goto("/planograms");
+  await expect(page.getByRole("link", { name: /Frame B1/ })).toHaveCount(0);
+  await page.goto(`/planograms/${left.anchorId}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Frame A1" })).toBeVisible();
+  await expect(page.locator("[data-block]")).toHaveCount(4);
+  await expect(page.getByRole("button", { name: /^E2E High-Rise Pant, / }).filter({ visible: true })).toBeVisible();
+});
+
 test("a long-press starts Select more, and two racks link from a phone", async ({ page }) => {
   test.skip(sizeOf(test.info()) !== "phone", "Long-press is the touch form; shift-click is the desktop one.");
   await seedLoneRack("Frame B", 200, 200);

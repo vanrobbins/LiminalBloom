@@ -162,7 +162,9 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
     }
     if (offMap(f)) issues.push(issue(f.id, "out-of-bounds", `${f.name} runs off the map.`));
     if (outline && !polygonContains(outline, footprint(f))) {
-      issues.push(issue(f.id, "outside-store", `${f.name} is outside the store.`, OUTLINE_ID));
+      const bends = f.curve !== 0 && polygonContains(outline, footprint({ ...f, curve: 0 }));
+      const why = bends ? "bends past the wall. Move it forward, or flip the curve." : "is outside the store.";
+      issues.push(issue(f.id, "outside-store", `${f.name} ${why}`, OUTLINE_ID));
     }
 
     const faces = layout.faces.filter((face) => face.fixtureId === f.id);

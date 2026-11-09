@@ -50,7 +50,7 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
   const router = useRouter();
   const { draft, status, save, adopt } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
-  const [faceId, setFaceId] = useState(() => startFace(scope, (viewing ?? latest)?.placements ?? [], initialDraft, highlightProductId));
+  const [faceId, setFaceId] = useState(() => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
   const [adding, setAdding] = useState(false);
   const [movingFace, setMovingFace] = useState(false);
   const [slideFrom, setSlideFrom] = useState<"left" | "right" | null>(null);
@@ -84,6 +84,11 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
       openSheet(null);
     },
     describe: (fields) => spotWords(scope.faces, fields),
+    reveal: (fields) => {
+      if (scope.isSet || fields.faceId === face.faceId) return null;
+      showFace(fields.faceId);
+      return scope.faces.find((f) => f.faceId === fields.faceId)?.label ?? null;
+    },
   });
 
   // Draft and Published are different placements: the open sheet and the mark don't carry over.

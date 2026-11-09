@@ -2,13 +2,14 @@
 // light and dark. These catch what jsdom cannot: sizes, computed colors,
 // and gestures.
 //
-// Runs against `next dev` and the DEVELOPMENT database, signed in as the
-// disposable test account. One worker, because every project shares that
-// account and store switching must not race.
+// Runs against a production build and the DEVELOPMENT database. Each worker
+// signs in as its own disposable account (e2e/test-account.ts), so workers
+// never share data. E2E_REUSE=1 uses a server already on :3000 instead of
+// building: it must be `E2E=1 next start`, and it is only as new as its build.
 
 import { defineConfig, devices } from "@playwright/test";
 
-import { AUTH_FILE } from "./e2e/test-account";
+import { E2E_WORKERS } from "./e2e/test-account";
 
 const SIZES = [
   { name: "phone", use: { viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true } },
@@ -19,26 +20,28 @@ const SIZES = [
 const THEMES = ["light", "dark"] as const;
 
 // Behaviour flows run in light at every size; dark runs the specs that check
-// colour. Planograms joined the light-only set once planogram-contrast.spec.ts
+// colour. Layout, products and shell keep their colour tests in theme.spec.ts. Planograms joined the light-only set once planogram-contrast.spec.ts
 // began checking its colours in both themes; builder.spec.ts is behaviour only
 // (drag, undo, touch) and joined it; cards.spec.ts checks layout only (columns, name
 // widths), no colors. Anchored to whole file names.
-const LIGHT_ONLY = /(?:^|[\\/])(library|store-map|frame-racks|curved-bays|tooltips|sign-in|sign-out|planograms|builder|cards|store-time)\.spec\.ts$/;
+const LIGHT_ONLY = /(?:^|[\\/])(layout|products|shell|library|store-map|frame-racks|curved-bays|tooltips|sign-in|sign-out|planograms|builder|cards|store-time)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: false,
-  workers: 1,
+  workers: E2E_WORKERS,
+  // One real bug must not turn into a run of timeouts (11-04: 75 failures, 30+ min).
+  maxFailures: 20,
   reporter: "list",
   use: {
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev",
+    command: "npm run build && npx next start -p 3000",
     url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 120_000,
+    reuseExistingServer: process.env.E2E_REUSE === "1",
+    timeout: 300_000,
     env: { E2E: "1" },
   },
   projects: [
@@ -53,7 +56,6 @@ export default defineConfig({
           ...size.use,
           // next-themes follows the device setting on a first visit.
           colorScheme: theme,
-          storageState: AUTH_FILE,
         },
       })),
     ),

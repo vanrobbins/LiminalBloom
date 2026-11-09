@@ -33,6 +33,29 @@ beforeEach(() => {
 const renderScreen = (overrides?: Partial<Parameters<typeof SearchScreen>[0]>) =>
   render(<SearchScreen initial={searchInput.parse({ q: "p" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} {...overrides} />);
 
+describe("SearchScreen focus on opening", () => {
+  const empty = { initial: searchInput.parse({}), initialResults: [] };
+  const pointer = (coarse: boolean) => vi.spyOn(window, "matchMedia").mockReturnValue({ matches: coarse } as MediaQueryList);
+
+  it("opens ready to type on a touch screen (§1.5)", () => {
+    pointer(true);
+    renderScreen(empty);
+    expect(screen.getByRole("searchbox", { name: "Search products" })).toHaveFocus();
+  });
+
+  it("leaves focus alone with a mouse and keyboard, so the first Tab reaches the skip link", () => {
+    pointer(false);
+    renderScreen(empty);
+    expect(document.body).toHaveFocus();
+  });
+
+  it("leaves focus alone when a query is already showing", () => {
+    pointer(true);
+    renderScreen();
+    expect(document.body).toHaveFocus();
+  });
+});
+
 describe("SearchScreen result rendering", () => {
   it("shows each result with its style number, and the count", () => {
     renderScreen();

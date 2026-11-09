@@ -101,7 +101,7 @@ export function PlanogramBody({
           builder={builder}
         />
         <div className="flex flex-col gap-4">
-          <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => openSheet(null)}>
+          <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => (sheetMode === "edit" ? setSelectedId(null) : openSheet(null))}>
             {isEditing && sheetId !== null && sheetMode === "edit" ? (
               <div data-placement-editor>
                 <PlacementEditor
@@ -110,7 +110,8 @@ export function PlanogramBody({
                   faces={scope.faces}
                   others={placements}
                   busy={busy}
-                  onClose={() => openSheet(null)}
+                  // Done with this tile: a phone's selection bar hides Publish until it's cleared.
+                  onClose={() => setSelectedId(null)}
                   onSave={onEdit}
                   onRemove={onRemove}
                 />
