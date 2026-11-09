@@ -22,4 +22,14 @@ describe("SelectionBar", () => {
     render(<SelectionBar name="Pant" canMoveFace={false} busy={false} {...handlers()} />);
     expect(screen.queryByRole("button", { name: "Move to face…" })).toBeNull();
   });
+
+  it("offers Move forward / Move back only while it shares rail space, spent at the front", async () => {
+    const onBack = vi.fn();
+    const { rerender } = render(<SelectionBar name="Tee" canMoveFace={false} busy={false} {...handlers()} />);
+    expect(screen.queryByRole("button", { name: "Move forward" })).toBeNull();
+    rerender(<SelectionBar name="Tee" canMoveFace={false} busy={false} {...handlers()} layers={{ onForward: null, onBack }} />);
+    expect(screen.getByRole("button", { name: "Move forward" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Move back" }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
 });

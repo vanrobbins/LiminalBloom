@@ -14,7 +14,7 @@ const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: 
 
 const fieldsOf = (i: GridItem) => ({ faceId: i.faceId, presentation: i.presentation, col: i.col, row: i.row, colSpan: i.colSpan, rowSpan: i.rowSpan, pieceCount: i.pieceCount });
 const builderWith = (over: Partial<GridBuilder> = {}): GridBuilder => ({
-  canMove: true, check: () => null, onCommit: vi.fn(() => Promise.resolve()), onRefused: vi.fn(), onKey: vi.fn(), onEmpty: vi.fn(), onDragging: vi.fn(), ...over,
+  canMove: true, check: () => null, onCommit: vi.fn(() => Promise.resolve()), onRefused: vi.fn(), onKey: vi.fn(), onReorder: vi.fn(), onEmpty: vi.fn(), onDragging: vi.fn(), ...over,
 });
 // 12 half-foot units across, drawn 240 px wide: 20 px a unit.
 const sized = () =>

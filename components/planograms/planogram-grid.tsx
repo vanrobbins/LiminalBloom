@@ -12,6 +12,7 @@
 import { useRef, useState } from "react";
 
 import { dragTarget } from "@/lib/planograms/builder/drag";
+import { layerGroups, layerOffset, sharesSpace } from "@/lib/planograms/layers";
 import { resizeTarget } from "@/lib/planograms/builder/resize";
 import { spanRect, spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import type { PlacementFields } from "@/lib/planograms/types";
@@ -42,6 +43,8 @@ export type GridBuilder = {
   onRefused: (message: string) => void;
   /** An arrow key on the selected tile: where it goes, or null (it can't; the builder has said why). Held and saved like a drop. */
   onKey: (item: GridItem, key: string, shift: boolean) => { fields: PlacementFields; verb: "Moved" | "Resized" } | null;
+  /** Alt+Up / Alt+Down on the selected tile: Move forward / Move back on a shared rail. */
+  onReorder: (item: GridItem, direction: "forward" | "back") => void;
   /** Tap on empty space, or Escape on the selected tile. */
   onEmpty: () => void;
   onDragging: (isDragging: boolean) => void;
@@ -72,7 +75,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const start = useRef<{ x: number; y: number; edges: Edges } | null>(null);
   const [drag, setDrag] = useState<Gesture | null>(null);
   const landed = usePendingLanding();
-  const drawn = landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId));
+  // Each layer group front to back, so Tab meets the front one first; z-index paints them back to front.
+  const drawn = layerGroups(landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId))).flat();
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
   const mask =
     edges.left && edges.right
@@ -92,6 +96,9 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const target = drag ? landing(drag) : null;
   const targetBlock = target ? (layout.blocks.find((b) => b.faceId === target.faceId) ?? null) : null;
   const refusal = drag && moving ? (target ? (builder?.check(moving, target) ?? null) : OFF_FACE) : null;
+  // Landing on hung product it didn't share space with: it joins at the back (layers.ts).
+  const joining = drag && moving && target && !refusal ? drawn.filter((o) => sharesSpace({ ...target, id: moving.id }, o) && !sharesSpace(moving, o)) : [];
+  const behind = joining.length === 0 ? "" : ` · behind ${joining.length === 1 ? joining[0].productName : `${joining.length} others`}`;
 
   const gestures = useTileGesture({
     unitPx: () => (space.current?.getBoundingClientRect().width ?? 0) / layout.width,
@@ -178,10 +185,12 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
               if (!block) return null;
               const isMoving = item.id === moving?.id;
               const resized = isMoving && drag && drag.mode !== "move" ? target : null;
+              const shared = drawn.some((o) => sharesSpace(item, o));
               return (
                 <GridTile
                   key={item.id}
                   item={item}
+                  layer={shared ? { depth: item.depth ?? 0, offsetPx: layerOffset(item, drawn) } : null}
                   block={block}
                   rect={spanRect(block, resized ?? item)}
                   words={spotSummary(spotOf(block, item))}
@@ -202,12 +211,13 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                         }
                       : undefined
                   }
+                  onReorder={builder && isMoving ? (direction) => builder.onReorder(item, direction) : undefined}
                   onEscape={builder?.onEmpty}
                 />
               );
             })}
             {drag && chipAt ? (
-              <DragChip rect={chipAt} invalid={refusal !== null} text={refusal ?? (target && targetBlock ? shortSpot(spotOf(targetBlock, target)) : OFF_FACE)} />
+              <DragChip rect={chipAt} invalid={refusal !== null} text={refusal ?? (target && targetBlock ? `${shortSpot(spotOf(targetBlock, target))}${behind}` : OFF_FACE)} />
             ) : null}
           </div>
         </div>

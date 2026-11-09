@@ -10,6 +10,7 @@ import type { PlanogramScope, ProductLook, SnapshotEntry } from "@/lib/planogram
 
 import { FaceSwitcher } from "./face-switcher";
 import { itemsFromSnapshot, startFace } from "./grid-items";
+import { LayerList } from "./layer-list";
 import { PlanogramGrid } from "./planogram-grid";
 import { ProductSheet } from "./product-sheet";
 
@@ -21,6 +22,7 @@ export function PlanogramPreview({ scope, entries, looks }: PlanogramPreviewProp
   const face = scope.faces.find((f) => f.faceId === faceId) ?? scope.faces[0];
   const shown = scope.isSet ? scope.faces : [face];
   const items = itemsFromSnapshot(entries, looks);
+  const open = items.find((i) => i.id === sheetId) ?? null;
   return (
     <div className="flex flex-col gap-3">
       {scope.isSet ? null : <FaceSwitcher faces={scope.faces} value={face.faceId} onChange={setFaceId} />}
@@ -33,10 +35,13 @@ export function PlanogramPreview({ scope, entries, looks }: PlanogramPreviewProp
       />
       <ProductSheet
         open={sheetId !== null}
-        item={items.find((i) => i.id === sheetId) ?? null}
-        face={scope.faces.find((f) => f.faceId === items.find((i) => i.id === sheetId)?.faceId) ?? null}
+        item={open}
+        face={scope.faces.find((f) => f.faceId === open?.faceId) ?? null}
         onClose={() => setSheetId(null)}
-      />
+      >
+        {/* A product hung behind another is reached here (hung layers). */}
+        {open ? <LayerList item={open} items={items} onPick={setSheetId} /> : null}
+      </ProductSheet>
     </div>
   );
 }

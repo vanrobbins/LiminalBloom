@@ -113,6 +113,13 @@
       "when": 1793894361078,
       "tag": "0015_curved_wall_bays",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794264502428,
+      "tag": "0016_hung_layers",
+      "breakpoints": true
     }
   ]
 }

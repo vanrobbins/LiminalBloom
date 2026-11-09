@@ -5,6 +5,7 @@ import type { PlacementView } from "../types";
 import { matchPlacement } from "./match";
 
 const view = (id: string, over: Partial<PlacementView> = {}): PlacementView => ({
+  depth: 0,
   id, faceId: "f", productId: "pant", productName: "Pant", styleNumber: "P", presentation: "folded",
   col: 0, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 6, version: 1, imageKey: null, categoryName: "", ...over,
 });

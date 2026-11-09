@@ -13,6 +13,8 @@ export type GridItem = Cells & {
   styleNumber: string;
   presentation: Presentation;
   pieceCount: number;
+  /** Front to back on a shared rail, 0 = front (layers.ts); a version from before has none. */
+  depth?: number;
 } & ProductLook;
 
 /** A product deleted since publishing has no look: it keeps its snapshot name and draws the default shape, neutral. */

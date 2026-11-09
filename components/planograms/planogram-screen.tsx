@@ -142,6 +142,7 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
       onFace={showFace}
       onEdit={actions.edit}
       onRemove={actions.remove}
+      onReorder={actions.gridBuilder ? actions.reorder : undefined}
     />
   );
 
@@ -217,6 +218,7 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
           onEdit={() => editNumbers(selectedPlacement.id)}
           onMoveFace={() => setMovingFace(true)}
           onRemove={() => actions.remove(selectedPlacement)}
+          layers={actions.layersFor(selectedPlacement)}
         />
       ) : null}
       {/* Keeps the last card clear of the sticky bar on a phone. */}

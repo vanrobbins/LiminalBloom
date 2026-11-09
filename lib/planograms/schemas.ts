@@ -5,6 +5,7 @@ import { z } from "zod";
 import { MAX_COLUMNS, MAX_ROWS } from "@/lib/feet";
 import { PRESENTATIONS } from "@/lib/products/footprint";
 
+import { MAX_DEPTH } from "./layers";
 import { EARLIEST_DUE_DATE, MAX_PIECES } from "./types";
 
 const col = z.int().min(0).max(MAX_COLUMNS - 1);
@@ -20,6 +21,8 @@ export const placementFields = z.object({
   colSpan,
   rowSpan,
   pieceCount: z.int().min(1).max(MAX_PIECES),
+  /** A place asked for in its layer group; the server renumbers (layers.ts). */
+  depth: z.int().min(0).max(MAX_DEPTH).optional(),
 });
 
 export const versionInput = z.int().min(1);

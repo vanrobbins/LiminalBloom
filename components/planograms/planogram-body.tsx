@@ -10,6 +10,7 @@ import type { PlacementFields, PlacementView, PlanogramFace, PlanogramScope } fr
 
 import { FaceSwitcher } from "./face-switcher";
 import type { GridItem } from "./grid-items";
+import { LayerList } from "./layer-list";
 import { PlacementList } from "./placement-list";
 import { PlacementEditor } from "./placement-panel";
 import { PlanogramGrid, type GridBuilder } from "./planogram-grid";
@@ -43,6 +44,8 @@ type PlanogramBodyProps = {
   /** "Edit numbers": resolves to the refusal to show in the form, or null. */
   onEdit: (placement: PlacementView, fields: PlacementFields) => Promise<string | null>;
   onRemove: (placement: PlacementView) => void;
+  /** Move forward / Move back on a shared rail; absent where nothing may move. */
+  onReorder?: (item: GridItem, direction: "forward" | "back") => void;
 };
 
 export function PlanogramBody({
@@ -68,6 +71,7 @@ export function PlanogramBody({
   onFace,
   onEdit,
   onRemove,
+  onReorder,
 }: PlanogramBodyProps) {
   const orphans = isEditing ? items.filter((i) => !scope.faces.some((f) => f.faceId === i.faceId)) : [];
 
@@ -117,6 +121,7 @@ export function PlanogramBody({
                 />
               </div>
             ) : null}
+            {sheetItem ? <LayerList item={sheetItem} items={items} onPick={onTile} onReorder={onReorder} busy={busy} /> : null}
           </ProductSheet>
           <PlacementList faces={shownFaces} items={items} orphans={orphans} issues={issues} highlightProductId={highlightProductId} selectedId={selectedId} onSelect={fromCard} />
         </div>

@@ -6,7 +6,7 @@ import type { SearchResult } from "@/lib/products/queries";
 
 import { SearchCard } from "./search-card";
 
-const where = (id: string, label: string, detail = "") => ({ id, productId: "p1", presentation: "hung" as const, label, detail, floor: null });
+const where = (id: string, label: string, detail = "") => ({ id, productId: "p1", presentation: "hung" as const, label, detail, behind: null, floor: null });
 const result: SearchResult = {
   id: "p1", name: "High-Rise Pant", styleNumber: "HRP-01", color: "Black", sizeRange: "", status: "in_stock", version: 1,
   categoryId: "c", categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid",

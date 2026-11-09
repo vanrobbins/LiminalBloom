@@ -58,6 +58,7 @@ export function LocationDetails({ result, layout, onChanged }: LocationDetailsPr
                     {l.detail.startsWith("Rail ·") ? <InfoPopover term="rail" /> : null}
                   </p>
                 ) : null}
+                {l.behind ? <p className="text-sm text-ink-muted">{l.behind}</p> : null}
                 {l.floor ? (
                   <>
                     <LocationMap layout={layout} fixtureId={l.floor.fixtureId} />

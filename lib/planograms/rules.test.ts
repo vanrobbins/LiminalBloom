@@ -57,8 +57,23 @@ describe("checkPlacement", () => {
   });
 });
 
+describe("hung layers (DECISIONS 11-09)", () => {
+  const tee: Neighbour = { id: "tee", faceId: "front", productName: "Navy Tee", presentation: "hung", col: 0, row: 0, colSpan: 2, rowSpan: 2 };
+
+  it("lets hung share rail space with hung, fully or partly", () => {
+    expect(checkPlacement(sock({ col: 0, colSpan: 2, rowSpan: 2 }), [tee], [front])).toBeNull();
+    expect(checkPlacement(sock({ col: 1, colSpan: 2, rowSpan: 2 }), [tee], [front])).toBeNull();
+  });
+
+  it("still refuses folded on hung and hung on folded", () => {
+    expect(checkPlacement(sock({ presentation: "folded", col: 1, colSpan: 2, rowSpan: 2 }), [tee], [front])?.message).toBe("Blocked by Navy Tee");
+    expect(checkPlacement(sock({ col: 1 }), [{ ...tee, presentation: "folded" }], [front])?.message).toBe("Blocked by Navy Tee");
+  });
+});
+
 describe("draftIssues", () => {
   const view = (id: string, over: Partial<PlacementView> = {}): PlacementView => ({
+    depth: 0,
     id, faceId: "front", productId: id, productName: id, styleNumber: id, presentation: "folded", imageKey: null, categoryName: "Denim",
     col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 1, version: 1, ...over,
   });
@@ -70,6 +85,12 @@ describe("draftIssues", () => {
       ["c", "Off the edge of the face"],
       ["d", "No longer in this set"],
     ]);
+  });
+
+  it("allows hung layers but flags two on the same layer", () => {
+    const hung = { presentation: "hung" as const };
+    expect(draftIssues([view("a", hung), view("b", { ...hung, col: 1, depth: 1 })], [front]).size).toBe(0);
+    expect([...draftIssues([view("a", hung), view("b", { ...hung, col: 1 })], [front])]).toEqual([["b", "Same layer as a"]]);
   });
 });
 

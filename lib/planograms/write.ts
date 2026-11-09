@@ -17,6 +17,7 @@ import { withStore } from "@/lib/db/with-store";
 import { guarded } from "@/lib/products/write";
 
 import { floorLocations, productFits } from "./draft-sources";
+import { layersAfter, type Layers } from "./layers";
 import { loadPlanogram, type PlanogramRow } from "./queries";
 import { restoreRows } from "./restore";
 import { checkPlacement } from "./rules";
@@ -91,8 +92,14 @@ const fieldValues = (f: PlacementFields): PlacementFields => ({
   pieceCount: f.pieceCount,
 });
 
-/** Exported so a test can build it from a stale read and prove the guard (as lib/layout/save.test.ts does). */
-export function changeStatements(storeId: string, row: PlanogramRow, change: Change, productId: string): Statements {
+const NO_LAYERS: Layers = { depth: 0, others: [] };
+
+/**
+ * Exported so a test can build it from a stale read and prove the guard (as lib/layout/save.test.ts does).
+ * `layers` renumbers the rows sharing rail space with it (layers.ts); the planogram's version guard
+ * covers them, so their own versions don't move.
+ */
+export function changeStatements(storeId: string, row: PlanogramRow, change: Change, productId: string, layers: Layers = NO_LAYERS): Statements {
   const head = guarded(
     db
       .update(planograms)
@@ -101,8 +108,14 @@ export function changeStatements(storeId: string, row: PlanogramRow, change: Cha
       .returning({ id: planograms.id }),
     "planogram",
   );
+  const renumbered = layers.others.map(([id, depth]) =>
+    db
+      .update(planogramPlacements)
+      .set({ depth })
+      .where(and(eq(planogramPlacements.storeId, storeId), eq(planogramPlacements.planogramId, row.id), eq(planogramPlacements.id, id))),
+  );
   if (change.kind === "add") {
-    return [head, db.insert(planogramPlacements).values({ ...fieldValues(change.fields), id: randomUUID(), storeId, planogramId: row.id, productId })];
+    return [head, db.insert(planogramPlacements).values({ ...fieldValues(change.fields), depth: layers.depth, id: randomUUID(), storeId, planogramId: row.id, productId }), ...renumbered];
   }
   const where = placementWhere(storeId, row, change.id, change.version);
   const write =
@@ -110,10 +123,10 @@ export function changeStatements(storeId: string, row: PlanogramRow, change: Cha
       ? db.delete(planogramPlacements).where(where).returning({ id: planogramPlacements.id })
       : db
           .update(planogramPlacements)
-          .set({ ...fieldValues(change.fields), version: sql`${planogramPlacements.version} + 1`, updatedAt: new Date() })
+          .set({ ...fieldValues(change.fields), depth: layers.depth, version: sql`${planogramPlacements.version} + 1`, updatedAt: new Date() })
           .where(where)
           .returning({ id: planogramPlacements.id });
-  return [head, guarded(write, "placement")];
+  return [head, guarded(write, "placement"), ...renumbered];
 }
 
 export function saveChange(storeId: string, fixtureId: string, change: Change): Promise<Outcome> {
@@ -135,7 +148,7 @@ export function saveChange(storeId: string, fixtureId: string, change: Change): 
       const refusal = checkPlacement({ ...saved.fields, id: target?.id ?? null }, draft.placements, scope.faces);
       if (refusal) return { status: "invalid", message: refusal.message };
     }
-    await withStore(storeId, changeStatements(storeId, row, saved, productId));
+    await withStore(storeId, changeStatements(storeId, row, saved, productId, layersAfter(draft.placements, saved)));
     return saved === change ? SAVED : { status: "saved", switchedToHung: true };
   });
 }

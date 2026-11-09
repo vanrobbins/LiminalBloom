@@ -8,6 +8,7 @@ import { AlertTriangle } from "lucide-react";
 
 import { ProductImage } from "@/components/products/product-image";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
+import { layerNumber, layerWords } from "@/lib/planograms/layers";
 import { spotOf } from "@/lib/planograms/set-grid";
 import type { PlanogramFace } from "@/lib/planograms/types";
 import { spotSummary } from "@/lib/products/location-words";
@@ -41,6 +42,7 @@ export function PlacementList({ faces, items, orphans = [], issues, highlightPro
               {rows.map((item) => {
                 const issue = issues?.get(item.id);
                 const face = faces.find((f) => f.faceId === item.faceId);
+                const layer = layerWords(layerNumber(item, items));
                 return (
                   <li key={item.id}>
                     <button
@@ -56,6 +58,8 @@ export function PlacementList({ faces, items, orphans = [], issues, highlightPro
                         <span className="truncate font-medium text-ink">{item.productName}</span>
                         <span className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
                           {face ? <span className="rounded bg-line-subtle px-1.5 text-ink">{spotSummary(spotOf(face, item))}</span> : null}
+                          {/* Sharing rail space: "front", "2nd from front" (hung layers). */}
+                          {layer ? <span data-layer-words>{layer}</span> : null}
                           {PRESENTATION_LABEL[item.presentation]} · {item.pieceCount} {item.pieceCount === 1 ? "piece" : "pieces"}
                         </span>
                         {issue ? (

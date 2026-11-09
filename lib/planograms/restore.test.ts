@@ -25,7 +25,7 @@ describe("restoreRows", () => {
       [front],
       new Map([["pant", fit("pant")], ["tee", fit("tee")]]),
     );
-    expect(rows).toEqual([{ productId: "pant", faceId: "front", presentation: "folded", col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 8 }]);
+    expect(rows).toEqual([{ productId: "pant", faceId: "front", presentation: "folded", col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 8, depth: 0 }]);
     expect(skipped).toEqual({ product: 1, face: 1, fit: 1 });
   });
 
@@ -33,6 +33,21 @@ describe("restoreRows", () => {
   it("keeps a folded count as stored, with no stack limit to clamp it", () => {
     const { rows } = restoreRows([entry({ pieceCount: 20 })], [front], new Map([["pant", fit("pant")]]));
     expect(rows[0].pieceCount).toBe(20);
+  });
+
+  it("brings hung layers back in their order, renumbered around anything skipped", () => {
+    const hung = { presentation: "hung" as const, colSpan: 2, rowSpan: 1 };
+    const { rows } = restoreRows(
+      [entry({ ...hung, depth: 0, productId: "gone" }), entry({ ...hung, depth: 2, productId: "tee" }), entry({ ...hung, depth: 1, col: 1 })],
+      [front],
+      new Map([["pant", fit("pant")], ["tee", fit("tee")]]),
+    );
+    expect(rows.map((r) => [r.productId, r.depth])).toEqual([["tee", 1], ["pant", 0]]);
+  });
+
+  it("reads a version from before hung layers as front", () => {
+    const { rows } = restoreRows([entry({})], [front], new Map([["pant", fit("pant")]]));
+    expect(rows[0].depth).toBe(0);
   });
 });
 

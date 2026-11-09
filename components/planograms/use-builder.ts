@@ -20,7 +20,10 @@ import { dismissToast, toast } from "@/lib/toast";
 import type { GridItem } from "./grid-items";
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
-export type Verb = "Moved" | "Resized" | "Changed";
+export type Verb = "Moved" | "Resized" | "Changed" | Reorder;
+/** Move forward / Move back on a shared rail (layers.ts). */
+export type Reorder = "Moved forward" | "Moved back";
+const isReorder = (verb: Verb): verb is Reorder => verb === "Moved forward" || verb === "Moved back";
 export type CommitResult = { ok: true; id: string } | { ok: false; message: string | null };
 
 const CONFLICT = "Changed on another device";
@@ -41,8 +44,8 @@ type Options = {
   reveal?: (fields: PlacementFields) => string | null;
 };
 
-/** Only a placement's own fields: a tile carries names and looks too. */
-const fieldsOf = (p: PlacementFields): PlacementFields => ({
+/** Only a placement's own fields: a tile carries names and looks too. Its depth only when asked for (layers.ts). */
+const fieldsOf = (p: PlacementFields, withDepth = false): PlacementFields => ({
   faceId: p.faceId,
   presentation: p.presentation,
   col: p.col,
@@ -50,6 +53,7 @@ const fieldsOf = (p: PlacementFields): PlacementFields => ({
   colSpan: p.colSpan,
   rowSpan: p.rowSpan,
   pieceCount: p.pieceCount,
+  ...(withDepth && p.depth !== undefined ? { depth: p.depth } : {}),
 });
 
 const isTyping = (target: EventTarget | null) =>
@@ -113,7 +117,9 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
 
   /** `onFound` hears which tile the change is saved to as soon as it's known: a started draft gives it a new id. */
   async function commit(item: GridItem, next: PlacementFields, verb: Verb, onFound?: (id: string) => void): Promise<CommitResult> {
-    const fields = fieldsOf(next);
+    // A move or a resize leaves the depth to the server (kept, or the back when it joins others);
+    // a reorder asks for its place.
+    const fields = fieldsOf(next, isReorder(verb));
     // A typed edit shows its refusal in its own form; the others say it in a toast.
     const tell = (message: string) => {
       if (verb !== "Changed") toast({ tone: "error", title: message });
@@ -142,9 +148,10 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
     // What the server kept, which isn't what was sent when folded product hangs on a rail;
     // and where it sat when this change went, which a change queued behind another moved.
     const kept = result.draft.placements.find((p) => p.id === target.id);
-    const after = kept ? fieldsOf(kept) : fields;
-    setHistory((h) => record(h, { id: target.id, before: fieldsOf(result.before ?? target), after }));
-    say(`${result.notice ?? verb} to ${describe(after)}`);
+    // Undo and Redo ask for the depth it had, so a step puts it back in its place front to back.
+    const after = kept ? fieldsOf(kept, true) : fields;
+    setHistory((h) => record(h, { id: target.id, before: fieldsOf(result.before ?? target, true), after }));
+    say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
     if (undoToast.current !== null) dismissToast(undoToast.current);
     undoToast.current = toast({ tone: "success", title: result.notice ?? verb, action: { label: "Undo", onSelect: () => void travel("undo") } });
     return { ok: true, id: target.id };

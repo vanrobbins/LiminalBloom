@@ -1,8 +1,9 @@
 // The two rules every placement keeps (§1.5: "the builder blocks every
 // overlapping or out-of-bounds placement"): inside the face's grid, and not on
 // top of another product. Pure, so the seed uses it now and the Week 5 builder
-// uses the same code later. Hung stacking (several styles on one hook) is a
-// Week 5 exception and is not allowed here.
+// uses the same code later. Hung product may share rail space front to back
+// (DECISIONS 11-09, lib/planograms/layers.ts), so two hung placements are not
+// an overlap here either.
 
 import type { Cells } from "./location-label";
 
@@ -26,12 +27,13 @@ export function cellsOverlap(a: Cells, b: Cells): boolean {
   return a.col < b.col + b.colSpan && b.col < a.col + a.colSpan && a.row < b.row + b.rowSpan && b.row < a.row + a.rowSpan;
 }
 
-export function placementIssues(grid: Grid, placements: readonly (Cells & { id: string })[]): PlacementIssue[] {
+export function placementIssues(grid: Grid, placements: readonly (Cells & { id: string; presentation?: "hung" | "folded" })[]): PlacementIssue[] {
   const issues: PlacementIssue[] = [];
   placements.forEach((p, i) => {
     if (!fitsGrid(p, grid)) issues.push({ id: p.id, kind: "out-of-bounds" });
     for (const earlier of placements.slice(0, i)) {
-      if (cellsOverlap(p, earlier)) issues.push({ id: p.id, kind: "overlap", otherId: earlier.id });
+      const bothHung = p.presentation === "hung" && earlier.presentation === "hung";
+      if (cellsOverlap(p, earlier) && !bothHung) issues.push({ id: p.id, kind: "overlap", otherId: earlier.id });
     }
   });
   return issues;

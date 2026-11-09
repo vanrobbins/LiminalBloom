@@ -26,6 +26,12 @@ describe("diffPlacements", () => {
     expect(diffPlacements(before, after)[0].moved).toHaveLength(1);
   });
 
+  it("counts a new place front to back as a move; an old version with no depth reads as front", () => {
+    const hung = { presentation: "hung" as const };
+    expect(diffPlacements([c({ ...hung, depth: 0 })], [c({ ...hung, depth: 1 })])[0].moved).toHaveLength(1);
+    expect(diffPlacements([c(hung)], [c({ ...hung, depth: 0 })])).toEqual([]);
+  });
+
   it("says when nothing changed", () => {
     expect(diffPlacements([c({})], [c({})])).toEqual([]);
     expect(summarizeChanges([])).toBe("No changes");

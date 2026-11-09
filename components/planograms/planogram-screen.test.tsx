@@ -32,7 +32,7 @@ const front = face("00000000-0000-4000-8000-000000000001", "Front");
 const back = face("00000000-0000-4000-8000-000000000002", "Back");
 const scope: PlanogramScope = { fixtureId: "r", fixtureName: "Rack 1", isSet: false, faces: [front, back] };
 const cells = { col: 0, row: 0, colSpan: 2, rowSpan: 1, presentation: "folded" as const, pieceCount: 4 };
-const pant: PlacementView = { ...cells, id: "d1", faceId: front.faceId, productId: "pant", productName: "Pant", styleNumber: "P-1", version: 1, imageKey: null, categoryName: "Denim" };
+const pant: PlacementView = { ...cells, id: "d1", faceId: front.faceId, productId: "pant", productName: "Pant", styleNumber: "P-1", version: 1, depth: 0, imageKey: null, categoryName: "Denim" };
 const published: PublishedVersion = {
   number: 1,
   publishedAt: new Date("2026-10-08T12:00:00Z"),

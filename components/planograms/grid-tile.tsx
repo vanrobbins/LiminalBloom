@@ -63,8 +63,13 @@ export function BlockView({ block, labelled, onEmpty }: { block: Block; labelled
   );
 }
 
+/** A tile sharing rail space with others (hung layers, layers.ts). */
+export type TileLayer = { depth: number; offsetPx: number };
+
 type GridTileProps = {
   item: GridItem;
+  /** Shares rail space: no card, so the one behind shows; drawn up and right by its offset; clicks land on the garment. */
+  layer?: TileLayer | null;
   block: Block;
   rect: Rect;
   words: string;
@@ -81,12 +86,23 @@ type GridTileProps = {
   gestures: Gestures;
   onSelect: (id: string) => void;
   onKey?: (key: string, shift: boolean) => void;
+  onReorder?: (direction: "forward" | "back") => void;
   onEscape?: () => void;
 };
 
-export function GridTile({ item, block, rect, words, selected, highlighted, issue, movable, offset, invalid, bounds, gestures, onSelect, onKey, onEscape }: GridTileProps) {
+export function GridTile({ item, layer = null, block, rect, words, selected, highlighted, issue, movable, offset, invalid, bounds, gestures, onSelect, onKey, onReorder, onEscape }: GridTileProps) {
   // Under 2 ft wide there is room for the photo and stock only; the name is in the sheet and the card.
-  const named = rect.width >= 2 * ROW_UNITS;
+  // Sharing a rail, the name strip would hide the product behind: its name is in the label and the Layers list.
+  const named = rect.width >= 2 * ROW_UNITS && !layer;
+  // A shared tile takes the pointer only where its garment (or photo, or badge) is painted, so a click
+  // lands on what shows; selected, it rises to the top and takes its whole box, so it can be dragged.
+  const passThrough = layer !== null && !selected && !movable;
+  const shift = layer?.offsetPx ?? 0;
+  const moveX = offset ? at(offset.dx) : "0px";
+  const moveY = offset ? at(offset.dy) : "0px";
+  const transform = offset || shift ? `translate(calc(${moveX} + ${shift}px), calc(${moveY} - ${shift}px))` : undefined;
+  // Back to front: nearer the front paints over; the selected one above all (lifted tiles are z-10).
+  const zIndex = layer && !movable ? (selected ? 10 : 9 - Math.min(layer.depth, 8)) : undefined;
   const grab = movable ? { onPointerDown: gestures.start("move"), ...gestures.handlers, ...KEEP_TOUCH } : {};
   return (
     <>
@@ -99,6 +115,8 @@ export function GridTile({ item, block, rect, words, selected, highlighted, issu
         data-lifted={movable ? "" : undefined}
         data-dragging={offset ? "" : undefined}
         data-invalid={invalid ? "" : undefined}
+        data-layered={layer ? "" : undefined}
+        data-depth={layer ? layer.depth : undefined}
         aria-pressed={selected}
         aria-label={`${item.productName}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
         onClick={(e) => {
@@ -109,16 +127,21 @@ export function GridTile({ item, block, rect, words, selected, highlighted, issu
         onKeyDown={(e) => {
           if (!movable) return;
           if (e.key === "Escape") return onEscape?.();
+          // Alt+Up / Alt+Down: Move forward / Move back on a shared rail.
+          if (onReorder && e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+            e.preventDefault();
+            return onReorder(e.key === "ArrowUp" ? "forward" : "back");
+          }
           if (onKey && e.key.startsWith("Arrow")) {
             e.preventDefault();
             onKey(e.key, e.shiftKey);
           }
         }}
         {...grab}
-        style={{ ...placed(rect), transform: offset ? `translate(${at(offset.dx)}, ${at(offset.dy)})` : undefined }}
-        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none"
+        style={{ ...placed(rect), transform, zIndex, pointerEvents: passThrough ? "none" : undefined }}
+        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface data-layered:border-transparent data-layered:bg-transparent data-layered:hover:outline-1 data-layered:hover:outline-dashed data-layered:hover:outline-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none"
       >
-        <span className="min-h-0 w-full flex-1">
+        <span className={`min-h-0 w-full flex-1 ${passThrough ? "[&_img]:pointer-events-auto [&_path]:pointer-events-auto [&_rect]:pointer-events-auto" : ""}`}>
           <ProductImage
             productId={item.productId}
             name={item.productName}
@@ -130,6 +153,7 @@ export function GridTile({ item, block, rect, words, selected, highlighted, issu
             colorWord={item.colorWord}
             size="fill"
             decorative
+            clear={layer !== null}
           />
         </span>
         {/* An icon for hung or folded and the piece count, not "F 1" (UX audit U21); the words are in the label and on hover. */}
@@ -137,7 +161,7 @@ export function GridTile({ item, block, rect, words, selected, highlighted, issu
           aria-hidden="true"
           data-count-badge
           title={`${PRESENTATION_LABEL[item.presentation]} · ${item.pieceCount} ${item.pieceCount === 1 ? "piece" : "pieces"}`}
-          className="absolute top-1 right-1 inline-flex items-center gap-0.5 rounded bg-raised/90 px-1 text-xs text-ink"
+          className="pointer-events-auto absolute top-1 right-1 inline-flex items-center gap-0.5 rounded bg-raised/90 px-1 text-xs text-ink"
         >
           {item.presentation === "hung" ? <Shirt strokeWidth={1.75} className="size-3" /> : <Layers strokeWidth={1.75} className="size-3" />}
           {item.pieceCount}

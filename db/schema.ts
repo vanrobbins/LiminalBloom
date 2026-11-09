@@ -493,6 +493,8 @@ export const productLocations = pgTable(
     colSpan: integer("col_span"),
     rowSpan: integer("row_span"),
     binId: uuid("bin_id"),
+    /** Front to back among hung products sharing rail space, 0 = front (DECISIONS 11-09). */
+    depth: integer("depth").notNull().default(0),
     createdAt: mapCreatedAt(),
   },
   (t) => [
@@ -523,6 +525,7 @@ export const productLocations = pgTable(
       "product_locations_ranges",
       sql`${t.col} between 0 and 47 and ${t.row} between 0 and 23 and ${t.colSpan} between 1 and 48 and ${t.rowSpan} between 1 and 24 and ${t.col} + ${t.colSpan} <= 48`,
     ),
+    check("product_locations_depth", sql`${t.depth} between 0 and 98`),
   ],
 );
 
@@ -578,6 +581,8 @@ export const planogramPlacements = pgTable(
     colSpan: integer("col_span").notNull(),
     rowSpan: integer("row_span").notNull(),
     pieceCount: integer("piece_count").notNull().default(1),
+    /** Front to back among hung products sharing rail space, 0 = front; the server renumbers it (DECISIONS 11-09). */
+    depth: integer("depth").notNull().default(0),
     version: mapVersion(),
     createdAt: mapCreatedAt(),
     updatedAt: mapUpdatedAt(),
@@ -605,6 +610,7 @@ export const planogramPlacements = pgTable(
       "planogram_placements_ranges",
       sql`${t.col} between 0 and 47 and ${t.row} between 0 and 23 and ${t.colSpan} between 1 and 48 and ${t.rowSpan} between 1 and 24 and ${t.col} + ${t.colSpan} <= 48 and ${t.row} + ${t.rowSpan} <= 24 and ${t.pieceCount} between 1 and 99`,
     ),
+    check("planogram_placements_depth", sql`${t.depth} between 0 and 98`),
   ],
 );
 

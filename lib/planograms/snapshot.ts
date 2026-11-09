@@ -7,6 +7,7 @@ import { FACE_SIDES } from "@/lib/layout/types";
 import { MAX_COLUMNS, MAX_ROWS } from "@/lib/feet";
 import { PRESENTATIONS } from "@/lib/products/footprint";
 
+import { MAX_DEPTH } from "./layers";
 import { MAX_PIECES, type PlacementView, type PlanogramFace, type SnapshotEntry } from "./types";
 
 const col = z.int().min(0).max(MAX_COLUMNS - 1);
@@ -30,6 +31,8 @@ export const snapshotSchema = z.array(
     colSpan,
     rowSpan,
     pieceCount: z.int().min(1).max(MAX_PIECES),
+    // Versions from before hung layers have none: 0, and nothing overlapped then.
+    depth: z.int().min(0).max(MAX_DEPTH).optional(),
   }),
 );
 
@@ -57,6 +60,7 @@ export function buildSnapshot(placements: readonly PlacementView[], faces: reado
       colSpan: p.colSpan,
       rowSpan: p.rowSpan,
       pieceCount: p.pieceCount,
+      depth: p.depth,
     };
   });
   return snapshotSchema.parse(

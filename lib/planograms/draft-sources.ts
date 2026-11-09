@@ -64,6 +64,6 @@ export async function floorLocations(storeId: string, faceIds: readonly string[]
   return rows.flatMap((r) =>
     r.faceId === null || r.col === null || r.row === null || r.colSpan === null || r.rowSpan === null
       ? []
-      : [{ productId: r.productId, faceId: r.faceId, presentation: r.presentation, col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan, pieceCount: 1 }],
+      : [{ productId: r.productId, faceId: r.faceId, presentation: r.presentation, col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan, pieceCount: 1, depth: r.depth }],
   );
 }
