@@ -1,10 +1,11 @@
 // Several items selected: what can be done to all of them at once. Two to six
-// frame racks on their own can be linked into a run (frame racks spec §4.3).
+// frame racks, or two to six wall bays, on their own can be linked into a run
+// (frame racks spec §4.3, run joins spec §2.3).
 
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { MAX_RUN_RACKS, MIN_RUN_RACKS } from "@/lib/layout/runs";
+import { MAX_RUN_RACKS, MIN_RUN_RACKS, isRunType } from "@/lib/layout/runs";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Layout } from "@/lib/layout/types";
 
@@ -16,7 +17,7 @@ export function SelectionProperties({ layout, ids, dispatch }: SelectionProperti
     picked.length === ids.length &&
     picked.length >= MIN_RUN_RACKS &&
     picked.length <= MAX_RUN_RACKS &&
-    picked.every((f) => f.type === "frame_rack" && f.runId === null);
+    picked.every((f) => isRunType(f.type) && f.type === picked[0].type && f.runId === null);
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-lg font-semibold text-ink">{ids.length} items selected</h2>

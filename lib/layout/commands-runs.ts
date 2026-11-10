@@ -7,7 +7,7 @@ import { nextName, type NewId } from "./factories";
 import { autoGrid, FIXTURE_RULES } from "./fixtures";
 import { rotate } from "./frames";
 import { poseAtEnd, poseBehind } from "./run-poses";
-import { MAX_RUN_RACKS, byIndex, linkPoint, rackEnds, runShape, type RunRack } from "./runs";
+import { MAX_RUN_RACKS, byIndex, isRunType, linkPoint, rackEnds, runShape, runWord, type RunRack } from "./runs";
 import type { Face, Fixture, Layout } from "./types";
 
 const asRack = (f: Fixture): RunRack => ({ ...f, runIndex: f.runIndex ?? 0 });
@@ -19,7 +19,7 @@ export function runRacks(layout: Layout, runId: string): Fixture[] {
 /** Which ends of a rack are open for another rack: both for a rack on its own, the run's ends otherwise, none when closed or full. */
 export function openEnds(layout: Layout, rackId: string): { left: boolean; right: boolean } {
   const rack = layout.fixtures.find((f) => f.id === rackId);
-  if (!rack || rack.type !== "frame_rack") return { left: false, right: false };
+  if (!rack || !isRunType(rack.type)) return { left: false, right: false };
   if (rack.runId === null) return { left: true, right: true };
   const racks = runRacks(layout, rack.runId);
   if (racks.length >= MAX_RUN_RACKS || runShape(racks.map(asRack)).closed) return { left: false, right: false };
@@ -34,7 +34,9 @@ export function openEnds(layout: Layout, rackId: string): { left: boolean; right
 export function addRackToRun(layout: Layout, rackId: string, side: "left" | "right", newId: NewId, behind = false): Layout {
   const rack = layout.fixtures.find((f) => f.id === rackId);
   if (!rack || !openEnds(layout, rackId)[side]) return layout;
-  const rule = FIXTURE_RULES.frame_rack;
+  // Only racks go back to back: a bay's back is against the wall.
+  if (behind && rack.type !== "frame_rack") return layout;
+  const rule = FIXTURE_RULES[rack.type];
   const pose = behind ? poseBehind(asRack(rack), side, rule.width, rule.depth) : poseAtEnd(asRack(rack), side, rule.width);
   const runId = rack.runId ?? newId();
   const members = rack.runId ? runRacks(layout, rack.runId) : [{ ...rack, runIndex: 0 }];
@@ -45,7 +47,7 @@ export function addRackToRun(layout: Layout, rackId: string, side: "left" | "rig
   const added: Fixture = {
     id,
     zoneId: rack.zoneId,
-    type: "frame_rack",
+    type: rack.type,
     name: nextName(layout.fixtures.map((f) => f.name), rule.label),
     ...pose,
     curve: 0,
@@ -73,7 +75,7 @@ export function removalRefusal(layout: Layout, rackId: string): string | null {
   const racks = runRacks(layout, rack.runId);
   if (runShape(racks.map(asRack)).closed) return null;
   const atEnd = rack.runIndex === 0 || rack.runIndex === racks.length - 1;
-  return atEnd ? null : "Remove an end rack first.";
+  return atEnd ? null : `Remove an end ${runWord(rack.type)} first.`;
 }
 
 /**
@@ -131,7 +133,7 @@ export function chainOrder(racks: readonly Fixture[]): string[] | null {
  */
 export function linkRun(layout: Layout, ids: readonly string[], newId: NewId, anchorId?: string): Layout {
   const racks = ids.map((id) => layout.fixtures.find((f) => f.id === id)).filter((f): f is Fixture => f !== undefined);
-  if (racks.length < 2 || racks.length > MAX_RUN_RACKS || racks.some((f) => f.type !== "frame_rack" || f.runId !== null)) return layout;
+  if (racks.length < 2 || racks.length > MAX_RUN_RACKS || racks.some((f) => !isRunType(f.type) || f.type !== racks[0].type || f.runId !== null)) return layout;
   let order = chainOrder(racks) ?? racks.map((f) => f.id);
   if (anchorId && order.includes(anchorId) && order[0] !== anchorId) {
     const at = order.indexOf(anchorId);
@@ -168,7 +170,7 @@ export function selectedRunRacks(layout: Layout, selection: readonly string[]): 
 export function joinRun(layout: Layout, rackId: string, targetId: string, side: "left" | "right", newId: NewId): Layout {
   const rack = layout.fixtures.find((f) => f.id === rackId);
   const target = layout.fixtures.find((f) => f.id === targetId);
-  if (!rack || !target || rack.type !== "frame_rack" || !openEnds(layout, targetId)[side]) return layout;
+  if (!rack || !target || !isRunType(rack.type) || rack.type !== target.type || !openEnds(layout, targetId)[side]) return layout;
   if (rack.runId !== null && rack.runId === target.runId) return layout;
   const chainOf = (f: Fixture) => (f.runId ? runRacks(layout, f.runId) : [f]);
   const moving = chainOf(rack);

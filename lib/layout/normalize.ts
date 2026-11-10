@@ -10,7 +10,7 @@ import { placeOnWall } from "./entrances";
 import { lowerTablePose } from "./fixtures";
 import { classify } from "./geometry";
 import { MAX_NAME } from "./limits";
-import { MIN_RUN_RACKS, byIndex, snapRun } from "./runs";
+import { MIN_RUN_RACKS, byIndex, isRunType, snapRun } from "./runs";
 import type { Fixture, FrameRun, Layout, Side, TableSet, Zone } from "./types";
 
 const SIDE_NAME: Record<Side, string> = { front: "Front", back: "Back", left: "Left", right: "Right" };
@@ -88,7 +88,7 @@ export function normalize(layout: Layout): Layout {
 function normalizeRuns(fixtures: Fixture[], frameRuns: FrameRun[]): { fixtures: Fixture[]; frameRuns: FrameRun[] } {
   const known = new Set(frameRuns.map((r) => r.id));
   const leave = (f: Fixture): Fixture => (f.runId === null && f.runIndex === null ? f : { ...f, runId: null, runIndex: null });
-  let next = fixtures.map((f) => (f.runId === null || !known.has(f.runId) || f.type !== "frame_rack" ? leave(f) : f));
+  let next = fixtures.map((f) => (f.runId === null || !known.has(f.runId) || !isRunType(f.type) ? leave(f) : f));
 
   const members = new Map<string, Fixture[]>();
   for (const f of next) if (f.runId !== null) members.set(f.runId, [...(members.get(f.runId) ?? []), f]);

@@ -60,3 +60,21 @@ test("bends a wall bay by dragging its curve handle", async ({ page }) => {
   await expect(page.getByText("Bends toward the front").filter({ visible: true })).toBeVisible();
   await saved(page);
 });
+
+test("wall bays link into a run that keeps a curved bay, and save (run joins spec §2)", async ({ page }) => {
+  await page.goto("/layout/edit");
+  await hydrated(page);
+  await addWallBay(page);
+  const inches = page.getByRole("textbox", { name: "Curve, inches" }).filter({ visible: true });
+  await inches.fill("6");
+  await inches.press("Enter");
+  await page.getByRole("button", { name: "Add bay to the right" }).filter({ visible: true }).click();
+  await expect(page.getByText("Run of 2 bays").filter({ visible: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add rack behind" })).toHaveCount(0);
+  await saved(page);
+
+  await page.reload();
+  await hydrated(page);
+  await expect(page.locator('[data-fixture-name^="Wall bay"]')).toHaveCount(2);
+  await expect(page.locator("[data-curved]")).toHaveCount(1);
+});

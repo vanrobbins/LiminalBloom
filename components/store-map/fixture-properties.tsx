@@ -8,6 +8,7 @@ import { FeetInchesInput } from "@/components/ui/feet-inches-input";
 import { NumberField } from "@/components/ui/number-field";
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import { MAX_FIXTURE_SIZE, MIN_FIXTURE_SIZE } from "@/lib/layout/limits";
+import { isRunType } from "@/lib/layout/runs";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Fixture, Layout } from "@/lib/layout/types";
 
@@ -79,7 +80,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
       ) : null}
       {rule.faces.length > 0 ? <FaceSettings fixture={fixture} faces={faces} dispatch={dispatch} /> : null}
       {fixture.type === "table" && !isLower ? <LowerTables table={fixture} lowers={lowers} dispatch={dispatch} /> : null}
-      {fixture.type === "frame_rack" ? <RunControls layout={layout} rack={fixture} dispatch={dispatch} /> : null}
+      {isRunType(fixture.type) ? <RunControls layout={layout} rack={fixture} dispatch={dispatch} /> : null}
       <div className="flex flex-wrap gap-2">
         {!isLower ? (
           <Button variant="secondary" onClick={() => dispatch({ type: "duplicate" })}>

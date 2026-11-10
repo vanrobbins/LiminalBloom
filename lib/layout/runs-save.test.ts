@@ -52,9 +52,11 @@ describe("migration 0013", () => {
     const [run] = await db.insert(frameRuns).values({ id: randomUUID(), storeId: store }).returning();
     const row = (over: object) => ({ id: randomUUID(), storeId: store, type: "frame_rack" as const, name: "R", x: 0, y: 0, width: 48, depth: 24, ...over });
     expect(await dbRefusal(db.insert(fixtures).values(row({ runId: run.id })))).toMatch(/"fixtures_run_has_index"/);
-    expect(await dbRefusal(db.insert(fixtures).values(row({ runId: run.id, runIndex: 0, type: "rack" })))).toMatch(/"fixtures_run_frame_rack"/);
+    expect(await dbRefusal(db.insert(fixtures).values(row({ runId: run.id, runIndex: 0, type: "rack" })))).toMatch(/"fixtures_run_type"/);
     expect(await dbRefusal(db.insert(fixtures).values(row({ runId: run.id, runIndex: 6 })))).toMatch(/"fixtures_run_index_range"/);
     await db.insert(fixtures).values(row({ runId: run.id, runIndex: 0 }));
+    // Migration 0017: a wall bay may join a run too (one type per run is validate()'s rule).
+    await db.insert(fixtures).values(row({ runId: run.id, runIndex: 1, type: "wall_bay" }));
   });
 
   it("refuses another store's run, and nulls a rack's run when the run goes", async () => {

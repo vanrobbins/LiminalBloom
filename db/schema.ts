@@ -332,8 +332,8 @@ export const fixtures = pgTable(
     // A deleted run nulls run_id only (the composite FK can't null run_index
     // too), so an index may outlive its run; the app ignores it then.
     check("fixtures_run_has_index", sql`${t.runId} is null or ${t.runIndex} is not null`),
-    // Cast to text: the enum value is new in the same migration.
-    check("fixtures_run_frame_rack", sql`${t.runId} is null or ${t.type}::text = 'frame_rack'`),
+    // Frame racks and wall bays join runs (run joins spec §2.1); one type per run is validate()'s.
+    check("fixtures_run_type", sql`${t.runId} is null or ${t.type}::text in ('frame_rack', 'wall_bay')`),
     foreignKey({
       name: "fixtures_run_fk",
       columns: [t.storeId, t.runId],

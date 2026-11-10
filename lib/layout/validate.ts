@@ -8,7 +8,7 @@ import { isOnWall, wallSpan } from "./entrances";
 import { FIXTURE_RULES, mayOverlap } from "./fixtures";
 import { SIDE_LABEL, formatLength } from "./format";
 import { area, bounds, boundsOverlap, distance, edgesOf, polygonContains, polygonsOverlap, selfIntersects } from "./geometry";
-import { MAX_RUN_RACKS, MIN_RUN_RACKS, runShape } from "./runs";
+import { MAX_RUN_RACKS, MIN_RUN_RACKS, isRunType, runShape, runWord } from "./runs";
 import {
   MAX_CORNERS,
   MAX_COORD,
@@ -220,19 +220,26 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
   return issues;
 }
 
-/** Frame racks spec §4.4, run joins spec §4: 2–6 frame racks per run, indexes 0…n−1, joined end to end at 0°, 90° or back to back. */
+/**
+ * Frame racks spec §4.4, run joins spec §4: 2–6 frame racks or wall bays per
+ * run, one type, indexes 0…n−1, joined end to end: racks at 0°, 90° or back to
+ * back; bays at 0° or 90°.
+ */
 function runIssues(layout: Layout, f: Fixture): Issue[] {
   if (f.runId === null && f.runIndex === null) return [];
+  const word = runWord(f.type);
   const run = layout.frameRuns.find((r) => r.id === f.runId);
-  if (!run || f.runIndex === null) return [issue(f.id, "run", "This rack's run is missing.")];
-  if (f.type !== "frame_rack") return [issue(f.id, "run", "Only frame racks join a run.")];
+  if (!run || f.runIndex === null) return [issue(f.id, "run", `This ${word}'s run is missing.`)];
+  if (!isRunType(f.type)) return [issue(f.id, "run", "Only frame racks and wall bays join a run.")];
   const racks = layout.fixtures.filter((o) => o.runId === run.id);
-  if (racks.length < MIN_RUN_RACKS || racks.length > MAX_RUN_RACKS) return [issue(f.id, "run", `A run has ${MIN_RUN_RACKS} to ${MAX_RUN_RACKS} racks.`)];
+  if (racks.some((o) => o.type !== f.type)) return [issue(f.id, "run", "A run is all frame racks or all wall bays.")];
+  if (racks.length < MIN_RUN_RACKS || racks.length > MAX_RUN_RACKS) return [issue(f.id, "run", `A run has ${MIN_RUN_RACKS} to ${MAX_RUN_RACKS} ${word}s.`)];
   const indexes = racks.map((o) => o.runIndex).sort((a, b) => (a ?? 0) - (b ?? 0));
-  if (!indexes.every((n, i) => n === i)) return [issue(f.id, "run", "The racks in a run are numbered from the anchor without gaps.")];
+  if (!indexes.every((n, i) => n === i)) return [issue(f.id, "run", `The ${word}s in a run are numbered from the anchor without gaps.`)];
   const shape = runShape(racks.map((o) => ({ ...o, runIndex: o.runIndex ?? 0 })));
-  if (!shape.joined) return [issue(f.id, "run", "Racks in a run must meet end to end: straight, at a corner, or back to back.")];
-  return [];
+  if (shape.joined) return [];
+  const how = f.type === "wall_bay" ? "back corner to back corner, straight or at a corner" : "end to end: straight, at a corner, or back to back";
+  return [issue(f.id, "run", `${word === "bay" ? "Bays" : "Racks"} in a run must meet ${how}.`)];
 }
 
 function entranceIssues(layout: Layout, wants: Wants): Issue[] {

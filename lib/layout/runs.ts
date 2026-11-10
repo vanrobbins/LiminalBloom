@@ -22,6 +22,12 @@ export const TURN_TOLERANCE = 0.5;
 export const MAX_RUN_RACKS = 6;
 export const MIN_RUN_RACKS = 2;
 
+/** What may join a run (run joins spec §2): one type per run. */
+export const RUN_TYPES = ["frame_rack", "wall_bay"] as const;
+export const isRunType = (type: FixtureType) => (RUN_TYPES as readonly FixtureType[]).includes(type);
+/** "rack" or "bay", for the panel's and messages' words. */
+export const runWord = (type: FixtureType) => (type === "wall_bay" ? "bay" : "rack");
+
 /** A run item. Depth, curve and type matter only to bays and back joins; a bare item is a straight frame rack. */
 export type RunRack = { id: string; x: number; y: number; width: number; rotation: number; runIndex: number; depth?: number; curve?: number; type?: FixtureType };
 export type Join = "straight" | "corner" | "back";

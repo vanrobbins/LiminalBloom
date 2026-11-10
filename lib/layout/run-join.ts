@@ -4,7 +4,7 @@
 // of one, so two lone racks can join too.
 
 import { openEnds, runRacks } from "./commands-runs";
-import { MAX_RUN_RACKS, linkPoint, rackEnds, turnBetween } from "./runs";
+import { MAX_RUN_RACKS, isRunType, linkPoint, rackEnds, turnBetween } from "./runs";
 import type { Fixture, Layout, Point } from "./types";
 
 /** How far apart the racks' edges can be, in inches. */
@@ -27,7 +27,7 @@ const chainOf = (layout: Layout, rack: Fixture) => (rack.runId ? runRacks(layout
 /** The dragged racks, in chain order, if they are exactly one rack or one run. */
 function movingChain(layout: Layout, ids: ReadonlySet<string>): Fixture[] | null {
   const moving = layout.fixtures.filter((f) => ids.has(f.id));
-  if (moving.length === 0 || moving.length !== ids.size || moving.some((f) => f.type !== "frame_rack")) return null;
+  if (moving.length === 0 || moving.length !== ids.size || moving.some((f) => !isRunType(f.type) || f.type !== moving[0].type)) return null;
   const chain = chainOf(layout, moving[0]);
   return chain.length === moving.length && chain.every((f) => ids.has(f.id)) ? chain : null;
 }
@@ -68,7 +68,7 @@ export function findJoin(layout: Layout, ids: ReadonlySet<string>): RunJoin | nu
   };
 
   for (const target of layout.fixtures) {
-    if (target.type !== "frame_rack" || ids.has(target.id)) continue;
+    if (target.type !== head.type || ids.has(target.id)) continue;
     if (chain.length + chainOf(layout, target).length > MAX_RUN_RACKS) continue;
     const open = openEnds(layout, target.id);
     if (open.right && headOpen) consider(head, target, "right");

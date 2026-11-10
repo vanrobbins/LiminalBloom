@@ -12,7 +12,7 @@ export const GLOSSARY = {
   dueDate: { term: "Due date", text: "When the team should have this planogram set up on the floor." },
   tableSet: { term: "Table set", text: "A table with lower tables against its sides. Planned together as one display." },
   frameRack: { term: "Frame rack", text: "A frame with one hanging rail. It holds hung product only." },
-  run: { term: "Run", text: "Frame racks joined end to end, in a line, an L, a U or a square. A run is planned as one display." },
+  run: { term: "Run", text: "Frame racks or wall bays joined end to end: in a line, an L, a U or a square; racks may also stand back to back, and bays may curve. A run is planned as one display." },
   rail: { term: "Rail", text: "The bar product hangs from. A frame rack has one." },
   zone: { term: "Zone", text: "An area of the store, such as the fitting rooms or the stockroom. Fixtures inside it belong to it." },
   status: { term: "Status", text: "In stock, sold out or on sale. Anyone can change it, and everyone sees it at once." },
