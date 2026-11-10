@@ -9,7 +9,6 @@
 
 import { CircleUser, LogOut, Moon, Store, Sun } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { personInitial } from "@/lib/initials";
 
+import { useShellSheet } from "./shell-context";
 import { useSignOut } from "./use-sign-out";
 import { useThemeSwitch } from "./use-theme-switch";
 import { NameTip, Tooltip } from "@/components/ui/tooltip";
@@ -46,7 +46,7 @@ export function UserMenu({
   user: { name: string; email: string };
   variant: UserMenuVariant;
 }) {
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useShellSheet("account");
   const { isMounted, target, switchTheme } = useThemeSwitch();
   const { signOut, isSigningOut } = useSignOut();
 
@@ -128,7 +128,7 @@ export function UserMenu({
           className={TRIGGER[variant]}
         >
           {avatar}
-          {variant === "sidebar" ? <span className="min-w-0 wrap-anywhere">{user.name}</span> : null}
+          {variant === "sidebar" ? <span className="min-w-0 wrap-break-word">{user.name}</span> : null}
         </DropdownMenuTrigger>
       </NameTip>
 

@@ -7,7 +7,6 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { PlanogramScreen } from "@/components/planograms/planogram-screen";
-import { VersionLine } from "@/components/planograms/version-line";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { requireMember } from "@/lib/current-member";
@@ -60,7 +59,6 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
           ) : null
         }
       />
-      <VersionLine latest={state.latest} />
       <PlanogramScreen
         key={`${state.row?.version ?? 0}-${viewing?.number ?? 0}`}
         scope={scope}

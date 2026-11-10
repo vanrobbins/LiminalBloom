@@ -5,16 +5,21 @@ import type { Footprint, Presentation } from "@/lib/products/footprint";
 import type { Cells } from "@/lib/products/location-label";
 import type { Texture } from "@/lib/products/schemas";
 
-/** Hung product doesn't stack, so only this caps it (DECISIONS 10-08). */
+/** Pieces per placement. Hung products share rail space as separate placements (layers.ts), so this caps each one. */
 export const MAX_PIECES = 99;
 
 /** Before 2000 is a half-typed year (a date field reads "0002-10-15" after one digit). */
 export const EARLIEST_DUE_DATE = "2000-01-01";
 
-export type PlacementFields = Cells & { faceId: string; presentation: Presentation; pieceCount: number };
+/**
+ * `depth` orders hung products sharing rail space, 0 = front (layers.ts). In a
+ * change it asks for a place in its layer group; left out, the server keeps the
+ * placement's own, or puts it at the back when it joins others.
+ */
+export type PlacementFields = Cells & { faceId: string; presentation: Presentation; pieceCount: number; depth?: number };
 
 /** A draft row. */
-export type Placement = PlacementFields & { id: string; productId: string; version: number };
+export type Placement = PlacementFields & { id: string; productId: string; version: number; depth: number };
 
 /**
  * What a tile draws a product with (Week 6.5 spec §4.6): its photo key, else a
@@ -40,6 +45,8 @@ export type PlanogramFace = {
   label: string;
   /** A frame rack that turns a corner from the rack before it. */
   corner?: boolean;
+  /** A frame rack back to back with the rack before it (run joins spec §1.3). */
+  back?: boolean;
   columns: number;
   rows: number;
 };

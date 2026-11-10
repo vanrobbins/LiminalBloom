@@ -1,11 +1,12 @@
-// A frame rack's run (frame racks spec §4.3): add a rack at an open end, take
+// A frame rack's run (frame racks spec §4.3): add a rack at an open end or
+// back to back behind it (run joins spec §1.2), take
 // this rack out, and for a closed run choose where the combined grid starts.
 
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { openEnds, removalRefusal, runRacks } from "@/lib/layout/commands-runs";
-import { MAX_RUN_RACKS, runShape } from "@/lib/layout/runs";
+import { MAX_RUN_RACKS, runShape, runWord } from "@/lib/layout/runs";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Fixture, Layout } from "@/lib/layout/types";
 import { FIELD_CLASSES } from "@/components/ui/password-field";
@@ -21,22 +22,35 @@ export function RunControls({ layout, rack, dispatch }: RunControlsProps) {
   const full = racks.length >= MAX_RUN_RACKS;
   const refusal = removalRefusal(layout, rack.id);
   const command = (c: Extract<SessionAction, { type: "command" }>["command"]) => dispatch({ type: "command", command: c });
+  // Behind the right end when it's open, else the left. Only racks: a bay's back is against the wall.
+  const behindSide = rack.type !== "frame_rack" ? null : ends.right ? "right" : ends.left ? "left" : null;
+  const word = runWord(rack.type);
 
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1 text-sm text-ink">
         <span className="inline-flex items-center gap-1">
-          {rack.runId ? `Run of ${racks.length} racks` : "Run"}
+          {rack.runId ? `Run of ${racks.length} ${word}s` : "Run"}
           <InfoPopover term="run" />
         </span>
       </legend>
       <div className="grid grid-cols-2 gap-2">
         <Button variant="secondary" disabled={!ends.left} onClick={() => command({ type: "addRackToRun", rackId: rack.id, side: "left" })}>
-          Add rack to the left
+          Add {word} to the left
         </Button>
         <Button variant="secondary" disabled={!ends.right} onClick={() => command({ type: "addRackToRun", rackId: rack.id, side: "right" })}>
-          Add rack to the right
+          Add {word} to the right
         </Button>
+        {rack.type === "frame_rack" ? (
+          <Button
+            variant="secondary"
+            className="col-span-2"
+            disabled={behindSide === null}
+            onClick={() => behindSide && command({ type: "addRackToRun", rackId: rack.id, side: behindSide, behind: true })}
+          >
+            Add rack behind
+          </Button>
+        ) : null}
       </div>
       {rack.runId === null ? (
         // Shift-click does this with a keyboard; a phone has this and a long-press.
@@ -44,7 +58,7 @@ export function RunControls({ layout, rack, dispatch }: RunControlsProps) {
           Select more
         </Button>
       ) : null}
-      {full ? <p className="text-sm text-ink-muted">A run holds up to {MAX_RUN_RACKS} racks.</p> : null}
+      {full ? <p className="text-sm text-ink-muted">A run holds up to {MAX_RUN_RACKS} {word}s.</p> : null}
       {rack.runId ? (
         <>
           <Button variant="secondary" disabled={refusal !== null} onClick={() => command({ type: "removeFromRun", rackId: rack.id })}>

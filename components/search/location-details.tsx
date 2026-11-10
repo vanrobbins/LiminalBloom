@@ -58,13 +58,14 @@ export function LocationDetails({ result, layout, onChanged }: LocationDetailsPr
                     {l.detail.startsWith("Rail ·") ? <InfoPopover term="rail" /> : null}
                   </p>
                 ) : null}
+                {l.behind ? <p className="text-sm text-ink-muted">{l.behind}</p> : null}
                 {l.floor ? (
                   <>
                     <LocationMap layout={layout} fixtureId={l.floor.fixtureId} />
                     <FaceGrid grid={l.floor.grid} cells={l.floor.cells} label={`${l.label}, ${l.detail}`} />
                     <Link
                       href={`/planograms/${l.floor.fixtureId}?product=${result.id}`}
-                      className="inline-flex min-h-11 items-center self-start text-brand-strong underline underline-offset-4"
+                      className="inline-flex min-h-11 items-center self-start text-ink underline underline-offset-4"
                     >
                       Open planogram
                     </Link>

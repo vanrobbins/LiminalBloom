@@ -26,6 +26,8 @@ type ProductImageProps = {
   size?: "sm" | "lg" | "fill";
   /** Inside a control that already names the product: hidden from screen readers. */
   decorative?: boolean;
+  /** No card behind a drawing: a product hung behind it shows around the garment (hung layers). */
+  clear?: boolean;
 };
 
 const SIZES = { sm: "size-12 rounded-md border border-line-subtle", lg: "h-48 w-40 rounded-md border border-line-subtle", fill: "size-full" } as const;
@@ -38,10 +40,10 @@ export function isPhoto(imageKey: string | null): imageKey is string {
   return imageKey !== null && !imageKey.startsWith("seed-");
 }
 
-export function ProductImage({ productId, name, categoryName, imageKey, view = "flat", swatch, texture, colorWord, size = "sm", decorative = false }: ProductImageProps) {
+export function ProductImage({ productId, name, categoryName, imageKey, view = "flat", swatch, texture, colorWord, size = "sm", decorative = false, clear = false }: ProductImageProps) {
   // Remember which key failed, so a new image gets its own chance to load.
   const [failedKey, setFailedKey] = useState<string | null>(null);
-  const box = `${SIZES[size]} shrink-0 overflow-hidden bg-surface`;
+  const box = `${SIZES[size]} shrink-0 overflow-hidden ${clear ? "" : "bg-surface"}`;
 
   if (isPhoto(imageKey) && failedKey !== imageKey) {
     return (

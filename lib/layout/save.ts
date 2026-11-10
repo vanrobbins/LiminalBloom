@@ -81,7 +81,7 @@ export function conflictsFrom(error: unknown, writes: ChangeSet): string[] | nul
   return null;
 }
 
-export const TWO_PLANOGRAMS = "Two of these racks have planograms. Only one rack in a run can.";
+export const TWO_PLANOGRAMS = "Two of these have planograms. A run can have only one.";
 
 /**
  * A run has one planogram, on its anchor (frame racks spec §4.2): linking racks

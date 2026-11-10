@@ -12,6 +12,8 @@ import { useMapEditor } from "./use-map-editor";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 vi.mock("@/lib/toast", () => ({ toast: vi.fn() }));
+// A cap of 2 lets a test pass it with three changes instead of 501.
+vi.mock("@/lib/layout/limits", async (original) => ({ ...(await original<typeof import("@/lib/layout/limits")>()), MAX_CHANGES_PER_SAVE: 2 }));
 
 const initial = { ...store(), fixtures: [fixture()] };
 const move = (dx: number) => ({ type: "command" as const, command: { type: "move" as const, ids: ["fixture-a"], delta: { x: dx, y: 0 } } });
@@ -251,5 +253,32 @@ describe("useMapEditor", () => {
     expect(result.current.session.layout).toEqual(two);
     expect(toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Couldn't save that change. The layout was reloaded." }));
     errorLog.mockRestore();
+  });
+
+  it("over the per-save cap it keeps the changes, says how to recover, and saves once Undo brings it under (B1)", async () => {
+    const three = { ...two, fixtures: [...two.fixtures, fixture({ id: "fixture-c", name: "Table 3", x: 700 })] };
+    const moveC = { type: "command" as const, command: { type: "move" as const, ids: ["fixture-c"], delta: { x: 12, y: 0 } } };
+    const save = vi.fn(async (_s: string, changes: ChangeSet): Promise<SaveReply> => ({ status: "saved", layout: applyChanges(three, changes) }));
+    const { result } = renderHook(() => useMapEditor({ storeId: "s", initial: three, save, fetchLatest: vi.fn() }));
+
+    act(() => {
+      result.current.dispatch(move(12));
+      result.current.dispatch(moveB);
+      result.current.dispatch(moveC);
+    });
+    act(() => result.current.done());
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+
+    expect(save).not.toHaveBeenCalled();
+    expect(result.current.session.layout.fixtures.map((f) => f.x)).toEqual([312, 412, 712]);
+    expect(result.current.leaving).toBe(false);
+    expect(push).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Too many changes to save at once." }));
+
+    act(() => result.current.dispatch({ type: "undo" }));
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0][1].fixtures).toHaveLength(2);
   });
 });

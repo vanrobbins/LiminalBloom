@@ -51,9 +51,16 @@ function runScope(layout: Layout, anchor: Fixture): PlanogramScope {
     const ordered = [...racks].sort((a, b) => a.runIndex - b.runIndex);
     const before = rack.runIndex === 0 ? (shape.closed ? turnBetween(ordered[ordered.length - 1], rack) : null) : shape.joins[rack.runIndex - 1];
     const corner = before === "corner";
+    const back = before === "back";
     return layout.faces
       .filter((face) => face.fixtureId === id && face.side === "front")
-      .map((face) => (corner ? { ...toFace(face, rack, rack.name, `${rack.name} · corner`), corner } : toFace(face, rack, rack.name, rack.name)));
+      .map((face) =>
+        corner
+          ? { ...toFace(face, rack, rack.name, `${rack.name} · corner`), corner }
+          : back
+            ? { ...toFace(face, rack, rack.name, `${rack.name} · back to back`), back }
+            : toFace(face, rack, rack.name, rack.name),
+      );
   });
   return { fixtureId: anchor.id, fixtureName: anchor.name, isSet: true, isRun: true, faces };
 }

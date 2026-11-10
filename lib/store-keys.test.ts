@@ -97,7 +97,7 @@ describe("getStoreKey", () => {
   it("refuses a store that has no key", async () => {
     const storeId = await makeStore("keyless");
 
-    await expect(getStoreKey(storeId)).rejects.toThrow();
+    await expect(getStoreKey(storeId)).rejects.toThrow(/has no active encryption key/);
   });
 });
 
@@ -136,7 +136,7 @@ describe("encryptForStore and decryptForStore", () => {
       .set({ wrappedKey: rowA.wrappedKey })
       .where(eq(storeKeys.storeId, b));
 
-    await expect(getStoreKey(b)).rejects.toThrow();
+    await expect(getStoreKey(b)).rejects.toThrow(/unable to authenticate data/);
   });
 
   it("refuses to open one store's value under another store", async () => {
@@ -150,7 +150,7 @@ describe("encryptForStore and decryptForStore", () => {
 
     const sealed = await encryptForStore(a, "store A's AI key");
 
-    await expect(decryptForStore(b, sealed)).rejects.toThrow();
+    await expect(decryptForStore(b, sealed)).rejects.toThrow(/unable to authenticate data/);
   });
 });
 
@@ -171,7 +171,7 @@ describe("giveStoreItsKey", () => {
     process.env.MASTER_KEY = Buffer.alloc(8).toString("base64");
 
     try {
-      await expect(giveStoreItsKey(storeId)).rejects.toThrow();
+      await expect(giveStoreItsKey(storeId)).rejects.toThrow(/MASTER_KEY must be 32 bytes/);
     } finally {
       process.env.MASTER_KEY = original;
     }

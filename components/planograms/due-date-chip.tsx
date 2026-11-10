@@ -21,6 +21,8 @@ export function DueDateChip({ fixtureId, dueDate, today }: DueDateChipProps) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const label = dueDate ? dueLabel(dueDate, today) : null;
   const Icon = label?.overdue ? AlertTriangle : CalendarDays;
+  // Not "Due date": that is the field's label inside (B9).
+  const title = dueDate ? "Change due date" : "Set due date";
   const form = open ? <DueDateForm key={dueDate ?? "none"} fixtureId={fixtureId} dueDate={dueDate} onDone={() => setOpen(false)} /> : null;
 
   return (
@@ -36,11 +38,11 @@ export function DueDateChip({ fixtureId, dueDate, today }: DueDateChipProps) {
         {label ? label.text : "Set due date"}
       </button>
       {isPhone ? (
-        <BottomSheet open={open} onOpenChange={setOpen} title="Due date">
+        <BottomSheet open={open} onOpenChange={setOpen} title={title}>
           {form}
         </BottomSheet>
       ) : (
-        <Dialog open={open} onOpenChange={setOpen} title="Due date">
+        <Dialog open={open} onOpenChange={setOpen} title={title}>
           {form}
         </Dialog>
       )}

@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { productCategories, productFootprints, products } from "@/db/schema";
+import { dbRefusal } from "@/lib/db/test-errors";
 
 import { createCategory, deleteCategory, updateCategory } from "./category-write";
 import { productDetail } from "./queries";
@@ -122,7 +123,7 @@ describe("products", () => {
   it("refuses a swatch that isn't #rrggbb, and has no stack limit columns (migration 0012)", async () => {
     const store = await makeStore("product-0012");
     const f = await seedStoreFixtures(store);
-    await expect(db.update(products).set({ swatch: "navy" }).where(eq(products.id, f.productId))).rejects.toThrow();
+    expect(await dbRefusal(db.update(products).set({ swatch: "navy" }).where(eq(products.id, f.productId)))).toMatch(/"products_swatch_hex"/);
     const columns = await db.execute(sql`select table_name from information_schema.columns where column_name = 'stack_limit' and table_name in ('product_categories', 'product_footprints')`);
     expect(columns.rows).toEqual([]);
     const [row] = await db.select({ sizeRange: products.sizeRange, texture: products.texture }).from(products).where(eq(products.id, f.productId));

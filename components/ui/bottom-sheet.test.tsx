@@ -126,6 +126,22 @@ describe("BottomSheet", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("closes from an × icon button, not a text link, in both modes (UX audit U1)", () => {
+    const { rerender } = render(
+      <BottomSheet open onOpenChange={() => {}} title="Straight jean">
+        <p>Details</p>
+      </BottomSheet>,
+    );
+    expect(screen.getByRole("button", { name: "Close" })).not.toHaveTextContent("Close");
+    expect(screen.getByRole("button", { name: "Close" }).querySelector("svg")).not.toBeNull();
+    rerender(
+      <BottomSheet open onOpenChange={() => {}} title="Straight jean" peek>
+        <p>Details</p>
+      </BottomSheet>,
+    );
+    expect(screen.getByRole("button", { name: "Close" })).not.toHaveTextContent("Close");
+  });
+
   it("asks to close from its Close button", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

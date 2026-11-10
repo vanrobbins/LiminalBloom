@@ -1,10 +1,11 @@
 // What the selected tile can do (Part 2 spec §4 "Draft"): Details · Edit
 // numbers · Move to face… · Remove. On a phone it takes the draft bar's place
-// above the tabs; inline on tablet and desktop, beside the draft bar.
+// above the tabs; inline on tablet and desktop, beside the draft bar. Sharing
+// rail space, it adds Move forward / Move back (hung layers).
 
 "use client";
 
-import { ArrowRightLeft, Info, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, ArrowUp, Info, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -16,11 +17,13 @@ type SelectionBarProps = {
   onEdit: () => void;
   onMoveFace: () => void;
   onRemove: () => void;
+  /** Only while it shares rail space; null when it's already at that end. */
+  layers?: { onForward: (() => void) | null; onBack: (() => void) | null };
 };
 
 const ICON = { "aria-hidden": true, strokeWidth: 1.75, className: "size-4" } as const;
 
-export function SelectionBar({ name, canMoveFace, busy, onDetails, onEdit, onMoveFace, onRemove }: SelectionBarProps) {
+export function SelectionBar({ name, canMoveFace, busy, onDetails, onEdit, onMoveFace, onRemove, layers }: SelectionBarProps) {
   return (
     <>
       <div
@@ -44,14 +47,26 @@ export function SelectionBar({ name, canMoveFace, busy, onDetails, onEdit, onMov
               Move to face…
             </Button>
           ) : null}
+          {layers ? (
+            <>
+              <Button variant="secondary" onClick={layers.onForward ?? undefined} disabled={busy || !layers.onForward}>
+                <ArrowUp {...ICON} />
+                Move forward
+              </Button>
+              <Button variant="secondary" onClick={layers.onBack ?? undefined} disabled={busy || !layers.onBack}>
+                <ArrowDown {...ICON} />
+                Move back
+              </Button>
+            </>
+          ) : null}
           <Button variant="secondary" onClick={onRemove} disabled={busy}>
             <Trash2 {...ICON} />
             Remove
           </Button>
         </div>
       </div>
-      {/* Keeps the last card clear of the two-row bar on a phone. */}
-      <div aria-hidden="true" className="h-28 md:hidden" />
+      {/* Keeps the last card clear of the two-row bar (three with Move forward / back) on a phone. */}
+      <div aria-hidden="true" className={`${layers ? "h-44" : "h-28"} md:hidden`} />
     </>
   );
 }

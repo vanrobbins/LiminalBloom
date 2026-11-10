@@ -86,7 +86,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
 
   return (
     // The panel narrows on tablets so the results keep room for whole words.
-    <div className={`mx-auto grid w-full gap-6 ${open ? "max-w-6xl md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]" : "max-w-2xl"}`}>
+    <div className={`mx-auto grid w-full gap-6 ${open ? "max-w-6xl md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]" : "max-w-2xl lg:max-w-5xl"}`}>
       <div className="min-w-0">
         <PageHeader title="Products" actions={<ProductsActions />} />
         <form role="search" onSubmit={(event) => event.preventDefault()}>

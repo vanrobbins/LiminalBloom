@@ -4,6 +4,7 @@
 
 import { worldToScreen, type Camera, type Viewport } from "@/lib/layout/camera";
 import { selectedRunRacks } from "@/lib/layout/commands-runs";
+import { shownLabels, zoneLabels } from "@/lib/layout/fixture-labels";
 import { isEditableFixture, type Focus, type HandleSpot } from "@/lib/layout/hit-test";
 import type { Drawing } from "@/lib/layout/outline-draw";
 import type { Marquee, VertexRef } from "@/lib/layout/session-core";
@@ -74,6 +75,8 @@ export function StoreMap({
   for (const face of layout.faces) facesOf.set(face.fixtureId, [...(facesOf.get(face.fixtureId) ?? []), face]);
   const box = marquee ? [worldToScreen(camera, marquee.from), worldToScreen(camera, marquee.to)] : null;
   const outline = layout.outline;
+  const zoneNames = zoneLabels(layout, camera.scale);
+  const named = shownLabels(layout, camera.scale, zoneNames);
 
   return (
     <svg role="img" aria-label={mapLabel(layout)} className="block size-full touch-none select-none" {...svgProps}>
@@ -85,7 +88,7 @@ export function StoreMap({
           <ZoneShape
             key={zone.id}
             zone={zone}
-            scale={camera.scale}
+            label={zoneNames.get(zone.id) ?? null}
             dimmed={focus.kind === "zone" && focus.id !== zone.id}
             selected={selected.has(zone.id)}
             problem={problems.has(zone.id)}
@@ -104,6 +107,7 @@ export function StoreMap({
             muted={!isEditableFixture(fixture, focus)}
             selected={selected.has(fixture.id)}
             problem={problems.has(fixture.id)}
+            named={named.has(fixture.id)}
           />
         ))}
         {outline

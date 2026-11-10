@@ -2,18 +2,16 @@
 // past version, face by face (a table set as one combined view). The draft and
 // the latest version are editable on the grid: tap to select, then drag,
 // resize, use the selection bar or the arrow keys; with no draft the first
-// change starts one. A status row sits above the grid and the actions in a bar
-// below it: sticky on a phone, where the selection bar takes its place.
+// change starts one. One status row above the grid holds the version line,
+// Draft | Published, the due date and the actions (UX audit U20); on a phone
+// the actions are a sticky bar instead, where the selection bar takes its place.
+// With nothing yet, Start draft sits in the empty box (U19).
 
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { InfoPopover } from "@/components/ui/info-popover";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { PlanogramRow, PublishedVersion } from "@/lib/planograms/queries";
 import { draftIssues } from "@/lib/planograms/rules";
 import { combinedBlocks, singleBlock } from "@/lib/planograms/set-grid";
@@ -21,18 +19,17 @@ import type { DraftState, PlanogramScope, ProductLook } from "@/lib/planograms/t
 
 import { AddProductDialog } from "./add-product-dialog";
 import { DraftBar } from "./draft-bar";
-import { DraftStatusLine } from "./draft-status";
-import { DueDateChip } from "./due-date-chip";
-import { swipeTarget } from "./face-swipe";
 import { itemsFromDraft, itemsFromSnapshot, startFace } from "./grid-items";
 import { MoveToFaceDialog } from "./move-to-face-dialog";
+import { PastVersion } from "./past-version";
 import { PlanogramBody } from "./planogram-body";
 import { SelectionBar } from "./selection-bar";
+import { StatusRow } from "./status-row";
 import { useBuilder } from "./use-builder";
+import { useFaceView } from "./use-face-view";
 import { spotWords, usePlacementActions } from "./use-placement-actions";
 import { usePlanogramDraft } from "./use-planogram-draft";
 import { useSelection } from "./use-selection";
-import type { Edges } from "./use-scroll-edges";
 
 type PlanogramScreenProps = {
   scope: PlanogramScope;
@@ -50,12 +47,10 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
   const router = useRouter();
   const { draft, status, save, adopt } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
-  const [faceId, setFaceId] = useState(() => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
+  const { face, slideFrom, showFace, onSwipe } = useFaceView(scope, () => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
   const [adding, setAdding] = useState(false);
   const [movingFace, setMovingFace] = useState(false);
-  const [slideFrom, setSlideFrom] = useState<"left" | "right" | null>(null);
 
-  const face = scope.faces.find((f) => f.faceId === faceId) ?? scope.faces[0];
   const shownFaces = scope.isSet ? scope.faces : [face];
   const layout = scope.isSet ? combinedBlocks(scope) : singleBlock(face);
   const isEditing = draft !== null && view === "draft" && viewing === null;
@@ -97,16 +92,6 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
     select(null);
   }
 
-  const faceIds = scope.faces.map((f) => f.faceId);
-  function showFace(id: string, from?: "left" | "right") {
-    setSlideFrom(from ?? (faceIds.indexOf(id) > faceIds.indexOf(face.faceId) ? "right" : "left"));
-    setFaceId(id);
-  }
-  function onSwipe(gesture: { dx: number; dy: number; edges: Edges }) {
-    if (scope.isSet) return;
-    const target = swipeTarget(faceIds, face.faceId, gesture);
-    if (target) showFace(target.faceId, target.from);
-  }
 
   const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, save, setSelectedId, select, showFace });
 
@@ -139,47 +124,45 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
       onFace={showFace}
       onEdit={actions.edit}
       onRemove={actions.remove}
+      onReorder={actions.gridBuilder ? actions.reorder : undefined}
     />
   );
 
   if (viewing) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-raised px-4 py-3">
-          <p className="text-ink">Version {viewing.number}, read-only.</p>
-          <Button asChild variant="secondary">
-            <Link href={`/planograms/${scope.fixtureId}`}>Back to the current planogram</Link>
-          </Button>
-        </div>
+      <PastVersion fixtureId={scope.fixtureId} latest={latest} number={viewing.number}>
         {body}
-      </div>
+      </PastVersion>
     );
   }
 
+  const draftBar = (inline: boolean) => (
+    <DraftBar
+      fixtureId={scope.fixtureId}
+      row={row}
+      hasDraft={draft !== null}
+      isEditing={isEditing}
+      draftVersion={draft?.planogramVersion ?? null}
+      latestNumber={latest?.number ?? null}
+      onAdd={() => setAdding(true)}
+      yieldOnPhone={selectedPlacement !== null}
+      inline={inline}
+    />
+  );
+  const hasBar = !isEmpty && !(draft !== null && !isEditing);
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {draft ? (
-          <span className="inline-flex max-w-full items-center gap-1">
-            <SegmentedControl
-              label="Show"
-              options={[
-                { value: "draft", label: "Draft" },
-                { value: "published", label: "Published" },
-              ]}
-              value={view}
-              onChange={showView}
-            />
-            <InfoPopover term="draft" />
-          </span>
-        ) : null}
-        <DueDateChip fixtureId={scope.fixtureId} dueDate={dueDate} today={today} />
-        {isEditing ? <DraftStatusLine status={status} /> : null}
-      </div>
+      {isEmpty ? null : (
+        <StatusRow fixtureId={scope.fixtureId} latest={latest} hasDraft={draft !== null} view={view} onView={showView} dueDate={dueDate} today={today} status={isEditing ? status : null}>
+          {draftBar(false)}
+        </StatusRow>
+      )}
       {isEmpty ? (
-        <div className="flex flex-col items-start gap-2 rounded-lg border border-dashed border-line p-8">
+        <div data-empty className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-line p-8">
           <p className="text-lg font-semibold text-ink">No planogram yet</p>
-          <p className="text-sm text-ink-muted">Start a draft: it begins from what&apos;s on the floor now.</p>
+          <p className="text-sm text-ink-muted">A draft starts from what&apos;s on the floor now.</p>
+          {draftBar(true)}
         </div>
       ) : (
         body
@@ -193,18 +176,11 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
           onEdit={() => editNumbers(selectedPlacement.id)}
           onMoveFace={() => setMovingFace(true)}
           onRemove={() => actions.remove(selectedPlacement)}
+          layers={actions.layersFor(selectedPlacement)}
         />
       ) : null}
-      <DraftBar
-        fixtureId={scope.fixtureId}
-        row={row}
-        hasDraft={draft !== null}
-        isEditing={isEditing}
-        draftVersion={draft?.planogramVersion ?? null}
-        latestNumber={latest?.number ?? null}
-        onAdd={() => setAdding(true)}
-        yieldOnPhone={selectedPlacement !== null}
-      />
+      {/* Keeps the last card clear of the sticky bar on a phone. */}
+      {hasBar && selectedPlacement === null ? <div aria-hidden="true" className="h-16 md:hidden" /> : null}
       {isEditing ? <AddProductDialog open={adding} onOpenChange={setAdding} onPick={actions.addProduct} onCloseAutoFocus={actions.focusAdded} /> : null}
       {selectedPlacement ? (
         <MoveToFaceDialog open={movingFace} onOpenChange={setMovingFace} faces={scope.faces} currentFaceId={selectedPlacement.faceId} onChoose={chooseFace} />

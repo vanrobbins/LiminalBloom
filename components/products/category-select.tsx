@@ -64,6 +64,11 @@ export function CategorySelect({ categories, value, onChange, onAdded, error }: 
         className={FIELD_CLASSES}
       >
         {categories.length === 0 ? <option value="">No categories yet</option> : null}
+        {categories.length > 0 && value === "" ? (
+          <option value="" disabled>
+            Choose a category
+          </option>
+        ) : null}
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}

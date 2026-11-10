@@ -36,8 +36,17 @@ describe("Button", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("keeps gold for primary actions: ghost reads in ink, quiet-danger in the danger tone (UX audit U2)", () => {
+    render(<Button variant="ghost">Back</Button>);
+    expect(screen.getByRole("button", { name: "Back" }).className).not.toContain("brand");
+    render(<Button variant="quiet-danger">Delete</Button>);
+    const del = screen.getByRole("button", { name: "Delete" }).className;
+    expect(del).toContain("text-danger");
+    expect(del).not.toContain("underline");
+  });
+
   it("keeps the 44px minimum in every variant", () => {
-    for (const variant of ["primary", "secondary", "ghost", "danger"] as const) {
+    for (const variant of ["primary", "secondary", "ghost", "danger", "quiet-danger"] as const) {
       render(<Button variant={variant}>{variant}</Button>);
       expect(screen.getByRole("button", { name: variant }).className, variant).toContain("min-h-11");
     }

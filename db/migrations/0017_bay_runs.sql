@@ -1,0 +1,2 @@
+ALTER TABLE "fixtures" DROP CONSTRAINT "fixtures_run_frame_rack";--> statement-breakpoint
+ALTER TABLE "fixtures" ADD CONSTRAINT "fixtures_run_type" CHECK ("fixtures"."run_id" is null or "fixtures"."type"::text in ('frame_rack', 'wall_bay'));

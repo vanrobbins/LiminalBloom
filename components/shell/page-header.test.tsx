@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
+const nav = vi.hoisted(() => ({ path: "/products" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => nav.path }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.ComponentProps<"a">) => (
     <a href={href} {...props}>
@@ -52,5 +54,37 @@ describe("PageHeader", () => {
     render(<PageHeader title={long} />);
     const h1 = screen.getByRole("heading", { level: 1, name: long });
     expect(h1).toHaveAttribute("title", long);
+  });
+
+  // loading.tsx and the page each draw a header, so the one a sheet was opened from
+  // is swapped for another when the page arrives (B7).
+  it.each([
+    ["Pioneer Place, switch store", "Stores"],
+    ["Account menu", "Van"],
+  ])("a sheet opened from %s stays open when the page replaces the loading header, and closes on navigation", async (trigger, sheet) => {
+    nav.path = "/products";
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ShellProvider value={two}>
+        <PageHeader key="loading" title="Products" />
+      </ShellProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: trigger }));
+    expect(screen.getByRole("dialog", { name: sheet })).toBeInTheDocument();
+
+    rerender(
+      <ShellProvider value={two}>
+        <PageHeader key="page" title="Products" />
+      </ShellProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: sheet })).toBeInTheDocument();
+
+    nav.path = "/layout";
+    rerender(
+      <ShellProvider value={two}>
+        <PageHeader key="layout" title="Store layout" />
+      </ShellProvider>,
+    );
+    expect(screen.queryByRole("dialog", { name: sheet })).not.toBeInTheDocument();
   });
 });

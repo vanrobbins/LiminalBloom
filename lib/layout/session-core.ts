@@ -15,7 +15,14 @@ import { OUTLINE_ID, type FixtureType, type Issue, type Layout, type Point } fro
 import { newIssues, validate } from "./validate";
 
 export type VertexRef = { owner: VertexOwner; index: number };
-export type Preview = { layout: Layout; issues: Issue[]; guides: Guide[]; join: RunJoin | null };
+export type Preview = {
+  layout: Layout;
+  issues: Issue[];
+  guides: Guide[];
+  join: RunJoin | null;
+  /** The wall bay a bent curve now runs straight into (run joins spec §3.1). */
+  meets?: string | null;
+};
 export type Drag = { target: HitTarget; start: Layout; origin: Point; ids: string[] };
 export type Marquee = { from: Point; to: Point };
 export type AddKind = "zone" | "entrance" | FixtureType;

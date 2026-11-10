@@ -46,7 +46,7 @@ export function PageHeader({ title, back, actions }: PageHeaderProps) {
         )}
         <h1
           title={title}
-          className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-ink md:overflow-visible md:whitespace-normal md:text-3xl md:wrap-anywhere"
+          className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-ink md:overflow-visible md:whitespace-normal md:text-3xl md:wrap-break-word"
         >
           {title}
         </h1>

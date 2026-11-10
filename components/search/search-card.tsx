@@ -30,17 +30,20 @@ export function SearchCard({ result, isOpen, onOpen, hasMenu = false }: SearchCa
     >
       <span className="flex items-center gap-3">
         <ProductImage productId={result.id} name={result.name} categoryName={result.categoryName} imageKey={result.imageKey} swatch={result.swatch} texture={result.texture} colorWord={result.color} decorative />
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="font-medium text-ink wrap-anywhere">{result.name}</span>
-          <span className="text-sm text-ink-muted">
-            {result.styleNumber} · {result.color}
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="font-medium text-ink wrap-break-word">{result.name}</span>
+          {/* Status under the name, not beside it, so the name keeps the width (UX audit U12). */}
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
+            <span>
+              {result.styleNumber} · {result.color}
+            </span>
+            <StatusBadge status={result.status} />
           </span>
         </span>
-        <StatusBadge status={result.status} />
       </span>
       {first ? (
         <span className="flex flex-col gap-0.5">
-          <span className="text-lg leading-snug font-semibold text-ink wrap-anywhere">{first.label}</span>
+          <span className="text-lg leading-snug font-semibold text-ink wrap-break-word">{first.label}</span>
           <span className="text-sm text-ink-muted">{how}</span>
         </span>
       ) : (

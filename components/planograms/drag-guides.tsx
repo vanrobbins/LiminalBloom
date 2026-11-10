@@ -8,7 +8,7 @@ import { AlertTriangle } from "lucide-react";
 import { COLUMNS_PER_FOOT } from "@/lib/feet";
 import type { GridLayout, Rect } from "@/lib/planograms/set-grid";
 
-import { at, placed } from "./grid-tile";
+import { at, placed } from "./grid-units";
 
 export function DragGuides({ layout }: { layout: GridLayout }) {
   return (

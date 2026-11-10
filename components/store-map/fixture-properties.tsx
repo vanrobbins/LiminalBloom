@@ -8,9 +8,11 @@ import { FeetInchesInput } from "@/components/ui/feet-inches-input";
 import { NumberField } from "@/components/ui/number-field";
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import { MAX_FIXTURE_SIZE, MIN_FIXTURE_SIZE } from "@/lib/layout/limits";
+import { isRunType } from "@/lib/layout/runs";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Fixture, Layout } from "@/lib/layout/types";
 
+import { CornerFit } from "./corner-fit";
 import { CurveField } from "./curve-field";
 import { FaceSettings } from "./face-settings";
 import { LowerTables } from "./lower-tables";
@@ -59,6 +61,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
         onCommit={(depth) => update({ depth })}
       />
       {rule.curves ? <CurveField fixture={fixture} onChange={(curve) => update({ curve })} /> : null}
+      {fixture.type === "wall_bay" ? <CornerFit layout={layout} fixture={fixture} dispatch={dispatch} /> : null}
       {!isLower ? (
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -79,7 +82,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
       ) : null}
       {rule.faces.length > 0 ? <FaceSettings fixture={fixture} faces={faces} dispatch={dispatch} /> : null}
       {fixture.type === "table" && !isLower ? <LowerTables table={fixture} lowers={lowers} dispatch={dispatch} /> : null}
-      {fixture.type === "frame_rack" ? <RunControls layout={layout} rack={fixture} dispatch={dispatch} /> : null}
+      {isRunType(fixture.type) ? <RunControls layout={layout} rack={fixture} dispatch={dispatch} /> : null}
       <div className="flex flex-wrap gap-2">
         {!isLower ? (
           <Button variant="secondary" onClick={() => dispatch({ type: "duplicate" })}>

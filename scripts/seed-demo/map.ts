@@ -2,7 +2,8 @@
 // every map (Week 3 spec §4). Built from the editor's own rules, then checked
 // by the editor's own validator in map.test.ts.
 
-import { FIXTURE_RULES, gridForSurface, lowerTableLength, lowerTablePose } from "@/lib/layout/fixtures";
+import { gridForSurface } from "@/lib/layout/fixture-grids";
+import { FIXTURE_RULES, lowerTableLength, lowerTablePose } from "@/lib/layout/fixtures";
 import { rectanglePoints } from "@/lib/layout/factories";
 import { DEFAULT_LOWER_DEPTH } from "@/lib/layout/limits";
 import { lowerTableName, normalize } from "@/lib/layout/normalize";

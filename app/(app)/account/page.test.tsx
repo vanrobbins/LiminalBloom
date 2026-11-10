@@ -13,4 +13,10 @@ describe("AccountPage", () => {
     render(await AccountPage());
     expect(screen.getByRole("link", { name: "Create a store" })).toHaveAttribute("href", "/create-store");
   });
+
+  it("hides the internal user id and links the working store's settings", async () => {
+    render(await AccountPage());
+    expect(screen.queryByText("User id")).toBeNull();
+    expect(screen.getByRole("link", { name: "Store settings" })).toHaveAttribute("href", "/store");
+  });
 });

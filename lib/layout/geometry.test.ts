@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  area,
-  centroid,
-  classify,
-  interiorPoint,
-  intersect,
-  polygonContains,
-  polygonsOverlap,
-  selfIntersects,
-} from "./geometry";
+import { intersect, polygonContains, polygonsOverlap, selfIntersects } from "./crossings";
+import { area, centroid, classify, interiorPoint } from "./geometry";
 import type { Point } from "./types";
 
 const square = (x: number, y: number, size: number): Point[] => [

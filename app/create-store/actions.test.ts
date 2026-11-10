@@ -28,6 +28,19 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+// The real time zone write, which one test makes fail the way a dropped connection would.
+const settings = vi.hoisted(() => ({ fail: null as Error | null }));
+vi.mock("@/lib/store-settings", async (original) => {
+  const real = await original<typeof import("@/lib/store-settings")>();
+  return {
+    ...real,
+    setStoreTimezone: async (...args: Parameters<typeof real.setStoreTimezone>) => {
+      if (settings.fail) throw settings.fail;
+      return real.setStoreTimezone(...args);
+    },
+  };
+});
+
 import { db } from "@/db";
 import { member, user } from "@/db/auth-schema";
 import { storeSettings } from "@/db/schema";
@@ -91,5 +104,21 @@ describe("createStore", () => {
     expect(logged).toHaveBeenCalledWith("create-store: time zone not saved", storeId, "forbidden");
     expect(await storeSettingsFor(storeId)).toEqual({ timezone: "America/Los_Angeles", version: 1 });
     logged.mockRestore();
+  });
+
+  it("goes on to the store when the zone write throws, so a retry can't make a second store (B4)", async () => {
+    const { storeId } = await createdStore();
+    settings.fail = new Error("Connection terminated unexpectedly");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(createStore(null, form("Clackamas", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
+      expect(mocks.setActiveOrganization).toHaveBeenCalled();
+      expect(mocks.redirect).toHaveBeenCalledWith("/products");
+      expect(mocks.createOrganization).toHaveBeenCalledTimes(1);
+      expect(logged).toHaveBeenCalledWith("create-store: time zone not saved", storeId, settings.fail);
+    } finally {
+      settings.fail = null;
+      logged.mockRestore();
+    }
   });
 });

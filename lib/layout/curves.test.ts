@@ -13,7 +13,8 @@ import {
   snapPoints,
 } from "./curves";
 import { corners } from "./fixtures";
-import { bounds, distance, polygonContains, selfIntersects } from "./geometry";
+import { polygonContains, selfIntersects } from "./crossings";
+import { bounds, distance } from "./geometry";
 import { MAX_CURVE } from "./limits";
 import { fixture } from "./test-layouts";
 

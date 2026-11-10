@@ -12,15 +12,18 @@
 import { useRef, useState } from "react";
 
 import { dragTarget } from "@/lib/planograms/builder/drag";
+import { layerGroups, layerOffset, sharesSpace } from "@/lib/planograms/layers";
 import { resizeTarget } from "@/lib/planograms/builder/resize";
 import { spanRect, spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import type { PlacementFields } from "@/lib/planograms/types";
 import { shortSpot, spotSummary } from "@/lib/products/location-words";
 
 import { DragChip, DragGuides, DropGhost } from "./drag-guides";
-import { SWIPE_MIN_PX } from "./face-swipe";
-import { BlockView, GridTile, at } from "./grid-tile";
+import { BlockView } from "./block-view";
+import { GridTile } from "./grid-tile";
+import { at } from "./grid-units";
 import type { GridItem } from "./grid-items";
+import { edgeFade, useFaceSwipe } from "./use-face-swipe";
 import { usePendingLanding } from "./use-pending-landing";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
 import { useTileGesture, type Gesture } from "./use-tile-gesture";
@@ -28,8 +31,6 @@ import { useTileGesture, type Gesture } from "./use-tile-gesture";
 /** Room above the grid for a table set's labels, the ruler and the drag chip. */
 const GUTTER = "1.5rem";
 const OFF_FACE = "Off the edge of the face";
-// A landed tile waiting on its save sits still, rather than sliding back from where the pointer let go.
-const STILL = { dx: 0, dy: 0 };
 
 export type GridBuilder = {
   /** The selected tile may be dragged, resized and moved with the arrow keys. */
@@ -42,6 +43,8 @@ export type GridBuilder = {
   onRefused: (message: string) => void;
   /** An arrow key on the selected tile: where it goes, or null (it can't; the builder has said why). Held and saved like a drop. */
   onKey: (item: GridItem, key: string, shift: boolean) => { fields: PlacementFields; verb: "Moved" | "Resized" } | null;
+  /** Alt+Up / Alt+Down on the selected tile: Move forward / Move back on a shared rail. */
+  onReorder: (item: GridItem, direction: "forward" | "back") => void;
   /** Tap on empty space, or Escape on the selected tile. */
   onEmpty: () => void;
   onDragging: (isDragging: boolean) => void;
@@ -67,21 +70,13 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const faceKey = layout.blocks.map((b) => b.faceId).join();
   const { ref, edges } = useScrollEdges<HTMLDivElement>(faceKey);
   const space = useRef<HTMLDivElement>(null);
-  // Where a swipe began, and which way the grid could scroll then: a drag that
-  // scrolls the grid to its edge doesn't also change face; the next one does.
-  const start = useRef<{ x: number; y: number; edges: Edges } | null>(null);
+  const swipe = useFaceSwipe(edges, onSwipe);
   const [drag, setDrag] = useState<Gesture | null>(null);
   const landed = usePendingLanding();
-  const drawn = landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId));
+  // Each layer group front to back, so Tab meets the front one first; z-index paints them back to front.
+  const drawn = layerGroups(landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId))).flat();
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
-  const mask =
-    edges.left && edges.right
-      ? "linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent)"
-      : edges.right
-        ? "linear-gradient(to right, black calc(100% - 2rem), transparent)"
-        : edges.left
-          ? "linear-gradient(to left, black calc(100% - 2rem), transparent)"
-          : undefined;
+  const mask = edgeFade(edges);
 
   const moving = builder?.canMove ? (drawn.find((i) => i.id === selectedId) ?? null) : null;
   const movingBlock = moving ? (layout.blocks.find((b) => b.faceId === moving.faceId) ?? null) : null;
@@ -92,6 +87,9 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const target = drag ? landing(drag) : null;
   const targetBlock = target ? (layout.blocks.find((b) => b.faceId === target.faceId) ?? null) : null;
   const refusal = drag && moving ? (target ? (builder?.check(moving, target) ?? null) : OFF_FACE) : null;
+  // Landing on hung product it didn't share space with: it joins at the back (layers.ts).
+  const joining = drag && moving && target && !refusal ? drawn.filter((o) => sharesSpace({ ...target, id: moving.id }, o) && !sharesSpace(moving, o)) : [];
+  const behind = joining.length === 0 ? "" : ` · behind ${joining.length === 1 ? joining[0].productName : `${joining.length} others`}`;
 
   const gestures = useTileGesture({
     unitPx: () => (space.current?.getBoundingClientRect().width ?? 0) / layout.width,
@@ -112,21 +110,6 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
     },
   });
 
-  function begin(x: number, y: number) {
-    start.current = { x, y, edges };
-  }
-  function end(x: number, y: number) {
-    const from = start.current;
-    start.current = null;
-    if (!from || !onSwipe) return;
-    const dx = x - from.x;
-    // A tap or a nudge is not a swipe.
-    if (Math.abs(dx) < SWIPE_MIN_PX) return;
-    onSwipe({ dx, dy: y - from.y, edges: from.edges });
-  }
-  function cancel() {
-    start.current = null;
-  }
   const slide = slideFrom === "right" ? "motion-safe:animate-slide-from-right" : slideFrom === "left" ? "motion-safe:animate-slide-from-left" : "";
   const chipAt = target && targetBlock ? spanRect(targetBlock, target) : moving && movingBlock ? spanRect(movingBlock, moving) : null;
 
@@ -143,17 +126,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
         style={{ maskImage: mask }}
         // pr-1 pb-1: room for the ring and focus outline of the last column and row (overflow clips them).
         className="@container overflow-x-auto overscroll-x-contain pr-1 pb-1"
-        // A sideways swipe changes face (the screen decides). Touch is read
-        // from touch events: they keep coming while the browser scrolls the
-        // grid natively, where pointer events end in pointercancel. Mouse and
-        // pen use pointer events. The moving tile stops both (Review Focus 1).
-        onPointerDown={(e) => (e.pointerType === "touch" ? undefined : begin(e.clientX, e.clientY))}
-        onPointerUp={(e) => (e.pointerType === "touch" ? undefined : end(e.clientX, e.clientY))}
-        onPointerCancel={(e) => (e.pointerType === "touch" ? undefined : cancel())}
-        // A second finger makes it a pinch, not a swipe.
-        onTouchStart={(e) => (e.touches.length === 1 ? begin(e.touches[0].clientX, e.touches[0].clientY) : cancel())}
-        onTouchEnd={(e) => (e.touches.length === 0 && e.changedTouches.length > 0 ? end(e.changedTouches[0].clientX, e.changedTouches[0].clientY) : undefined)}
-        onTouchCancel={cancel}
+        {...swipe}
       >
         <div
           // Remounts per face so the slide plays.
@@ -178,10 +151,12 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
               if (!block) return null;
               const isMoving = item.id === moving?.id;
               const resized = isMoving && drag && drag.mode !== "move" ? target : null;
+              const shared = drawn.some((o) => sharesSpace(item, o));
               return (
                 <GridTile
                   key={item.id}
                   item={item}
+                  layer={shared ? { depth: item.depth ?? 0, offsetPx: layerOffset(item, drawn) } : null}
                   block={block}
                   rect={spanRect(block, resized ?? item)}
                   words={spotSummary(spotOf(block, item))}
@@ -189,7 +164,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   highlighted={item.productId === highlightProductId}
                   issue={issues?.get(item.id)}
                   movable={isMoving}
-                  offset={isMoving && drag?.mode === "move" ? drag : landed.isHeld(item.id) ? STILL : null}
+                  offset={isMoving && drag?.mode === "move" ? drag : null}
+                  held={landed.isHeld(item.id)}
                   invalid={isMoving && refusal !== null}
                   bounds={layout}
                   gestures={gestures}
@@ -202,12 +178,13 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                         }
                       : undefined
                   }
+                  onReorder={builder && isMoving ? (direction) => builder.onReorder(item, direction) : undefined}
                   onEscape={builder?.onEmpty}
                 />
               );
             })}
             {drag && chipAt ? (
-              <DragChip rect={chipAt} invalid={refusal !== null} text={refusal ?? (target && targetBlock ? shortSpot(spotOf(targetBlock, target)) : OFF_FACE)} />
+              <DragChip rect={chipAt} invalid={refusal !== null} text={refusal ?? (target && targetBlock ? `${shortSpot(spotOf(targetBlock, target))}${behind}` : OFF_FACE)} />
             ) : null}
           </div>
         </div>

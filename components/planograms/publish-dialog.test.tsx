@@ -8,7 +8,7 @@ import { PublishDialog } from "./publish-dialog";
 
 const actions = vi.hoisted(() => ({ previewPublishAction: vi.fn(), publishAction: vi.fn() }));
 vi.mock("@/app/(app)/planograms/actions", () => actions);
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/planograms" }));
 
 const change = (label: string, added: number, moved: number) => ({
   faceId: label, label, added: Array(added).fill({}), removed: [], moved: Array(moved).fill({}), recounted: [],

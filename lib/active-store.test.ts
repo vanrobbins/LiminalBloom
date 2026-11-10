@@ -6,7 +6,7 @@
 // store cascades to its memberships.
 
 import { eq, inArray } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
 import { member, organization, user } from "@/db/auth-schema";
@@ -14,7 +14,9 @@ import { member, organization, user } from "@/db/auth-schema";
 import {
   chooseActiveStore,
   rememberActiveStore,
+  rememberSwitch,
   resolveActiveStore,
+  storeForNewSession,
 } from "./active-store";
 
 const users: string[] = [];
@@ -191,5 +193,47 @@ describe("resolveActiveStore", () => {
     await join(person, store, EARLIER);
 
     expect(await resolveActiveStore(person, null)).toBe(store);
+  });
+});
+
+// The two session hooks (lib/auth.ts) are conveniences: a database error in one
+// must not fail the sign-in or the switch it rides on (B6).
+describe("the session hooks", () => {
+  it("signing in still works when the store can't be chosen; the next request chooses", async () => {
+    const select = vi.spyOn(db, "select").mockImplementationOnce(() => {
+      throw new Error("Connection terminated unexpectedly");
+    });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await storeForNewSession("anyone")).toBeNull();
+      expect(logged).toHaveBeenCalledWith("sign-in: no store chosen", expect.any(Error));
+    } finally {
+      select.mockRestore();
+      logged.mockRestore();
+    }
+  });
+
+  it("a switch still works when it can't be remembered", async () => {
+    const update = vi.spyOn(db, "update").mockImplementationOnce(() => {
+      throw new Error("Connection terminated unexpectedly");
+    });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(rememberSwitch("anyone", "store")).resolves.toBeUndefined();
+      expect(logged).toHaveBeenCalledWith("store switch: not remembered", expect.any(Error));
+    } finally {
+      update.mockRestore();
+      logged.mockRestore();
+    }
+  });
+
+  it("chooses and remembers as before when the database answers", async () => {
+    const person = await makeUser("hooks");
+    const store = await makeStore("hooks");
+    await join(person, store, new Date());
+    expect(await storeForNewSession(person)).toBe(store);
+    await rememberSwitch(person, store);
+    const [row] = await db.select({ last: user.lastActiveStoreId }).from(user).where(eq(user.id, person));
+    expect(row.last).toBe(store);
   });
 });

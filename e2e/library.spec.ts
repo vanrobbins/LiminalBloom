@@ -93,7 +93,7 @@ test("adds a product with a photo, finds it, and deletes it", async ({ page }) =
 test("gives one product its own space on the fixture, then uses the category's again", async ({ page }) => {
   await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
   const space = page.getByRole("group", { name: "Space on the fixture" });
-  await expect(space.getByRole("radio", { name: "Uses the E2E Pants’s" })).toBeChecked();
+  await expect(space.getByRole("radio", { name: "Same as E2E Pants" })).toBeChecked();
   await space.getByRole("radio", { name: "Different for this product" }).check();
   await page.getByRole("button", { name: "More hung width" }).click();
   await expect(space.getByText("Hung: 1½ ft wide, 3 rows high")).toBeVisible();
@@ -103,12 +103,12 @@ test("gives one product its own space on the fixture, then uses the category's a
   await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
   await expect(space.getByRole("radio", { name: "Different for this product" })).toBeChecked();
   await expect(page.getByRole("group", { name: "Hung width" })).toContainText("1½ ft");
-  await space.getByRole("radio", { name: "Uses the E2E Pants’s" }).check();
+  await space.getByRole("radio", { name: "Same as E2E Pants" }).check();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(/\/products$/);
 
   await openProduct(page, "E2E-HRP-01", "E2E High-Rise Pant");
-  await expect(space.getByRole("radio", { name: "Uses the E2E Pants’s" })).toBeChecked();
+  await expect(space.getByRole("radio", { name: "Same as E2E Pants" })).toBeChecked();
   await expect(space.getByText("Hung: 1 ft wide, 3 rows high")).toBeVisible();
 });
 
@@ -118,7 +118,7 @@ test("a product without its own size range shows its category's, in the location
   await expect(page.getByText("XS–XL", { exact: true }).filter({ visible: true })).toBeVisible();
   await page.getByRole("link", { name: "Edit product" }).filter({ visible: true }).click();
   const size = page.getByRole("group", { name: "Size range" });
-  await expect(size.getByRole("radio", { name: "Uses the E2E Tees’s" })).toBeChecked();
+  await expect(size.getByRole("radio", { name: "Same as E2E Tees" })).toBeChecked();
   await expect(size.getByText("XS–XL", { exact: true })).toBeVisible();
 });
 

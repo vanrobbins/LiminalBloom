@@ -6,8 +6,10 @@
 
 import { useRef } from "react";
 
+import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
 import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
+import { reorderTarget, sharesSpace } from "@/lib/planograms/layers";
 import { checkPlacement } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
@@ -16,7 +18,7 @@ import { toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
 import type { GridBuilder } from "./planogram-grid";
-import type { useBuilder, Verb } from "./use-builder";
+import type { useBuilder } from "./use-builder";
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
 /** Where a placement sits, for a screen reader: "4–6 ft, Top shelf". */
@@ -68,11 +70,28 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
       onFound?.(id);
     });
     const refocus = renamed;
-    if (hadFocus && refocus) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(refocus)}"]`)?.focus());
+    // Only while focus was lost with the old tile: focus moved elsewhere since stays there (B10).
+    const lost = () => document.activeElement === null || document.activeElement === document.body;
+    if (hadFocus && refocus) requestAnimationFrame(() => (lost() ? document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(refocus)}"]`)?.focus() : undefined));
     if (!result.ok) return result.message;
     setSelectedId(result.id);
     if (!scope.isSet && fields.faceId !== face.faceId) showFace(fields.faceId);
     return null;
+  }
+
+  /** Move forward / Move back: swaps with the nearest product it overlaps, one save and one undo step. */
+  function reorder(item: GridItem, direction: "forward" | "back") {
+    const at = reorderTarget(item, isEditing ? placements : items, direction);
+    if (at === null) return builder.say(direction === "forward" ? "Already at the front" : "Already at the back");
+    void change(item, { ...item, depth: at }, direction === "forward" ? "Moved forward" : "Moved back");
+  }
+
+  /** The selection bar's Move forward / Move back, while it shares rail space and may move. */
+  function layersFor(item: GridItem) {
+    const rows = isEditing ? placements : items;
+    if (!canMove || !rows.some((o) => sharesSpace(item, o))) return undefined;
+    const step = (direction: "forward" | "back") => (reorderTarget(item, rows, direction) === null ? null : () => reorder(item, direction));
+    return { onForward: step("forward"), onBack: step("back") };
   }
 
   const gridBuilder: GridBuilder | undefined = canMove
@@ -92,6 +111,7 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
           }
           return { fields: next, verb: shift ? "Resized" : "Moved" };
         },
+        onReorder: reorder,
         onEmpty: () => select(null),
         onDragging: builder.setDragging,
       }
@@ -99,10 +119,17 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
 
   function remove(p: PlacementView) {
     select(null);
-    // The tile is gone once this lands: leave focus on the grid, not the page top.
-    void save({ kind: "remove", id: p.id, version: p.version }).then((result) => {
-      if (result.saved) requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-planogram-grid]")?.focus());
-    });
+    // The button pressed goes with the selection: focus the tile if it's still there (refused),
+    // else the grid, else the page's main area, never the page top (B8).
+    void save({ kind: "remove", id: p.id, version: p.version }).then((result) =>
+      requestAnimationFrame(() =>
+        (
+          (result.saved ? null : document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(p.id)}"]`)) ??
+          document.querySelector<HTMLElement>("[data-planogram-grid]") ??
+          document.getElementById("content")
+        )?.focus(),
+      ),
+    );
   }
 
   function moveToFace(target: string) {
@@ -140,5 +167,5 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     tile.scrollIntoView?.({ block: "nearest", inline: "center" });
   }
 
-  return { gridBuilder, remove, moveToFace, addProduct, focusAdded, edit: (p: PlacementView, fields: PlacementFields) => change(p, fields, "Changed") };
+  return { gridBuilder, reorder, layersFor, remove, moveToFace, addProduct, focusAdded, edit: (p: PlacementView, fields: PlacementFields) => change(p, fields, "Changed") };
 }

@@ -15,7 +15,7 @@ const remove = { kind: "remove" as const, id: "00000000-0000-4000-8000-000000000
 const ID = "00000000-0000-4000-8000-000000000002";
 const at = (col: number): PlacementFields => ({ faceId: "f", presentation: "hung", col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1 });
 const update = (version: number, col: number) => ({ kind: "update" as const, id: ID, version, fields: at(col) });
-const placed = (version: number, col = 0): PlacementView => ({ ...at(col), id: ID, productId: "pant", productName: "Pant", styleNumber: "P", version, imageKey: null, categoryName: "" });
+const placed = (version: number, col = 0): PlacementView => ({ ...at(col), id: ID, productId: "pant", productName: "Pant", styleNumber: "P", version, depth: 0, imageKey: null, categoryName: "" });
 const withTile = (n: number, tile: PlacementView): DraftState => ({ planogramVersion: n, placements: [tile] });
 
 describe("usePlanogramDraft", () => {

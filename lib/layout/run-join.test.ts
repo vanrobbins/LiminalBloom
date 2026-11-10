@@ -88,6 +88,32 @@ describe("findJoin", () => {
   });
 });
 
+describe("back to back (run joins spec §1.2)", () => {
+  // a's back is toward −y: a rack turned around and pushed against it sits at y 96.
+  it("offers a turned rack near a's back, at either end, and Link puts it there", () => {
+    const behindRight = frame("b", 100, { y: 98, rotation: 180 });
+    expect(findJoin(layoutWith(frame("a", 100), behindRight), moving("b"))).toMatchObject({ targetId: "a", side: "right" });
+    const right = apply(layoutWith(frame("a", 100), behindRight), { type: "joinRun", rackId: "b", targetId: "a", side: "right" }, newId);
+    expect(right.fixtures.map((f) => [f.id, f.x, f.y])).toEqual([["a", 100, 120], ["b", 100, 96]]);
+    expect(runShape(runRacks(right, right.fixtures[0].runId!).map((f) => ({ ...f, runIndex: f.runIndex ?? 0 }))).joins).toEqual(["back"]);
+    expect(validate(right)).toEqual([]);
+
+    // Equal racks back to back meet at both ends; a shorter one reaches only a's left end here.
+    const behindLeft = frame("b", 94, { y: 97, rotation: 180, width: 36 });
+    expect(findJoin(layoutWith(frame("a", 100), behindLeft), moving("b"))).toMatchObject({ targetId: "a", side: "left" });
+    const left = apply(layoutWith(frame("a", 100), behindLeft), { type: "joinRun", rackId: "b", targetId: "a", side: "left" }, newId);
+    expect(left.fixtures.map((f) => [f.id, f.y, f.runIndex])).toEqual([["a", 120, 1], ["b", 96, 0]]);
+    expect(validate(left)).toEqual([]);
+  });
+
+  it("Add rack behind puts a new rack back to back, one run", () => {
+    const next = apply(layoutWith(frame("a", 100)), { type: "addRackToRun", rackId: "a", side: "right", behind: true }, newId);
+    const added = next.fixtures.find((f) => f.id !== "a")!;
+    expect([added.x, added.y, added.rotation]).toEqual([100, 96, 180]);
+    expect(validate(next)).toEqual([]);
+  });
+});
+
 describe("joinRun", () => {
   const shapeOf = (layout: Layout, runId: string) => runShape(runRacks(layout, runId).map((f) => ({ ...f, runIndex: f.runIndex ?? 0 })));
 

@@ -69,7 +69,7 @@ export function LocationSheet({ result, layout, onClose, onChanged }: LocationSh
       className="sticky top-6 flex max-h-[calc(100dvh-3rem)] flex-col gap-4 overflow-y-auto rounded-lg border border-line-subtle bg-raised p-5"
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold tracking-tight text-ink break-words outline-none">
+        <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold tracking-tight text-ink wrap-break-word outline-none">
           {result.name}
         </h2>
         <div className="flex shrink-0 items-center gap-1">

@@ -1,17 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  FIXTURE_RULES,
-  autoGrid,
-  corners,
-  distanceToRect,
-  gridForSurface,
-  lowerTablePose,
-  mayOverlap,
-  rectsOverlap,
-  resizeFromHandle,
-  resizeLowerTable,
-} from "./fixtures";
+import { autoGrid, gridForSurface } from "./fixture-grids";
+import { resizeFromHandle, resizeLowerTable } from "./fixture-resize";
+import { FIXTURE_RULES, corners, distanceToRect, lowerTablePose, mayOverlap, rectsOverlap } from "./fixtures";
 import { MAX_GRID_COLUMNS } from "./limits";
 import type { Fixture, FixtureType } from "./types";
 

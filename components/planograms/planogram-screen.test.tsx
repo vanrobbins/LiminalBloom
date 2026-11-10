@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,7 +32,7 @@ const front = face("00000000-0000-4000-8000-000000000001", "Front");
 const back = face("00000000-0000-4000-8000-000000000002", "Back");
 const scope: PlanogramScope = { fixtureId: "r", fixtureName: "Rack 1", isSet: false, faces: [front, back] };
 const cells = { col: 0, row: 0, colSpan: 2, rowSpan: 1, presentation: "folded" as const, pieceCount: 4 };
-const pant: PlacementView = { ...cells, id: "d1", faceId: front.faceId, productId: "pant", productName: "Pant", styleNumber: "P-1", version: 1, imageKey: null, categoryName: "Denim" };
+const pant: PlacementView = { ...cells, id: "d1", faceId: front.faceId, productId: "pant", productName: "Pant", styleNumber: "P-1", version: 1, depth: 0, imageKey: null, categoryName: "Denim" };
 const published: PublishedVersion = {
   number: 1,
   publishedAt: new Date("2026-10-08T12:00:00Z"),
@@ -63,6 +63,15 @@ describe("PlanogramScreen", () => {
     await user.click(tile());
     await user.click(screen.getByRole("button", { name: "Remove" }));
     await waitFor(() => expect(screen.getByRole("region", { name: /Rack 1, Front/ })).toHaveFocus());
+  });
+
+  it("when Remove is refused, focus goes back to the tile, which is still there (B8)", async () => {
+    hook.save = vi.fn().mockResolvedValue({ saved: false, message: "Changed on another device" });
+    const user = userEvent.setup();
+    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
+    await user.click(tile());
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(tile()).toHaveFocus());
   });
 
   it("closes the sheet when Draft | Published switches, instead of leaving it open and empty", async () => {
@@ -231,6 +240,22 @@ describe("PlanogramScreen", () => {
     expect(screen.getByRole("button", { name: "Start draft" })).toBeInTheDocument();
   });
 
+  it("with nothing yet, Start draft sits in the empty box, said once, and no due date is offered", () => {
+    render(screenWith(null, null));
+    const box = screen.getByText("No planogram yet").closest("[data-empty]") as HTMLElement;
+    expect(within(box).getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+    expect(screen.getAllByText(/what.s on the floor now/)).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Set due date" })).toBeNull();
+  });
+
+  it("puts the status, Draft | Published and Publish… on one row", () => {
+    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
+    const row = screen.getByRole("button", { name: "Publish…" }).closest("[data-status-row]") as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(within(row).getByText(/Version 1 · published/)).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Published" })).toBeInTheDocument();
+  });
+
   it("on Published, an arrow that starts a draft keeps the tile selected and focused, so the next arrow works", async () => {
     const started = { planogramVersion: 3, placements: [pant] };
     const moved = { planogramVersion: 4, placements: [{ ...pant, col: 1, version: 2 }] };
@@ -248,5 +273,36 @@ describe("PlanogramScreen", () => {
     await waitFor(() => expect(tile()).toHaveFocus());
     expect(tile()).toHaveAttribute("data-placement", "d1");
     expect(screen.getByRole("toolbar", { name: "Pant selected" })).toBeInTheDocument();
+  });
+
+  it("after a draft starts, focus isn't pulled back to the tile if it moved elsewhere meanwhile (B10)", async () => {
+    const started = { planogramVersion: 3, placements: [pant] };
+    const moved = { planogramVersion: 4, placements: [{ ...pant, col: 1, version: 2 }] };
+    actions.beginDraftAction = vi.fn().mockResolvedValue({ status: "saved", draft: started });
+    let settle: () => void = () => {};
+    hook.save = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          settle = () => {
+            hook.draft = moved;
+            resolve({ saved: true, draft: moved });
+          };
+        }),
+    );
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Elsewhere</button>
+        {screenWith(published, null)}
+      </>,
+    );
+    await user.click(tile());
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(hook.save).toHaveBeenCalledTimes(1));
+    const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+    elsewhere.focus();
+    await act(async () => settle());
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(elsewhere).toHaveFocus();
   });
 });

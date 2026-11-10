@@ -14,7 +14,7 @@ const pant: GridItem = { id: "p1", faceId: "u", productId: "pant", productName: 
 
 const fieldsOf = (i: GridItem) => ({ faceId: i.faceId, presentation: i.presentation, col: i.col, row: i.row, colSpan: i.colSpan, rowSpan: i.rowSpan, pieceCount: i.pieceCount });
 const builderWith = (over: Partial<GridBuilder> = {}): GridBuilder => ({
-  canMove: true, check: () => null, onCommit: vi.fn(() => Promise.resolve()), onRefused: vi.fn(), onKey: vi.fn(), onEmpty: vi.fn(), onDragging: vi.fn(), ...over,
+  canMove: true, check: () => null, onCommit: vi.fn(() => Promise.resolve()), onRefused: vi.fn(), onKey: vi.fn(), onReorder: vi.fn(), onEmpty: vi.fn(), onDragging: vi.fn(), ...over,
 });
 // 12 half-foot units across, drawn 240 px wide: 20 px a unit.
 const sized = () =>
@@ -199,7 +199,7 @@ describe("PlanogramGrid as the builder's surface", () => {
     sized();
     let settle: (value: unknown) => void = () => {};
     const builder = builderWith({ onCommit: vi.fn(() => new Promise((resolve) => (settle = resolve))) });
-    render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builder} />);
+    const { container } = render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builder} />);
     const tile = screen.getByRole("button", { name: /High-Rise Pant/ });
     const home = tile.style.left;
     fireEvent.pointerDown(tile, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
@@ -207,6 +207,10 @@ describe("PlanogramGrid as the builder's surface", () => {
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
     expect(tile.style.left).toBe("calc(calc(var(--cell) * 3) + 1px)");
     expect(tile).toHaveAttribute("data-lifted");
+    // Landed, not still in the hand: no grabbing look, and its handles are back (B10).
+    expect(tile).not.toHaveAttribute("data-dragging");
+    expect(tile).toHaveAttribute("data-held");
+    expect(container.querySelector('[data-handle="right"]')).not.toBeNull();
     await act(async () => settle({ ok: false, message: "Changed on another device" }));
     expect(tile.style.left).toBe(home);
   });

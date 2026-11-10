@@ -1,8 +1,9 @@
 // The planogram list (spec §5.1): every fixture that shows product, grouped by
-// zone in map order, zoneless last. Lower tables are covered by their upper.
+// zone, zoneless last; zones and fixtures by name, Rack 2 before Rack 10 (UX audit U3). Lower tables are covered by their upper.
 
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import type { Layout } from "@/lib/layout/types";
+import { byName, compareNames } from "@/lib/natural-sort";
 
 export type PlanogramSummary = {
   fixtureId: string;
@@ -12,14 +13,15 @@ export type PlanogramSummary = {
   dueDate: string | null;
 };
 export type ListItem = Omit<PlanogramSummary, "fixtureId"> & { fixtureId: string; name: string; typeLabel: string };
-export type ListGroup = { zoneName: string; items: ListItem[] };
+/** `zoneId` is null for "Not in a zone"; it keys the group's fold (A1). */
+export type ListGroup = { zoneId: string | null; zoneName: string; items: ListItem[] };
 
 export function planogramList(layout: Layout, summaries: readonly PlanogramSummary[]): ListGroup[] {
   const byFixture = new Map(summaries.map((s) => [s.fixtureId, s]));
   const shown = layout.fixtures
     // A run is listed once, by its anchor (frame racks spec §4.2).
     .filter((f) => f.tableSetId === null && (f.runId === null || f.runIndex === 0) && layout.faces.some((face) => face.fixtureId === f.id))
-    .sort((a, b) => a.name.localeCompare(b.name, "en"));
+    .sort((a, b) => compareNames(a.name, b.name));
   const item = (f: (typeof shown)[number]): ListItem => {
     const s = byFixture.get(f.id);
     return {
@@ -32,7 +34,7 @@ export function planogramList(layout: Layout, summaries: readonly PlanogramSumma
       dueDate: s?.dueDate ?? null,
     };
   };
-  const groups = layout.zones.map((z) => ({ zoneName: z.name, items: shown.filter((f) => f.zoneId === z.id).map(item) }));
-  groups.push({ zoneName: "Not in a zone", items: shown.filter((f) => !layout.zones.some((z) => z.id === f.zoneId)).map(item) });
+  const groups: ListGroup[] = byName(layout.zones).map((z) => ({ zoneId: z.id, zoneName: z.name, items: shown.filter((f) => f.zoneId === z.id).map(item) }));
+  groups.push({ zoneId: null, zoneName: "Not in a zone", items: shown.filter((f) => !layout.zones.some((z) => z.id === f.zoneId)).map(item) });
   return groups.filter((g) => g.items.length > 0);
 }

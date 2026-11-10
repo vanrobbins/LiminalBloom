@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { poseAtEnd, rackEnds, readingOrder, runShape, snapRun, turnBetween, type RunRack } from "./runs";
+import { poseAtEnd, poseBehind } from "./run-poses";
+import { endsOf, rackEnds, readingOrder, runShape, snapRun, turnBetween, type RunRack } from "./runs";
 
 const rack = (id: string, runIndex: number, x: number, y: number, rotation = 0, width = 48): RunRack => ({ id, runIndex, x, y, width, rotation });
 
@@ -35,9 +36,9 @@ describe("runShape", () => {
     expect(runShape([rack("a", 0, 0, 0), rack("b", 1, 50, 0)])).toMatchObject({ joins: [null], joined: false });
   });
 
-  it("refuses a 45° turn and a U-turn", () => {
+  it("refuses a 45° turn; a U-turn is a back-to-back join (run joins spec §1)", () => {
     expect(turnBetween({ rotation: 0 }, { rotation: 45 })).toBeNull();
-    expect(turnBetween({ rotation: 0 }, { rotation: 180 })).toBeNull();
+    expect(turnBetween({ rotation: 0 }, { rotation: 180 })).toBe("back");
     expect(turnBetween({ rotation: 350 }, { rotation: 80 })).toBe("corner");
   });
 });
@@ -75,5 +76,61 @@ describe("poseAtEnd and readingOrder", () => {
   it("reads from the anchor, or from the start index on a closed run", () => {
     expect(readingOrder(square, 2)).toEqual(["c", "d", "a", "b"]);
     expect(readingOrder(straight, 2)).toEqual(["a", "b", "c"]);
+  });
+});
+
+// Two 48 × 24 racks back to back: b turned around, its centre line 24 in behind a's
+// (a's back is toward −y), its left end beside a's right end.
+const deep = (id: string, runIndex: number, x: number, y: number, rotation = 0): RunRack => ({ ...rack(id, runIndex, x, y, rotation), depth: 24, type: "frame_rack" });
+
+describe("back to back (run joins spec §1)", () => {
+  it("reads a hairpin, and one that carries on straight", () => {
+    const pair = [deep("a", 0, 0, 0), deep("b", 1, 0, -24, 180)];
+    expect(runShape(pair)).toMatchObject({ joins: ["back"], joined: true, closed: false });
+    // Behind b is a itself, so the next rack carries on along b's line.
+    const on = [...pair, deep("c", 2, -48, -24, 180)];
+    expect(runShape(on)).toMatchObject({ joins: ["back", "straight"], joined: true });
+  });
+
+  it("refuses racks turned around but apart, or overlapping", () => {
+    expect(runShape([deep("a", 0, 0, 0), deep("b", 1, 0, -40, 180)]).joined).toBe(false);
+    expect(runShape([deep("a", 0, 0, 0), deep("b", 1, 0, 0, 180)]).joined).toBe(false);
+  });
+
+  it("snaps a rough U-turn into place behind, lengths may differ", () => {
+    const longer = { ...deep("b", 1, 30, -30, 175), width: 72 };
+    const [placed] = snapRun([deep("a", 0, 0, 0), longer]);
+    // Its left end (local +36 once turned) sits beside a's right end (24, 0), 24 in behind.
+    expect(placed).toMatchObject({ rotation: 180, x: -12, y: -24 });
+    expect(runShape([deep("a", 0, 0, 0), placed]).joins).toEqual(["back"]);
+  });
+
+  it("puts a new rack behind either open end", () => {
+    const a = deep("a", 0, 0, 0);
+    expect(poseBehind(a, "right", 48, 24)).toEqual({ x: 0, y: -24, rotation: 180 });
+    const left = poseBehind(a, "left", 48, 24);
+    expect(runShape([{ ...deep("n", 0, 0, 0), ...left }, { ...a, runIndex: 1 }]).joins).toEqual(["back"]);
+  });
+
+  it("a wall bay never joins back to back", () => {
+    const bay = (id: string, runIndex: number, x: number, y: number, rotation = 0): RunRack => ({ ...rack(id, runIndex, x, y, rotation), depth: 24, type: "wall_bay" });
+    expect(turnBetween({ rotation: 0, type: "wall_bay" }, { rotation: 180, type: "wall_bay" })).toBeNull();
+    expect(snapRun([bay("a", 0, 0, 0), bay("b", 1, 0, -24, 178)])[0].rotation).not.toBe(180);
+  });
+});
+
+describe("wall bay ends (run joins spec §2.2)", () => {
+  it("a straight bay's ends are its back corners, facing its rotation", () => {
+    const ends = endsOf({ x: 0, y: 0, rotation: 0, width: 48, depth: 24, curve: 0, type: "wall_bay" });
+    expect(ends).toEqual({ left: { at: { x: -24, y: -12 }, dir: 0 }, right: { at: { x: 24, y: -12 }, dir: 0 } });
+  });
+
+  it("a curved bay's ends turn with its bend: the back edge leaves toward the front and returns", () => {
+    const ends = endsOf({ x: 0, y: 0, rotation: 0, width: 96, depth: 24, curve: 20, type: "wall_bay" });
+    expect(ends.left.dir).toBeGreaterThan(0);
+    expect(ends.right.dir).toBeCloseTo(-ends.left.dir);
+    // Stepping a little along the edge from the left end goes the way it says.
+    const step = { x: ends.left.at.x + Math.cos((ends.left.dir * Math.PI) / 180), y: ends.left.at.y + Math.sin((ends.left.dir * Math.PI) / 180) };
+    expect(step.y).toBeGreaterThan(ends.left.at.y);
   });
 });

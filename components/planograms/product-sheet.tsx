@@ -98,7 +98,7 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
       }}
       className="flex flex-col gap-4 rounded-lg border border-line-subtle bg-raised p-5 motion-safe:animate-fade-in">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-semibold tracking-tight text-ink wrap-anywhere">{title}</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-ink wrap-break-word">{title}</h2>
         <Button variant="secondary" icon onClick={onClose} aria-label="Close">
           <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>

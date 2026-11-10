@@ -61,7 +61,7 @@ export function StoreSwitcher({
             key={store.id}
             value={store.id}
             data-store-name={store.name}
-            className="inline-flex min-h-11 w-full items-center rounded border border-line bg-raised px-3 py-2 text-left text-sm text-ink wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-[state=on]:border-brand data-[state=on]:bg-brand data-[state=on]:font-medium data-[state=on]:text-on-brand"
+            className="inline-flex min-h-11 w-full items-center rounded border border-line bg-raised px-3 py-2 text-left text-sm text-ink wrap-break-word focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-[state=on]:border-brand data-[state=on]:bg-brand data-[state=on]:font-medium data-[state=on]:text-on-brand"
           >
             {switchingTo === store.id ? "Switching…" : store.name}
           </ToggleGroup.Item>

@@ -88,6 +88,14 @@ describe("frame rack runs", () => {
     expect(planogramScope(straight, "a")!.faces.map((f) => f.corner ?? false)).toEqual([false, false, true]);
   });
 
+  it("marks and names a rack back to back with the one before (run joins spec §1.3)", () => {
+    const pair: Layout = { ...square, fixtures: [frame("a", 0, 0, 0, 0), frame("b", 1, 0, -24, 180)], faces: square.faces.slice(0, 2) };
+    expect(planogramScope(pair, "a")!.faces.map((f) => [f.label, f.back ?? false, f.corner ?? false])).toEqual([
+      ["Frame a", false, false],
+      ["Frame b · back to back", true, false],
+    ]);
+  });
+
   it("starts reading where a closed run says", () => {
     const later = { ...square, frameRuns: [{ id: "run", startIndex: 2, version: 1 }] };
     expect(planogramScope(later, "a")!.faces.map((f) => f.faceId)).toEqual(["c-rail", "d-rail", "a-rail", "b-rail"]);

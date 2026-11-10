@@ -1,21 +1,24 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Change, DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 
 import { useBuilder } from "./use-builder";
+import { usePlanogramDraft } from "./use-planogram-draft";
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
-const actions = vi.hoisted(() => ({ beginDraftAction: vi.fn() }));
+const actions = vi.hoisted(() => ({ beginDraftAction: vi.fn(), saveChangeAction: vi.fn(), reloadDraftAction: vi.fn() }));
 vi.mock("@/app/(app)/planograms/actions", () => actions);
 const toasts = vi.hoisted(() => ({ toast: vi.fn(), dismissToast: vi.fn() }));
 vi.mock("@/lib/toast", () => toasts);
 
 const view = (id: string, col: number, version = 1): PlacementView => ({
+  depth: 0,
   id, faceId: "f", productId: "pant", productName: "Pant", styleNumber: "P", presentation: "hung",
   col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1, version, imageKey: null, categoryName: "",
 });
 const fields = (p: PlacementView, col: number): PlacementFields => ({ faceId: p.faceId, presentation: p.presentation, col, row: p.row, colSpan: p.colSpan, rowSpan: p.rowSpan, pieceCount: p.pieceCount });
+// Undo and Redo ask for the depth the step left (hung layers): every tile here is at the front.
 const state = (...placements: PlacementView[]): DraftState => ({ planogramVersion: 1, placements });
 
 /** The draft hook's queue, one change at a time: a picked change is picked from the draft shown; `save` sees what's sent. */
@@ -54,7 +57,7 @@ describe("useBuilder", () => {
     expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Moved", action: expect.objectContaining({ label: "Undo" }) }));
     rerender({ d: state({ ...pant, col: 4, version: 5 }) });
     await act(() => result.current.undo());
-    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: fields(pant, 0) });
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: { ...fields(pant, 0), depth: 0 } });
   });
 
   it("says Switched to hung with the Undo, and Undo puts folded product back (frame racks spec §3)", async () => {
@@ -70,7 +73,7 @@ describe("useBuilder", () => {
 
     rerender({ d: state(hung) });
     await act(() => result.current.undo());
-    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: fields(folded, 0) });
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: { ...fields(folded, 0), depth: 0 } });
     expect(toasts.toast).toHaveBeenCalledTimes(2);
   });
 
@@ -185,7 +188,7 @@ describe("useBuilder", () => {
     expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
     await act(() => result.current.undo());
     expect(save).toHaveBeenCalledTimes(3);
-    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "b", version: 2, fields: fields(tee, 10) });
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "b", version: 2, fields: { ...fields(tee, 10), depth: 0 } });
   });
 
   it("starts one draft when two changes land before it's back", async () => {
@@ -208,7 +211,7 @@ describe("useBuilder", () => {
     await act(() => result.current.commit(tee, fields(tee, 12), "Moved"));
     rerender({ d: state({ ...pant, col: 4, version: 2 }) });
     await act(() => result.current.undo());
-    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 2, fields: fields(pant, 0) });
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 2, fields: { ...fields(pant, 0), depth: 0 } });
   });
 
   it("ignores Undo while a drag is held", async () => {
@@ -234,7 +237,7 @@ describe("useBuilder", () => {
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
     });
-    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ fields: fields(pant, 0) }));
+    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ fields: { ...fields(pant, 0), depth: 0 } }));
     input.remove();
   });
 
@@ -252,7 +255,7 @@ describe("useBuilder", () => {
     expect(save).toHaveBeenCalledTimes(1);
     rerender({ d: state({ ...pant, col: 4, version: 2 }), on: true });
     await act(() => result.current.undo());
-    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ fields: fields(pant, 0) }));
+    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ fields: { ...fields(pant, 0), depth: 0 } }));
   });
 
   it("resyncs when the first change is refused with no draft to work in", async () => {
@@ -291,7 +294,7 @@ describe("useBuilder", () => {
     await act(() => Promise.all([result.current.commit(pant, fields(pant, 1), "Moved"), result.current.commit(pant, fields(pant, 2), "Moved")]));
     rerender({ d: state({ ...pant, col: 2, version: 6 }) });
     await act(() => result.current.undo());
-    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 6, fields: fields(pant, 1) });
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 6, fields: { ...fields(pant, 1), depth: 0 } });
   });
 
   it("only the latest change offers Undo: the toast before it goes", async () => {
@@ -313,5 +316,38 @@ describe("useBuilder", () => {
     expect(result.current.announcement).not.toBe(first);
     expect(result.current.announcement.startsWith("Blocked by Tee")).toBe(true);
     expect(first).toBe("Blocked by Tee");
+  });
+
+  it("an Undo pressed while this device's move is still saving undoes that move, not \"Changed on another device\" (B3)", async () => {
+    const pant = view("a", 0, 1);
+    let release: () => void = () => {};
+    actions.saveChangeAction
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (release = () => resolve({ status: "saved", draft: state({ ...pant, col: 4, version: 2 }) }))),
+      )
+      .mockResolvedValueOnce({ status: "saved", draft: state({ ...pant, col: 0, version: 3 }) });
+    // The real draft queue under the builder: the order the two hooks hand off in is what's tested.
+    const { result } = renderHook(() => {
+      const draft = usePlanogramDraft("fx", state(pant), vi.fn());
+      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
+      return builder;
+    });
+
+    let moved: Promise<unknown> = Promise.resolve();
+    let undone: Promise<unknown> = Promise.resolve();
+    act(() => {
+      moved = result.current.commit(pant, fields(pant, 4), "Moved");
+    });
+    await waitFor(() => expect(actions.saveChangeAction).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      undone = result.current.undo();
+      release();
+      await Promise.all([moved, undone]);
+    });
+
+    expect(actions.saveChangeAction).toHaveBeenCalledTimes(2);
+    expect(actions.saveChangeAction).toHaveBeenLastCalledWith("fx", { kind: "update", id: "a", version: 2, fields: { ...fields(pant, 0), depth: 0 } });
+    expect(toasts.toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: "Changed on another device" }));
+    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Undone" }));
   });
 });

@@ -9,6 +9,7 @@ const faces: PlanogramFace[] = [
   { faceId: id(2), fixtureId: id(9), fixtureName: "4-way Rack 2", fixtureType: "rack", side: "back", setSide: null, label: "Back", columns: 6, rows: 4 },
 ];
 const view = (over: Partial<PlacementView>): PlacementView => ({
+  depth: 0,
   id: id(5), faceId: id(1), productId: id(7), productName: "Crew Sock", styleNumber: "CS-1", presentation: "hung", imageKey: null, categoryName: "Denim", col: 0, row: 0, colSpan: 1, rowSpan: 3, pieceCount: 6, version: 1, ...over,
 });
 
@@ -18,6 +19,15 @@ describe("snapshot", () => {
     expect(snapshot.map((e) => [e.faceLabel, e.col])).toEqual([["Front", 0], ["Front", 3], ["Back", 0]]);
     expect(snapshot[0]).toMatchObject({ fixtureName: "4-way Rack 2", productName: "Crew Sock", styleNumber: "CS-1", side: "front", pieceCount: 6 });
     expect(parseSnapshot(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot);
+  });
+
+  it("keeps each layer's depth, and reads an old version with none", () => {
+    const snapshot = buildSnapshot([view({}), view({ id: id(6), depth: 1 })], faces);
+    expect(snapshot.map((e) => e.depth).sort()).toEqual([0, 1]);
+    const old = { ...snapshot[0] };
+    delete old.depth;
+    expect(parseSnapshot([old])[0].depth).toBeUndefined();
+    expect(() => parseSnapshot([{ ...snapshot[0], depth: 99 }])).toThrow();
   });
 
   it("refuses a placement on a face outside the planogram", () => {

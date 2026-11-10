@@ -2,10 +2,20 @@
 // rectangle, face markers and label all turn together (spec §6).
 
 import { bandPath, edgePath, middleOffset } from "@/lib/layout/curves";
+import { FIXTURE_FONT, labelAngle } from "@/lib/layout/fixture-labels";
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import type { Face, Fixture } from "@/lib/layout/types";
 
-type FixtureShapeProps = { fixture: Fixture; faces: Face[]; scale: number; muted: boolean; selected: boolean; problem: boolean };
+type FixtureShapeProps = {
+  fixture: Fixture;
+  faces: Face[];
+  scale: number;
+  muted: boolean;
+  selected: boolean;
+  problem: boolean;
+  /** Has room for its name, clear of every other (shownLabels). */
+  named: boolean;
+};
 
 /** A short bar just inside each displaying side, so you can see which way it faces. */
 function faceMarker(f: Fixture, side: Face["side"]) {
@@ -39,7 +49,7 @@ function FrameRail({ fixture: f }: { fixture: Fixture }) {
   );
 }
 
-export function FixtureShape({ fixture: f, faces, scale, muted, selected, problem }: FixtureShapeProps) {
+export function FixtureShape({ fixture: f, faces, scale, muted, selected, problem, named }: FixtureShapeProps) {
   const rule = FIXTURE_RULES[f.type];
   const stroke = problem ? "var(--danger)" : selected ? "var(--brand)" : "var(--ink)";
   const common = {
@@ -49,7 +59,6 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
     strokeDasharray: problem ? "6 4" : selected ? "8 4" : undefined,
     vectorEffect: "non-scaling-stroke" as const,
   };
-  const labelFits = f.width * scale > 56 && f.depth * scale > 18;
   return (
     <g
       data-fixture-id={f.id}
@@ -67,14 +76,20 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
       )}
       {f.type === "frame_rack" ? <FrameRail fixture={f} /> : null}
       {faces.map((face) => faceMarker(f, face.side))}
-      {labelFits ? (
+      {named ? (
         <text
-          fontSize={12 / scale}
+          fontSize={FIXTURE_FONT / scale}
           textAnchor="middle"
           dominantBaseline="middle"
           fill="var(--ink)"
-          // On the bay's middle, counter-rotated so the name always reads upright.
-          transform={`translate(0 ${middleOffset(f)}) rotate(${-f.rotation})`}
+          // A halo in the fixture's fill, so a rail or face marker under the name stops at its letters (L3).
+          stroke="var(--surface)"
+          strokeWidth={3}
+          strokeLinejoin="round"
+          paintOrder="stroke"
+          vectorEffect="non-scaling-stroke"
+          // Through the middle, along the longest edge, never upside down (labelAngle).
+          transform={`translate(0 ${middleOffset(f)}) rotate(${labelAngle(f) - f.rotation})`}
           className="pointer-events-none select-none"
         >
           {f.name}

@@ -4,9 +4,10 @@
 
 import type { Session, Drag } from "./session-core";
 import { pointsOf, type Command } from "./commands";
+import { snapBend } from "./curve-snap";
 import { bendFromHandle, resizeCurved, snapPoints } from "./curves";
 import { dragEntranceEnd } from "./entrances";
-import { resizeFromHandle, resizeLowerTable } from "./fixtures";
+import { resizeFromHandle, resizeLowerTable } from "./fixture-resize";
 import { angleTowards } from "./frames";
 import { snapAngle, snapDelta, snapPoint, targetsFor, type Guide } from "./snap";
 import { OUTLINE_ID, type Layout, type Point } from "./types";
@@ -46,7 +47,7 @@ export function movingPoints(layout: Layout, ids: readonly string[]): Point[] {
   ];
 }
 
-export function planDrag(session: Session, drag: Drag, pointer: Point): { command: Command; guides: Guide[] } | null {
+export function planDrag(session: Session, drag: Drag, pointer: Point): { command: Command; guides: Guide[]; meets?: string | null } | null {
   const { start, target } = drag;
   const { scale } = session.camera;
 
@@ -87,8 +88,9 @@ export function planDrag(session: Session, drag: Drag, pointer: Point): { comman
     case "curve": {
       const f = start.fixtures.find((x) => x.id === ref.fixtureId);
       if (!f) return null;
-      const curve = bendFromHandle(f, drag.origin, pointer, session.snapping);
-      return { command: { type: "updateFixture", id: f.id, changes: { curve } }, guides: [] };
+      // Pulled onto a curve that runs straight into a nearby wall bay, when one is close (run joins spec §3.1).
+      const { curve, meets } = snapBend(start, f, bendFromHandle(f, drag.origin, pointer, session.snapping), session.snapping);
+      return { command: { type: "updateFixture", id: f.id, changes: { curve } }, guides: [], meets };
     }
     case "rotate": {
       const f = start.fixtures.find((x) => x.id === ref.fixtureId);

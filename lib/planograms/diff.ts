@@ -14,12 +14,16 @@ export type Comparable = Cells & {
   productName: string;
   presentation: Presentation;
   pieceCount: number;
+  /** Front to back on a shared rail (layers.ts); a version from before has none, read as 0. */
+  depth?: number;
 };
 export type Pair = { before: Comparable; after: Comparable };
 export type FaceChanges = { faceId: string; label: string; added: Comparable[]; removed: Comparable[]; moved: Pair[]; recounted: Pair[] };
 
 const keyOf = (c: Comparable) => `${c.faceId}|${c.productId}|${c.presentation}`;
-const sameCells = (a: Cells, b: Cells) => a.col === b.col && a.row === b.row && a.colSpan === b.colSpan && a.rowSpan === b.rowSpan;
+// A new place front to back counts as a move too (DECISIONS 11-09).
+const sameCells = (a: Comparable, b: Comparable) =>
+  a.col === b.col && a.row === b.row && a.colSpan === b.colSpan && a.rowSpan === b.rowSpan && (a.depth ?? 0) === (b.depth ?? 0);
 const byPosition = (a: Cells, b: Cells) => a.row - b.row || a.col - b.col;
 
 export function diffPlacements(before: readonly Comparable[], after: readonly Comparable[]): FaceChanges[] {

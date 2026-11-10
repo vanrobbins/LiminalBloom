@@ -61,6 +61,7 @@ function draftQuery(storeId: string, planogramId: string) {
       colSpan: planogramPlacements.colSpan,
       rowSpan: planogramPlacements.rowSpan,
       pieceCount: planogramPlacements.pieceCount,
+      depth: planogramPlacements.depth,
       version: planogramPlacements.version,
       productName: products.name,
       styleNumber: products.styleNumber,

@@ -7,8 +7,9 @@ import "server-only";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { fixtureFaces, fixtures, productLocations, stockroomBins } from "@/db/schema";
+import { fixtureFaces, fixtures, productLocations, products, stockroomBins } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
+import { behindWords, layerWords } from "@/lib/planograms/layers";
 
 import type { Presentation } from "./footprint";
 import { locationDetail, locationLabel, type Cells } from "./location-label";
@@ -21,10 +22,19 @@ export type LocationRow = {
   productId: string;
   presentation: Presentation;
   label: string;
-  /** Feet and levels; "" for a bin. */
+  /** Feet and levels, then its layer on a shared rail ("· 2nd from front"); "" for a bin. */
   detail: string;
+  /** What hangs in front of it on a shared rail: "Behind Navy Tee"; null when nothing does. */
+  behind: string | null;
   floor: FloorPlace | null;
 };
+
+// Another hung product on the same face whose cells overlap this one (layers.ts, sharesSpace). Inside
+// the subquery the alias `o` hides the table's own name, so product_locations.* is the outer row.
+const sharing = sql`o.store_id = ${productLocations.storeId} and o.face_id = ${productLocations.faceId} and o.id <> ${productLocations.id}
+  and o.presentation = 'hung' and ${productLocations.presentation} = 'hung'
+  and o.col < ${productLocations.col} + ${productLocations.colSpan} and ${productLocations.col} < o.col + o.col_span
+  and o.row < ${productLocations.row} + ${productLocations.rowSpan} and ${productLocations.row} < o.row + o.row_span`;
 
 export async function locationsFor(storeId: string, productIds: readonly string[]): Promise<LocationRow[]> {
   if (productIds.length === 0) return [];
@@ -48,6 +58,8 @@ export async function locationsFor(storeId: string, productIds: readonly string[
         setSide: fixtures.setSide,
         faceCount: sql<number>`(select count(*)::int from ${fixtureFaces} f2 where f2.fixture_id = ${fixtures.id})`,
         binCode: stockroomBins.code,
+        shares: sql<boolean>`exists (select 1 from ${productLocations} o where ${sharing})`,
+        inFront: sql<string[]>`array(select p.name from ${productLocations} o join ${products} p on p.id = o.product_id where ${sharing} and o.depth < ${productLocations.depth} order by o.depth desc)`,
       })
       .from(productLocations)
       .leftJoin(fixtureFaces, eq(fixtureFaces.id, productLocations.faceId))
@@ -62,7 +74,7 @@ export async function locationsFor(storeId: string, productIds: readonly string[
     const base = { id: r.id, productId: r.productId, presentation: r.presentation };
     if (r.binCode !== null) {
       const label = locationLabel({ kind: "bin", code: r.binCode });
-      return [{ ...base, label, detail: "", floor: null }];
+      return [{ ...base, label, detail: "", behind: null, floor: null }];
     }
     if (
       r.faceId === null || r.side === null || r.fixtureId === null || r.fixtureName === null || r.fixtureType === null ||
@@ -80,7 +92,8 @@ export async function locationsFor(storeId: string, productIds: readonly string[
       {
         ...base,
         label: locationLabel(parts),
-        detail: locationDetail(parts),
+        detail: [locationDetail(parts), layerWords(r.shares ? r.inFront.length + 1 : null)].filter(Boolean).join(" · "),
+        behind: behindWords(r.inFront),
         floor: { fixtureId: r.fixtureId, faceId: r.faceId, grid: { columns: r.columns, rows: r.rows }, cells },
       },
     ];

@@ -81,6 +81,7 @@ export function publishStatements(
             row: p.row,
             colSpan: p.colSpan,
             rowSpan: p.rowSpan,
+            depth: p.depth,
           })),
         ),
       ]

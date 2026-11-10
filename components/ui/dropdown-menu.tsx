@@ -57,7 +57,7 @@ export function DropdownMenuRadioItem({
 }: React.ComponentProps<typeof Menu.RadioItem>) {
   return (
     <Menu.RadioItem
-      className={`${ITEM} wrap-anywhere data-[state=checked]:bg-brand data-[state=checked]:data-[highlighted]:bg-brand data-[state=checked]:font-medium data-[state=checked]:text-on-brand ${className}`.trim()}
+      className={`${ITEM} wrap-break-word data-[state=checked]:bg-brand data-[state=checked]:data-[highlighted]:bg-brand data-[state=checked]:font-medium data-[state=checked]:text-on-brand ${className}`.trim()}
       {...props}
     >
       <span className="min-w-0 flex-1">{children}</span>
