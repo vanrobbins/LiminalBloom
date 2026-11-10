@@ -6,6 +6,7 @@
 
 import { useRef } from "react";
 
+import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
 import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
 import { reorderTarget, sharesSpace } from "@/lib/planograms/layers";
@@ -17,7 +18,7 @@ import { toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
 import type { GridBuilder } from "./planogram-grid";
-import type { useBuilder, Verb } from "./use-builder";
+import type { useBuilder } from "./use-builder";
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
 /** Where a placement sits, for a screen reader: "4–6 ft, Top shelf". */

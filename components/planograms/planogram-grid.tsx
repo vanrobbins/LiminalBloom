@@ -19,9 +19,11 @@ import type { PlacementFields } from "@/lib/planograms/types";
 import { shortSpot, spotSummary } from "@/lib/products/location-words";
 
 import { DragChip, DragGuides, DropGhost } from "./drag-guides";
-import { SWIPE_MIN_PX } from "./face-swipe";
-import { BlockView, GridTile, at } from "./grid-tile";
+import { BlockView } from "./block-view";
+import { GridTile } from "./grid-tile";
+import { at } from "./grid-units";
 import type { GridItem } from "./grid-items";
+import { edgeFade, useFaceSwipe } from "./use-face-swipe";
 import { usePendingLanding } from "./use-pending-landing";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
 import { useTileGesture, type Gesture } from "./use-tile-gesture";
@@ -68,22 +70,13 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const faceKey = layout.blocks.map((b) => b.faceId).join();
   const { ref, edges } = useScrollEdges<HTMLDivElement>(faceKey);
   const space = useRef<HTMLDivElement>(null);
-  // Where a swipe began, and which way the grid could scroll then: a drag that
-  // scrolls the grid to its edge doesn't also change face; the next one does.
-  const start = useRef<{ x: number; y: number; edges: Edges } | null>(null);
+  const swipe = useFaceSwipe(edges, onSwipe);
   const [drag, setDrag] = useState<Gesture | null>(null);
   const landed = usePendingLanding();
   // Each layer group front to back, so Tab meets the front one first; z-index paints them back to front.
   const drawn = layerGroups(landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId))).flat();
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
-  const mask =
-    edges.left && edges.right
-      ? "linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent)"
-      : edges.right
-        ? "linear-gradient(to right, black calc(100% - 2rem), transparent)"
-        : edges.left
-          ? "linear-gradient(to left, black calc(100% - 2rem), transparent)"
-          : undefined;
+  const mask = edgeFade(edges);
 
   const moving = builder?.canMove ? (drawn.find((i) => i.id === selectedId) ?? null) : null;
   const movingBlock = moving ? (layout.blocks.find((b) => b.faceId === moving.faceId) ?? null) : null;
@@ -117,21 +110,6 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
     },
   });
 
-  function begin(x: number, y: number) {
-    start.current = { x, y, edges };
-  }
-  function end(x: number, y: number) {
-    const from = start.current;
-    start.current = null;
-    if (!from || !onSwipe) return;
-    const dx = x - from.x;
-    // A tap or a nudge is not a swipe.
-    if (Math.abs(dx) < SWIPE_MIN_PX) return;
-    onSwipe({ dx, dy: y - from.y, edges: from.edges });
-  }
-  function cancel() {
-    start.current = null;
-  }
   const slide = slideFrom === "right" ? "motion-safe:animate-slide-from-right" : slideFrom === "left" ? "motion-safe:animate-slide-from-left" : "";
   const chipAt = target && targetBlock ? spanRect(targetBlock, target) : moving && movingBlock ? spanRect(movingBlock, moving) : null;
 
@@ -148,17 +126,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
         style={{ maskImage: mask }}
         // pr-1 pb-1: room for the ring and focus outline of the last column and row (overflow clips them).
         className="@container overflow-x-auto overscroll-x-contain pr-1 pb-1"
-        // A sideways swipe changes face (the screen decides). Touch is read
-        // from touch events: they keep coming while the browser scrolls the
-        // grid natively, where pointer events end in pointercancel. Mouse and
-        // pen use pointer events. The moving tile stops both (Review Focus 1).
-        onPointerDown={(e) => (e.pointerType === "touch" ? undefined : begin(e.clientX, e.clientY))}
-        onPointerUp={(e) => (e.pointerType === "touch" ? undefined : end(e.clientX, e.clientY))}
-        onPointerCancel={(e) => (e.pointerType === "touch" ? undefined : cancel())}
-        // A second finger makes it a pinch, not a swipe.
-        onTouchStart={(e) => (e.touches.length === 1 ? begin(e.touches[0].clientX, e.touches[0].clientY) : cancel())}
-        onTouchEnd={(e) => (e.touches.length === 0 && e.changedTouches.length > 0 ? end(e.changedTouches[0].clientX, e.changedTouches[0].clientY) : undefined)}
-        onTouchCancel={cancel}
+        {...swipe}
       >
         <div
           // Remounts per face so the slide plays.

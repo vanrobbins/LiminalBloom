@@ -7,7 +7,7 @@ import { pointsOf, type Command } from "./commands";
 import { snapBend } from "./curve-snap";
 import { bendFromHandle, resizeCurved, snapPoints } from "./curves";
 import { dragEntranceEnd } from "./entrances";
-import { resizeFromHandle, resizeLowerTable } from "./fixtures";
+import { resizeFromHandle, resizeLowerTable } from "./fixture-resize";
 import { angleTowards } from "./frames";
 import { snapAngle, snapDelta, snapPoint, targetsFor, type Guide } from "./snap";
 import { OUTLINE_ID, type Layout, type Point } from "./types";

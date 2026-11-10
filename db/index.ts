@@ -18,7 +18,7 @@ const connectionString =
   optionalEnv("DATABASE_URL_POOLED") ?? requiredEnv("DATABASE_URL");
 
 // Both schemas are handed to Drizzle together: the tables we wrote
-// (db/schema.ts) and the ones Better Auth generated (db/auth-schema.ts).
+// (db/schema/) and the ones Better Auth generated (db/auth-schema.ts).
 export const schema = { ...appSchema, ...authSchema };
 
 export const db = drizzle(neon(connectionString), { schema });

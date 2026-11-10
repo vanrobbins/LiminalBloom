@@ -9,13 +9,9 @@
 
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { InfoPopover } from "@/components/ui/info-popover";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { PlanogramRow, PublishedVersion } from "@/lib/planograms/queries";
 import { draftIssues } from "@/lib/planograms/rules";
 import { combinedBlocks, singleBlock } from "@/lib/planograms/set-grid";
@@ -23,19 +19,17 @@ import type { DraftState, PlanogramScope, ProductLook } from "@/lib/planograms/t
 
 import { AddProductDialog } from "./add-product-dialog";
 import { DraftBar } from "./draft-bar";
-import { DraftStatusLine } from "./draft-status";
-import { DueDateChip } from "./due-date-chip";
-import { swipeTarget } from "./face-swipe";
 import { itemsFromDraft, itemsFromSnapshot, startFace } from "./grid-items";
 import { MoveToFaceDialog } from "./move-to-face-dialog";
+import { PastVersion } from "./past-version";
 import { PlanogramBody } from "./planogram-body";
 import { SelectionBar } from "./selection-bar";
+import { StatusRow } from "./status-row";
 import { useBuilder } from "./use-builder";
+import { useFaceView } from "./use-face-view";
 import { spotWords, usePlacementActions } from "./use-placement-actions";
 import { usePlanogramDraft } from "./use-planogram-draft";
 import { useSelection } from "./use-selection";
-import { VersionLine } from "./version-line";
-import type { Edges } from "./use-scroll-edges";
 
 type PlanogramScreenProps = {
   scope: PlanogramScope;
@@ -53,12 +47,10 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
   const router = useRouter();
   const { draft, status, save, adopt } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
-  const [faceId, setFaceId] = useState(() => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
+  const { face, slideFrom, showFace, onSwipe } = useFaceView(scope, () => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
   const [adding, setAdding] = useState(false);
   const [movingFace, setMovingFace] = useState(false);
-  const [slideFrom, setSlideFrom] = useState<"left" | "right" | null>(null);
 
-  const face = scope.faces.find((f) => f.faceId === faceId) ?? scope.faces[0];
   const shownFaces = scope.isSet ? scope.faces : [face];
   const layout = scope.isSet ? combinedBlocks(scope) : singleBlock(face);
   const isEditing = draft !== null && view === "draft" && viewing === null;
@@ -100,16 +92,6 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
     select(null);
   }
 
-  const faceIds = scope.faces.map((f) => f.faceId);
-  function showFace(id: string, from?: "left" | "right") {
-    setSlideFrom(from ?? (faceIds.indexOf(id) > faceIds.indexOf(face.faceId) ? "right" : "left"));
-    setFaceId(id);
-  }
-  function onSwipe(gesture: { dx: number; dy: number; edges: Edges }) {
-    if (scope.isSet) return;
-    const target = swipeTarget(faceIds, face.faceId, gesture);
-    if (target) showFace(target.faceId, target.from);
-  }
 
   const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, save, setSelectedId, select, showFace });
 
@@ -148,16 +130,9 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
 
   if (viewing) {
     return (
-      <div className="flex flex-col gap-4">
-        <VersionLine latest={latest} />
-        <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-raised px-4 py-3">
-          <p className="text-ink">Version {viewing.number}, read-only.</p>
-          <Button asChild variant="secondary">
-            <Link href={`/planograms/${scope.fixtureId}`}>Back to the current planogram</Link>
-          </Button>
-        </div>
+      <PastVersion fixtureId={scope.fixtureId} latest={latest} number={viewing.number}>
         {body}
-      </div>
+      </PastVersion>
     );
   }
 
@@ -179,26 +154,9 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
   return (
     <div className="flex flex-col gap-4">
       {isEmpty ? null : (
-        <div data-status-row className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <VersionLine latest={latest} />
-          {draft ? (
-            <span className="inline-flex max-w-full items-center gap-1">
-              <SegmentedControl
-                label="Show"
-                options={[
-                  { value: "draft", label: "Draft" },
-                  { value: "published", label: "Published" },
-                ]}
-                value={view}
-                onChange={showView}
-              />
-              <InfoPopover term="draft" />
-            </span>
-          ) : null}
-          <DueDateChip fixtureId={scope.fixtureId} dueDate={dueDate} today={today} />
-          {isEditing ? <DraftStatusLine status={status} /> : null}
+        <StatusRow fixtureId={scope.fixtureId} latest={latest} hasDraft={draft !== null} view={view} onView={showView} dueDate={dueDate} today={today} status={isEditing ? status : null}>
           {draftBar(false)}
-        </div>
+        </StatusRow>
       )}
       {isEmpty ? (
         <div data-empty className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-line p-8">

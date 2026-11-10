@@ -17,6 +17,8 @@ import { createSession } from "@/lib/layout/session-core";
 import type { Layout } from "@/lib/layout/types";
 import { toast } from "@/lib/toast";
 
+import { useEditorSync } from "./use-editor-sync";
+
 export type SaveStatus = "saved" | "saving" | "offline";
 
 type Options = {
@@ -176,43 +178,7 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
     else router.push("/layout");
   }, [leaving, pending, router, onLeft]);
 
-  // Messages from the session (a blocked drop, a conflict) become toasts.
-  useEffect(() => {
-    if (!session.notice) return;
-    toast({ tone: "error", title: session.notice });
-    const clear = window.setTimeout(() => dispatch({ type: "noticeShown" }), 0);
-    return () => window.clearTimeout(clear);
-  }, [session.notice]);
-
-  // Closing the tab with unsaved changes asks first.
-  useEffect(() => {
-    function onLeave(event: BeforeUnloadEvent) {
-      // Once stopped, the reload that follows must not be blocked by our own prompt.
-      if (!stopped.current && hasPending(queueRef.current, latest.current)) event.preventDefault();
-    }
-    window.addEventListener("beforeunload", onLeave);
-    return () => window.removeEventListener("beforeunload", onLeave);
-  }, []);
-
-  // Coming back to the tab: pick up other devices' edits when nothing is pending here.
-  useEffect(() => {
-    async function onFocus() {
-      if (stopped.current || hasPending(queueRef.current, latest.current)) return;
-      let reply: FetchReply;
-      try {
-        reply = await fetchLatest(storeId);
-      } catch {
-        return; // offline: the next focus tries again
-      }
-      if (reply.status !== "ok") return;
-      // An edit or save may have started during the fetch; the save's own reply will rebase.
-      if (stopped.current || queueRef.current.inFlight || hasPending(queueRef.current, latest.current)) return;
-      dispatch({ type: "rebase", base: queueRef.current.confirmed, server: reply.layout, skip: [] });
-      setQueue(createQueue(reply.layout));
-    }
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [fetchLatest, setQueue, storeId]);
+  useEditorSync({ storeId, notice: session.notice, dispatch, fetchLatest, queueRef, setQueue, latest, stopped });
 
   useEffect(
     () => () => {

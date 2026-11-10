@@ -5,9 +5,11 @@
 // The shape is a circular band; a curve of 0 is the fixture's own rectangle,
 // with the exact rectangle maths from fixtures.ts.
 
-import { clampSize, corners, distanceToRect, rectsOverlap, type Rect } from "./fixtures";
+import { clampSize } from "./fixture-resize";
+import { corners, distanceToRect, rectsOverlap, type Rect } from "./fixtures";
 import { toLocal, toWorld } from "./frames";
-import { bounds, classify, closestPointOnSegment, edgesOf, polygonsOverlap } from "./geometry";
+import { polygonsOverlap } from "./crossings";
+import { bounds, classify, closestPointOnSegment, edgesOf } from "./geometry";
 import { CURVE_SNAP, MAX_CURVE, MIN_CURVE_RADIUS } from "./limits";
 import type { Point } from "./types";
 

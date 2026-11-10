@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { beginDraftAction } from "@/app/(app)/planograms/actions";
+import { fieldsOf, isReorder, type Verb } from "@/lib/planograms/builder/fields";
 import { matchPlacement } from "@/lib/planograms/builder/match";
 import { EMPTY_HISTORY, forget, prune, record, redo as redoStep, sitsAt, undo as undoStep, type History, type Travel } from "@/lib/planograms/builder/undo";
 import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
@@ -19,11 +20,8 @@ import { dismissToast, toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
 import type { Pending, SaveResult } from "./use-planogram-draft";
+import { useUndoKeys } from "./use-undo-keys";
 
-export type Verb = "Moved" | "Resized" | "Changed" | Reorder;
-/** Move forward / Move back on a shared rail (layers.ts). */
-export type Reorder = "Moved forward" | "Moved back";
-const isReorder = (verb: Verb): verb is Reorder => verb === "Moved forward" || verb === "Moved back";
 export type CommitResult = { ok: true; id: string } | { ok: false; message: string | null };
 
 const CONFLICT = "Changed on another device";
@@ -43,21 +41,6 @@ type Options = {
   /** Undo or Redo landed: shows the face it landed on and names it, if that wasn't the one showing. */
   reveal?: (fields: PlacementFields) => string | null;
 };
-
-/** Only a placement's own fields: a tile carries names and looks too. Its depth only when asked for (layers.ts). */
-const fieldsOf = (p: PlacementFields, withDepth = false): PlacementFields => ({
-  faceId: p.faceId,
-  presentation: p.presentation,
-  col: p.col,
-  row: p.row,
-  colSpan: p.colSpan,
-  rowSpan: p.rowSpan,
-  pieceCount: p.pieceCount,
-  ...(withDepth && p.depth !== undefined ? { depth: p.depth } : {}),
-});
-
-const isTyping = (target: EventTarget | null) =>
-  target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], [role=dialog]") !== null;
 
 export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, onStale, describe, enabled = true, reveal }: Options) {
   const [history, setHistoryState] = useState<History>(EMPTY_HISTORY);
@@ -199,16 +182,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
     if (result.message) toast({ tone: "error", title: result.message });
   }
 
-  useEffect(() => {
-    if (!enabled) return;
-    function onKey(event: KeyboardEvent) {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "z" || isTyping(event.target)) return;
-      event.preventDefault();
-      void travel(event.shiftKey ? "redo" : "undo");
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
+  useUndoKeys(enabled, (direction) => void travel(direction));
 
   return {
     commit,

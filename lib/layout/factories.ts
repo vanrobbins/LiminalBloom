@@ -1,7 +1,8 @@
 // Making new items with sensible defaults (spec §5 table, §7 "Adding").
 // Pure: ids come from the caller, so tests and undo are repeatable.
 
-import { FIXTURE_RULES, autoGrid } from "./fixtures";
+import { autoGrid } from "./fixture-grids";
+import { FIXTURE_RULES } from "./fixtures";
 import { DEFAULT_ENTRANCE_WIDTH, MAX_NAME } from "./limits";
 import {
   ZONE_COLORS,

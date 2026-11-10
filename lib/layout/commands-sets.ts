@@ -2,7 +2,8 @@
 // items at once. Split from commands.ts to keep both files readable.
 
 import { baseName, nextName, type NewId } from "./factories";
-import { gridForSurface, lowerTableLength } from "./fixtures";
+import { gridForSurface } from "./fixture-grids";
+import { lowerTableLength } from "./fixtures";
 import { translate } from "./geometry";
 import { DEFAULT_LOWER_DEPTH } from "./limits";
 import type { Face, Fixture, Layout, Point, Side, Zone } from "./types";

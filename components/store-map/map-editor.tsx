@@ -7,7 +7,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { screenToWorld } from "@/lib/layout/camera";
 import type { ChangeSet } from "@/lib/layout/diff";
 import { canRedo, canUndo } from "@/lib/layout/history";
@@ -23,6 +22,7 @@ import { TILE_TYPE } from "./add-options";
 import { AddPanel } from "./add-panel";
 import { DrawingBar } from "./drawing-bar";
 import { EditorBottomBar } from "./editor-bottom-bar";
+import { EditorSheets } from "./editor-sheets";
 import { EditorTopBar } from "./editor-top-bar";
 import { LayoutList } from "./layout-list";
 import { LinkOffer } from "./link-offer";
@@ -174,32 +174,16 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest, startWith
       <EditorBottomBar status={status} onList={() => setListOpen(true)} />
 
       {isPhone ? (
-        <>
-          <BottomSheet
-            peek
-            open={session.selection.length > 0 && !listOpen}
-            onOpenChange={(open) => {
-              if (!open) dispatch({ type: "select", ids: [] });
-            }}
-            title="Selected"
-            hideTitle
-          >
-            {properties}
-          </BottomSheet>
-          <BottomSheet open={listOpen} onOpenChange={setListOpen} title="Everything on the map">
-            {/* Choosing an item closes the sheet, so its properties can show. */}
-            <LayoutList
-              layout={session.layout}
-              selection={session.selection}
-              issues={issues}
-              storeKey={storeId}
-              dispatch={(action) => {
-                dispatch(action);
-                if (action.type === "reveal") setListOpen(false);
-              }}
-            />
-          </BottomSheet>
-        </>
+        <EditorSheets
+          layout={session.layout}
+          selection={session.selection}
+          issues={issues}
+          storeId={storeId}
+          dispatch={dispatch}
+          listOpen={listOpen}
+          onListOpenChange={setListOpen}
+          properties={properties}
+        />
       ) : null}
 
       {!session.layout.outline && !session.drawing ? <OutlineSetup dispatch={dispatch} /> : null}

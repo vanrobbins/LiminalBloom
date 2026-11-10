@@ -4,7 +4,8 @@
 // validate; normalize() snaps the racks into place and closes up indexes.
 
 import { nextName, type NewId } from "./factories";
-import { autoGrid, FIXTURE_RULES } from "./fixtures";
+import { autoGrid } from "./fixture-grids";
+import { FIXTURE_RULES } from "./fixtures";
 import { rotate } from "./frames";
 import { poseAtEnd, poseBehind } from "./run-poses";
 import { MAX_RUN_RACKS, byIndex, isRunType, linkPoint, rackEnds, runShape, runWord, type RunRack } from "./runs";

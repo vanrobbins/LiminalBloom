@@ -1,12 +1,11 @@
 // What each kind of fixture is, and the maths of rotated rectangles (spec §5).
-// All rotation goes through frames.ts.
-
-import { COLUMNS_PER_FOOT } from "@/lib/feet";
+// All rotation goes through frames.ts. Resizing is in fixture-resize.ts, face
+// grids in fixture-grids.ts.
 
 import { normalizeAngle, toLocal, toWorld, type Pose } from "./frames";
 import { dot, length, subtract } from "./geometry";
-import { MAX_FIXTURE_SIZE, MAX_GRID_COLUMNS, MAX_GRID_ROWS, MIN_FIXTURE_SIZE, ROTATED_EPSILON } from "./limits";
-import type { Face, FaceSide, Fixture, FixtureType, Point, Side, TableSet } from "./types";
+import { ROTATED_EPSILON } from "./limits";
+import type { FaceSide, Fixture, FixtureType, Point, Side, TableSet } from "./types";
 
 export type FixtureRule = {
   label: string;
@@ -184,92 +183,10 @@ export function outerSide(side: Side): "front" | "back" {
   return side === "front" || side === "left" ? "front" : "back";
 }
 
-export function clampSize(n: number): number {
-  return Math.min(MAX_FIXTURE_SIZE, Math.max(MIN_FIXTURE_SIZE, Math.round(n)));
-}
-
-/** Drag the handle on `side` to `pointer`: that edge follows, the opposite edge stays. */
-export function resizeFromHandle(
-  f: Rect,
-  side: Side,
-  pointer: Point,
-): { x: number; y: number; width: number; depth: number } {
-  const local = toLocal(f, pointer);
-  let width = f.width;
-  let depth = f.depth;
-  let cx = 0;
-  let cy = 0;
-  if (side === "right") {
-    width = clampSize(local.x + f.width / 2);
-    cx = -f.width / 2 + width / 2;
-  } else if (side === "left") {
-    width = clampSize(f.width / 2 - local.x);
-    cx = f.width / 2 - width / 2;
-  } else if (side === "front") {
-    depth = clampSize(local.y + f.depth / 2);
-    cy = -f.depth / 2 + depth / 2;
-  } else {
-    depth = clampSize(f.depth / 2 - local.y);
-    cy = f.depth / 2 - depth / 2;
-  }
-  const centre = toWorld(f, { x: cx, y: cy });
-  return { x: Math.round(centre.x), y: Math.round(centre.y), width, depth };
-}
-
-/** Lower tables stay centred on their side, so both ends move together; normalize() re-places them. */
-export function resizeLowerTable(
-  f: Rect,
-  side: Side,
-  pointer: Point,
-): { width: number; depth: number } {
-  if (side === "left" || side === "right") {
-    return { width: clampSize(Math.abs(toLocal(f, pointer).x) * 2), depth: f.depth };
-  }
-  return { width: f.width, depth: resizeFromHandle(f, side, pointer).depth };
-}
-
 /** 0 inside the rectangle, otherwise the gap to its nearest edge. */
 export function distanceToRect(f: Rect, p: Point): number {
   const local = toLocal(f, p);
   const dx = Math.max(Math.abs(local.x) - f.width / 2, 0);
   const dy = Math.max(Math.abs(local.y) - f.depth / 2, 0);
   return Math.hypot(dx, dy);
-}
-
-/** Whole feet along a run, within the row limit. */
-function feetAlong(inches: number): number {
-  return Math.min(MAX_GRID_ROWS, Math.max(1, Math.round(inches / 12)));
-}
-
-/** Two columns a foot: exactly double the old count, so a migrated grid still reads as automatic. */
-function columnsAlong(inches: number): number {
-  return Math.min(MAX_GRID_COLUMNS, feetAlong(inches) * COLUMNS_PER_FOOT);
-}
-
-/** A surface seen from above: half-foot columns across, a row per foot of depth. */
-export function gridForSurface(width: number, depth: number): { columns: number; rows: number } {
-  return { columns: columnsAlong(width), rows: feetAlong(depth) };
-}
-
-/**
- * The grid a face gets from its fixture's size (DECISIONS 10-10, 10-12): two
- * columns per foot along the face. Fixtures have no height, so a standing face
- * keeps its type's rows.
- */
-export function autoGrid(
-  f: Pick<Fixture, "type" | "width" | "depth">,
-  side: FaceSide,
-): { columns: number; rows: number } {
-  if (side === "top") return gridForSurface(f.width, f.depth);
-  const run = side === "front" || side === "back" ? f.width : f.depth;
-  return { columns: columnsAlong(run), rows: FIXTURE_RULES[f.type].defaultFaces[0]?.rows ?? 3 };
-}
-
-/** Nobody set this grid by hand: it is what the size implies. Not stored, so no migration. */
-export function isAutoGrid(
-  f: Pick<Fixture, "type" | "width" | "depth">,
-  face: Pick<Face, "side" | "columns" | "rows">,
-): boolean {
-  const auto = autoGrid(f, face.side);
-  return auto.columns === face.columns && auto.rows === face.rows;
 }

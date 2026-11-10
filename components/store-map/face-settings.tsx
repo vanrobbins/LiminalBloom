@@ -5,7 +5,8 @@
 
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Button } from "@/components/ui/button";
-import { FIXTURE_RULES, autoGrid, isAutoGrid } from "@/lib/layout/fixtures";
+import { autoGrid, isAutoGrid } from "@/lib/layout/fixture-grids";
+import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import { SIDE_LABEL } from "@/lib/layout/format";
 import { feetText } from "@/lib/feet";
 import { MAX_GRID_COLUMNS, MAX_GRID_ROWS } from "@/lib/layout/limits";
