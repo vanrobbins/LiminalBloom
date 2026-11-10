@@ -12,6 +12,7 @@ import { isRunType } from "@/lib/layout/runs";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Fixture, Layout } from "@/lib/layout/types";
 
+import { CornerFit } from "./corner-fit";
 import { CurveField } from "./curve-field";
 import { FaceSettings } from "./face-settings";
 import { LowerTables } from "./lower-tables";
@@ -60,6 +61,7 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
         onCommit={(depth) => update({ depth })}
       />
       {rule.curves ? <CurveField fixture={fixture} onChange={(curve) => update({ curve })} /> : null}
+      {fixture.type === "wall_bay" ? <CornerFit layout={layout} fixture={fixture} dispatch={dispatch} /> : null}
       {!isLower ? (
         <div className="flex items-end gap-2">
           <div className="flex-1">

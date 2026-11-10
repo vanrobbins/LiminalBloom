@@ -69,6 +69,9 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest, startWith
   // Worked out afresh each time, so it goes by itself if the racks stop being near.
   const offered = session.linkOffer && !session.drag ? findJoin(session.layout, new Set(session.linkOffer.ids)) : null;
   const join = session.preview?.join ?? offered;
+  // A bent curve that now runs straight into a wall bay outlines that bay (run joins spec §3.1).
+  const meetsId = session.preview?.meets ?? null;
+  const meetsOutline = meetsId ? session.layout.fixtures.filter((f) => f.id === meetsId) : undefined;
 
   const pointer = usePointerInput({
     hit: (screen, shift) => {
@@ -140,7 +143,7 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest, startWith
             drawing={session.drawing}
             drawPreview={drawPreview}
             marquee={session.marquee}
-            joinOutline={join?.outline}
+            joinOutline={join?.outline ?? meetsOutline}
             svgProps={pointer.handlers}
           />
           <ZoomControls onZoom={(factor) => dispatch({ type: "zoom", factor })} onFit={() => dispatch({ type: "fit" })} />

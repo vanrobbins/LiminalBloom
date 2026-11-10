@@ -136,7 +136,7 @@ function moveDrag(session: Session, pointerScreen: Point, newId: NewId): Session
   const changed = changedIds(drag.start, layout);
   const issues = newIssues(validate(drag.start, changed), validate(layout, changed), changed);
   const join = drag.target.kind === "fixture" ? findJoin(layout, movedIds(drag.start, drag.ids)) : null;
-  return { ...session, preview: { layout, issues, guides: plan.guides, join } };
+  return { ...session, preview: { layout, issues, guides: plan.guides, join, meets: plan.meets ?? null } };
 }
 
 function endDrag(session: Session): Session {

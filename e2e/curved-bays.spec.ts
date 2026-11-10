@@ -2,7 +2,7 @@
 // the map, and it stays curved after a reload.
 
 import { expect, hydrated, sizeOf, test } from "./fixtures";
-import { seedLayout } from "./map-store";
+import { seedLayout, seedWallBay } from "./map-store";
 
 type Page = import("@playwright/test").Page;
 
@@ -77,4 +77,26 @@ test("wall bays link into a run that keeps a curved bay, and save (run joins spe
   await hydrated(page);
   await expect(page.locator('[data-fixture-name^="Wall bay"]')).toHaveCount(2);
   await expect(page.locator("[data-curved]")).toHaveCount(1);
+});
+
+test("Fit to corner bends a bay between two bays at a corner, and links nothing (run joins spec §3.2)", async ({ page }) => {
+  test.skip(sizeOf(test.info()) !== "desktop", "Picking the bay by its place on the map is the desktop form; the panel is the same at every size.");
+  // An inside corner at (300, 100): Bay A along the top, Bay B down the side, Bay F across it.
+  await seedWallBay("Bay A", 200, 112);
+  await seedWallBay("Bay B", 288, 224, 90);
+  await seedWallBay("Bay F", 270, 150, 0, 96);
+  await page.goto("/layout/edit");
+  await hydrated(page);
+  const box = await page.locator('[data-fixture-name="Bay F"]').boundingBox();
+  if (!box) throw new Error("Bay F is not on the map");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page.getByRole("button", { name: "Fit to corner" }).filter({ visible: true }).click();
+  await expect(page.locator('[data-fixture-name="Bay F"] [data-curved]')).toHaveCount(1);
+  await saved(page);
+
+  await page.reload();
+  await hydrated(page);
+  await expect(page.locator('[data-fixture-name="Bay F"] [data-curved]')).toHaveCount(1);
+  await expect(page.locator("[data-run-outline]")).toHaveCount(0);
+  await expect(page.getByText(/Run of \d/)).toHaveCount(0);
 });
