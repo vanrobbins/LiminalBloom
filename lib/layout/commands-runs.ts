@@ -6,10 +6,11 @@
 import { nextName, type NewId } from "./factories";
 import { autoGrid, FIXTURE_RULES } from "./fixtures";
 import { rotate } from "./frames";
-import { MAX_RUN_RACKS, byIndex, poseAtEnd, rackEnds, runShape, type RunRack } from "./runs";
+import { poseAtEnd, poseBehind } from "./run-poses";
+import { MAX_RUN_RACKS, byIndex, linkPoint, rackEnds, runShape, type RunRack } from "./runs";
 import type { Face, Fixture, Layout } from "./types";
 
-const asRack = (f: Fixture): RunRack => ({ id: f.id, x: f.x, y: f.y, width: f.width, rotation: f.rotation, runIndex: f.runIndex ?? 0 });
+const asRack = (f: Fixture): RunRack => ({ ...f, runIndex: f.runIndex ?? 0 });
 
 export function runRacks(layout: Layout, runId: string): Fixture[] {
   return byIndex(layout.fixtures.filter((f) => f.runId === runId).map((f) => ({ ...f, runIndex: f.runIndex ?? 0 })));
@@ -25,12 +26,16 @@ export function openEnds(layout: Layout, rackId: string): { left: boolean; right
   return { left: rack.runIndex === 0, right: rack.runIndex === racks.length - 1 };
 }
 
-/** A new 48 in frame rack joined straight at one open end (spec §4.3); a corner comes from rotating it afterwards. */
-export function addRackToRun(layout: Layout, rackId: string, side: "left" | "right", newId: NewId): Layout {
+/**
+ * A new 48 in frame rack at one open end (spec §4.3): joined straight, or
+ * `behind` it, back to back (run joins spec §1.2). A corner comes from
+ * rotating it afterwards.
+ */
+export function addRackToRun(layout: Layout, rackId: string, side: "left" | "right", newId: NewId, behind = false): Layout {
   const rack = layout.fixtures.find((f) => f.id === rackId);
   if (!rack || !openEnds(layout, rackId)[side]) return layout;
   const rule = FIXTURE_RULES.frame_rack;
-  const pose = poseAtEnd(asRack(rack), side, rule.width);
+  const pose = behind ? poseBehind(asRack(rack), side, rule.width, rule.depth) : poseAtEnd(asRack(rack), side, rule.width);
   const runId = rack.runId ?? newId();
   const members = rack.runId ? runRacks(layout, rack.runId) : [{ ...rack, runIndex: 0 }];
   // Left of the anchor, the new rack becomes index 0; the save moves the planogram to it.
@@ -172,7 +177,8 @@ export function joinRun(layout: Layout, rackId: string, targetId: string, side: 
   if (first.length + second.length > MAX_RUN_RACKS) return layout;
 
   const from = rackEnds(asRack(rack))[side === "right" ? "left" : "right"];
-  const to = rackEnds(asRack(target))[side];
+  const to = linkPoint(asRack(rack), asRack(target), side);
+  if (!to) return layout;
   const dx = Math.round(to.x - from.x);
   const dy = Math.round(to.y - from.y);
   const movingIds = new Set(moving.map((f) => f.id));

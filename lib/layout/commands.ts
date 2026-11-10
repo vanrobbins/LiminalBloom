@@ -36,7 +36,7 @@ export type Command =
   | { type: "setFace"; fixtureId: string; side: FaceSide; on: boolean }
   | { type: "setFaceGrid"; faceId: string; columns: number; rows: number }
   | { type: "attachLowerTable"; upperId: string; side: Side }
-  | { type: "addRackToRun"; rackId: string; side: "left" | "right" }
+  | { type: "addRackToRun"; rackId: string; side: "left" | "right"; behind?: boolean }
   | { type: "removeFromRun"; rackId: string }
   | { type: "linkRun"; ids: string[]; anchorId?: string }
   | { type: "joinRun"; rackId: string; targetId: string; side: "left" | "right" }
@@ -164,7 +164,7 @@ function applyRaw(layout: Layout, command: Command, newId: NewId): Layout {
       return attachLowerTable(layout, command.upperId, command.side, newId);
 
     case "addRackToRun":
-      return addRackToRun(layout, command.rackId, command.side, newId);
+      return addRackToRun(layout, command.rackId, command.side, newId, command.behind);
 
     case "removeFromRun":
       return removeFromRun(layout, command.rackId);

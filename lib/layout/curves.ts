@@ -77,6 +77,22 @@ export function halfChord(f: Pick<Curved, "width" | "curve">): number {
   return arc ? arc.radius * Math.sin(arc.half) : f.width / 2;
 }
 
+/** One end of an edge in the fixture's frame, and which way the edge runs there: degrees from its x axis, travelling left to right. */
+export type EdgeEnd = { at: Point; turn: number };
+
+/** Where a bay's back edge (the wall line) ends: where it meets the next bay in a run (run joins spec §2.2). */
+export function backEdgeEnds(f: Pick<Curved, "width" | "depth" | "curve">): { left: EdgeEnd; right: EdgeEnd } {
+  const arc = arcOf(f.width, f.curve);
+  const back = -f.depth / 2;
+  if (!arc) return { left: { at: { x: -f.width / 2, y: back }, turn: 0 }, right: { at: { x: f.width / 2, y: back }, turn: 0 } };
+  // The edge leaves the left end turned toward the bend, and arrives at the right end turned away by as much.
+  const half = (arc.half * 180) / Math.PI;
+  return {
+    left: { at: pointOn(arc, -arc.half, back), turn: arc.sign * half },
+    right: { at: pointOn(arc, arc.half, back), turn: -arc.sign * half },
+  };
+}
+
 /** How far the middle of the bay is from `x, y`, toward the front. */
 export function middleOffset(f: Pick<Curved, "width" | "curve">): number {
   const arc = arcOf(f.width, f.curve);

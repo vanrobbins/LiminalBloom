@@ -1,4 +1,5 @@
-// A frame rack's run (frame racks spec §4.3): add a rack at an open end, take
+// A frame rack's run (frame racks spec §4.3): add a rack at an open end or
+// back to back behind it (run joins spec §1.2), take
 // this rack out, and for a closed run choose where the combined grid starts.
 
 "use client";
@@ -21,6 +22,8 @@ export function RunControls({ layout, rack, dispatch }: RunControlsProps) {
   const full = racks.length >= MAX_RUN_RACKS;
   const refusal = removalRefusal(layout, rack.id);
   const command = (c: Extract<SessionAction, { type: "command" }>["command"]) => dispatch({ type: "command", command: c });
+  // Behind the right end when it's open, else the left.
+  const behindSide = ends.right ? "right" : ends.left ? "left" : null;
 
   return (
     <fieldset className="flex flex-col gap-2">
@@ -36,6 +39,14 @@ export function RunControls({ layout, rack, dispatch }: RunControlsProps) {
         </Button>
         <Button variant="secondary" disabled={!ends.right} onClick={() => command({ type: "addRackToRun", rackId: rack.id, side: "right" })}>
           Add rack to the right
+        </Button>
+        <Button
+          variant="secondary"
+          className="col-span-2"
+          disabled={behindSide === null}
+          onClick={() => behindSide && command({ type: "addRackToRun", rackId: rack.id, side: behindSide, behind: true })}
+        >
+          Add rack behind
         </Button>
       </div>
       {rack.runId === null ? (

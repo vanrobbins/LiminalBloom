@@ -220,7 +220,7 @@ function fixtureIssues(layout: Layout, wants: Wants): Issue[] {
   return issues;
 }
 
-/** Frame racks spec §4.4: 2–6 frame racks per run, indexes 0…n−1, joined end to end at 0° or 90°. */
+/** Frame racks spec §4.4, run joins spec §4: 2–6 frame racks per run, indexes 0…n−1, joined end to end at 0°, 90° or back to back. */
 function runIssues(layout: Layout, f: Fixture): Issue[] {
   if (f.runId === null && f.runIndex === null) return [];
   const run = layout.frameRuns.find((r) => r.id === f.runId);
@@ -231,7 +231,7 @@ function runIssues(layout: Layout, f: Fixture): Issue[] {
   const indexes = racks.map((o) => o.runIndex).sort((a, b) => (a ?? 0) - (b ?? 0));
   if (!indexes.every((n, i) => n === i)) return [issue(f.id, "run", "The racks in a run are numbered from the anchor without gaps.")];
   const shape = runShape(racks.map((o) => ({ ...o, runIndex: o.runIndex ?? 0 })));
-  if (!shape.joined) return [issue(f.id, "run", "Racks in a run must meet end to end, straight or at a corner.")];
+  if (!shape.joined) return [issue(f.id, "run", "Racks in a run must meet end to end: straight, at a corner, or back to back.")];
   return [];
 }
 

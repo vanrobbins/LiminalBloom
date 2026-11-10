@@ -45,6 +45,8 @@ export type PlanogramFace = {
   label: string;
   /** A frame rack that turns a corner from the rack before it. */
   corner?: boolean;
+  /** A frame rack back to back with the rack before it (run joins spec §1.3). */
+  back?: boolean;
   columns: number;
   rows: number;
 };

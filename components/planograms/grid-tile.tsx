@@ -53,6 +53,12 @@ export function BlockView({ block, labelled, onEmpty }: { block: Block; labelled
               <path d="M2 1 V8 H9" fill="none" stroke="currentColor" strokeWidth={2} />
             </svg>
           ) : null}
+          {block.back ? (
+            // A U-turn: the run doubles back behind the rack before.
+            <svg data-back-mark viewBox="0 0 10 10" className="mr-1 inline size-2.5 align-baseline">
+              <path d="M2 9 V4 A3 3 0 0 1 8 4 V9" fill="none" stroke="currentColor" strokeWidth={2} />
+            </svg>
+          ) : null}
           {block.label}
         </span>
       ) : null}
