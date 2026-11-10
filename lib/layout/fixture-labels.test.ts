@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { shownLabels } from "./fixture-labels";
+import { labelAngle, shownLabels } from "./fixture-labels";
 import { fixture, store, zone } from "./test-layouts";
 
 // At scale 2 a 12 px name is 6 in tall and about 3.4 in a character.
@@ -13,9 +13,9 @@ describe("shownLabels", () => {
   });
 
   it("of two names that would overlap, keeps the bigger fixture's", () => {
-    // Side by side, each name wider than its table.
-    const big = fixture({ id: "big", name: "Denim feature table", x: 300, width: 40, depth: 36 });
-    const small = fixture({ id: "small", name: "Accessories round", x: 342, width: 40, depth: 30 });
+    // One over the other, names 4 in apart: each fits its own fixture, but they touch.
+    const big = fixture({ id: "big", name: "Denim feature table", x: 300, y: 100, width: 120, depth: 40 });
+    const small = fixture({ id: "small", name: "Accessories round", x: 300, y: 104, width: 80, depth: 30 });
     expect(shownLabels({ ...store(), fixtures: [small, big] }, SCALE)).toEqual(new Set(["big"]));
   });
 
@@ -33,7 +33,35 @@ describe("shownLabels", () => {
     expect(shownLabels({ ...store(), zones: [named], fixtures: [under] }, SCALE)).toEqual(new Set());
   });
 
+  it("names nothing whose whole name doesn't fit along the fixture's longest edge", () => {
+    // About 64 in of name at this scale on a 72 in table: fits. On 60 in: hidden.
+    const long = { name: "Denim feature table", depth: 36 };
+    expect(shownLabels({ ...store(), fixtures: [fixture({ ...long, width: 72 })] }, SCALE)).toEqual(new Set(["fixture-a"]));
+    expect(shownLabels({ ...store(), fixtures: [fixture({ ...long, width: 60 })] }, SCALE)).toEqual(new Set());
+  });
+
+  it("names a fixture standing on end along its depth", () => {
+    const deep = fixture({ name: "Denim feature table", width: 36, depth: 72 });
+    expect(shownLabels({ ...store(), fixtures: [deep] }, SCALE)).toEqual(new Set(["fixture-a"]));
+  });
+
   it("names nothing on a fixture too small on screen for it", () => {
     expect(shownLabels({ ...store(), fixtures: [fixture({ width: 24, depth: 24 })] }, SCALE)).toEqual(new Set());
+  });
+});
+
+describe("labelAngle", () => {
+  it("runs along the longer side, the width on a tie", () => {
+    expect(labelAngle({ rotation: 0, width: 72, depth: 36 })).toBe(0);
+    expect(labelAngle({ rotation: 0, width: 36, depth: 72 })).toBe(-90);
+    expect(labelAngle({ rotation: 0, width: 48, depth: 48 })).toBe(0);
+  });
+
+  it("never reads upside down: left to right, or bottom to top on end", () => {
+    expect(labelAngle({ rotation: 180, width: 72, depth: 36 })).toBe(0);
+    expect(labelAngle({ rotation: 90, width: 72, depth: 36 })).toBe(-90);
+    expect(labelAngle({ rotation: 270, width: 72, depth: 36 })).toBe(-90);
+    expect(labelAngle({ rotation: 135, width: 72, depth: 36 })).toBe(-45);
+    expect(labelAngle({ rotation: -30, width: 72, depth: 36 })).toBe(-30);
   });
 });

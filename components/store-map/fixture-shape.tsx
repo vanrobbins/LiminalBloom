@@ -2,7 +2,7 @@
 // rectangle, face markers and label all turn together (spec §6).
 
 import { bandPath, edgePath, middleOffset } from "@/lib/layout/curves";
-import { FIXTURE_FONT } from "@/lib/layout/fixture-labels";
+import { FIXTURE_FONT, labelAngle } from "@/lib/layout/fixture-labels";
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import type { Face, Fixture } from "@/lib/layout/types";
 
@@ -82,8 +82,8 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
           textAnchor="middle"
           dominantBaseline="middle"
           fill="var(--ink)"
-          // On the bay's middle, counter-rotated so the name always reads upright.
-          transform={`translate(0 ${middleOffset(f)}) rotate(${-f.rotation})`}
+          // Through the middle, along the longest edge, never upside down (labelAngle).
+          transform={`translate(0 ${middleOffset(f)}) rotate(${labelAngle(f) - f.rotation})`}
           className="pointer-events-none select-none"
         >
           {f.name}
