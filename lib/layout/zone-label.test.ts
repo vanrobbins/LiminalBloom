@@ -32,6 +32,23 @@ describe("zoneLabel", () => {
     expect(zoneLabel(rect(0, 0, 60, 200), "Fitting rooms", 3)!.text).toBe("Fitting rooms");
   });
 
+  it("moves down past a fixture drawn over its corner, to the first clear row", () => {
+    const bays = [{ minX: 100, minY: 50, maxX: 300, maxY: 74 }];
+    const label = zoneLabel(rect(100, 50, 300, 60), "Back wall", 1, bays)!;
+    expect(label.text).toBe("Back wall");
+    expect(label.y - label.fontSize / 2).toBe(76);
+  });
+
+  it("ignores a fixture beside the name rather than under it", () => {
+    const aside = [{ minX: 300, minY: 50, maxX: 400, maxY: 110 }];
+    expect(zoneLabel(rect(100, 50, 300, 60), "Back wall", 1, aside)!.y).toBeLessThan(70);
+  });
+
+  it("says nothing when fixtures leave no clear row", () => {
+    const bays = [{ minX: 100, minY: 50, maxX: 300, maxY: 100 }];
+    expect(zoneLabel(rect(100, 50, 300, 60), "Back wall", 1, bays)).toBeNull();
+  });
+
   it("says nothing for a sliver or a nameless zone", () => {
     expect(zoneLabel(rect(0, 0, 8, 200), "Aisle", 1)).toBeNull();
     expect(zoneLabel(rect(0, 0, 300, 200), "", 1)).toBeNull();

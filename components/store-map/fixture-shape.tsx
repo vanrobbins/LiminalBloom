@@ -82,6 +82,12 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
           textAnchor="middle"
           dominantBaseline="middle"
           fill="var(--ink)"
+          // A halo in the fixture's fill, so a rail or face marker under the name stops at its letters (L3).
+          stroke="var(--surface)"
+          strokeWidth={3}
+          strokeLinejoin="round"
+          paintOrder="stroke"
+          vectorEffect="non-scaling-stroke"
           // Through the middle, along the longest edge, never upside down (labelAngle).
           transform={`translate(0 ${middleOffset(f)}) rotate(${labelAngle(f) - f.rotation})`}
           className="pointer-events-none select-none"

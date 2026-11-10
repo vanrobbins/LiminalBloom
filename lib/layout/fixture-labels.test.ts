@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { labelAngle, shownLabels } from "./fixture-labels";
+import { labelAngle, shownLabels, zoneLabels } from "./fixture-labels";
 import { fixture, store, zone } from "./test-layouts";
 
 // At scale 2 a 12 px name is 6 in tall and about 3.4 in a character.
@@ -26,11 +26,22 @@ describe("shownLabels", () => {
     expect(shownLabels({ ...store(), fixtures: [upper, front, back] }, SCALE)).toEqual(new Set(["upper"]));
   });
 
-  it("a zone's name wins over a fixture name drawn across it", () => {
-    const named = zone({ name: "Front tables" });
-    // The zone's name sits in its top-left corner, at y ≈ 6; this table's name is drawn there too.
-    const under = fixture({ name: "Table 1", x: 40, y: 6, width: 72, depth: 30 });
-    expect(shownLabels({ ...store(), zones: [named], fixtures: [under] }, SCALE)).toEqual(new Set());
+  it("a zone's name moves clear of a fixture over its corner, so both names show", () => {
+    const named = zone({ id: "zone-a", name: "Front tables" });
+    // The zone's name would sit in its top-left corner, under this table.
+    const over = fixture({ name: "Table 1", x: 40, y: 15, width: 72, depth: 30 });
+    const layout = { ...store(), zones: [named], fixtures: [over] };
+    expect(zoneLabels(layout, SCALE).get("zone-a")!.y).toBeGreaterThan(30);
+    expect(shownLabels(layout, SCALE)).toEqual(new Set(["fixture-a"]));
+  });
+
+  it("a zone with no clear row for its name holds no space for it", () => {
+    // A thin zone under a row of bays: its name can't show, so the bay's name does.
+    const band = zone({ id: "band", name: "Back wall", points: [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 26 }, { x: 0, y: 26 }] });
+    const bay = fixture({ name: "Bay 1", x: 40, y: 12, width: 72, depth: 24 });
+    const layout = { ...store(), zones: [band], fixtures: [bay] };
+    expect(zoneLabels(layout, SCALE).has("band")).toBe(false);
+    expect(shownLabels(layout, SCALE)).toEqual(new Set(["fixture-a"]));
   });
 
   it("names nothing whose whole name doesn't fit along the fixture's longest edge", () => {

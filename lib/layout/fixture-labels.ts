@@ -5,9 +5,10 @@
 // lower tables are named by their upper table and get none of their own. The
 // full list beside the map names everything.
 
-import { middleOffset } from "./curves";
+import { footprint, middleOffset } from "./curves";
+import { bounds } from "./geometry";
 import type { Fixture, Layout } from "./types";
-import { CHAR, zoneLabel } from "./zone-label";
+import { CHAR, type ZoneLabel, zoneLabel } from "./zone-label";
 
 /** On-screen pixels, as FixtureShape draws them. */
 export const FIXTURE_FONT = 12;
@@ -54,11 +55,20 @@ function nameBox(f: Fixture, scale: number): Box {
   return { left: x - w, right: x + w, top: y - h, bottom: y + h };
 }
 
-export function shownLabels(layout: Layout, scale: number): Set<string> {
-  const taken: Box[] = [];
+/** Each zone's name, placed clear of every fixture (they draw over zones). */
+export function zoneLabels(layout: Layout, scale: number): Map<string, ZoneLabel> {
+  const blocked = layout.fixtures.map((f) => bounds(footprint(f)));
+  const labels = new Map<string, ZoneLabel>();
   for (const zone of layout.zones) {
-    const label = zoneLabel(zone.points, zone.name, scale);
-    if (!label) continue;
+    const label = zoneLabel(zone.points, zone.name, scale, blocked);
+    if (label) labels.set(zone.id, label);
+  }
+  return labels;
+}
+
+export function shownLabels(layout: Layout, scale: number, zones = zoneLabels(layout, scale)): Set<string> {
+  const taken: Box[] = [];
+  for (const label of zones.values()) {
     const half = label.fontSize / 2;
     taken.push({ left: label.x, right: label.x + label.text.length * CHAR * label.fontSize, top: label.y - half, bottom: label.y + half });
   }

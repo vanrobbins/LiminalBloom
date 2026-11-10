@@ -1,13 +1,13 @@
 // A zone: its fill colour, its name (top-left, fitted: UX audit U5), and how
 // it shows selection and problems.
 
-import { zoneLabel } from "@/lib/layout/zone-label";
+import type { ZoneLabel } from "@/lib/layout/zone-label";
 import type { Zone } from "@/lib/layout/types";
 
-type ZoneShapeProps = { zone: Zone; scale: number; dimmed: boolean; selected: boolean; problem: boolean };
+/** `label`: placed by zoneLabels, clear of the fixtures; null when it has no room. */
+type ZoneShapeProps = { zone: Zone; label: ZoneLabel | null; dimmed: boolean; selected: boolean; problem: boolean };
 
-export function ZoneShape({ zone, scale, dimmed, selected, problem }: ZoneShapeProps) {
-  const label = zoneLabel(zone.points, zone.name, scale);
+export function ZoneShape({ zone, label, dimmed, selected, problem }: ZoneShapeProps) {
   return (
     <g data-zone-id={zone.id} data-zone-name={zone.name} data-problem={problem || undefined} opacity={dimmed ? 0.35 : 1}>
       <polygon
