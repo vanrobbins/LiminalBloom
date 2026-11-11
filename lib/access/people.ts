@@ -77,14 +77,11 @@ export async function peopleViewFor(viewer: Member, now: Date = new Date()): Pro
     };
   });
   const managers = people.filter((p) => p.builtin === "store_manager");
-  const invitations: InvitationRow[] = pending.map((i) => ({
-    id: i.id,
-    email: i.email,
-    roleName: i.roleName ?? NO_ROLE_NAME,
-    expiresAt: i.expiresAt.toISOString(),
-    expired: i.expiresAt <= now,
-    canAct: canActOn(actor, i.rank ?? NO_ROLE_RANK, "people.manage"),
-  }));
+  const invitations: InvitationRow[] = pending.map((i) => {
+    const canAct = canActOn(actor, i.rank ?? NO_ROLE_RANK, "people.manage");
+    // The id is the invite link (/invite/<id>), so only someone who may act on the row is sent it.
+    return { id: canAct ? i.id : null, email: i.email, roleName: i.roleName ?? NO_ROLE_NAME, expiresAt: i.expiresAt.toISOString(), expired: i.expiresAt <= now, canAct };
+  });
 
   return {
     canManage,

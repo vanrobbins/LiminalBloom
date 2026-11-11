@@ -32,6 +32,13 @@ describe("InvitationsCard", () => {
     expect(screen.getByText("boss@x.com")).toBeInTheDocument();
   });
 
+  it("shows a row that carries no id (the server withheld it) read-only, without crashing", () => {
+    render(<InvitationsCard invitations={[invitationRow("boss@x.com", { id: null }), invitationRow("jane@x.com")]} />);
+    expect(screen.queryByRole("button", { name: /boss@x.com/ })).toBeNull();
+    expect(screen.getByText("boss@x.com")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" })).toBeInTheDocument();
+  });
+
   it("copies the invitation link and says so", async () => {
     const user = userEvent.setup();
     const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();

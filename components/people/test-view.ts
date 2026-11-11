@@ -21,15 +21,10 @@ export const person = (name: string, roleId: string, roleName: string, rank: num
   ...extra,
 });
 
-export const invitationRow = (email: string, extra: Partial<InvitationRow> = {}): InvitationRow => ({
-  id: `i-${email}`,
-  email,
-  roleName: "Sales Associate",
-  expiresAt: "2026-11-13T23:40:00.000Z",
-  expired: false,
-  canAct: true,
-  ...extra,
-});
+export const invitationRow = (email: string, extra: Partial<InvitationRow> = {}): InvitationRow => {
+  const canAct = extra.canAct ?? true;
+  return { id: canAct ? `i-${email}` : null, email, roleName: "Sales Associate", expiresAt: "2026-11-13T23:40:00.000Z", expired: false, canAct, ...extra };
+};
 
 export function viewOf(people: PersonRow[], extra: Partial<PeopleView> = {}): PeopleView {
   return { canManage: false, groups: groupByRole(people), invitations: [], assignable: [], isSoleManager: false, ...extra };

@@ -26,9 +26,9 @@ export type PeopleActor = Actor & { userId: string; name: string };
 
 export type Refusal = { status: "forbidden" | "stale" | "gone" | "invalid" | "last-manager" };
 
-type Target = { memberId: string; userId: string; name: string; roleId: string | null; roleName: string; rank: number; isManager: boolean };
+export type Target = { memberId: string; userId: string; name: string; roleId: string | null; roleName: string; rank: number; isManager: boolean };
 
-async function readTarget(storeId: string, memberId: string): Promise<Target | null> {
+export async function readTarget(storeId: string, memberId: string): Promise<Target | null> {
   const [row] = await db
     .select({
       memberId: member.id,
@@ -89,11 +89,16 @@ export async function changeRole(storeId: string, actor: PeopleActor, memberId: 
   if (!role || role.id === target.roleId) return { status: "invalid" };
   if (!canActOn(actor, role.rank, "people.manage")) return { status: "forbidden" };
   if (await isLastManager(storeId, target)) return { status: "last-manager" };
+  return applyRoleChange(storeId, actor, target, expectedRoleId, role);
+}
 
+/** The write alone, after the checks above. Exported so a test can run it against a row that changed since the target was read: the guards in the SQL are what hold then. */
+export async function applyRoleChange(storeId: string, actor: PeopleActor, target: Target, expectedRoleId: string | null, role: { id: string; name: string }): Promise<ChangeOutcome> {
+  const memberId = target.memberId;
   const log = logRow(storeId, actor, "member_role_changed", { person: target.name, from: target.roleName, to: role.name, memberId });
   const rows = await changedRows(sql`
     with changed as (
-      update member set role_id = ${newRoleId}
+      update member set role_id = ${role.id}
       where id = ${memberId} and organization_id = ${storeId}
         and role_id is not distinct from ${expectedRoleId}::text
         and ${stillManagerSafe(storeId, target)}
@@ -111,7 +116,12 @@ export async function removePerson(storeId: string, actor: PeopleActor, memberId
   const refused = refusalFor(actor, target, expectedRoleId);
   if (refused) return refused;
   if (await isLastManager(storeId, target)) return { status: "last-manager" };
+  return applyRemoval(storeId, actor, target, expectedRoleId);
+}
 
+/** The write alone, after the checks above; exported for the same reason as applyRoleChange. */
+export async function applyRemoval(storeId: string, actor: PeopleActor, target: Target, expectedRoleId: string | null): Promise<RemoveOutcome> {
+  const memberId = target.memberId;
   const log = logRow(storeId, actor, "member_removed", { person: target.name, role: target.roleName, memberId });
   const rows = await changedRows(sql`
     with removed as (

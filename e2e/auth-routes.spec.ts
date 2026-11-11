@@ -11,8 +11,15 @@ const BASE = "/api/auth/organization/";
 const POST_ONLY = ["invite-member", "cancel-invitation", "accept-invitation", "reject-invitation", "update-member-role", "remove-member", "leave", "update", "delete", "create"];
 const GET_ONLY = ["list-invitations", "get-full-organization", "list-members", "get-invitation", "list-user-invitations"];
 
-// Spellings that must not slip past an exact-match list: a trailing slash, upper case, a doubled slash.
-const variants = (name: string) => [`${BASE}${name}`, `${BASE}${name}/`, `${BASE}${name.toUpperCase()}`, `${BASE}${name.toUpperCase()}/`, `${BASE}/${name}`];
+// Spellings that must not slip past an exact-match list: a trailing slash, upper case,
+// a doubled slash, and one percent-encoded character in the name (the hyphen where
+// there is one, otherwise the first letter). Checked by switching disabledPaths off:
+// the plain name and the trailing slash then answer, so those two are what
+// disabledPaths itself closes. The upper-case, double-slash and encoded variants
+// already 404 without it (the router is case-sensitive, does not match a doubled
+// slash, and does not decode %2D in the path); they stay as a guard in case that changes.
+const encoded = (name: string) => (name.includes("-") ? name.replace("-", "%2D") : `%${name.charCodeAt(0).toString(16)}${name.slice(1)}`);
+const variants = (name: string) => [`${BASE}${name}`, `${BASE}${name}/`, `${BASE}${name.toUpperCase()}`, `${BASE}${name.toUpperCase()}/`, `${BASE}/${name}`, `${BASE}${encoded(name)}`];
 
 test.beforeEach(({}, testInfo) => {
   test.skip(sizeOf(testInfo) !== "desktop", "Server behaviour: one size is enough.");

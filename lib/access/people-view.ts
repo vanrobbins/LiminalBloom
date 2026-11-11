@@ -23,7 +23,8 @@ export type PersonRow = {
 };
 
 export type InvitationRow = {
-  id: string;
+  /** The id is the invite link (/invite/<id>), so it is null unless the viewer may act on this invitation (`canAct`). */
+  id: string | null;
   email: string;
   roleName: string;
   /** ISO text, so it crosses into client components. */

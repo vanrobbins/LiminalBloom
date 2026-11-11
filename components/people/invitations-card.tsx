@@ -22,19 +22,19 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function copy(invite: InvitationRow) {
+  async function copy(id: string) {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/invite/${invite.id}`);
+      await navigator.clipboard.writeText(`${window.location.origin}/invite/${id}`);
       toast({ tone: "success", title: "Link copied" });
     } catch {
       toast({ tone: "error", title: "Couldn't copy the link", description: "Try again." });
     }
   }
 
-  async function cancel(invite: InvitationRow) {
-    setBusy(invite.id);
+  async function cancel(id: string) {
+    setBusy(id);
     try {
-      const result = await cancelInvitationAction(invite.id);
+      const result = await cancelInvitationAction(id);
       if (result.status === "cancelled") toast({ tone: "success", title: `Cancelled the invitation for ${result.email}` });
       else if (result.status === "gone") toast({ tone: "error", title: "This invitation was already used or cancelled." });
       else toast({ tone: "error", title: refusalText("forbidden", "").message });
@@ -53,26 +53,30 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
         <InfoPopover term="invitation" />
       </h2>
       <ul className="mt-2 flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
-        {invitations.map((i) => (
-          <li key={i.id} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="font-medium text-ink wrap-break-word">{i.email}</span>
-              <span className="text-sm text-ink-muted">
-                {i.roleName} role · {i.expired ? "Expired" : "Expires"} <LocalTime at={i.expiresAt} />
+        {invitations.map((i, n) => {
+          // A row with no id is read-only (the server withholds the id, which is the link), so its key is its place in the list.
+          const id = i.id;
+          return (
+            <li key={id ?? `read-only-${n}`} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="font-medium text-ink wrap-break-word">{i.email}</span>
+                <span className="text-sm text-ink-muted">
+                  {i.roleName} role · {i.expired ? "Expired" : "Expires"} <LocalTime at={i.expiresAt} />
+                </span>
               </span>
-            </span>
-            {i.canAct && !i.expired ? (
-              <Button variant="secondary" onClick={() => copy(i)} aria-label={`Copy link for ${i.email}`}>
-                Copy link
-              </Button>
-            ) : null}
-            {i.canAct ? (
-              <Button variant="quiet-danger" onClick={() => cancel(i)} loading={busy === i.id} loadingText="Cancelling…" aria-label={`Cancel invitation for ${i.email}`}>
-                Cancel
-              </Button>
-            ) : null}
-          </li>
-        ))}
+              {id !== null && !i.expired ? (
+                <Button variant="secondary" onClick={() => copy(id)} aria-label={`Copy link for ${i.email}`}>
+                  Copy link
+                </Button>
+              ) : null}
+              {id !== null ? (
+                <Button variant="quiet-danger" onClick={() => cancel(id)} loading={busy === id} loadingText="Cancelling…" aria-label={`Cancel invitation for ${i.email}`}>
+                  Cancel
+                </Button>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );

@@ -98,6 +98,20 @@ describe("peopleViewFor", () => {
     expect(byRole["Assistant Manager"]).toMatchObject({ canAct: false, expired: false });
   });
 
+  it("never sends the id of an invitation the viewer can't act on: the id is the link", async () => {
+    const s = await makeStoreWithRoles("pv-inv-id");
+    const vmm = await viewerIn(s.store, s.roles, "vm_manager");
+    const mine = await makeInvitation(s.store, vmm.user.id, s.roles.sales_associate);
+    const above = await makeInvitation(s.store, vmm.user.id, s.roles.assistant_manager);
+    await db.update(invitation).set({ email: "boss@example.com" }).where(eq(invitation.id, above)); // the helper's address contains the id
+    const view = await peopleViewFor(vmm);
+    // What the page hands the client is this object, serialised.
+    const sent = JSON.stringify(view);
+    expect(sent).toContain(mine);
+    expect(sent).not.toContain(above);
+    expect(view.invitations.find((i) => i.roleName === "Assistant Manager")).toMatchObject({ canAct: false, id: null });
+  });
+
   it("is only this store, and says so when the viewer is the sole Store Manager or has no role", async () => {
     const s = await makeStoreWithRoles("pv-sole");
     await makeStoreWithRoles("pv-sole-other");
