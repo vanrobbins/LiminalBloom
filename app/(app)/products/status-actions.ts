@@ -5,24 +5,37 @@
 
 import { z } from "zod";
 
-import { requireMember } from "@/lib/current-member";
+import { statusChangeNeeds } from "@/lib/access/rank";
+import { requireSwitchForAction } from "@/lib/current-member";
 import type { ProductStatus } from "@/lib/product-status";
 import { productDetail, type ProductRow } from "@/lib/products/queries";
 import { statusInput } from "@/lib/products/schemas";
-import { setProductStatus } from "@/lib/products/write";
+import { productStatus, setProductStatus } from "@/lib/products/write";
 
 const isVersion = (v: number) => Number.isInteger(v) && v >= 1;
 
-export async function changeStatus(
-  productId: string,
-  expectedVersion: number,
-  status: ProductStatus,
-): Promise<{ status: "saved"; version: number } | { status: "conflict"; product: ProductRow | null }> {
-  const { activeStoreId } = await requireMember();
+export type StatusReply = { status: "saved"; version: number } | { status: "conflict"; product: ProductRow | null } | { status: "forbidden" };
+
+export async function changeStatus(productId: string, expectedVersion: number, status: ProductStatus): Promise<StatusReply> {
+  // Which switch the change needs depends on the status it starts from, and the browser's
+  // idea of that is only a hint: read it here, check against what the database holds.
+  const view = await requireSwitchForAction("view");
+  if (view.status === "forbidden") return { status: "forbidden" };
+  const { activeStoreId } = view.member;
   if (!z.uuid().safeParse(productId).success || !statusInput.safeParse(status).success || !isVersion(expectedVersion)) {
     return { status: "conflict", product: null };
   }
-  const result = await setProductStatus(activeStoreId, productId, expectedVersion, status);
+  const current = await productStatus(activeStoreId, productId);
+  const stale = async (): Promise<StatusReply> => ({ status: "conflict", product: (await productDetail(activeStoreId, productId))?.product ?? null });
+  if (current === null) return stale();
+  const needs = statusChangeNeeds(current, status);
+  // Already there (another device got to it first): show what is true, change nothing.
+  if (needs === "unchanged") return stale();
+  const allowed = await requireSwitchForAction(needs);
+  if (allowed.status === "forbidden") return { status: "forbidden" };
+
+  // The write matches only while the product still has the status just checked.
+  const result = await setProductStatus(activeStoreId, productId, expectedVersion, current, status);
   if (result.status === "saved") return { status: "saved", version: result.version };
-  return { status: "conflict", product: (await productDetail(activeStoreId, productId))?.product ?? null };
+  return stale();
 }

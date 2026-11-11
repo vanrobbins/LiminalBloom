@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-query";
 import { Input } from "@/components/ui/input";
+import { can, type Holder } from "@/lib/access/can";
 import type { Layout } from "@/lib/layout/types";
 import type { SearchResult } from "@/lib/products/queries";
 import type { SearchInput } from "@/lib/products/schemas";
@@ -28,6 +29,8 @@ type SearchScreenProps = {
   categories: { id: string; name: string }[];
   colors: string[];
   layout: Layout;
+  /** Whose switches decide which controls show; the server checks them again. */
+  member: Holder;
   initialTotal?: number;
   /** The store has no products at all (not just none matching). */
   isCatalogEmpty?: boolean;
@@ -35,7 +38,7 @@ type SearchScreenProps = {
 
 const DESKTOP_QUERY = "(min-width: 1024px)";
 
-export function SearchScreen({ initial, initialResults, categories, colors, layout, initialTotal = initialResults.length, isCatalogEmpty = false }: SearchScreenProps) {
+export function SearchScreen({ initial, initialResults, categories, colors, layout, member, initialTotal = initialResults.length, isCatalogEmpty = false }: SearchScreenProps) {
   const { input, results, total, isPending, isOffline, isLoadingMore, update, showMore, patchProduct, removeProduct } = useSearch(initial, initialResults, initialTotal);
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
@@ -88,7 +91,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
     // The panel narrows on tablets so the results keep room for whole words.
     <div className={`mx-auto grid w-full gap-6 ${open ? "max-w-6xl md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]" : "max-w-2xl lg:max-w-5xl"}`}>
       <div className="min-w-0">
-        <PageHeader title="Products" actions={<ProductsActions />} />
+        <PageHeader title="Products" actions={<ProductsActions member={member} />} />
         <form role="search" onSubmit={(event) => event.preventDefault()}>
           <Input
             label="Search products"
@@ -113,8 +116,9 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
           hasFilters={hasFilters(input)}
           onOpen={setOpenId}
           onClear={clear}
-          onDeleted={isDesktop ? removeProduct : undefined}
+          onDeleted={isDesktop && can(member, "products.edit") ? removeProduct : undefined}
           isCatalogEmpty={isCatalogEmpty && results.length === 0 && total === 0}
+          canEdit={can(member, "products.edit")}
         />
         {canShowMore ? (
           <div className="mt-4 flex justify-center">
@@ -130,6 +134,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
       <LocationSheet
         result={open}
         layout={layout}
+        member={member}
         onClose={close}
         onChanged={patchProduct}
       />

@@ -20,9 +20,9 @@ import { toast } from "@/lib/toast";
 
 import { PublishDialog } from "./publish-dialog";
 
-type DraftBarProps = { fixtureId: string; row: PlanogramRow | null; hasDraft: boolean; isEditing: boolean; draftVersion: number | null; latestNumber: number | null; onAdd: () => void; yieldOnPhone?: boolean; inline?: boolean };
+type DraftBarProps = { fixtureId: string; row: PlanogramRow | null; hasDraft: boolean; isEditing: boolean; draftVersion: number | null; latestNumber: number | null; onAdd: () => void; yieldOnPhone?: boolean; inline?: boolean; canPublish: boolean };
 
-export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, latestNumber, onAdd, yieldOnPhone = false, inline = false }: DraftBarProps) {
+export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, latestNumber, onAdd, yieldOnPhone = false, inline = false, canPublish }: DraftBarProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<"start" | "discard" | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -32,7 +32,7 @@ export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, la
     setBusy("start");
     try {
       const reply = await startDraftAction(fixtureId, row?.version ?? null);
-      if (reply.status === "refused") toast({ tone: "error", title: reply.message });
+      if (reply.status !== "saved") toast({ tone: "error", title: reply.message });
       router.refresh();
     } catch {
       toast({ tone: "error", title: "Couldn't start the draft", description: "Check the connection and try again." });
@@ -76,9 +76,11 @@ export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, la
               <Button variant="secondary" className="flex-1 md:flex-none" onClick={onAdd}>
                 Add product
               </Button>
-              <Button className="flex-1 md:flex-none" onClick={() => setPublishing(true)}>
-                Publish…
-              </Button>
+              {canPublish ? (
+                <Button className="flex-1 md:flex-none" onClick={() => setPublishing(true)}>
+                  Publish…
+                </Button>
+              ) : null}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="secondary" icon aria-label="More draft actions" className="shrink-0">

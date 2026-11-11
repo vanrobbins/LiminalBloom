@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import { ProductImage } from "@/components/products/product-image";
 import { InfoPopover } from "@/components/ui/info-popover";
+import type { Holder } from "@/lib/access/can";
 import type { Layout } from "@/lib/layout/types";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 import type { ProductRow, SearchResult } from "@/lib/products/queries";
@@ -15,9 +16,9 @@ import { FaceGrid } from "./face-grid";
 import { LocationMap } from "./location-map";
 import { StatusControl } from "./status-control";
 
-type LocationDetailsProps = { result: SearchResult; layout: Layout; onChanged: (product: ProductRow) => void };
+type LocationDetailsProps = { result: SearchResult; layout: Layout; member: Holder; onChanged: (product: ProductRow) => void };
 
-export function LocationDetails({ result, layout, onChanged }: LocationDetailsProps) {
+export function LocationDetails({ result, layout, member, onChanged }: LocationDetailsProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex gap-4">
@@ -37,7 +38,7 @@ export function LocationDetails({ result, layout, onChanged }: LocationDetailsPr
           ) : null}
         </dl>
       </div>
-      <StatusControl product={result} onChanged={onChanged} />
+      <StatusControl product={result} member={member} onChanged={onChanged} />
       <section aria-labelledby="where-heading" className="flex flex-col gap-4">
         <h3 id="where-heading" className="font-semibold text-ink">
           Where it goes

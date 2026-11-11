@@ -5,7 +5,7 @@
 
 import { z } from "zod";
 
-import { requireMember } from "@/lib/current-member";
+import { requireSwitchForAction } from "@/lib/current-member";
 import { productFits } from "@/lib/planograms/draft-sources";
 import { previewPublish, publishDraft, restoreVersion, type Preview } from "@/lib/planograms/publish";
 import { draftState } from "@/lib/planograms/queries";
@@ -16,17 +16,26 @@ import { discardDraft, saveChange, setDueDate, startDraft } from "@/lib/planogra
 import { searchProducts } from "@/lib/products/queries";
 import { searchInput } from "@/lib/products/schemas";
 
-export type DraftReply = { status: "saved"; draft: DraftState; notice?: string } | { status: "refused"; message: string; draft: DraftState | null };
-export type DoneReply = { status: "saved"; message: string } | { status: "refused"; message: string };
+// "forbidden" is the role's own answer (the switch is missing), told apart from a "refused" change so the screen never
+// mistakes it for a draft that went away. Its words are plain, ready to show.
+export type DraftReply =
+  | { status: "saved"; draft: DraftState; notice?: string }
+  | { status: "refused"; message: string; draft: DraftState | null }
+  | { status: "forbidden"; message: string; draft: null };
+export type DoneReply = { status: "saved"; message: string } | { status: "refused"; message: string } | { status: "forbidden"; message: string };
 
 const CONFLICT = "Changed on another device";
+const NOT_ALLOWED_DRAFT = "Your role can't change planogram drafts.";
+const NOT_ALLOWED_PUBLISH = "Your role can't publish planograms.";
 const RELOAD = "Couldn't save that. Reload and try again.";
 const uuid = z.uuid();
 const optionalVersion = versionInput.nullable();
 const isId = (id: string) => uuid.safeParse(id).success;
 
 export async function startDraftAction(fixtureId: string, expectedVersion: number | null): Promise<DoneReply> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.draft");
+  if (check.status === "forbidden") return { status: "forbidden", message: NOT_ALLOWED_DRAFT };
+  const { activeStoreId } = check.member;
   if (!isId(fixtureId) || !optionalVersion.safeParse(expectedVersion).success) return { status: "refused", message: RELOAD };
   const result = await startDraft(activeStoreId, fixtureId, expectedVersion);
   return result.status === "saved" ? { status: "saved", message: "Draft started" } : { status: "refused", message: CONFLICT };
@@ -38,7 +47,9 @@ export async function startDraftAction(fixtureId: string, expectedVersion: numbe
  * returned, so this device works in it rather than failing (Review Focus 3).
  */
 export async function beginDraftAction(fixtureId: string, expectedVersion: number | null): Promise<DraftReply> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.draft");
+  if (check.status === "forbidden") return { status: "forbidden", message: NOT_ALLOWED_DRAFT, draft: null };
+  const { activeStoreId } = check.member;
   if (!isId(fixtureId) || !optionalVersion.safeParse(expectedVersion).success) return { status: "refused", message: RELOAD, draft: null };
   const result = await startDraft(activeStoreId, fixtureId, expectedVersion);
   const draft = await draftState(activeStoreId, fixtureId);
@@ -47,7 +58,9 @@ export async function beginDraftAction(fixtureId: string, expectedVersion: numbe
 }
 
 export async function saveChangeAction(fixtureId: string, raw: unknown): Promise<DraftReply> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.draft");
+  if (check.status === "forbidden") return { status: "forbidden", message: NOT_ALLOWED_DRAFT, draft: null };
+  const { activeStoreId } = check.member;
   const parsed = changeInput.safeParse(raw);
   if (!isId(fixtureId) || !parsed.success) return { status: "refused", message: RELOAD, draft: null };
   const result = await saveChange(activeStoreId, fixtureId, parsed.data);
@@ -57,19 +70,25 @@ export async function saveChangeAction(fixtureId: string, raw: unknown): Promise
 }
 
 export async function reloadDraftAction(fixtureId: string): Promise<DraftState | null> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.draft");
+  if (check.status === "forbidden") return null;
+  const { activeStoreId } = check.member;
   return isId(fixtureId) ? draftState(activeStoreId, fixtureId) : null;
 }
 
 export async function discardDraftAction(fixtureId: string, expectedVersion: number): Promise<DoneReply> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.draft");
+  if (check.status === "forbidden") return { status: "forbidden", message: NOT_ALLOWED_DRAFT };
+  const { activeStoreId } = check.member;
   if (!isId(fixtureId) || !versionInput.safeParse(expectedVersion).success) return { status: "refused", message: RELOAD };
   const result = await discardDraft(activeStoreId, fixtureId, expectedVersion);
   return result.status === "saved" ? { status: "saved", message: "Draft discarded" } : { status: "refused", message: CONFLICT };
 }
 
 export async function setDueDateAction(fixtureId: string, dueDate: string | null): Promise<DoneReply> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.publish");
+  if (check.status === "forbidden") return { status: "forbidden", message: NOT_ALLOWED_PUBLISH };
+  const { activeStoreId } = check.member;
   const date = dueDateInput.safeParse(dueDate);
   if (!isId(fixtureId) || !date.success) return { status: "refused", message: "Choose a date." };
   const result = await setDueDate(activeStoreId, fixtureId, date.data);
@@ -79,12 +98,16 @@ export async function setDueDateAction(fixtureId: string, dueDate: string | null
 }
 
 export async function previewPublishAction(fixtureId: string): Promise<Preview | null> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.publish");
+  if (check.status === "forbidden") return null;
+  const { activeStoreId } = check.member;
   return isId(fixtureId) ? previewPublish(activeStoreId, fixtureId) : null;
 }
 
 export async function publishAction(fixtureId: string, expectedVersion: number, basedOnVersion: number | null, summary: string): Promise<DoneReply> {
-  const { activeStoreId, user } = await requireMember();
+  const check = await requireSwitchForAction("planograms.publish");
+  if (check.status === "forbidden") return { status: "forbidden", message: NOT_ALLOWED_PUBLISH };
+  const { activeStoreId, user } = check.member;
   const text = summaryInput.safeParse(summary);
   if (!isId(fixtureId) || !versionInput.safeParse(expectedVersion).success || !optionalVersion.safeParse(basedOnVersion).success || !text.success) {
     return { status: "refused", message: "Keep the summary under 200 characters." };
@@ -105,7 +128,9 @@ export async function publishAction(fixtureId: string, expectedVersion: number, 
 }
 
 export async function restoreAction(fixtureId: string, expectedVersion: number, number: number): Promise<DoneReply> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.publish");
+  if (check.status === "forbidden") return { status: "forbidden", message: NOT_ALLOWED_PUBLISH };
+  const { activeStoreId } = check.member;
   if (!isId(fixtureId) || !versionInput.safeParse(expectedVersion).success || !versionInput.safeParse(number).success) {
     return { status: "refused", message: RELOAD };
   }
@@ -116,7 +141,9 @@ export async function restoreAction(fixtureId: string, expectedVersion: number, 
 
 /** The add form's product search: the library's own trigram search, with footprints. */
 export async function pickerSearch(q: string): Promise<ProductFit[]> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("planograms.draft");
+  if (check.status === "forbidden") return [];
+  const { activeStoreId } = check.member;
   const input = searchInput.safeParse({ q });
   if (!input.success) return [];
   const rows = await searchProducts(activeStoreId, input.data, 12);

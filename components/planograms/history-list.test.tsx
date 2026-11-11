@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EVERYTHING } from "@/lib/access/test-guard";
 import { HistoryList } from "./history-list";
 
 const actions = vi.hoisted(() => ({ restoreAction: vi.fn() }));
@@ -18,7 +19,7 @@ describe("HistoryList", () => {
   beforeEach(() => vi.resetAllMocks());
 
   it("lists versions newest first with their changes", () => {
-    render(<HistoryList fixtureId="fx" expectedVersion={9} entries={entries} />);
+    render(<HistoryList member={EVERYTHING} fixtureId="fx" expectedVersion={9} entries={entries} />);
     const items = screen.getAllByRole("article");
     expect(within(items[0]).getByRole("heading")).toHaveTextContent("Version 2");
     expect(items[0]).toHaveTextContent(/Oct 8, .+ · Van/);
@@ -28,9 +29,15 @@ describe("HistoryList", () => {
     expect(within(items[1]).getByRole("link", { name: "View version 1" })).toHaveAttribute("href", "/planograms/fx?version=1");
   });
 
+  it("offers no Restore without planograms.publish, but still lets the version be viewed", () => {
+    render(<HistoryList member={{ switches: ["view", "planograms.draft"] }} fixtureId="fx" expectedVersion={9} entries={entries} />);
+    expect(screen.queryByRole("button", { name: /Restore/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "View version 1" })).toBeInTheDocument();
+  });
+
   it("restores after a confirmation and opens the draft", async () => {
     actions.restoreAction.mockResolvedValue({ status: "saved", message: "Restored version 1 as a draft." });
-    render(<HistoryList fixtureId="fx" expectedVersion={9} entries={entries} />);
+    render(<HistoryList member={EVERYTHING} fixtureId="fx" expectedVersion={9} entries={entries} />);
     await userEvent.click(screen.getByRole("button", { name: "Restore version 1" }));
     await userEvent.click(screen.getByRole("button", { name: "Restore as draft" }));
     expect(actions.restoreAction).toHaveBeenCalledWith("fx", 9, 1);

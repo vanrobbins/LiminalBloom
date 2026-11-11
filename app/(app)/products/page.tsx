@@ -12,7 +12,8 @@ import { fromSearchParams, toSearchParams } from "@/lib/products/search-params";
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { activeStoreId } = await requireMember();
+  const member = await requireMember();
+  const { activeStoreId } = member;
   const initial = fromSearchParams(await searchParams);
   const [page, categories, colors, layout] = await Promise.all([
     search(activeStoreId, initial),
@@ -34,6 +35,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       categories={categories.map(({ id, name }) => ({ id, name }))}
       colors={colors}
       layout={layout}
+      member={member}
       // Every product belongs to a category, so their counts add up to the catalog.
       isCatalogEmpty={categories.every((c) => c.productCount === 0)}
     />

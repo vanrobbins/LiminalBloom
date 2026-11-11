@@ -4,6 +4,9 @@
 
 import type { Switch } from "./switches";
 
-export function can(member: { switches: readonly Switch[] }, wanted: Switch): boolean {
+/** Anything that carries switches: a Member from lib/current-member.ts, or the part of one a component needs. */
+export type Holder = { switches: readonly Switch[] };
+
+export function can(member: Holder, wanted: Switch): boolean {
   return member.switches.includes(wanted);
 }

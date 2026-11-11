@@ -5,23 +5,27 @@
 
 import { z } from "zod";
 
-import { requireMember } from "@/lib/current-member";
+import { statusChangeNeeds } from "@/lib/access/rank";
+import { requireSwitchForAction } from "@/lib/current-member";
 import { deleteImagesQuietly, withoutSeedImages } from "@/lib/products/images";
 import { listCategories, type CategoryRow } from "@/lib/products/queries";
 import { categoryInput, fieldErrors, productInput } from "@/lib/products/schemas";
 import { createCategory } from "@/lib/products/category-write";
-import { createProduct, deleteProduct, updateProduct } from "@/lib/products/write";
+import { createProduct, deleteProduct, productStatus, updateProduct } from "@/lib/products/write";
 
 export type FormResult =
   | { status: "saved"; id: string }
   | { status: "invalid"; errors: Record<string, string> }
-  | { status: "conflict" };
+  | { status: "conflict" }
+  | { status: "forbidden" };
 
 const uuid = z.uuid();
 const isVersion = (v: number) => Number.isInteger(v) && v >= 1;
 
 export async function saveProduct(productId: string | null, expectedVersion: number | null, raw: unknown): Promise<FormResult> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("products.edit");
+  if (check.status === "forbidden") return { status: "forbidden" };
+  const { activeStoreId } = check.member;
   const parsed = productInput.safeParse(raw);
   if (!parsed.success) return { status: "invalid", errors: fieldErrors(parsed.error) };
 
@@ -31,6 +35,14 @@ export async function saveProduct(productId: string | null, expectedVersion: num
   }
   const isEdit = productId !== null && expectedVersion !== null;
   if (isEdit && (!uuid.safeParse(productId).success || !isVersion(expectedVersion))) return { status: "conflict" };
+
+  // The form carries a status too. Changing it needs the same switch as the status control, so
+  // products.edit alone is no way round products.stock and products.sale. A new product starts in stock.
+  const from = isEdit ? await productStatus(activeStoreId, productId) : "in_stock";
+  if (from && from !== parsed.data.status) {
+    const needs = statusChangeNeeds(from, parsed.data.status);
+    if (needs !== "unchanged" && (await requireSwitchForAction(needs)).status === "forbidden") return { status: "forbidden" };
+  }
   const result = isEdit
     ? await updateProduct(activeStoreId, productId, expectedVersion, parsed.data)
     : await createProduct(activeStoreId, parsed.data);
@@ -47,8 +59,10 @@ export async function saveProduct(productId: string | null, expectedVersion: num
   }
 }
 
-export async function removeProduct(productId: string, expectedVersion: number): Promise<{ status: "saved" } | { status: "conflict" }> {
-  const { activeStoreId } = await requireMember();
+export async function removeProduct(productId: string, expectedVersion: number): Promise<{ status: "saved" } | { status: "conflict" } | { status: "forbidden" }> {
+  const check = await requireSwitchForAction("products.edit");
+  if (check.status === "forbidden") return { status: "forbidden" };
+  const { activeStoreId } = check.member;
   if (!uuid.safeParse(productId).success || !isVersion(expectedVersion)) return { status: "conflict" };
   const result = await deleteProduct(activeStoreId, productId, expectedVersion);
   if (result.status !== "saved") return { status: "conflict" };
@@ -58,8 +72,10 @@ export async function removeProduct(productId: string, expectedVersion: number):
 }
 
 /** "New category…" from the product form: a name, with the usual defaults. */
-export async function addCategory(name: string): Promise<{ status: "saved"; category: CategoryRow } | { status: "invalid"; message: string }> {
-  const { activeStoreId } = await requireMember();
+export async function addCategory(name: string): Promise<{ status: "saved"; category: CategoryRow } | { status: "invalid"; message: string } | { status: "forbidden" }> {
+  const check = await requireSwitchForAction("products.edit");
+  if (check.status === "forbidden") return { status: "forbidden" };
+  const { activeStoreId } = check.member;
   const parsed = categoryInput.safeParse({ name, hungColumns: 2, hungRows: 3, foldedColumns: 4, foldedRows: 2 });
   if (!parsed.success) return { status: "invalid", message: fieldErrors(parsed.error).name ?? "Enter a name." };
   const result = await createCategory(activeStoreId, parsed.data);

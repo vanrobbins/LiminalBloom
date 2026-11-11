@@ -42,6 +42,10 @@ export function CategoryForm({ category, onDone }: { category?: CategoryRow; onD
         setErrors(result.errors);
         return;
       }
+      if (result.status === "forbidden") {
+        setErrors({ form: "Your role can't change categories." });
+        return;
+      }
       if (result.status === "conflict") toast({ tone: "error", title: "Changed on another device", description: "The current values are loaded." });
       onDone();
     } catch {

@@ -90,7 +90,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
         .catch(() => {});
     }
     const reply = await pending;
-    if (!reply.draft) return { message: reply.status === "refused" ? reply.message : CONFLICT };
+    if (!reply.draft) return { message: reply.message };
     const placement = matchPlacement(item, reply.draft.placements);
     return placement ? { placement } : { message: CONFLICT };
   }

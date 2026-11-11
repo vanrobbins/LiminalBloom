@@ -114,6 +114,9 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
           stop("You were signed out.", "Your last change was not saved. Sign in to keep editing.");
           router.push("/sign-in");
           return;
+        case "forbidden":
+          stop("Your role can't change the map.", "Your last change was not saved.");
+          return;
         case "store-changed":
           stop("You switched stores in another tab.", "Reloading, so nothing lands in the wrong store.");
           // Long enough to read the message first.

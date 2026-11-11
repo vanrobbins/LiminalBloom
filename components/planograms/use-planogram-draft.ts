@@ -104,6 +104,11 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
         // Folded product moved onto a frame rack hangs instead (frame racks spec §3); the builder says so, with its Undo.
         return { saved: true, draft: reply.draft, ...(reply.notice ? { notice: reply.notice } : {}), ...(was ? { before: was } : {}) };
       }
+      if (reply.status === "forbidden") {
+        // The role lost the switch since the page loaded: nothing was written, and the draft is still there.
+        setStatus({ kind: "refused", message: reply.message });
+        return { saved: false, message: reply.message };
+      }
       if (!reply.draft) {
         // Published or discarded on another device: the page reloads to what's there now, and nothing queued is sent.
         round.current += 1;

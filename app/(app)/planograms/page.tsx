@@ -4,6 +4,7 @@ import { PlanogramList } from "@/components/planograms/planogram-list";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { can } from "@/lib/access/can";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
 import { planogramList } from "@/lib/planograms/list";
@@ -15,7 +16,8 @@ import { InfoPopover } from "@/components/ui/info-popover";
 export const dynamic = "force-dynamic";
 
 export default async function PlanogramsPage() {
-  const { activeStoreId } = await requireMember();
+  const member = await requireMember();
+  const { activeStoreId } = member;
   const [layout, summaries, zone] = await Promise.all([loadLayout(activeStoreId), planogramSummaries(activeStoreId), storeTimezone(activeStoreId)]);
   const today = storeToday(zone);
   const groups = planogramList(layout, summaries);
@@ -27,9 +29,11 @@ export default async function PlanogramsPage() {
         <Card className="flex flex-col items-start gap-3">
           <p className="text-ink">No fixtures that show product yet.</p>
           <p className="text-sm text-ink-muted">Add tables, racks or wall bays to the store layout, and each gets a planogram.</p>
-          <Button asChild>
-            <a href="/layout/edit">Edit the store layout</a>
-          </Button>
+          {can(member, "layout.edit") ? (
+            <Button asChild>
+              <a href="/layout/edit">Edit the store layout</a>
+            </Button>
+          ) : null}
         </Card>
       ) : (
         <PlanogramList groups={groups} today={today} storeKey={activeStoreId} />

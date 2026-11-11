@@ -12,6 +12,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { can, type Holder } from "@/lib/access/can";
 import type { PlanogramRow, PublishedVersion } from "@/lib/planograms/queries";
 import { draftIssues } from "@/lib/planograms/rules";
 import { combinedBlocks, singleBlock } from "@/lib/planograms/set-grid";
@@ -41,10 +42,15 @@ type PlanogramScreenProps = {
   highlightProductId: string | null;
   dueDate: string | null;
   today: string;
+  /** Whose switches decide which controls show; the server checks them again. */
+  member: Holder;
 };
 
-export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewing, looks, highlightProductId, dueDate, today }: PlanogramScreenProps) {
+export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing, looks, highlightProductId, dueDate, today, member }: PlanogramScreenProps) {
   const router = useRouter();
+  const canDraft = can(member, "planograms.draft");
+  // A draft is for those who may draft: without the switch the page reads as the published planogram only.
+  const initialDraft = canDraft ? pageDraft : null;
   const { draft, status, save, adopt } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
   const { face, slideFrom, showFace, onSwipe } = useFaceView(scope, () => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
@@ -55,7 +61,7 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
   const layout = scope.isSet ? combinedBlocks(scope) : singleBlock(face);
   const isEditing = draft !== null && view === "draft" && viewing === null;
   // The latest version is movable too: its first change starts a draft (Part 2 spec §4 "Draft").
-  const canMove = viewing === null && (isEditing || (draft === null && latest !== null));
+  const canMove = canDraft && viewing === null && (isEditing || (draft === null && latest !== null));
   const placements = draft?.placements ?? [];
   const issues = isEditing ? draftIssues(placements, scope.faces) : new Map<string, string>();
   const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks);
@@ -91,7 +97,6 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
     setView(next);
     select(null);
   }
-
 
   const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, save, setSelectedId, select, showFace });
 
@@ -136,7 +141,8 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
     );
   }
 
-  const draftBar = (inline: boolean) => (
+  const draftBar = (inline: boolean) =>
+    canDraft ? (
     <DraftBar
       fixtureId={scope.fixtureId}
       row={row}
@@ -147,21 +153,22 @@ export function PlanogramScreen({ scope, row, latest, draft: initialDraft, viewi
       onAdd={() => setAdding(true)}
       yieldOnPhone={selectedPlacement !== null}
       inline={inline}
+      canPublish={can(member, "planograms.publish")}
     />
-  );
-  const hasBar = !isEmpty && !(draft !== null && !isEditing);
+    ) : null;
+  const hasBar = canDraft && !isEmpty && !(draft !== null && !isEditing);
 
   return (
     <div className="flex flex-col gap-4">
       {isEmpty ? null : (
-        <StatusRow fixtureId={scope.fixtureId} latest={latest} hasDraft={draft !== null} view={view} onView={showView} dueDate={dueDate} today={today} status={isEditing ? status : null}>
+        <StatusRow fixtureId={scope.fixtureId} latest={latest} hasDraft={draft !== null} view={view} onView={showView} dueDate={dueDate} canSetDueDate={can(member, "planograms.publish")} today={today} status={isEditing ? status : null}>
           {draftBar(false)}
         </StatusRow>
       )}
       {isEmpty ? (
         <div data-empty className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-line p-8">
           <p className="text-lg font-semibold text-ink">No planogram yet</p>
-          <p className="text-sm text-ink-muted">A draft starts from what&apos;s on the floor now.</p>
+          {canDraft ? <p className="text-sm text-ink-muted">A draft starts from what&apos;s on the floor now.</p> : null}
           {draftBar(true)}
         </div>
       ) : (

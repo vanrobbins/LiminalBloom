@@ -19,13 +19,15 @@ type SearchResultsProps = {
   onDeleted?: (productId: string) => void;
   /** The store has no products at all, so the empty state says how to start. */
   isCatalogEmpty?: boolean;
+  /** Whether the person may add products; without it the empty state does not tell them to. */
+  canEdit?: boolean;
 };
 
-export function SearchResults({ results, openId = null, query, hasFilters, onOpen, onClear, onDeleted, isCatalogEmpty = false }: SearchResultsProps) {
+export function SearchResults({ results, openId = null, query, hasFilters, onOpen, onClear, onDeleted, isCatalogEmpty = false, canEdit = false }: SearchResultsProps) {
   if (results.length === 0 && isCatalogEmpty) {
     return (
       <p className="mt-6 rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">
-        No products yet. Add the first one, or set up categories.
+        {canEdit ? "No products yet. Add the first one, or set up categories." : "No products yet."}
       </p>
     );
   }

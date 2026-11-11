@@ -5,7 +5,7 @@
 
 import { z } from "zod";
 
-import { requireMember } from "@/lib/current-member";
+import { requireSwitchForAction } from "@/lib/current-member";
 import { deleteImagesQuietly, withoutSeedImages } from "@/lib/products/images";
 import { categoryInput, fieldErrors } from "@/lib/products/schemas";
 import { createCategory, deleteCategory, updateCategory } from "@/lib/products/category-write";
@@ -13,13 +13,16 @@ import { createCategory, deleteCategory, updateCategory } from "@/lib/products/c
 export type CategoryFormResult =
   | { status: "saved" }
   | { status: "invalid"; errors: Record<string, string> }
-  | { status: "conflict" };
+  | { status: "conflict" }
+  | { status: "forbidden" };
 
 const uuid = z.uuid();
 const isVersion = (v: number) => Number.isInteger(v) && v >= 1;
 
 export async function saveCategory(id: string | null, expectedVersion: number | null, raw: unknown): Promise<CategoryFormResult> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("products.edit");
+  if (check.status === "forbidden") return { status: "forbidden" };
+  const { activeStoreId } = check.member;
   const parsed = categoryInput.safeParse(raw);
   if (!parsed.success) return { status: "invalid", errors: fieldErrors(parsed.error) };
   // An edit needs both its id and the version it was loaded at; one without the other is not a create.
@@ -38,8 +41,10 @@ export async function removeCategory(
   id: string,
   expectedVersion: number,
   expectedCount: number,
-): Promise<{ status: "saved" } | { status: "conflict" } | { status: "count-changed"; count: number }> {
-  const { activeStoreId } = await requireMember();
+): Promise<{ status: "saved" } | { status: "conflict" } | { status: "count-changed"; count: number } | { status: "forbidden" }> {
+  const check = await requireSwitchForAction("products.edit");
+  if (check.status === "forbidden") return { status: "forbidden" };
+  const { activeStoreId } = check.member;
   if (!uuid.safeParse(id).success || !isVersion(expectedVersion) || !Number.isInteger(expectedCount) || expectedCount < 0) {
     return { status: "conflict" };
   }

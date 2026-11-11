@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
+import { can, type Holder } from "@/lib/access/can";
 import type { ChangeSet } from "@/lib/layout/diff";
 import type { FetchReply, SaveReply } from "@/lib/layout/replies";
 import type { Layout } from "@/lib/layout/types";
@@ -26,6 +27,8 @@ type LayoutScreenProps = {
   looks: Readonly<Record<string, ProductLook>>;
   save: (storeId: string, changes: ChangeSet) => Promise<SaveReply>;
   fetchLatest: (storeId: string) => Promise<FetchReply>;
+  /** Whose switches decide whether Edit shows; the server checks them again. */
+  member: Holder;
 };
 
 /** Changes whenever the loaded layout does, so the viewer starts over from it after editing. */
@@ -36,7 +39,7 @@ function layoutKey(layout: Layout): string {
   return (hash >>> 0).toString(36);
 }
 
-export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest }: LayoutScreenProps) {
+export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest, member }: LayoutScreenProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const key = useMemo(() => layoutKey(layout), [layout]);
@@ -65,10 +68,12 @@ export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLa
       <PageHeader
         title="Store layout"
         actions={
-          <Button variant="secondary" onClick={() => setEditing(true)}>
-            <Pencil aria-hidden="true" strokeWidth={1.75} className="size-4" />
-            Edit
-          </Button>
+          can(member, "layout.edit") ? (
+            <Button variant="secondary" onClick={() => setEditing(true)}>
+              <Pencil aria-hidden="true" strokeWidth={1.75} className="size-4" />
+              Edit
+            </Button>
+          ) : null
         }
       />
       <MapViewer key={key} layout={layout} planograms={planograms} looks={looks} storeKey={storeId} />

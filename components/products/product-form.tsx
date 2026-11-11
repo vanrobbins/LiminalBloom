@@ -13,6 +13,8 @@ import { uploadProductImage } from "@/app/(app)/products/image-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FIELD_CLASSES } from "@/components/ui/password-field";
+import { allowedStatuses } from "@/lib/access/rank";
+import type { Holder } from "@/lib/access/can";
 import { PRODUCT_STATUS, type ProductStatus } from "@/lib/product-status";
 import type { Overrides } from "@/lib/products/footprint";
 import { IMAGE_EXTENSION, type ImageType } from "@/lib/products/image-check";
@@ -31,9 +33,11 @@ type ProductFormProps = {
   categories: CategoryRow[];
   product?: ProductRow;
   overrides?: Overrides;
+  /** Whose switches decide which statuses the Status field offers. */
+  member: Holder;
 };
 
-export function ProductForm({ categories: initialCategories, product, overrides: initialOverrides = {} }: ProductFormProps) {
+export function ProductForm({ categories: initialCategories, product, overrides: initialOverrides = {}, member }: ProductFormProps) {
   const router = useRouter();
   const statusId = useId();
   const [categories, setCategories] = useState(initialCategories);
@@ -53,6 +57,9 @@ export function ProductForm({ categories: initialCategories, product, overrides:
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const category = categories.find((c) => c.id === categoryId);
+  // Only the current status and the changes this person's switches allow; the server checks the same rule.
+  const currentStatus = product?.status ?? "in_stock";
+  const statusChoices = PRODUCT_STATUSES.filter((s) => s === currentStatus || allowedStatuses(currentStatus, new Set(member.switches)).includes(s));
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,6 +82,10 @@ export function ProductForm({ categories: initialCategories, product, overrides:
         setErrors(result.errors);
         return;
       }
+      if (result.status === "forbidden") {
+        toast({ tone: "error", title: "Your role can't make that change", description: "Nothing was saved." });
+        return;
+      }
       if (result.status === "conflict") {
         toast({ tone: "error", title: "Changed on another device", description: "The current details are loaded. Make your change again." });
         router.refresh();
@@ -87,7 +98,9 @@ export function ProductForm({ categories: initialCategories, product, overrides:
           const form = new FormData();
           form.set("image", image, `image.${IMAGE_EXTENSION[image.type as ImageType] ?? "webp"}`);
           const upload = await uploadProductImage(result.id, form);
-          if (upload.status === "error") toast({ tone: "error", title: "Saved, but the image wasn't", description: upload.message });
+          if (upload.status !== "saved") {
+            toast({ tone: "error", title: "Saved, but the image wasn't", description: upload.status === "error" ? upload.message : "Your role can't change images." });
+          }
         } catch {
           toast({ tone: "error", title: "Saved, but the image wasn't", description: "Check your connection, then add the image again." });
         }
@@ -122,8 +135,8 @@ export function ProductForm({ categories: initialCategories, product, overrides:
         <Label.Root htmlFor={statusId} className="text-sm text-ink">
           Status
         </Label.Root>
-        <select id={statusId} name="status" defaultValue={product?.status ?? "in_stock"} className={FIELD_CLASSES}>
-          {PRODUCT_STATUSES.map((s: ProductStatus) => (
+        <select id={statusId} name="status" defaultValue={currentStatus} className={FIELD_CLASSES}>
+          {statusChoices.map((s: ProductStatus) => (
             <option key={s} value={s}>
               {PRODUCT_STATUS[s].label}
             </option>

@@ -14,6 +14,7 @@ import { EMPTY_LAYOUT } from "@/lib/layout/types";
 import type { SearchResult } from "@/lib/products/queries";
 import { searchInput } from "@/lib/products/schemas";
 
+import { EVERYTHING } from "@/lib/access/test-guard";
 import { SearchScreen } from "./search-screen";
 
 const product = (id: string, name: string, overrides?: Partial<SearchResult>): SearchResult => ({
@@ -31,7 +32,7 @@ beforeEach(() => {
 });
 
 const renderScreen = (overrides?: Partial<Parameters<typeof SearchScreen>[0]>) =>
-  render(<SearchScreen initial={searchInput.parse({ q: "p" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} {...overrides} />);
+  render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({ q: "p" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} {...overrides} />);
 
 describe("SearchScreen focus on opening", () => {
   const empty = { initial: searchInput.parse({}), initialResults: [] };
@@ -71,7 +72,7 @@ describe("SearchScreen result rendering", () => {
   });
 
   it("shows singular product for count of 1", () => {
-    render(<SearchScreen initial={searchInput.parse({ q: "p" })} initialResults={[pant]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({ q: "p" })} initialResults={[pant]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
     expect(screen.getByText("1 product")).toBeInTheDocument();
   });
 
@@ -127,17 +128,23 @@ describe("SearchScreen card menu", () => {
 
 describe("SearchScreen empty state", () => {
   it("tells a store with no products how to start", () => {
-    render(<SearchScreen initial={searchInput.parse({})} initialResults={[]} initialTotal={0} isCatalogEmpty categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({})} initialResults={[]} initialTotal={0} isCatalogEmpty categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
     expect(screen.getByText("No products yet. Add the first one, or set up categories.")).toBeInTheDocument();
   });
 
+  it("does not tell someone without products.edit to add a product", () => {
+    render(<SearchScreen member={{ switches: ["products.stock"] }} initial={searchInput.parse({})} initialResults={[]} initialTotal={0} isCatalogEmpty categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    expect(screen.getByText("No products yet.")).toBeInTheDocument();
+    expect(screen.queryByText(/Add the first one/)).toBeNull();
+  });
+
   it("shows empty results message when no products found", () => {
-    render(<SearchScreen initial={searchInput.parse({ q: "xyz" })} initialResults={[]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({ q: "xyz" })} initialResults={[]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
     expect(screen.getByText("0 products")).toBeInTheDocument();
   });
 
   it("renders all-products view with no query", () => {
-    render(<SearchScreen initial={searchInput.parse({ q: "" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({ q: "" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
     expect(screen.getByText("2 products")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /High-Rise Pant/ })).toBeInTheDocument();
   });

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dropStores, makeStore, seedStoreFixtures } from "@/lib/products/test-stores";
+import { EVERYTHING, guardFor, memberWith } from "@/lib/access/test-guard";
 import * as currentMember from "@/lib/current-member";
 
 import { addCategory, removeProduct, saveProduct } from "./actions";
@@ -16,14 +17,8 @@ describe("server actions", () => {
 
   beforeEach(async () => {
     storeId = await makeStore(`actions-${randomUUID()}`);
-    vi.mocked(currentMember.requireMember).mockResolvedValue({
-      kind: "member",
-      user: { id: "member-123", name: "Test User", email: "test@example.com" },
-      stores: [{ id: storeId, name: "Test Store" }],
-      activeStoreId: storeId,
-      role: null,
-      switches: [],
-    });
+    // Everything allowed: these tests are about what the actions do; the switch rules are in edit-actions.access.test.ts.
+    vi.mocked(currentMember.requireSwitchForAction).mockImplementation(guardFor(() => memberWith(storeId, EVERYTHING.switches)));
   });
 
   describe("saveProduct", () => {
