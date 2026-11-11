@@ -96,6 +96,7 @@ export const member = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     role: text("role").default("member").notNull(),
     createdAt: timestamp("created_at").notNull(),
+    roleId: text("role_id"),
   },
   (table) => [
     index("member_organizationId_idx").on(table.organizationId),
@@ -118,6 +119,7 @@ export const invitation = pgTable(
     inviterId: text("inviter_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    roleId: text("role_id"),
   },
   (table) => [
     index("invitation_organizationId_idx").on(table.organizationId),

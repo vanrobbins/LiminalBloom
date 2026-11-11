@@ -83,6 +83,13 @@ export const auth = betterAuth({
     // invitation tables from section 7, which is why products.store_id was
     // deliberately left out until now. See docs/DECISIONS.md.
     organization({
+      schema: {
+        // The app's own role (a role_definitions id). Better Auth's `role` is
+        // left to Better Auth (DECISIONS 09-28). `input: false` so no request
+        // can set it; only the app's own actions write it, with Drizzle.
+        member: { additionalFields: { roleId: { type: "string", required: false, input: false } } },
+        invitation: { additionalFields: { roleId: { type: "string", required: false, input: false } } },
+      },
       organizationHooks: {
         // Every store gets its own encryption key and its settings row the
         // moment it exists, however it was created -- the Server Action or
