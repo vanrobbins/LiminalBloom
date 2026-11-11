@@ -4,8 +4,9 @@
 
 import type { Session, Drag } from "./session-core";
 import { pointsOf, type Command } from "./commands";
-import { snapBend } from "./curve-snap";
-import { bendFromHandle, resizeCurved, snapPoints } from "./curves";
+import { snapBayEnds } from "./bay-snap";
+import { bendWithHandle } from "./curve-snap";
+import { resizeCurved, snapPoints } from "./curves";
 import { dragEntranceEnd } from "./entrances";
 import { resizeFromHandle, resizeLowerTable } from "./fixture-resize";
 import { angleTowards } from "./frames";
@@ -53,6 +54,15 @@ export function planDrag(session: Session, drag: Drag, pointer: Point): { comman
 
   if (target.kind === "fixture" || target.kind === "zone" || target.kind === "entrance") {
     const raw = { x: pointer.x - drag.origin.x, y: pointer.y - drag.origin.y };
+    // A wall bay's end lands on another bay's end before any line does (DECISIONS 11-11).
+    const ends = session.snapping && target.kind === "fixture" ? snapBayEnds(start, movedIds(start, drag.ids), raw, scale) : null;
+    if (ends) {
+      const bay = ends.turned ? start.fixtures.find((f) => f.id === ends.turned?.id) : undefined;
+      const command: Command = bay
+        ? { type: "updateFixture", id: bay.id, changes: { x: bay.x + ends.delta.x, y: bay.y + ends.delta.y, rotation: ends.turned?.rotation } }
+        : { type: "move", ids: drag.ids, delta: ends.delta };
+      return { command, guides: [], meets: ends.meets };
+    }
     const targets = targetsFor(start, movedIds(start, drag.ids));
     const { delta, guides } = snapDelta(movingPoints(start, drag.ids), raw, targets, scale, session.snapping);
     return { command: { type: "move", ids: drag.ids, delta }, guides };
@@ -88,9 +98,9 @@ export function planDrag(session: Session, drag: Drag, pointer: Point): { comman
     case "curve": {
       const f = start.fixtures.find((x) => x.id === ref.fixtureId);
       if (!f) return null;
-      // Pulled onto a curve that runs straight into a nearby wall bay, when one is close (run joins spec §3.1).
-      const { curve, meets } = snapBend(start, f, bendFromHandle(f, drag.origin, pointer, session.snapping), session.snapping);
-      return { command: { type: "updateFixture", id: f.id, changes: { curve } }, guides: [], meets };
+      // Held at a neighbour's end it bends about that end; a curve that runs straight into a nearby bay pulls it in (run joins spec §3.1).
+      const { changes, meets } = bendWithHandle(start, f, drag.origin, pointer, session.snapping, scale);
+      return { command: { type: "updateFixture", id: f.id, changes }, guides: [], meets };
     }
     case "rotate": {
       const f = start.fixtures.find((x) => x.id === ref.fixtureId);

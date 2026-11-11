@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GestureEffect } from "./gesture";
 import type { HitTarget } from "./hit-test";
+import { endsOf } from "./runs";
 import type { Session } from "./session-core";
 import { face, fixture, store, zone } from "./test-layouts";
 import { editing, reducer } from "./test-sessions";
@@ -179,6 +180,33 @@ describe("dragging a rack near an open end", () => {
     const offered = gesture(reduce, racks(), ...drag(target, [300, 120], [156, 120]));
     expect(gesture(reduce, offered, tap({ kind: "empty" })).linkOffer).toBeNull();
     expect(gesture(reduce, offered, { type: "dragStart", target, origin: at(156, 120) }).linkOffer).toBeNull();
+  });
+});
+
+describe("dragging a wall bay to another bay's end (DECISIONS 11-11)", () => {
+  const bay = (id: string, over: object) => fixture({ id, type: "wall_bay", name: id, width: 48, depth: 24, rotation: 0, ...over });
+  const curved = bay("c", { x: 200, y: 100, width: 96, curve: -14 });
+  const loose = bay("f", { x: 350, y: 250 });
+  const end = endsOf(curved).right;
+  // Drop f with its left end 6 in past the curved bay's right end.
+  const to: [number, number] = [350 + end.at.x + 6 - (350 - 24), 250 + end.at.y - (250 - 12)];
+
+  it("lands on the end, turned to follow the curve, and links nothing by itself", () => {
+    const s = gesture(reducer(), editing({ ...store(), fixtures: [curved, loose] }), ...drag({ kind: "fixture", id: "f" }, [350, 250], to));
+    const f = s.layout.fixtures[1];
+    expect(s.notice).toBeNull();
+    const left = endsOf(f).left;
+    expect(Math.hypot(left.at.x - end.at.x, left.at.y - end.at.y)).toBeLessThanOrEqual(3);
+    expect(Math.abs(left.dir - end.dir)).toBeLessThanOrEqual(0.5);
+    expect(f.runId).toBeNull();
+    expect(s.history.past).toHaveLength(1);
+  });
+
+  it("outlines the bay it meets while dragging, and only moves with snapping off", () => {
+    const [start, move, drop] = drag({ kind: "fixture", id: "f" }, [350, 250], to);
+    expect(gesture(reducer(), editing({ ...store(), fixtures: [curved, loose] }), start, move).preview?.meets).toBe("c");
+    const free = gesture(reducer(), { ...editing({ ...store(), fixtures: [curved, loose] }), snapping: false }, start, move, drop);
+    expect(free.layout.fixtures[1].rotation).toBe(0);
   });
 });
 

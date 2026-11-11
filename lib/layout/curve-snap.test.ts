@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cornerFit, meetingCurves, snapBend } from "./curve-snap";
+import { bendWithHandle, cornerFit, meetingCurves, snapBend } from "./curve-snap";
 import { endsOf, placeLeftEnd } from "./runs";
 import { fixture, store } from "./test-layouts";
 import type { Fixture, Layout } from "./types";
@@ -55,10 +55,44 @@ describe("meetingCurves and snapBend (run joins spec §3.1)", () => {
     expect(Math.hypot(bent.left.at.x - 124, bent.left.at.y)).toBeLessThanOrEqual(12);
   });
 
-  it("pulls the handle onto it within 3 in, and says which bay it meets; not with snapping off", () => {
+  it("pulls the handle onto it within 3 in (zoomed in), lands the end on a's, and says which bay it meets; not with snapping off", () => {
     const target = meetingCurves(layout, f).find((m) => m.meets === "a")!.curve;
-    expect(snapBend(layout, f, target + 2, true)).toEqual({ curve: target, meets: "a" });
-    expect(snapBend(layout, f, target + 5, true)).toEqual({ curve: target + 5, meets: null });
-    expect(snapBend(layout, f, target + 2, false)).toEqual({ curve: target + 2, meets: null });
+    const snapped = snapBend(layout, f, target + 2, true, 4);
+    expect(snapped).toMatchObject({ changes: { curve: target }, meets: "a" });
+    const landed = ends({ ...f, ...snapped.changes });
+    expect(Math.hypot(landed.left.at.x - 124, landed.left.at.y)).toBeLessThanOrEqual(3);
+    expect(snapBend(layout, f, target + 5, true, 4)).toEqual({ changes: { curve: target + 5 }, meets: null });
+    expect(snapBend(layout, f, target + 2, false)).toEqual({ changes: { curve: target + 2 }, meets: null });
+  });
+
+  it("reaches farther when zoomed out: 12 px on screen", () => {
+    const target = meetingCurves(layout, f).find((m) => m.meets === "a")!.curve;
+    expect(snapBend(layout, f, target + 5, true, 0.5)).toMatchObject({ changes: { curve: target }, meets: "a" });
+  });
+});
+
+describe("bending a bay joined to a neighbour (DECISIONS 11-11)", () => {
+  // g sits on a's right end; b waits down the side wall for g to curve round to it.
+  const g = bay("g", { x: 172, y: 12, width: 96 });
+  const joined: Layout = { ...store(), fixtures: [a, b, g] };
+
+  it("keeps the joined end in place whatever the curve, and outlines the bay it stays on", () => {
+    const { changes, meets } = snapBend(joined, g, -9, false);
+    expect(meets).toBe("a");
+    const bent = ends({ ...g, ...changes });
+    expect(Math.hypot(bent.left.at.x - 124, bent.left.at.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(bent.left.dir)).toBeLessThanOrEqual(0.5);
+  });
+
+  it("the handle swings the bay toward the pointer: dragged forward, the free end comes forward", () => {
+    const { changes } = bendWithHandle(joined, g, { x: 172, y: 24 }, { x: 172, y: 44 }, false, 1);
+    expect(changes.curve).toBe(-20);
+    expect(ends({ ...g, ...changes }).right.at.y).toBeGreaterThan(20);
+  });
+
+  it("snaps to the curve that turns its free end to run into the bay round the corner", () => {
+    const quarter = meetingCurves({ ...joined, fixtures: [a, { ...b, y: 97 }, g] }, g).find((m) => m.meets === "b");
+    if (!quarter) throw new Error("no meeting");
+    expect(Math.abs(ends({ ...g, ...quarter.changes }).right.dir - 90)).toBeLessThanOrEqual(1);
   });
 });

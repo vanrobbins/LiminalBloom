@@ -121,9 +121,11 @@ test.describe("read-only map", () => {
 		expect(shown.width + beside).toBeGreaterThan(content.width - 80);
 	});
 
-	test("+ Add starts editing in the same place with the panel open; Done comes back (A3)", async ({ page }) => {
+	test("Edit starts editing in the same place, where + Add appears; Done comes back (A3, DECISIONS 11-11)", async ({ page }) => {
 		await page.goto("/layout");
 		await hydrated(page);
+		await expect(page.getByRole("button", { name: "Add", exact: true })).toHaveCount(0);
+		await page.getByRole("button", { name: "Edit" }).click();
 		await page.getByRole("button", { name: "Add", exact: true }).click();
 		const panel = page.getByRole("dialog", { name: "Add to the map" });
 		await expect(panel).toBeVisible();
@@ -218,6 +220,9 @@ test.describe("editing", () => {
 		await add(page, "Rack");
 		await expandPeek(page);
 		await page.getByRole("button", { name: "Back", exact: true }).click();
+		// The grids are folded behind one line that counts the sides (DECISIONS 11-11).
+		const grids = page.getByRole("button", { name: "Planogram grid 2 sides" }).filter({ visible: true });
+		await grids.click();
 		await expect(page.getByText("Back grid").filter({ visible: true })).toBeVisible();
 		await saved(page);
 	});
@@ -229,7 +234,8 @@ test.describe("editing", () => {
 		const feet = page.getByRole("textbox", { name: "Width, feet" }).filter({ visible: true });
 		await feet.fill("8");
 		await feet.press("Enter");
-		await expect(page.getByRole("group", { name: "Top grid" }).filter({ visible: true }).getByRole("group", { name: "Width", exact: true })).toContainText("8 ft");
+		// The folded grid's line follows the table (DECISIONS 11-11).
+		await expect(page.getByRole("button", { name: "Planogram grid 8 ft × 3 rows" }).filter({ visible: true })).toBeVisible();
 		await saved(page);
 	});
 

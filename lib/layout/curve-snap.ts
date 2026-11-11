@@ -1,17 +1,21 @@
-// Easier curving (run joins spec §3). The curve handle snaps to the curves
-// that make a bay's end run smoothly into a nearby wall bay, and "Fit to
-// corner" bends a bay into the quarter circle between two bays at a corner.
-// Neither links anything: runs are only made explicitly (DECISIONS 11-09).
+// Easier curving (run joins spec §3; DECISIONS 11-11). A bay sitting on a
+// neighbour's end bends about that end, so the two stay joined. The curve
+// handle snaps to the curves that make a bay's free end run smoothly into a
+// nearby wall bay, and lands on it. "Fit to corner" bends a bay into the
+// quarter circle between two bays at a corner. None of it links anything:
+// runs are only made explicitly (DECISIONS 11-09).
 
-import { maxCurve } from "./curves";
+import { anchorOf, bendAbout, clearOf, type Anchor } from "./bay-snap";
+import type { FixtureChanges } from "./commands-edits";
+import { bendFromHandle, maxCurve } from "./curves";
 import { normalizeAngle, rotate } from "./frames";
-import { MIN_CURVE_RADIUS } from "./limits";
+import { MIN_CURVE_RADIUS, SNAP_PX } from "./limits";
 import { endsOf } from "./runs";
 import type { Fixture, Layout, Point } from "./types";
 
 /** How close a bent end must come to a neighbour's end to count as meeting it. */
 export const MEET_REACH = 12;
-/** How far, in inches of curve, the handle is pulled onto a meeting curve. */
+/** How far, in inches of curve, the handle is pulled onto a meeting curve; farther when zoomed out (12 px on screen). */
 export const BEND_SNAP = 3;
 /** The grid unit: a fitted bay's width is a whole number of these. */
 const HALF_FOOT = 6;
@@ -28,37 +32,79 @@ function curveFor(width: number, half: number): number {
   return Math.round(Math.sign(half) * (width / (2 * h)) * (1 - Math.cos(h)));
 }
 
-export type Meeting = { curve: number; meets: string };
+export type Meeting = { curve: number; meets: string; changes: FixtureChanges };
 
-/** Every curve that makes one of this bay's ends run straight on into another wall bay's end, within reach. */
-export function meetingCurves(layout: Layout, f: Fixture): Meeting[] {
+/**
+ * Every curve that makes one of this bay's ends run straight on into another
+ * wall bay's end, within reach, and the pose that lands it there. A bay
+ * anchored at one end bends about it, so only its free end can meet another.
+ */
+export function meetingCurves(layout: Layout, f: Fixture, anchor: Anchor | null = anchorOf(layout, f)): Meeting[] {
   const limit = maxCurve(f.width, f.depth);
   const found: Meeting[] = [];
   for (const g of layout.fixtures) {
-    if (g.id === f.id || g.type !== "wall_bay") continue;
+    if (g.id === f.id || g.type !== "wall_bay" || g.id === anchor?.bay.id) continue;
     const theirs = bayEnds(g);
     // f's right end into g's left end: f.rotation − half = g's left direction. f's left end from g's right: f.rotation + half.
-    const tries: [number, "left" | "right", Point][] = [
-      [angleDiff(f.rotation, theirs.left.dir), "right", theirs.left.at],
-      [angleDiff(theirs.right.dir, f.rotation), "left", theirs.right.at],
-    ];
+    // On its own f turns by `half` at each end; anchored, the free end takes the whole turn.
+    const tries: [number, "left" | "right", Point][] = !anchor
+      ? [
+          [angleDiff(f.rotation, theirs.left.dir), "right", theirs.left.at],
+          [angleDiff(theirs.right.dir, f.rotation), "left", theirs.right.at],
+        ]
+      : anchor.end === "left"
+        ? [[angleDiff(anchor.dir, theirs.left.dir) / 2, "right", theirs.left.at]]
+        : [[angleDiff(theirs.right.dir, anchor.dir) / 2, "left", theirs.right.at]];
     for (const [half, end, at] of tries) {
       if (Math.abs(half) >= 90) continue;
       const curve = curveFor(f.width, half);
       if (curve === 0 || Math.abs(curve) > limit) continue;
-      if (gap(bayEnds({ ...f, curve })[end].at, at) <= MEET_REACH) found.push({ curve, meets: g.id });
+      const held = anchor ? bendAbout(f, anchor, curve) : null;
+      const bent = { ...f, curve, ...held };
+      const from = bayEnds(bent)[end].at;
+      if (gap(from, at) > MEET_REACH) continue;
+      if (held) {
+        found.push({ curve, meets: g.id, changes: held });
+        continue;
+      }
+      // Slide the bay so its end sits on the neighbour's, not just near it.
+      const moved = { ...bent, x: Math.round(bent.x + at.x - from.x), y: Math.round(bent.y + at.y - from.y) };
+      const placed = clearOf(moved, g, end === "left" ? bayEnds(moved).left.dir : bayEnds(moved).right.dir + 180);
+      if (placed) found.push({ curve, meets: g.id, changes: { curve, x: placed.x, y: placed.y } });
     }
   }
   return found;
 }
 
-/** The handle's curve, pulled onto a meeting curve within BEND_SNAP; which bay it meets, if any. */
-export function snapBend(layout: Layout, f: Fixture, curve: number, snapping: boolean): { curve: number; meets: string | null } {
-  if (!snapping || f.type !== "wall_bay") return { curve, meets: null };
-  const near = meetingCurves(layout, f)
-    .filter((m) => Math.abs(m.curve - curve) <= BEND_SNAP)
-    .sort((a, b) => Math.abs(a.curve - curve) - Math.abs(b.curve - curve))[0];
-  return near ? { curve: near.curve, meets: near.meets } : { curve, meets: null };
+export type Bend = { changes: FixtureChanges; meets: string | null };
+
+/**
+ * A bay at `curve`: bent about its anchored end when it has one, and pulled
+ * onto a meeting curve within reach. `meets` is the bay it runs into, or the
+ * one it stays joined to.
+ */
+export function snapBend(layout: Layout, f: Fixture, curve: number, snapping: boolean, scale = 1): Bend {
+  if (f.type !== "wall_bay") return { changes: { curve }, meets: null };
+  const anchor = anchorOf(layout, f);
+  const reach = Math.max(BEND_SNAP, SNAP_PX / scale);
+  const near = snapping
+    ? meetingCurves(layout, f, anchor)
+        .filter((m) => Math.abs(m.curve - curve) <= reach)
+        .sort((a, b) => Math.abs(a.curve - curve) - Math.abs(b.curve - curve))[0]
+    : undefined;
+  if (near) return { changes: near.changes, meets: near.meets };
+  return anchor ? { changes: bendAbout(f, anchor, curve), meets: anchor.bay.id } : { changes: { curve }, meets: null };
+}
+
+/**
+ * The curve handle dragged from `origin` to `pointer`. The middle of the bay
+ * follows the pointer either way: on its own a bay bends toward the pointer;
+ * held at one end it swings toward it, which is the opposite curve.
+ */
+export function bendWithHandle(layout: Layout, f: Fixture, origin: Point, pointer: Point, snapping: boolean, scale: number): Bend {
+  const held = anchorOf(layout, f) !== null;
+  const curve = held ? bendFromHandle(f, pointer, origin, snapping) : bendFromHandle(f, origin, pointer, snapping);
+  return snapBend(layout, f, curve, snapping, scale);
 }
 
 type FitChanges = Pick<Fixture, "x" | "y" | "rotation" | "width" | "curve">;

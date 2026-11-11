@@ -19,12 +19,16 @@ async function addWallBay(page: Page) {
   if (sizeOf(test.info()) === "phone") await page.getByRole("region", { name: "Selected" }).getByRole("button", { name: "Expand" }).click();
 }
 
+/** A straight bay's Curve is folded behind its line (DECISIONS 11-11); a curved bay's opens itself. */
+const openCurve = (page: Page) => page.getByRole("button", { name: "Curve Straight" }).filter({ visible: true }).click();
+
 const saved = (page: Page) => expect(page.getByText("Saved", { exact: true }).filter({ visible: true }).first()).toBeVisible();
 
 test("curves a wall bay from the panel, flips it, and keeps it after a reload", async ({ page }) => {
   await page.goto("/layout/edit");
   await hydrated(page);
   await addWallBay(page);
+  await openCurve(page);
 
   const inches = page.getByRole("textbox", { name: "Curve, inches" }).filter({ visible: true });
   await inches.fill("10");
@@ -65,6 +69,7 @@ test("wall bays link into a run that keeps a curved bay, and save (run joins spe
   await page.goto("/layout/edit");
   await hydrated(page);
   await addWallBay(page);
+  await openCurve(page);
   const inches = page.getByRole("textbox", { name: "Curve, inches" }).filter({ visible: true });
   await inches.fill("6");
   await inches.press("Enter");
@@ -98,5 +103,50 @@ test("Fit to corner bends a bay between two bays at a corner, and links nothing 
   await hydrated(page);
   await expect(page.locator('[data-fixture-name="Bay F"] [data-curved]')).toHaveCount(1);
   await expect(page.locator("[data-run-outline]")).toHaveCount(0);
+  await expect(page.getByText(/Run of \d/)).toHaveCount(0);
+});
+
+test("a bay dragged near another bay's end lands on it, and stays joined while it bends (DECISIONS 11-11)", async ({ page }) => {
+  test.skip(sizeOf(test.info()) !== "desktop", "The mouse drag is the desktop form; touch shares the same gesture code.");
+  await seedWallBay("Bay A", 200, 112);
+  await seedWallBay("Bay F", 300, 250);
+  await page.goto("/layout/edit");
+  await hydrated(page);
+  const boxOf = async (name: string) => {
+    const box = await page.locator(`[data-fixture-name="${name}"]`).boundingBox();
+    if (!box) throw new Error(`${name} is not on the map`);
+    return box;
+  };
+  const a = await boxOf("Bay A");
+  const f = await boxOf("Bay F");
+  // Drop F with its left end about 5 in right of and 4 in below A's right end: near, not on it.
+  const perInch = a.width / 48;
+  const from = { x: f.x + f.width / 2, y: f.y + f.height / 2 };
+  const to = { x: a.x + a.width + (24 + 5) * perInch, y: a.y + a.height / 2 + 4 * perInch };
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 12 });
+  await page.mouse.up();
+  // Bay A is 48 in wide at (200, 112): F lands end to end with it, in line.
+  const bayF = page.locator('[data-fixture-name="Bay F"]');
+  await expect(bayF).toHaveAttribute("transform", "translate(248 112) rotate(0)");
+  await saved(page);
+
+  // Bending it now swings the far end; the end on Bay A stays where it is.
+  const handle = await page.locator('[data-handle="curve"]').boundingBox();
+  if (!handle) throw new Error("no curve handle");
+  const x = handle.x + handle.width / 2;
+  const y = handle.y + handle.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 20, { steps: 10 });
+  await page.mouse.up();
+  await expect(bayF.locator("[data-curved]")).toHaveCount(1);
+  // Held at its left end it turns as it bends, swinging forward into the room; about its middle it would not turn at all.
+  const [, down, turn] = ((await bayF.getAttribute("transform")) ?? "").match(/translate\(\S+ (\S+)\) rotate\((\d+)\)/) ?? [];
+  expect(Number(turn)).toBeGreaterThan(10);
+  expect(Number(turn)).toBeLessThan(90);
+  expect(Number(down)).toBeGreaterThan(112);
+  await saved(page);
   await expect(page.getByText(/Run of \d/)).toHaveCount(0);
 });

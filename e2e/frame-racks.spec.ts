@@ -25,7 +25,8 @@ test("adds a frame rack and builds a run from it", async ({ page }) => {
   await hydrated(page);
   await add(page, "Frame rack");
   if (sizeOf(test.info()) === "phone") await page.getByRole("region", { name: "Selected" }).getByRole("button", { name: "Expand" }).click();
-  await expect(page.getByText("1 rail").filter({ visible: true })).toBeVisible();
+  // One rail, said on the folded grid's line (DECISIONS 11-11).
+  await expect(page.getByRole("button", { name: "Planogram grid 4 ft rail" }).filter({ visible: true })).toBeVisible();
   await page.getByRole("button", { name: "Add rack to the right" }).filter({ visible: true }).click();
   await expect(page.getByText("Run of 2 racks").filter({ visible: true })).toBeVisible();
   await expect(page.locator('[data-fixture-name^="Frame rack"]')).toHaveCount(2);
