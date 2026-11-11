@@ -1,12 +1,11 @@
 // Store settings (DECISIONS "Time", 10-12): the store's time zone, which
-// decides what "today" and overdue mean for everyone working there. Only the
-// store's Better Auth owner or admins can change it (Week 7: the Admin role);
-// everyone else sees it.
+// decides what "today" and overdue mean for everyone working there. Only a
+// role with the store.settings switch can change it; everyone else sees it.
 
 import { PageHeader } from "@/components/shell/page-header";
 import { Card } from "@/components/ui/card";
-import { requireMember } from "@/lib/current-member";
-import { canManageStore, storeSettingsFor } from "@/lib/store-settings";
+import { can, requireMember } from "@/lib/current-member";
+import { storeSettingsFor } from "@/lib/store-settings";
 import { DEFAULT_TIMEZONE, zoneLabel } from "@/lib/time/zones";
 
 import { TimezoneForm } from "./timezone-form";
@@ -15,8 +14,9 @@ import { InfoPopover } from "@/components/ui/info-popover";
 export const dynamic = "force-dynamic";
 
 export default async function StorePage() {
-  const { user, activeStoreId } = await requireMember();
-  const [settings, canManage] = await Promise.all([storeSettingsFor(activeStoreId), canManageStore(user.id, activeStoreId)]);
+  const member = await requireMember();
+  const settings = await storeSettingsFor(member.activeStoreId);
+  const canManage = can(member, "store.settings");
   const zone = settings?.timezone ?? DEFAULT_TIMEZONE;
 
   return (
@@ -34,7 +34,7 @@ export default async function StorePage() {
         ) : (
           <p className="text-ink">
             {zoneLabel(zone)}
-            <span className="block text-sm text-ink-muted">Only the store&apos;s owner or admins can change this.</span>
+            <span className="block text-sm text-ink-muted">Your role can&apos;t change this.</span>
           </p>
         )}
       </Card>

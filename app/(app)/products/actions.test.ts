@@ -21,6 +21,8 @@ describe("server actions", () => {
       user: { id: "member-123", name: "Test User", email: "test@example.com" },
       stores: [{ id: storeId, name: "Test Store" }],
       activeStoreId: storeId,
+      role: null,
+      switches: [],
     });
   });
 

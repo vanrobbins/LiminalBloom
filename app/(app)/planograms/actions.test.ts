@@ -34,6 +34,8 @@ describe("planogram actions", () => {
       user: VAN,
       stores: [{ id: store, name: "Test Store" }],
       activeStoreId: store,
+      role: null,
+      switches: [],
     });
     f = await seedStoreFixtures(store);
     tee = await addProduct(store, f.categoryId, "Pocket Tee");
@@ -74,7 +76,7 @@ describe("planogram actions", () => {
     const other = await makeStore(`pg-actions-other-${randomUUID().slice(0, 6)}`);
     const theirs = await seedStoreFixtures(other, "Their Pant");
     expect(await beginDraftAction(theirs.fixtureId, null)).toMatchObject({ status: "refused", draft: null });
-    vi.mocked(currentMember.requireMember).mockResolvedValue({ kind: "member", user: VAN, stores: [{ id: other, name: "Other" }], activeStoreId: other });
+    vi.mocked(currentMember.requireMember).mockResolvedValue({ kind: "member", user: VAN, stores: [{ id: other, name: "Other" }], activeStoreId: other, role: null, switches: [] });
     expect(await reloadDraftAction(theirs.fixtureId)).toBeNull();
   });
 
