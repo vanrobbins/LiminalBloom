@@ -64,7 +64,7 @@ describe("the write's own guards, after the pre-checks passed", () => {
     const target = await read(s.store, first.memberId); // two managers when read
     await setRole(second.memberId, s.roles.vm_worker); // the other is demoted meanwhile
     const out = await applyRoleChange(s.store, actor, target, first.roleId, { id: s.roles.vm_worker, name: "Visual Merchandising Worker" });
-    expect(out.status).not.toBe("changed");
+    expect(out).toEqual({ status: "stale" }); // the write matched nothing; reported as stale, not last-manager
     expect(await roleOf(first.memberId)).toBe(s.roles.store_manager);
     expect(await eventsOf(s.store)).toEqual([]);
   });
@@ -76,7 +76,7 @@ describe("the write's own guards, after the pre-checks passed", () => {
     const second = await personIn(s, "store_manager");
     const target = await read(s.store, first.memberId);
     await setRole(second.memberId, s.roles.vm_worker);
-    expect((await applyRemoval(s.store, actor, target, first.roleId)).status).not.toBe("removed");
+    expect(await applyRemoval(s.store, actor, target, first.roleId)).toEqual({ status: "stale" });
     expect(await roleOf(first.memberId)).toBe(s.roles.store_manager);
     expect(await eventsOf(s.store)).toEqual([]);
   });

@@ -107,7 +107,7 @@ describe("peopleViewFor", () => {
     const view = await peopleViewFor(vmm);
     // What the page hands the client is this object, serialised.
     const sent = JSON.stringify(view);
-    expect(sent).toContain(mine);
+    expect(view.invitations.find((i) => i.roleName === "Sales Associate")).toMatchObject({ canAct: true, id: mine });
     expect(sent).not.toContain(above);
     expect(view.invitations.find((i) => i.roleName === "Assistant Manager")).toMatchObject({ canAct: false, id: null });
   });
