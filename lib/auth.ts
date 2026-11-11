@@ -17,7 +17,34 @@ import { db } from "@/db";
 import { rememberSwitch, storeForNewSession } from "./active-store";
 import { optionalEnv } from "./env";
 
+// Better Auth's organization endpoints that read or change people. Its own checks
+// know only owner / admin / member, not our roles or the rank rule, and three of them
+// list emails and invitation ids to any member. So the browser cannot reach them: the
+// router answers 404 before anything runs. People, roles and invitations go through the
+// app's own server actions (lib/access/people-write.ts). `auth.api.*` calls from server
+// code are not affected. Not here: `/organization/set-active` (the store switcher),
+// and `/change-password` (plan task 11 moves it to a server action first). Spec 0.7,
+// 4.5, "Spike findings"; e2e/auth-routes.spec.ts proves each path and its spellings.
+const CLOSED_ORGANIZATION_PATHS = [
+  "invite-member",
+  "cancel-invitation",
+  "accept-invitation",
+  "reject-invitation",
+  "update-member-role",
+  "remove-member",
+  "leave",
+  "update",
+  "delete",
+  "create",
+  "list-invitations",
+  "get-full-organization",
+  "list-members",
+  "get-invitation",
+  "list-user-invitations",
+].map((name) => `/organization/${name}`);
+
 export const auth = betterAuth({
+  disabledPaths: CLOSED_ORGANIZATION_PATHS,
   // Read through optionalEnv so a value pasted into a dashboard with a
   // trailing newline cannot produce an "Invalid URL" build failure.
   baseURL: optionalEnv("BETTER_AUTH_URL"),
@@ -83,6 +110,7 @@ export const auth = betterAuth({
     // invitation tables from section 7, which is why products.store_id was
     // deliberately left out until now. See docs/DECISIONS.md.
     organization({
+      disableOrganizationDeletion: true,
       schema: {
         // The app's own role (a role_definitions id). Better Auth's `role` is
         // left to Better Auth (DECISIONS 09-28). `input: false` so no request

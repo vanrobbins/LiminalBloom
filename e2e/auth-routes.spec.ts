@@ -1,0 +1,45 @@
+// Better Auth's organization endpoints are closed to the browser (spec 0.7 §4.5):
+// its owner/admin check knows nothing of our roles, and three read routes list
+// emails and invitation ids to any member. People, roles and invitations go
+// through the app's own server actions. The router answers a disabled path with
+// 404 before anything else runs, so the signed-in test account makes no difference.
+
+import { expect, sizeOf, test } from "./fixtures";
+
+const BASE = "/api/auth/organization/";
+
+const POST_ONLY = ["invite-member", "cancel-invitation", "accept-invitation", "reject-invitation", "update-member-role", "remove-member", "leave", "update", "delete", "create"];
+const GET_ONLY = ["list-invitations", "get-full-organization", "list-members", "get-invitation", "list-user-invitations"];
+
+// Spellings that must not slip past an exact-match list: a trailing slash, upper case, a doubled slash.
+const variants = (name: string) => [`${BASE}${name}`, `${BASE}${name}/`, `${BASE}${name.toUpperCase()}`, `${BASE}${name.toUpperCase()}/`, `${BASE}/${name}`];
+
+test.beforeEach(({}, testInfo) => {
+  test.skip(sizeOf(testInfo) !== "desktop", "Server behaviour: one size is enough.");
+});
+
+test.describe("closed organization endpoints", () => {
+  for (const name of POST_ONLY) {
+    test(`POST ${name} is 404 in every spelling, and so is GET`, async ({ request }) => {
+      for (const path of variants(name)) {
+        expect((await request.post(path, { data: {} })).status(), `POST ${path}`).toBe(404);
+        expect((await request.get(path)).status(), `GET ${path}`).toBe(404);
+      }
+    });
+  }
+
+  for (const name of GET_ONLY) {
+    test(`GET ${name} is 404 in every spelling, and so is POST`, async ({ request }) => {
+      for (const path of variants(name)) {
+        expect((await request.get(path)).status(), `GET ${path}`).toBe(404);
+        expect((await request.post(path, { data: {} })).status(), `POST ${path}`).toBe(404);
+      }
+    });
+  }
+
+  test("what the app still uses is open: the session, and switching stores", async ({ request }) => {
+    expect((await request.get("/api/auth/get-session")).status()).toBe(200);
+    // Reaches the endpoint (a refusal of this bare request is fine); a closed path would be 404.
+    expect((await request.post(`${BASE}set-active`, { data: {} })).status()).not.toBe(404);
+  });
+});

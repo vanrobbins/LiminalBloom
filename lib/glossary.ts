@@ -19,6 +19,8 @@ export const GLOSSARY = {
   notPlaced: { term: "Not placed", text: "Products with no spot on the floor or in the stockroom yet." },
   swatch: { term: "Swatch and texture", text: "The color and pattern a product is drawn in when it has no photo. Without a swatch, its color word picks the color." },
   storeTime: { term: "Store time", text: "The time zone the store runs on. Dates like a planogram's due date follow it, wherever you are." },
+  role: { term: "Role", text: "What a person can do in this store. Roles are ranked, and you can manage only people ranked below you." },
+  invitation: { term: "Invitation link", text: "Whoever opens it signs in with the invited email and joins in that role. It works for 48 hours; send it yourself, because the app doesn't email it yet." },
 } as const satisfies Record<string, { term: string; text: string }>;
 
 export type Term = keyof typeof GLOSSARY;
