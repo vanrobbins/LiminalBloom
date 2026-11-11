@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSession } from "@/lib/layout/session-core";
 import { face, fixture, store } from "@/lib/layout/test-layouts";
@@ -18,9 +18,30 @@ function panel(over: Partial<Fixture> = {}) {
 
 const curveTo = (curve: number) => ({ type: "command", command: { type: "updateFixture", id: "bay", changes: { curve } } });
 
+/** A straight bay's Curve is folded behind its line (DECISIONS 11-11). */
+const openCurve = () => userEvent.click(screen.getByRole("button", { name: /^Curve/ }));
+
 describe("the Curve field", () => {
+  // What was opened is remembered on the device.
+  beforeEach(() => window.localStorage.clear());
+
+  it("is folded behind a line saying Straight on a straight bay", () => {
+    panel();
+    expect(screen.getByRole("button", { name: "Curve Straight" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("textbox", { name: "Curve, inches" })).toBeNull();
+  });
+
+  it("opens itself on a curved bay, says how far and which way, and folds by hand", async () => {
+    panel({ curve: -18 });
+    const line = screen.getByRole("button", { name: "Curve 1′ 6″ toward the back" });
+    expect(line).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(line);
+    expect(screen.queryByRole("textbox", { name: "Curve, inches" })).toBeNull();
+  });
+
   it("sets a straight bay's curve toward the front", async () => {
     const dispatch = panel();
+    await openCurve();
     const inches = screen.getByRole("textbox", { name: "Curve, inches" });
     await userEvent.clear(inches);
     await userEvent.type(inches, "18{Enter}");
@@ -32,8 +53,9 @@ describe("the Curve field", () => {
     expect(screen.getByText("Width is measured along the curve's centre.")).toBeInTheDocument();
   });
 
-  it("offers no direction while the bay is straight", () => {
+  it("offers no direction while the bay is straight", async () => {
     panel();
+    await openCurve();
     expect(screen.queryByRole("button", { name: "Flip curve" })).toBeNull();
     expect(screen.queryByRole("group", { name: "Width along the curve" })).toBeNull();
   });
@@ -61,6 +83,7 @@ describe("the Curve field", () => {
 
   it("refuses more than the bay can take", async () => {
     const dispatch = panel();
+    await openCurve();
     const feet = screen.getByRole("textbox", { name: "Curve, feet" });
     await userEvent.clear(feet);
     await userEvent.type(feet, "9{Enter}");

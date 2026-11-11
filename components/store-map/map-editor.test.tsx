@@ -34,9 +34,4 @@ describe("MapEditor", () => {
     expect(screen.getByRole("banner")).toContainElement(screen.getByRole("button", { name: "Add" }));
     expect(screen.queryByRole("region", { name: "Add to the map" })).toBeNull();
   });
-
-  it("can open with the + Add panel showing", () => {
-    render(<MapEditor storeId="s" initialLayout={{ ...store(), fixtures: [fixture()] }} {...actions} startWithAdd embedded />);
-    expect(screen.getByRole("dialog", { name: "Add to the map" })).toBeInTheDocument();
-  });
 });

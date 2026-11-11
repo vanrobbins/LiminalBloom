@@ -1,12 +1,16 @@
 // A fixture's name, size, rotation, display sides, lower tables and run. Every
-// field works without dragging (spec §10).
+// field works without dragging (spec §10). Curve and the planogram grid are
+// folded behind a line each, so the panel opens on what is changed most
+// (DECISIONS 11-11).
 
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Fold } from "@/components/ui/fold";
 import { FeetInchesInput } from "@/components/ui/feet-inches-input";
 import { NumberField } from "@/components/ui/number-field";
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
+import { formatLength } from "@/lib/layout/format";
 import { MAX_FIXTURE_SIZE, MIN_FIXTURE_SIZE } from "@/lib/layout/limits";
 import { isRunType } from "@/lib/layout/runs";
 import type { SessionAction } from "@/lib/layout/session";
@@ -18,6 +22,7 @@ import { FaceSettings } from "./face-settings";
 import { LowerTables } from "./lower-tables";
 import { NameField } from "./name-field";
 import { RunControls } from "./run-controls";
+import { usePanelFold } from "./use-panel-fold";
 
 type FixturePropertiesProps = { layout: Layout; fixture: Fixture; dispatch: (action: SessionAction) => void };
 
@@ -29,6 +34,8 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
   const upperId = layout.tableSets.find((s) => s.id === fixture.tableSetId)?.upperFixtureId;
   const upper = layout.fixtures.find((f) => f.id === upperId);
   const faces = layout.faces.filter((face) => face.fixtureId === fixture.id);
+  const curveFold = usePanelFold("curve", fixture.curve !== 0);
+  const curveNow = fixture.curve === 0 ? "Straight" : `${formatLength(Math.abs(fixture.curve))} toward the ${fixture.curve > 0 ? "front" : "back"}`;
   const update = (changes: Partial<Pick<Fixture, "name" | "width" | "depth" | "rotation" | "curve">>) =>
     dispatch({ type: "command", command: { type: "updateFixture", id: fixture.id, changes } });
 
@@ -60,7 +67,11 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
         max={MAX_FIXTURE_SIZE}
         onCommit={(depth) => update({ depth })}
       />
-      {rule.curves ? <CurveField fixture={fixture} onChange={(curve) => update({ curve })} /> : null}
+      {rule.curves ? (
+        <Fold title="Curve" summary={curveNow} open={curveFold.open} onToggle={curveFold.toggle}>
+          <CurveField fixture={fixture} onChange={(curve) => update({ curve })} />
+        </Fold>
+      ) : null}
       {fixture.type === "wall_bay" ? <CornerFit layout={layout} fixture={fixture} dispatch={dispatch} /> : null}
       {!isLower ? (
         <div className="flex items-end gap-2">

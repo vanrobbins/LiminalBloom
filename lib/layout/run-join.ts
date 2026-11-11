@@ -25,7 +25,7 @@ export type RunJoin = {
 const chainOf = (layout: Layout, rack: Fixture) => (rack.runId ? runRacks(layout, rack.runId) : [rack]);
 
 /** The dragged racks, in chain order, if they are exactly one rack or one run. */
-function movingChain(layout: Layout, ids: ReadonlySet<string>): Fixture[] | null {
+export function movingChain(layout: Layout, ids: ReadonlySet<string>): Fixture[] | null {
   const moving = layout.fixtures.filter((f) => ids.has(f.id));
   if (moving.length === 0 || moving.length !== ids.size || moving.some((f) => !isRunType(f.type) || f.type !== moving[0].type)) return null;
   const chain = chainOf(layout, moving[0]);

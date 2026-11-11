@@ -11,12 +11,11 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 const props = { storeId: "s", layout: { ...store(), fixtures: [fixture()] }, planograms: {}, looks: {}, save: vi.fn(), fetchLatest: vi.fn() };
 
 describe("LayoutScreen", () => {
-  it("+ Add switches to editing in the same place, with the Add panel open (A3)", async () => {
+  it("has no + Add until you are editing (DECISIONS 11-11)", async () => {
     render(<LayoutScreen {...props} />);
-    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
-    await userEvent.setup().click(screen.getByRole("button", { name: "Add" }));
-    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Add to the map" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
   });
 
   it("Edit switches to editing without the panel", async () => {

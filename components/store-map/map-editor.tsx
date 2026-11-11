@@ -1,7 +1,7 @@
 // The map editor (spec §10): one canvas, panels by screen size, everything
 // driven through the session reducer. This file only arranges parts; the
 // rules live in lib/layout/. Full screen on /layout/edit, or `embedded` in
-// /layout's own area when + Add or Edit starts editing there (A3).
+// /layout's own area when Edit starts editing there (A3).
 
 "use client";
 
@@ -42,8 +42,6 @@ type MapEditorProps = {
   initialLayout: Layout;
   save: (storeId: string, changes: ChangeSet) => Promise<SaveReply>;
   fetchLatest: (storeId: string) => Promise<FetchReply>;
-  /** Opens with the + Add panel showing (the viewer's + started editing). */
-  startWithAdd?: boolean;
   /** Fills its parent instead of the screen, and Done calls `onLeft`. */
   embedded?: boolean;
   onLeft?: () => void;
@@ -51,11 +49,11 @@ type MapEditorProps = {
 
 const ADD_KINDS: readonly string[] = ["zone", "entrance", "table", "wall_bay", "rack", "mannequin", "platform", "prop"];
 
-export function MapEditor({ storeId, initialLayout, save, fetchLatest, startWithAdd = false, embedded = false, onLeft }: MapEditorProps) {
+export function MapEditor({ storeId, initialLayout, save, fetchLatest, embedded = false, onLeft }: MapEditorProps) {
   const { session, dispatch, status, leaving, done } = useMapEditor({ storeId, initial: initialLayout, save, fetchLatest, onLeft });
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [listOpen, setListOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(startWithAdd);
+  const [addOpen, setAddOpen] = useState(false);
 
   const onSize = useCallback((viewport: { width: number; height: number }) => dispatch({ type: "viewport", viewport }), [dispatch]);
   const container = useElementSize<HTMLDivElement>(onSize);

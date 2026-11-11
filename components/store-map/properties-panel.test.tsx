@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSession } from "@/lib/layout/session-core";
 import { face, fixture, store, zone } from "@/lib/layout/test-layouts";
@@ -15,6 +15,9 @@ function panel(layout: Layout, selection: string[]) {
 }
 
 describe("PropertiesPanel", () => {
+  // What was opened is remembered on the device.
+  beforeEach(() => window.localStorage.clear());
+
   it("renames a zone", async () => {
     const dispatch = panel({ ...store(), zones: [zone()] }, ["zone-a"]);
     const name = screen.getByRole("textbox", { name: "Zone name" });
