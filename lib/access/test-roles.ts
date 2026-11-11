@@ -1,26 +1,25 @@
-// Setup for database tests that need roles. The app's store-creation hook does
-// not seed a store's five built-in roles yet, so a test store gets them here.
+// Setup for database tests that need roles. A test store is made without
+// Better Auth, so the hook has not run; it gets its roles from the same function.
 // Rows are written as the owner, which row-level security does not restrict.
 
 import { randomUUID } from "node:crypto";
 
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
 import { roleDefinitions } from "@/db/schema";
 import { makeStore } from "@/lib/products/test-stores";
 
-import { BUILTIN_ROLES, type BuiltinRoleKey } from "./roles";
+import type { BuiltinRoleKey } from "./roles";
+import { giveStoreItsRoles } from "./seed";
 
 export type StoreRoles = Record<BuiltinRoleKey, string>;
 
-/** The five built-in roles, as the migration's backfill makes them. Returns each one's id. */
+/** The five built-in roles, made by the real function the creation hook uses. Returns each one's id. */
 export async function seedBuiltinRoles(storeId: string): Promise<StoreRoles> {
-  const rows = await db
-    .insert(roleDefinitions)
-    .values(BUILTIN_ROLES.map((r) => ({ storeId, builtin: r.key, name: r.name, rank: r.rank, switches: [...r.switches] })))
-    .returning({ id: roleDefinitions.id, builtin: roleDefinitions.builtin });
+  await giveStoreItsRoles(storeId);
+  const rows = await db.select({ id: roleDefinitions.id, builtin: roleDefinitions.builtin }).from(roleDefinitions).where(eq(roleDefinitions.storeId, storeId));
   return Object.fromEntries(rows.map((r) => [r.builtin, r.id])) as StoreRoles;
 }
 

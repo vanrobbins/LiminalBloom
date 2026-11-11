@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { asc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, notLike, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
@@ -43,8 +43,9 @@ const EXPECTED: Record<string, BuiltinRoleKey> = {
 
 describe("the migration's backfill", () => {
   it("left every store that has built-in roles with exactly the five, matching lib/access/roles.ts", async () => {
-    // Only stores that already hold a built-in row; an empty database passes.
-    const rows = await db.select().from(roleDefinitions).where(isNotNull(roleDefinitions.builtin)).orderBy(asc(roleDefinitions.rank));
+    // Only stores that already hold a built-in row; an empty database passes. Throwaway test
+    // stores (test_ ids) are skipped: other tests edit their roles on purpose, in parallel.
+    const rows = await db.select().from(roleDefinitions).where(and(isNotNull(roleDefinitions.builtin), notLike(roleDefinitions.storeId, "test\_%"))).orderBy(asc(roleDefinitions.rank));
     const byStore = Map.groupBy(rows, (r) => r.storeId);
     for (const [, mine] of byStore) {
       expect(mine.map((r) => [r.builtin, r.name, r.rank, r.switches])).toEqual(

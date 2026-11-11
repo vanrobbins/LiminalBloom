@@ -91,7 +91,7 @@ export const auth = betterAuth({
         invitation: { additionalFields: { roleId: { type: "string", required: false, input: false } } },
       },
       organizationHooks: {
-        // Every store gets its own encryption key and its settings row the
+        // Every store gets its own encryption key, settings row and roles the
         // moment it exists, however it was created -- the Server Action or
         // Better Auth's own endpoint. Proposal 8.1.
         //
@@ -106,6 +106,16 @@ export const auth = betterAuth({
           const { giveStoreSettings } = await import("./store-settings");
           try {
             await giveStoreSettings(organization.id);
+          } catch (error) {
+            const { removeStore } = await import("./store-keys");
+            await removeStore(organization.id);
+            throw error;
+          }
+          // The five built-in roles, and the creator as Store Manager (0.7.0).
+          // Same rule: a store never exists without them.
+          const { giveStoreItsRoles } = await import("./access/seed");
+          try {
+            await giveStoreItsRoles(organization.id);
           } catch (error) {
             const { removeStore } = await import("./store-keys");
             await removeStore(organization.id);
