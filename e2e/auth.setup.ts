@@ -26,7 +26,7 @@ async function signInOrUp(page: Page, worker: number) {
   await page.getByLabel("Password", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   const refused = page.getByText("That email and password do not match.");
-  await expect(refused.or(page.getByRole("searchbox", { name: "Search products" })).or(page.getByLabel("Store name"))).toBeVisible();
+  await expect(refused.or(page.getByRole("searchbox", { name: "Search products" })).or(page.getByLabel("Store name")).or(page.getByRole("heading", { name: "Welcome" }))).toBeVisible();
   if (!(await refused.isVisible())) return;
 
   await page.goto("/sign-up");
@@ -34,7 +34,7 @@ async function signInOrUp(page: Page, worker: number) {
   await page.getByLabel("Work email").fill(account.email);
   await page.getByLabel("Password", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL(/\/(products|create-store)/);
+  await page.waitForURL(/\/(products|welcome)/);
 }
 
 setup("sign in every worker's account, each with two stores, in the home store", async ({ browser }) => {

@@ -38,9 +38,16 @@ export async function clearPeople(): Promise<void> {
   const store = await storeId(HOME_STORE);
   // The tests invite addresses at example.test; nothing else uses that domain.
   await db`delete from invitation where organization_id = ${store} and email like ${"%@example.test"}`;
+  // invite.spec invites the test account itself, to see the "already in this store" message.
+  await db`delete from invitation where organization_id = ${store} and email = ${TEST_ACCOUNT.email}`;
   await db`delete from "user" where id like ${`${PREFIX}%`}`;
+  // People who signed up from an invitation have Better Auth's own ids; their address marks them.
+  await db`delete from "user" where email like ${`${PREFIX}invitee.%@example.test`}`;
   await db`delete from access_events where store_id = ${store}`;
 }
+
+/** A fresh address for someone who will sign up from an invitation; clearPeople removes the account. */
+export const inviteeEmail = () => `${PREFIX}invitee.${randomUUID().slice(0, 8)}@example.test`;
 
 export async function seedTeam(team = TEAM): Promise<void> {
   await clearPeople();
@@ -64,6 +71,11 @@ export async function seedInvitation(email: string, role: Builtin, expired = fal
   await db`insert into invitation (id, organization_id, email, role, status, expires_at, inviter_id, role_id)
     values (${id}, ${store}, ${email}, 'member', 'pending', ${expiresAt.toISOString()}, (select id from "user" where email = ${TEST_ACCOUNT.email}), ${roles[role]})`;
   return id;
+}
+
+/** Changes an invitation's status behind the page's back: canceled, accepted. */
+export async function setInvitationStatus(id: string, status: string): Promise<void> {
+  await sql()`update invitation set status = ${status} where id = ${id}`;
 }
 
 /** Another session changes someone's role while a dialog is open. */

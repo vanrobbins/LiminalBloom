@@ -123,10 +123,10 @@ describe("requireMember", () => {
     await expect(requireMember()).rejects.toThrow("redirect:/sign-in");
   });
 
-  it("sends a person with no store to create one", async () => {
+  it("sends a person with no store to the welcome page (accept an invitation or create a store)", async () => {
     mocks.getSession.mockResolvedValue(SESSION);
     access(null, null, []);
-    await expect(requireMember()).rejects.toThrow("redirect:/create-store");
+    await expect(requireMember()).rejects.toThrow("redirect:/welcome");
   });
 
   it("returns the member and redirects nowhere", async () => {
@@ -145,10 +145,10 @@ describe("requireSwitch", () => {
     await expect(requireSwitch("products.edit")).rejects.toThrow("redirect:/sign-in");
   });
 
-  it("sends a person with no store to create one", async () => {
+  it("sends a person with no store to the welcome page (accept an invitation or create a store)", async () => {
     mocks.getSession.mockResolvedValue(SESSION);
     access(null, null, []);
-    await expect(requireSwitch("products.edit")).rejects.toThrow("redirect:/create-store");
+    await expect(requireSwitch("products.edit")).rejects.toThrow("redirect:/welcome");
   });
 
   it("returns the member who holds the switch", async () => {
@@ -175,7 +175,7 @@ describe("requireSwitchForAction", () => {
 
     mocks.getSession.mockResolvedValue(SESSION);
     access(null, null, []);
-    await expect(requireSwitchForAction("products.edit")).rejects.toThrow("redirect:/create-store");
+    await expect(requireSwitchForAction("products.edit")).rejects.toThrow("redirect:/welcome");
   });
 
   it("returns the member who holds the switch", async () => {

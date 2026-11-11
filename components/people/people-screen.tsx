@@ -79,7 +79,12 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           {view.isSoleManager && group.people.some((p) => p.isYou) ? <p className="mt-2 text-sm text-ink-muted">A store always keeps one Store Manager.</p> : null}
         </section>
       ))}
-      {onlyYou ? <p className="rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">Only you so far.</p> : null}
+      {onlyYou ? (
+        <div className="rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">
+          <p>Only you so far.</p>
+          {view.assignable.length > 0 ? <p>Invite someone to add them to the store.</p> : null}
+        </div>
+      ) : null}
       {open?.kind === "role" ? (
         <ChangeRoleDialog
           key={open.person.memberId}

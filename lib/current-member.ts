@@ -85,7 +85,7 @@ export async function requireMember(): Promise<Member> {
     redirect("/sign-in");
   }
   if (member.kind === "no-store") {
-    redirect("/create-store");
+    redirect("/welcome");
   }
 
   return member;

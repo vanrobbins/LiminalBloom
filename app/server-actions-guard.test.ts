@@ -17,9 +17,9 @@ const GUARD = "requireSwitchForAction";
 type Exception = { guard: string; first: string[]; why: string };
 const ALLOWED: Record<string, Exception> = {
   "app/create-store/actions.ts": { guard: "getSession", first: ["headers"], why: "store creation happens before the person has a store or a role; the session needs the request headers" },
+  "app/invite/[id]/actions.ts": { guard: "getSession", first: ["headers"], why: "accepting is how a person with no store or role gets one; the session (its person and email) is the check, and the invitation must name that email" },
   "app/(editor)/layout/edit/actions.ts": { guard: GUARD, first: ["getCurrentMember"], why: "the editor answers signed-out itself (its last change was not saved; the guard would redirect), so one getCurrentMember() comes first" },
 };
-
 const SCANNED_ROOTS = ["app", "lib", "components"];
 
 function sourceFiles() {

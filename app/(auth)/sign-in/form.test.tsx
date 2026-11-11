@@ -7,11 +7,11 @@ const mocks = vi.hoisted(() => ({ email: vi.fn(), push: vi.fn(), refresh: vi.fn(
 vi.mock("@/lib/auth-client", () => ({ signIn: { email: mocks.email } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }) }));
 
-import SignInPage from "./page";
+import { SignInForm } from "./form";
 
-async function submit() {
+async function submit(next: string | null = null) {
   const user = userEvent.setup();
-  render(<SignInPage />);
+  render(<SignInForm next={next} />);
   await user.type(screen.getByLabelText("Work email"), "van@example.com");
   await user.type(screen.getByLabelText("Password", { exact: true }), "correct-horse");
   await user.click(screen.getByRole("button", { name: "Sign in" }));
@@ -22,7 +22,7 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
-describe("SignInPage", () => {
+describe("SignInForm", () => {
   it("stays on Signing in… while the next page loads", async () => {
     mocks.email.mockResolvedValue({ error: null });
     await submit();
@@ -52,5 +52,27 @@ describe("SignInPage", () => {
     await submit();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach the server. Check the connection and try again.");
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  });
+
+  it("returns to the page it was sent from (an invitation) after signing in", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    await submit("/invite/abc123");
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/invite/abc123"));
+  });
+
+  it("ignores a return path that leaves the site", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    await submit("//evil.example/x");
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
+  });
+
+  it("keeps the return path on the link to create an account", () => {
+    render(<SignInForm next="/invite/abc123" />);
+    expect(screen.getByRole("link", { name: "Need an account? Create one" })).toHaveAttribute("href", "/sign-up?next=%2Finvite%2Fabc123");
+  });
+
+  it("links to a bare sign-up page when there is nowhere to return to", () => {
+    render(<SignInForm next={null} />);
+    expect(screen.getByRole("link", { name: "Need an account? Create one" })).toHaveAttribute("href", "/sign-up");
   });
 });

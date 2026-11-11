@@ -42,6 +42,7 @@ describe("PeopleScreen, read-only", () => {
   it("shows the only-you box", () => {
     renderScreen(viewOf([sm({ isYou: true })]));
     expect(screen.getByText("Only you so far.")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Invite someone");
   });
 });
 
@@ -114,5 +115,16 @@ describe("PeopleScreen, for someone who manages people", () => {
     renderScreen(managing(undefined, { invitations: [invitationRow("jane@x.com")] }));
     const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings[0]).toBe("Invitations waiting");
+  });
+});
+
+describe("PeopleScreen, only you", () => {
+  it("tells someone who may invite to invite someone, and tells nobody else", () => {
+    const { unmount } = renderScreen(viewOf([sm({ isYou: true })], { canManage: true, assignable: ROLES }));
+    expect(screen.getByText("Only you so far.")).toBeInTheDocument();
+    expect(screen.getByText("Invite someone to add them to the store.")).toBeInTheDocument();
+    unmount();
+    renderScreen(viewOf([sm({ isYou: true })], { canManage: true, assignable: [] }));
+    expect(screen.queryByText("Invite someone to add them to the store.")).toBeNull();
   });
 });

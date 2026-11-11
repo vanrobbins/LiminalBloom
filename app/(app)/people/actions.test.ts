@@ -23,7 +23,7 @@ import { accessEvents } from "@/db/schema";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
 
-import { cancelInvitationAction, changeRoleAction, removePersonAction } from "./actions";
+import { cancelInvitationAction, changeRoleAction, createInvitationAction, removePersonAction } from "./actions";
 
 afterAll(async () => {
   await dropStores();
@@ -99,6 +99,41 @@ describe("people actions", () => {
     await removePersonAction(jane.memberId, roles.sales_associate);
     expect(await removePersonAction(jane.memberId, roles.sales_associate)).toEqual({ status: "gone" });
     expect(await cancelInvitationAction("no-such-invitation")).toEqual({ status: "gone" });
+  });
+
+  it("creates an invitation for a Store Manager, with its event and the link's id, and the expiry as text", async () => {
+    await signInAs("store_manager");
+    const out = await createInvitationAction("Jane@Example.Test", roles.vm_worker);
+    expect(out).toMatchObject({ status: "created", email: "jane@example.test", roleName: "Visual Merchandising Worker" });
+    if (out.status !== "created") throw new Error("not created");
+    expect(typeof out.expiresAt).toBe("string");
+    expect((await db.select().from(invitation).where(eq(invitation.id, out.id)))[0]).toMatchObject({ status: "pending", roleId: roles.vm_worker });
+    expect(await eventCount()).toBe(1);
+  });
+
+  it.each(["vm_worker", "sales_associate", null] as const)("refuses to invite for a member whose role is %s, and writes nothing", async (role) => {
+    await signInAs(role);
+    expect(await createInvitationAction("jane@example.test", roles.sales_associate)).toEqual({ status: "forbidden" });
+    expect(await db.select().from(invitation).where(eq(invitation.organizationId, store))).toEqual([]);
+    expect(await eventCount()).toBe(0);
+  });
+
+  it("holds the rank rule on the role invited into, even when called directly", async () => {
+    await signInAs("assistant_manager");
+    expect(await createInvitationAction("a@example.test", roles.store_manager)).toEqual({ status: "forbidden" });
+    expect(await createInvitationAction("a@example.test", roles.assistant_manager)).toEqual({ status: "forbidden" });
+    await signInAs("vm_manager");
+    expect(await createInvitationAction("a@example.test", roles.vm_manager)).toEqual({ status: "forbidden" });
+    expect((await createInvitationAction("a@example.test", roles.vm_worker)).status).toBe("created");
+    expect(await eventCount()).toBe(1);
+  });
+
+  it("answers invalid to arguments that are not text, and bad-email to a blank address", async () => {
+    await signInAs("store_manager");
+    for (const bad of [undefined, null, 42, {}, "x".repeat(400)]) expect(await createInvitationAction(bad, roles.vm_worker)).toEqual({ status: "invalid" });
+    for (const bad of [undefined, null, 42, {}, "x".repeat(300)]) expect(await createInvitationAction("a@example.test", bad)).toEqual({ status: "invalid" });
+    expect(await createInvitationAction("", roles.vm_worker)).toEqual({ status: "bad-email" });
+    expect(await eventCount()).toBe(0);
   });
 
   it("answers invalid, not an error, to arguments that are not ids", async () => {

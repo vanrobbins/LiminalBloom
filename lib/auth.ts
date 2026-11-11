@@ -65,7 +65,7 @@ export const auth = betterAuth({
     session: {
       create: {
         // Better Auth starts every session with no active store. Pick one,
-        // or /products and /create-store send a returning member back and
+        // or /products and /welcome send a returning member back and
         // forth forever. This is the pattern the organization plugin docs give.
         before: async (session) => ({
           data: {
