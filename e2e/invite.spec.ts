@@ -1,8 +1,7 @@
-// Invitations (spec 0.7, 4.8 parts 1 and 5, 4.9): the Store Manager makes a link, the
-// invited person signs up from it, accepts, and is in the store with that role. Also the
-// dialog's refusals, the invitation page's plain messages, and /welcome. The test
-// account is the Store Manager of its home store; people who join are real sign-ups
-// (their addresses end @example.test, and clearPeople removes them).
+// Invitations (spec 0.7, 4.8 parts 1 and 5, 4.9): the Store Manager makes a link, the invited person
+// signs up from it, accepts, and is in the store with that role; also the dialog's refusals, the
+// invitation page's messages and /welcome. The test account is its home store's Store Manager;
+// joiners are real @example.test sign-ups (clearPeople removes them).
 
 import type { Browser, Page } from "@playwright/test";
 
@@ -173,27 +172,28 @@ test("the invitation page says in plain words when a link can't be used", async 
   await guest.context.close();
 });
 
-test("/welcome: a new account with an invitation waiting for its email accepts it there", async ({ page, browser }) => {
+test("/welcome: a new account sees the invitation waiting for its email by name only, and accepts it from the link", async ({ page, browser }) => {
   const email = inviteeEmail();
-  await seedInvitation(email, "sales_associate");
+  const id = await seedInvitation(email, "sales_associate");
   const guest = await visitor(browser, page);
   await guest.page.goto("/sign-up");
   await signUp(guest.page, email, "Wendy Welcome");
-  // No store yet: Products sends them to /welcome, where the invitation for their address waits.
-  await expect(guest.page.getByRole("heading", { level: 1, name: "Welcome" })).toBeVisible();
+  // No store yet: Products sends them to /welcome, which names the invitation but is no way in: the link is the secret.
   await expect(guest.page).toHaveURL(/\/welcome$/);
   await expect(guest.page.getByRole("heading", { name: "Invitations for you" })).toBeVisible();
-  await expect(guest.page.getByRole("link", { name: "Create a store" })).toHaveAttribute("href", "/create-store");
-  await guest.page.getByRole("button", { name: `Accept invitation to ${HOME_STORE}` }).click();
+  await expect(guest.page.getByText(HOME_STORE, { exact: true })).toBeVisible();
+  await expect(guest.page.getByText("Open the invite link you were sent to join.")).toBeVisible();
+  await expect(guest.page.getByRole("button", { name: /Accept/ })).toHaveCount(0);
+  expect(await guest.page.content()).not.toContain(id);
+  await guest.page.goto(`/invite/${id}`);
+  await guest.page.getByRole("button", { name: "Accept invitation" }).click();
   await guest.page.waitForURL("**/products");
-
   await openPeople(guest.page);
   await expect(guest.page.getByRole("heading", { name: "Sales Associate · 3" })).toBeVisible();
   // With a store, /welcome has nothing for them.
   await guest.page.goto("/welcome");
   await expect(guest.page).toHaveURL(/\/products$/);
   await guest.context.close();
-
   // The Store Manager's own visit goes straight to Products too.
   await page.goto("/welcome");
   await expect(page).toHaveURL(/\/products$/);

@@ -4,8 +4,9 @@
 // invitation accepted and writes the access_events row, so none exists without the
 // others. The conditions sit in the statement itself, so two accepts, or an accept
 // racing a cancel, cannot both win: the invitation must still be pending and
-// unexpired, its email must be this person's, they must not already be in the store,
-// and the store must have room.
+// unexpired, its role must be one of that store's (the invitation_role_fk foreign key
+// already says so; this keeps the member insert from relying on it), its email must be
+// this person's, they must not already be in the store, and the store must have room.
 //
 // The person comes from the action's session (never the browser). Runs as the table
 // owner, so every condition is spelled out here.
@@ -32,7 +33,7 @@ export async function acceptInvitation(person: { id: string; name: string; email
     with taken as (
       update invitation i set status = 'accepted'
       where i.id = ${invitationId}::text and i.status = 'pending' and i.expires_at > ${nowText}::timestamp
-        and i.role_id is not null
+        and exists (select 1 from role_definitions r where r.store_id = i.organization_id and r.id = i.role_id)
         and lower(i.email) = ${email}::text
         and not exists (select 1 from member m where m.organization_id = i.organization_id and m.user_id = ${person.id}::text)
         and (select count(*) from member m where m.organization_id = i.organization_id) < ${MAX_PEOPLE}

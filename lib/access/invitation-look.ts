@@ -65,12 +65,13 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
   return { state: people.n >= MAX_PEOPLE ? "full" : "ready", ...named };
 }
 
-export type WaitingInvitation = { id: string; storeName: string; roleName: string; /** ISO text, so it crosses into client components. */ expiresAt: string };
+// No id: /welcome is open to anyone who signs up with an invited address (email is not verified), and the link is the secret (4.9), so the id never leaves this read.
+export type WaitingInvitation = { storeName: string; roleName: string; /** ISO text, so it crosses into client components. */ expiresAt: string };
 
 /** The invitations waiting for this person's email, newest first, for stores they are not already in. */
 export async function pendingInvitationsFor(person: Viewer, now: Date = new Date()): Promise<WaitingInvitation[]> {
   const rows = await db
-    .select({ id: invitation.id, storeName: organization.name, roleName: roleDefinitions.name, expiresAt: invitation.expiresAt })
+    .select({ storeName: organization.name, roleName: roleDefinitions.name, expiresAt: invitation.expiresAt })
     .from(invitation)
     .innerJoin(organization, eq(organization.id, invitation.organizationId))
     .innerJoin(roleDefinitions, and(eq(roleDefinitions.storeId, invitation.organizationId), eq(roleDefinitions.id, invitation.roleId)))
@@ -83,5 +84,5 @@ export async function pendingInvitationsFor(person: Viewer, now: Date = new Date
       ),
     )
     .orderBy(desc(invitation.createdAt));
-  return rows.map((r) => ({ id: r.id, storeName: r.storeName, roleName: r.roleName, expiresAt: r.expiresAt.toISOString() }));
+  return rows.map((r) => ({ storeName: r.storeName, roleName: r.roleName, expiresAt: r.expiresAt.toISOString() }));
 }

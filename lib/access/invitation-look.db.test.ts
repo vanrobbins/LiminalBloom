@@ -104,13 +104,17 @@ describe("pendingInvitationsFor", () => {
     const v = await viewer("Lena.List@Example.Test");
     const first = await invite(a, "lena.list@example.test");
     const second = await invite(b, "LENA.LIST@example.test", { createdAt: new Date(Date.now() + 1000) });
-    await invite(a, "lena.list@example.test", { expiresAt: new Date(Date.now() - 1000) });
-    await invite(a, "lena.list@example.test", { status: "canceled" });
+    const skipped = [await invite(a, "lena.list@example.test", { expiresAt: new Date(Date.now() - 1000) }), await invite(a, "lena.list@example.test", { status: "canceled" })];
     await invite(b, "somebody.else@example.test");
     const list = await pendingInvitationsFor(v);
-    expect(list.map((i) => i.id)).toEqual([second, first]);
+    expect(list.map((i) => i.storeName)).toEqual([await storeName(b.store), await storeName(a.store)]);
     expect(list[0]).toMatchObject({ storeName: await storeName(b.store), roleName: "Visual Merchandising Manager" });
     expect(typeof list[0].expiresAt).toBe("string");
+    // The link is the secret (spec 4.9), and /welcome is open to anyone who signs up with the address:
+    // what leaves this read names the store, role and expiry, and nothing that opens an invitation.
+    expect(list.map((i) => Object.keys(i).sort())).toEqual([["expiresAt", "roleName", "storeName"], ["expiresAt", "roleName", "storeName"]]);
+    const serialised = JSON.stringify(list);
+    for (const id of [first, second, ...skipped]) expect(serialised).not.toContain(id);
   });
 
   it("skips a store the person is already in", async () => {

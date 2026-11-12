@@ -12,6 +12,7 @@ vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, setA
 
 import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
+import { eventsOf } from "@/lib/access/people-test";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
 
@@ -78,6 +79,28 @@ describe("acceptInvitationAction", () => {
     expect((await acceptInvitationAction(inviteId)).status).toBe("accepted");
     expect(await membership(userId)).toBeDefined();
     error.mockRestore();
+  });
+
+  it.each([
+    ["an expired invitation", { expiresAt: new Date(Date.now() - 1000) }, "expired"],
+    ["a cancelled one", { status: "canceled" }, "cancelled"],
+    ["an already accepted one", { status: "accepted" }, "used"],
+  ] as const)("passes on the state of %s and writes nothing", async (_name, change, status) => {
+    const userId = await signInWithEmail(address);
+    await db.update(invitation).set(change).where(eq(invitation.id, inviteId));
+    expect((await acceptInvitationAction(inviteId)).status).toBe(status);
+    expect(await membership(userId)).toBeUndefined();
+    expect(await eventsOf(store)).toEqual([]);
+    expect(mocks.setActiveOrganization).not.toHaveBeenCalled();
+  });
+
+  it("adds one member and logs one event when the same invitation is accepted twice at once", async () => {
+    const userId = await signInWithEmail(address);
+    const outcomes = await Promise.all([acceptInvitationAction(inviteId), acceptInvitationAction(inviteId)]);
+    expect(outcomes.filter((o) => o.status === "accepted")).toHaveLength(1);
+    expect(await db.select().from(member).where(eq(member.userId, userId))).toHaveLength(1);
+    expect((await eventsOf(store)).filter((e) => e.event === "invitation_accepted")).toHaveLength(1);
+    expect(mocks.setActiveOrganization).toHaveBeenCalledTimes(1);
   });
 
   it("answers invalid to an argument that is not an id", async () => {

@@ -33,17 +33,21 @@ describe("WelcomePage", () => {
     await expect(WelcomePage()).rejects.toThrow("redirect:/products");
   });
 
-  it("offers a person with no store the invitations waiting for their email, each with Accept, and Create a store", async () => {
+  it("lists the invitations waiting for their email by store, role and expiry, and tells them to open their link", async () => {
+    // The ids are in the data here on purpose: nothing from them may reach the page, as text, link or button (the link is the secret, spec 4.9).
     mocks.waiting.mockResolvedValue([
-      { id: "i1", storeName: "Spring Street", roleName: "Sales Associate", expiresAt: "2026-11-13T23:40:00.000Z" },
-      { id: "i2", storeName: "Pioneer Place", roleName: "Visual Merchandising Worker", expiresAt: "2026-11-13T23:40:00.000Z" },
+      { id: "SECRET-ID-ONE", storeName: "Spring Street", roleName: "Sales Associate", expiresAt: "2026-11-13T23:40:00.000Z" },
+      { id: "SECRET-ID-TWO", storeName: "Pioneer Place", roleName: "Visual Merchandising Worker", expiresAt: "2026-11-13T23:40:00.000Z" },
     ]);
-    render(await WelcomePage());
+    const { container } = render(await WelcomePage());
     expect(mocks.waiting).toHaveBeenCalledWith({ id: "u1", email: "nia@example.test" });
     expect(screen.getByRole("heading", { name: "Invitations for you" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Accept invitation to Spring Street" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Accept invitation to Pioneer Place" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create a store" })).toHaveAttribute("href", "/create-store");
+    expect(screen.getByText("Spring Street")).toBeInTheDocument();
+    expect(screen.getByText(/Visual Merchandising Worker role/)).toBeInTheDocument();
+    expect(screen.getByText("Open the invite link you were sent to join.")).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain("SECRET-ID");
+    expect(screen.queryByRole("button", { name: /accept/i })).toBeNull();
+    expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store"]);
   });
 
   it("says nothing is waiting, and still offers Create a store, when there are no invitations", async () => {
