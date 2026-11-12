@@ -9,7 +9,11 @@
 // appeared after the reads below is still caught. Two requests at the very same
 // instant can both pass (there is no unique index to stop them, and adding one is a
 // migration): the cost is a second link for one address. Counts and "already
-// waiting" ignore an expired invitation, and a lapsed one (its inviter can no longer grant its role, invitation-lapse.ts): it is dead, and People offers Cancel only.
+// waiting" ignore an expired invitation, and a lapsed one (its inviter can no longer
+// grant its role, invitation-lapse.ts): it is dead, and People offers Cancel only. A
+// lapsed invitation is a live condition (it revives if its inviter regains the authority),
+// so a new invitation to the same address cancels the lapsed one in the same statement:
+// there is never a usable one beside a lapsed one.
 //
 // Runs as the table owner, not through withStore (the store role cannot reach Better
 // Auth's tables), so every statement is filtered by the store id by hand.
@@ -79,6 +83,11 @@ export async function applyInvitation(storeId: string, actor: PeopleActor, email
         and not exists (select 1 from invitation where organization_id = ${storeId} and lower(email) = ${email}::text and status = 'pending' and expires_at > ${nowText}::timestamp and ${notLapsed})
         and (select count(*) from member where organization_id = ${storeId}) < ${MAX_PEOPLE}
         and (select count(*) from invitation where organization_id = ${storeId} and status = 'pending' and expires_at > ${nowText}::timestamp and ${notLapsed}) < ${MAX_INVITATIONS}),
+    superseded as (
+      update invitation set status = 'canceled'
+      where organization_id = ${storeId} and lower(email) = ${email}::text and status = 'pending' and expires_at > ${nowText}::timestamp and not ${notLapsed}
+        and exists (select 1 from allowed)
+      returning id),
     made as (
       insert into invitation (id, organization_id, email, role, status, expires_at, inviter_id, role_id)
       select ${id}::text, ${storeId}::text, ${email}::text, 'member', 'pending', ${expiresAt.toISOString()}::timestamp, ${actor.userId}::text, ${role.id}::text from allowed

@@ -58,7 +58,8 @@ async function checkOurs(storeId: string, accountId: string, person: DemoPerson)
   }
 }
 
-type Options = { isProduction?: boolean; people?: DemoPerson[] };
+/** `existing` is checkDemoPeople's answer, when the caller already asked: it is then not asked again. */
+type Options = { isProduction?: boolean; people?: DemoPerson[]; existing?: Map<string, string> };
 
 /**
  * The accounts that already exist (email to id). On production each must be ours or this throws.
@@ -78,7 +79,7 @@ export async function checkDemoPeople(storeId: string, { isProduction = false, p
 export async function seedDemoPeople(storeId: string, options: Options = {}): Promise<number> {
   const { people = DEMO_PEOPLE } = options;
   // Every existing account is checked before any role is placed, so a refusal leaves the store as it was.
-  const existing = await checkDemoPeople(storeId, options);
+  const existing = options.existing ?? (await checkDemoPeople(storeId, options));
   for (const person of people) {
     let accountId = existing.get(person.email);
     if (!accountId) {

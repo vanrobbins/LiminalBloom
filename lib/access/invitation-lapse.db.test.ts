@@ -3,7 +3,8 @@
 // people.manage and still ranks strictly above the invitation's role. Otherwise the
 // invitation has lapsed: it is refused and nothing is written.
 
-import { eq, inArray } from "drizzle-orm";
+import { neonConfig, Pool, type PoolClient } from "@neondatabase/serverless";
+import { eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -14,9 +15,11 @@ import { dropStores } from "@/lib/products/test-stores";
 
 import { acceptInvitation } from "./invitation-accept";
 import { actorIn, eventsOf, type Setup } from "./people-test";
-import { applyRemoval, readTarget } from "./people-write";
 import type { BuiltinRoleKey } from "./roles";
 import { dropPeople, makeInvitation, makeStoreWithRoles } from "./test-roles";
+
+// A transaction held open on a second connection needs a socket, not the HTTP driver the app uses.
+neonConfig.webSocketConstructor = WebSocket;
 
 const made: string[] = [];
 afterAll(async () => {
@@ -116,20 +119,56 @@ describe("an invitation lapses when its inviter can no longer grant its role", (
   });
 });
 
-describe("an inviter removed at the same moment as the accept", () => {
-  // The accept and the removal race. Either order is fine, but the two must agree: the
-  // person is in the store only if the accept ran before the removal took the inviter out.
-  it("never leaves a half-written accept", async () => {
-    for (let round = 0; round < 3; round += 1) {
-      const { s, inviter, nia, id } = await setup(`lapse-race-${round}`, "vm_manager", "vm_worker");
-      const remover = await actorIn(s, "store_manager");
-      const target = (await readTarget(s.store, (await db.select({ id: member.id }).from(member).where(eq(member.userId, inviter.userId)))[0].id))!;
-      const [accepted, removed] = await Promise.all([acceptInvitation(nia, id), applyRemoval(s.store, remover, target, s.roles.vm_manager)]);
-      expect(removed.status).toBe("removed");
-      expect(["accepted", "lapsed"]).toContain(accepted.status);
-      const joined = (await membersOf(nia.id)).length;
-      expect(joined).toBe(accepted.status === "accepted" ? 1 : 0);
-      expect(await statusOf(id)).toBe(accepted.status === "accepted" ? "accepted" : "pending");
-    }
-  });
+// The accept's lapse check locks the inviter's member row and role (invitation-lapse.ts `lock`), so a change
+// that is still uncommitted when the accept starts is waited for, and the accept sees its result. Proved with
+// a second connection: it opens a transaction, makes the change and holds it; the accept is shown to be blocked
+// (a waiting backend in pg_stat_activity); only then does the change commit.
+const pool = new Pool({ connectionString: process.env.DATABASE_URL_POOLED ?? process.env.DATABASE_URL });
+afterAll(() => pool.end());
+
+const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+/** Whether some other backend is waiting on a lock inside the accept statement. */
+async function acceptIsWaiting() {
+  for (let i = 0; i < 40; i += 1) {
+    const { rows } = await db.execute(sql`select 1 from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid() and wait_event_type = 'Lock' and query like '%update invitation i set status%'`);
+    if (rows.length) return true;
+    await sleep(250);
+  }
+  return false;
+}
+
+/** Runs `change` in an open transaction, starts the accept, waits until it is blocked, then commits. Returns the accept's outcome. */
+async function acceptDuring(nia: { id: string; name: string; email: string }, id: string, change: (tx: PoolClient) => Promise<unknown>) {
+  const tx = await pool.connect();
+  let accepting: ReturnType<typeof acceptInvitation> | undefined;
+  try {
+    await tx.query("begin");
+    await change(tx);
+    accepting = acceptInvitation(nia, id);
+    expect(await acceptIsWaiting()).toBe(true);
+    await tx.query("commit");
+  } catch (err) {
+    await tx.query("rollback");
+    throw err;
+  } finally {
+    tx.release();
+  }
+  return accepting;
+}
+
+describe("an inviter changed by a transaction that has not committed when the accept starts", () => {
+  it("waits for the removal, then lapses and writes nothing", async () => {
+    const { s, inviter, nia, id } = await setup("lapse-lock-member", "vm_manager", "vm_worker");
+    const out = await acceptDuring(nia, id, (tx) => tx.query("delete from member where user_id = $1", [inviter.userId]));
+    expect(out).toEqual({ status: "lapsed" });
+    await expectLapsed(s, nia, id);
+  }, 30_000);
+
+  it("waits for the inviter's role to lose people.manage, then lapses and writes nothing", async () => {
+    const { s, nia, id } = await setup("lapse-lock-role", "vm_manager", "vm_worker");
+    const out = await acceptDuring(nia, id, (tx) => tx.query("update role_definitions set switches = array['view']::text[] where id = $1", [s.roles.vm_manager]));
+    expect(out).toEqual({ status: "lapsed" });
+    await expectLapsed(s, nia, id);
+  }, 30_000);
 });

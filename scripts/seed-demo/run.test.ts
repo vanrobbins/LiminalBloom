@@ -37,6 +37,9 @@ vi.mock("@/lib/products/images", () => ({
 
 const { seedDemo } = await import("./run");
 
+/** What the check found: the seed hands this map on, so ownership is asked once. */
+const EXISTING = new Map([["demo.store.manager@liminalbloom.app", "user_1"]]);
+
 const run = () => seedDemo({ isProduction: false, confirm: async () => false });
 
 beforeEach(() => {
@@ -53,7 +56,7 @@ beforeEach(() => {
     calls.push("delete");
   });
   fake.seedDemoPeople.mockReset().mockImplementation(async () => 5);
-  fake.checkDemoPeople.mockReset().mockImplementation(async () => new Map());
+  fake.checkDemoPeople.mockReset().mockImplementation(async () => EXISTING);
 });
 
 describe("seedDemo", () => {
@@ -71,7 +74,7 @@ describe("seedDemo", () => {
 
   it("puts one account per built-in role into the demo store, and none when the batch fails", async () => {
     await run();
-    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: false });
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: false, existing: EXISTING });
     fake.seedDemoPeople.mockClear();
     fake.withStore.mockRejectedValue(new Error("boom"));
     await expect(run()).rejects.toThrow("boom");
@@ -87,6 +90,12 @@ describe("seedDemo", () => {
     expect(fake.seedDemoPeople).not.toHaveBeenCalled();
   });
 
+  it("asks about ownership once: the check runs one time and the seed gets its answer", async () => {
+    await run();
+    expect(fake.checkDemoPeople).toHaveBeenCalledTimes(1);
+    expect(fake.seedDemoPeople.mock.calls[0][1].existing).toBe(EXISTING);
+  });
+
   it("skips that check when the role accounts are skipped", async () => {
     await seedDemo({ isProduction: true, confirm: async () => true });
     expect(fake.checkDemoPeople).not.toHaveBeenCalled();
@@ -94,7 +103,7 @@ describe("seedDemo", () => {
 
   it("seeds the role accounts on development, with no flag", async () => {
     await run();
-    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: false });
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: false, existing: EXISTING });
   });
 
   it("seeds no role accounts on production without --with-people", async () => {
@@ -108,7 +117,7 @@ describe("seedDemo", () => {
   it("seeds them on production with --with-people, and the prompt names every email", async () => {
     const confirm = vi.fn<(message: string) => Promise<boolean>>(async () => true);
     await seedDemo({ isProduction: true, withPeople: true, confirm });
-    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: true });
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: true, existing: EXISTING });
     const message = confirm.mock.calls[0][0];
     expect(message).toContain("demo.store.manager@liminalbloom.app");
     expect(message).toContain("demo.sales.associate@liminalbloom.app");

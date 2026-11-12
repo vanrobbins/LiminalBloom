@@ -15,7 +15,7 @@ import { dropStores } from "@/lib/products/test-stores";
 import { lookInvitation, pendingInvitationsFor } from "./invitation-look";
 import { createInvitation, MAX_INVITATIONS } from "./invite";
 import { peopleViewFor } from "./people";
-import { actorIn, type Setup } from "./people-test";
+import { actorIn, personIn, type Setup } from "./people-test";
 import { BUILTIN_ROLES } from "./roles";
 import { dropPeople, makeInvitation, makeStoreWithRoles } from "./test-roles";
 
@@ -37,6 +37,8 @@ async function lapsed(label: string) {
   await db.delete(member).where(eq(member.userId, inviter.userId));
   return { s, manager, id, email };
 }
+
+const statusOf = async (id: string) => (await db.select({ s: invitation.status }).from(invitation).where(eq(invitation.id, id)))[0].s;
 
 async function viewer(email: string) {
   const id = `test_acc_${randomUUID().slice(0, 8)}`;
@@ -75,6 +77,26 @@ describe("a lapsed invitation", () => {
   it("does not block a new invitation to the same address", async () => {
     const { s, manager, email } = await lapsed("lv-dup");
     expect((await createInvitation(s.store, manager, email, s.roles.sales_associate)).status).toBe("created");
+  });
+
+  it("is cancelled in the same statement by a new invitation to the same address, whatever its letter case; one for another address stays", async () => {
+    const { s, manager, id, email } = await lapsed("lv-cancel");
+    const gone = await actorIn(s, "vm_manager");
+    const elsewhere = await makeInvitation(s.store, gone.userId, s.roles.vm_worker);
+    await db.delete(member).where(eq(member.userId, gone.userId));
+    const out = await createInvitation(s.store, manager, email.toUpperCase(), s.roles.sales_associate);
+    expect(out.status).toBe("created");
+    expect(await statusOf(id)).toBe("canceled");
+    expect(await statusOf(elsewhere)).toBe("pending");
+    expect(await statusOf((out as { id: string }).id)).toBe("pending");
+  });
+
+  it("is left alone when the new invitation to its address is refused", async () => {
+    const { s, manager, id } = await lapsed("lv-cancel-refused");
+    const there = await personIn(s, "sales_associate");
+    await db.update(invitation).set({ email: `${there.userId}@example.com` }).where(eq(invitation.id, id));
+    expect((await createInvitation(s.store, manager, `${there.userId}@example.com`, s.roles.sales_associate)).status).toBe("already-member");
+    expect(await statusOf(id)).toBe("pending");
   });
 
   it("is not counted toward the 100 waiting invitations", async () => {

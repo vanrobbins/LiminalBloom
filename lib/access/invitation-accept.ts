@@ -8,7 +8,10 @@
 // already says so; this keeps the member insert from relying on it), its email must be
 // this person's, they must not already be in the store, the store must have room, and
 // the inviter must still be able to grant the role (invitation-lapse.ts), or the
-// invitation has lapsed.
+// invitation has lapsed. That check locks the inviter's member row and role row FOR
+// SHARE, so a removal or role change still uncommitted when the accept starts is
+// waited for and seen; one that commits later is ordered after the accept. The
+// invitation's own role row is not locked (invitation-lapse.ts says what that leaves).
 //
 // The person comes from the action's session (never the browser). Runs as the table
 // owner, so every condition is spelled out here.
@@ -40,7 +43,7 @@ export async function acceptInvitation(person: { id: string; name: string; email
         and lower(i.email) = ${email}::text
         and not exists (select 1 from member m where m.organization_id = i.organization_id and m.user_id = ${person.id}::text)
         and (select count(*) from member m where m.organization_id = i.organization_id) < ${MAX_PEOPLE}
-        and ${inviterMayGrant(sql`i.organization_id`, sql`i.role_id`, sql`i.inviter_id`)}
+        and ${inviterMayGrant(sql`i.organization_id`, sql`i.role_id`, sql`i.inviter_id`, true)}
       returning i.organization_id, i.role_id),
     added as (
       insert into member (id, organization_id, user_id, role, created_at, role_id)

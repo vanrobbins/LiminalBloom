@@ -36,8 +36,9 @@ export async function seedDemo({ isProduction, withPeople = false, confirm }: Op
     return;
   }
 
-  // Before anything is replaced: an account that may not be ours stops the run here, with the catalog untouched.
-  if (seedPeople) await checkDemoPeople(found.storeId, { isProduction });
+  // Before anything is replaced: an account that may not be ours stops the run here, with the catalog untouched
+  // ("Nothing was changed" is true of that refusal only). The answer goes on to seedDemoPeople so ownership is asked once.
+  const existing = seedPeople ? await checkDemoPeople(found.storeId, { isProduction }) : undefined;
 
   const { withStore } = await import("@/lib/db/with-store");
   const { deleteImagesQuietly, listImages } = await import("@/lib/products/images");
@@ -53,7 +54,8 @@ export async function seedDemo({ isProduction, withPeople = false, confirm }: Op
   await deleteImagesQuietly(stale);
 
   // One account per built-in role, so a walkthrough can sign in as each (spec 0.7, 4.10).
-  const people = seedPeople ? await seedDemoPeople(found.storeId, { isProduction }) : 0;
+  // A sign-up that fails here comes after the catalog was replaced: that part stays done, and a re-run finishes the people.
+  const people = seedPeople ? await seedDemoPeople(found.storeId, { isProduction, existing }) : 0;
 
   const floor = plan.locations.filter((l) => l.faceId).length;
   console.log(`Done: ${plan.products.length} products, ${plan.categories.length} categories, ${floor} floor places, ${plan.locations.length - floor} bin places, ${stale.length} old images removed, ${seedPeople ? `${people} role accounts in place` : "role accounts skipped (production needs --with-people)"}.`);
