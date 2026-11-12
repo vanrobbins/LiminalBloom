@@ -110,5 +110,17 @@ describe("the nesting rule in the SQL alone (the checks before it skipped)", () 
     expect(await applyRename(s.store, await actorOf(s), sa, "Educator")).toEqual({ status: "stale" });
     await unchanged(s, before);
   });
+
+  it("refuses a rename of a role that moved above the actor after it was read", async () => {
+    const s = await makeStoreWithRoles("race-rename-rank");
+    const custom = await addCustom(s.store, "Educator", 450, ["view"]);
+    const actor = await actorOf(s);
+    const role = (await readSnapshot(s.store)).roles.find((r) => r.id === custom.id)!;
+    // Moved to a rank the actor no longer outranks; swapRanks does not bump the version, so only the rank pin can see it.
+    await db.update(roleDefinitions).set({ rank: actor.rank - 1 }).where(eq(roleDefinitions.id, custom.id));
+    const before = await rolesOf(s.store);
+    expect(await applyRename(s.store, actor, role, "Planner")).toEqual({ status: "stale" });
+    await unchanged(s, before);
+  });
 });
 

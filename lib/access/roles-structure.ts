@@ -97,13 +97,13 @@ export async function renameRole(storeId: string, actor: RolesActor, roleId: str
   return applyRename(storeId, actor, role, checked.name);
 }
 
-/** The rename itself, after the checks; exported so a test can run it on a role whose version moved since it was read: the pin in the SQL is what holds then. */
+/** The rename itself, after the checks; exported so a test can run it on a role whose version moved since it was read: the pins in the SQL (version and rank) are what hold then. */
 export async function applyRename(storeId: string, actor: RolesActor, role: DbRole, name: string): Promise<RenameOutcome> {
   const done = await runRoleWrite(sql`
     with renamed as (
       update role_definitions r set name = ${name}, version = r.version + 1, updated_at = now()
       from role_definitions old
-      where r.store_id = ${storeId} and r.id = ${role.id} and r.version = ${role.version} and old.id = r.id
+      where r.store_id = ${storeId} and r.id = ${role.id} and r.version = ${role.version} and r.rank = ${role.rank}::int and old.id = r.id
       returning old.name as old_name, r.name as new_name),
     logged as (
       insert into access_events (store_id, actor_id, actor_name, event, detail)

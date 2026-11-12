@@ -40,7 +40,6 @@ function checkPlan(snapshot: Snapshot, actor: RolesActor, planned: Planned[]): R
 }
 
 /**
-
  * The one statement, exported so a race test can run it with a snapshot that is out of date. `planned` carries each role's new switches and name; its
  * versions pin it, and so do the roles as read (pins). Zero rows back means
  * nothing was written.
