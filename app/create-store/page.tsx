@@ -1,6 +1,6 @@
 // Create a store. The first-run case for someone with no store, and also how
 // an existing member adds another: a person can belong to several stores
-// (docs/DECISIONS.md, 2026-09-29), and whoever creates one becomes its owner.
+// (docs/DECISIONS.md, 2026-09-29), and whoever creates one becomes its Store Manager.
 //
 // Most team members still arrive by invitation (section 3.1).
 

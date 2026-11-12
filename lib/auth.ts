@@ -21,7 +21,8 @@ import { optionalEnv } from "./env";
 // know only owner / admin / member, not our roles or the rank rule, and three of them
 // list emails and invitation ids to any member. So the browser cannot reach them: the
 // router answers 404 before anything runs. People, roles and invitations go through the
-// app's own server actions (lib/access/people-write.ts). `auth.api.*` calls from server
+// app's own server actions (lib/access/people-write.ts, invite.ts, invitation-accept.ts
+// and roles-*.ts). `auth.api.*` calls from server
 // code are not affected. Not here: `/organization/set-active` (the store switcher).
 // `/change-password` is closed too, below: the browser's own call would not revoke the
 // person's other sessions, so the Account page's server action calls
@@ -125,8 +126,9 @@ export const auth = betterAuth({
       },
       organizationHooks: {
         // Every store gets its own encryption key, settings row and roles the
-        // moment it exists, however it was created -- the Server Action or
-        // Better Auth's own endpoint. Proposal 8.1.
+        // moment it exists, however it was created: the Server Action, or any
+        // server code calling auth.api.createOrganization (Better Auth's own
+        // browser endpoint is closed above). Proposal 8.1.
         //
         // Imported inside the hook: store-keys imports `server-only`, and the
         // Better Auth CLI loads this file outside Next.js, where that throws.

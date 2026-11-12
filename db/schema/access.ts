@@ -32,8 +32,10 @@ export const roleDefinitions = pgTable(
     uniqueIndex("role_definitions_store_id_unique").on(t.storeId, t.id),
     uniqueIndex("role_definitions_name_unique").on(t.storeId, sql`lower(${t.name})`),
     unique("role_definitions_builtin_unique").on(t.storeId, t.builtin),
-    // A constraint, not an index, so migration 0018 can make it DEFERRABLE:
-    // renumbering ranks passes through duplicates mid-batch.
+    // A constraint, not an index, so migration 0018 can make it DEFERRABLE
+    // INITIALLY IMMEDIATE: a deferrable unique constraint is checked at the end
+    // of the statement, so renumbering ranks in ONE statement passes through
+    // duplicates without a SET CONSTRAINTS batch (lib/access/roles-structure.ts).
     unique("role_definitions_rank_unique").on(t.storeId, t.rank),
     check("role_definitions_rank_positive", sql`${t.rank} > 0`),
     check(
