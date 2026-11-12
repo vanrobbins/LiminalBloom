@@ -11,6 +11,7 @@ const fake = vi.hoisted(() => ({
   listImages: vi.fn(),
   deleteImagesQuietly: vi.fn(),
   seedDemoPeople: vi.fn(),
+  checkDemoPeople: vi.fn(),
 }));
 
 vi.mock("./target", () => ({
@@ -25,6 +26,7 @@ vi.mock("./build", () => ({
 }));
 vi.mock("./people", () => ({
   seedDemoPeople: fake.seedDemoPeople,
+  checkDemoPeople: fake.checkDemoPeople,
   DEMO_PEOPLE: [{ email: "demo.store.manager@liminalbloom.app" }, { email: "demo.sales.associate@liminalbloom.app" }],
 }));
 vi.mock("@/lib/db/with-store", () => ({ withStore: fake.withStore }));
@@ -51,6 +53,7 @@ beforeEach(() => {
     calls.push("delete");
   });
   fake.seedDemoPeople.mockReset().mockImplementation(async () => 5);
+  fake.checkDemoPeople.mockReset().mockImplementation(async () => new Map());
 });
 
 describe("seedDemo", () => {
@@ -73,6 +76,20 @@ describe("seedDemo", () => {
     fake.withStore.mockRejectedValue(new Error("boom"));
     await expect(run()).rejects.toThrow("boom");
     expect(fake.seedDemoPeople).not.toHaveBeenCalled();
+  });
+
+  it("checks the role accounts before replacing the catalog, so a refusal leaves the store as it was", async () => {
+    fake.checkDemoPeople.mockRejectedValue(new Error("demo.vm.manager@liminalbloom.app is not ours"));
+    const confirm = async () => true;
+    await expect(seedDemo({ isProduction: true, withPeople: true, confirm })).rejects.toThrow("not ours");
+    expect(fake.checkDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: true });
+    expect(fake.withStore).not.toHaveBeenCalled();
+    expect(fake.seedDemoPeople).not.toHaveBeenCalled();
+  });
+
+  it("skips that check when the role accounts are skipped", async () => {
+    await seedDemo({ isProduction: true, confirm: async () => true });
+    expect(fake.checkDemoPeople).not.toHaveBeenCalled();
   });
 
   it("seeds the role accounts on development, with no flag", async () => {

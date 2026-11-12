@@ -82,7 +82,7 @@ describe("the store-creation hook", () => {
 describe("giveStoreItsRoles", () => {
   it("changes nothing when run twice", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const store = await makeStore("seed-twice");
+    const store = await makeStore("seed-twice", { roles: false });
     await giveStoreItsRoles(store);
     const first = await rolesOf(store);
     await giveStoreItsRoles(store);

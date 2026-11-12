@@ -60,8 +60,11 @@ async function checkOurs(storeId: string, accountId: string, person: DemoPerson)
 
 type Options = { isProduction?: boolean; people?: DemoPerson[] };
 
-export async function seedDemoPeople(storeId: string, { isProduction = false, people = DEMO_PEOPLE }: Options = {}): Promise<number> {
-  // Every existing account is checked before any role is placed, so a refusal leaves the store as it was.
+/**
+ * The accounts that already exist (email to id). On production each must be ours or this throws.
+ * It writes nothing, so run.ts calls it before it replaces the catalog: a refusal then leaves the whole store as it was.
+ */
+export async function checkDemoPeople(storeId: string, { isProduction = false, people = DEMO_PEOPLE }: Options = {}): Promise<Map<string, string>> {
   const existing = new Map<string, string>();
   for (const person of people) {
     const [account] = await db.select({ id: user.id }).from(user).where(eq(user.email, person.email));
@@ -69,6 +72,13 @@ export async function seedDemoPeople(storeId: string, { isProduction = false, pe
     if (isProduction) await checkOurs(storeId, account.id, person);
     existing.set(person.email, account.id);
   }
+  return existing;
+}
+
+export async function seedDemoPeople(storeId: string, options: Options = {}): Promise<number> {
+  const { people = DEMO_PEOPLE } = options;
+  // Every existing account is checked before any role is placed, so a refusal leaves the store as it was.
+  const existing = await checkDemoPeople(storeId, options);
   for (const person of people) {
     let accountId = existing.get(person.email);
     if (!accountId) {

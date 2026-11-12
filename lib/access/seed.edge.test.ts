@@ -27,7 +27,7 @@ const roleIdOf = async (memberId: string) =>
 describe("giveStoreItsRoles edge cases", () => {
   it("only touches the store it is given", async () => {
     const other = await makeStore("seed-other");
-    const mine = await makeStore("seed-mine");
+    const mine = await makeStore("seed-mine", { roles: false });
     await seedBuiltinRoles(other);
     const theirs = await makePerson(other, null, "owner");
     const before = await rolesOf(other);

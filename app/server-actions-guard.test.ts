@@ -77,4 +77,22 @@ ${body}
     expect(problemIn(`const a = await ${GUARD}("a"); if (a.status === "forbidden") return 1; await ${GUARD}("b");`)).toContain("without checking its status");
     expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "ok") return 1;`)).toContain("never checks c.status");
   });
+
+  it("accepts the comparison in a ternary, behind a !, or among other conditions", () => {
+    expect(problemIn(`const c = await ${GUARD}("a"); return c.status === "forbidden" ? 1 : 2;`)).toBeNull();
+    expect(problemIn(`const c = await ${GUARD}("a"); if (!(c.status !== "forbidden")) return 1;`)).toBeNull();
+    expect(problemIn(`const c = await ${GUARD}("a"); if (x || c.status === "forbidden") return 1;`)).toBeNull();
+    expect(problemIn(`if (x && (await ${GUARD}("a")).status === "forbidden") return 1;`)).toBeNull();
+  });
+
+  it("flags a comparison that is not the condition of an if or ternary: assigned, passed on, or returned as it is", () => {
+    expect(problemIn(`const c = await ${GUARD}("a"); const gone = c.status === "forbidden"; return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); log(c.status === "forbidden"); return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); return c.status === "forbidden";`)).toContain("never checks c.status");
+    expect(problemIn(`const gone = (await ${GUARD}("a")).status === "forbidden"; return 1;`)).toContain("never branches on it");
+  });
+
+  it("flags a guard whose answer is only checked before it was awaited, such as an earlier variable of the same name", () => {
+    expect(problemIn(`{ const c = await ${GUARD}("a"); if (c.status === "forbidden") return 1; } { const c = await ${GUARD}("b"); return 2; }`)).toContain("never checks c.status");
+  });
 });
