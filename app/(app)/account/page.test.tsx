@@ -19,4 +19,10 @@ describe("AccountPage", () => {
     expect(screen.queryByText("User id")).toBeNull();
     expect(screen.getByRole("link", { name: "Store settings" })).toHaveAttribute("href", "/store");
   });
+
+  it("has the Change password card", async () => {
+    render(await AccountPage());
+    expect(screen.getByRole("heading", { name: "Change password" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Current password")).toBeInTheDocument();
+  });
 });

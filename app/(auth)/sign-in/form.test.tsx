@@ -66,6 +66,28 @@ describe("SignInForm", () => {
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
   });
 
+  it("offers Keep me signed in, off until ticked", () => {
+    render(<SignInForm next={null} />);
+    expect(screen.getByRole("checkbox", { name: "Keep me signed in" })).not.toBeChecked();
+  });
+
+  it("signs in for the browser session only (rememberMe false) unless Keep me signed in is ticked", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    await submit();
+    expect(mocks.email).toHaveBeenCalledWith({ email: "van@example.com", password: "correct-horse", rememberMe: false });
+  });
+
+  it("asks for a lasting session (rememberMe true) when Keep me signed in is ticked", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<SignInForm next={null} />);
+    await user.type(screen.getByLabelText("Work email"), "van@example.com");
+    await user.type(screen.getByLabelText("Password", { exact: true }), "correct-horse");
+    await user.click(screen.getByRole("checkbox", { name: "Keep me signed in" }));
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(mocks.email).toHaveBeenCalledWith({ email: "van@example.com", password: "correct-horse", rememberMe: true });
+  });
+
   it("keeps the return path on the link to create an account", () => {
     render(<SignInForm next="/invite/abc123" />);
     expect(screen.getByRole("link", { name: "Need an account? Create one" })).toHaveAttribute("href", "/sign-up?next=%2Finvite%2Fabc123");

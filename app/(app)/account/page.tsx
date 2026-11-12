@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireMember } from "@/lib/current-member";
 
+import { ChangePasswordForm } from "./change-password-form";
+
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
@@ -37,6 +39,8 @@ export default async function AccountPage() {
           </div>
         </dl>
       </Card>
+
+      <ChangePasswordForm />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-ink">

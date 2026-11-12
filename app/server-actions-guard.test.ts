@@ -18,6 +18,7 @@ type Exception = { guard: string; first: string[]; why: string };
 const ALLOWED: Record<string, Exception> = {
   "app/create-store/actions.ts": { guard: "getSession", first: ["headers"], why: "store creation happens before the person has a store or a role; the session needs the request headers" },
   "app/invite/[id]/actions.ts": { guard: "getSession", first: ["headers"], why: "accepting is how a person with no store or role gets one; the session (its person and email) is the check, and the invitation must name that email" },
+  "app/(app)/account/actions.ts": { guard: "requireMember", first: [], why: "changing your own password is for any signed-in member whatever their role, so there is no switch to hold; requireMember redirects a signed-out visitor before anything is read" },
   "app/(editor)/layout/edit/actions.ts": { guard: GUARD, first: ["getCurrentMember"], why: "the editor answers signed-out itself (its last change was not saved; the guard would redirect), so one getCurrentMember() comes first" },
 };
 const SCANNED_ROOTS = ["app", "lib", "components"];
@@ -55,7 +56,6 @@ const isExported = (node: ts.Node) => hasModifier(node, ts.SyntaxKind.ExportKeyw
 const isAsync = (node: ts.Node) => hasModifier(node, ts.SyntaxKind.AsyncKeyword);
 
 type FunctionNode = ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression;
-
 const unwrap = (e: ts.Expression): ts.Expression => (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isSatisfiesExpression(e) || ts.isNonNullExpression(e) ? unwrap(e.expression) : e);
 
 /** The async function an expression is, if it is one. */

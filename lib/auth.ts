@@ -22,9 +22,12 @@ import { optionalEnv } from "./env";
 // list emails and invitation ids to any member. So the browser cannot reach them: the
 // router answers 404 before anything runs. People, roles and invitations go through the
 // app's own server actions (lib/access/people-write.ts). `auth.api.*` calls from server
-// code are not affected. Not here: `/organization/set-active` (the store switcher),
-// and `/change-password` (plan task 11 moves it to a server action first). Spec 0.7,
-// 4.5, "Spike findings"; e2e/auth-routes.spec.ts proves each path and its spellings.
+// code are not affected. Not here: `/organization/set-active` (the store switcher).
+// `/change-password` is closed too, below: the browser's own call would not revoke the
+// person's other sessions, so the Account page's server action calls
+// `auth.api.changePassword` with `revokeOtherSessions: true` instead (lib/change-password.db.test.ts
+// proves the server call still works). Spec 0.7, 4.5, "Spike findings";
+// e2e/auth-routes.spec.ts proves each path and its spellings.
 const CLOSED_ORGANIZATION_PATHS = [
   "invite-member",
   "cancel-invitation",
@@ -43,8 +46,10 @@ const CLOSED_ORGANIZATION_PATHS = [
   "list-user-invitations",
 ].map((name) => `/organization/${name}`);
 
+const CLOSED_PATHS = [...CLOSED_ORGANIZATION_PATHS, "/change-password"];
+
 export const auth = betterAuth({
-  disabledPaths: CLOSED_ORGANIZATION_PATHS,
+  disabledPaths: CLOSED_PATHS,
   // Read through optionalEnv so a value pasted into a dashboard with a
   // trailing newline cannot produce an "Invalid URL" build failure.
   baseURL: optionalEnv("BETTER_AUTH_URL"),

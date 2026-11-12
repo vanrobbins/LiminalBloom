@@ -44,6 +44,8 @@ export function activityText(event: string, actor: string, detail: Detail, canSe
       return canSeeEmails ? `${actor} invited ${email} as ${role}` : `${actor} created an invitation as ${role}`;
     case "invitation_cancelled":
       return canSeeEmails ? `${actor} cancelled the invitation for ${email}` : `${actor} cancelled an invitation`;
+    case "store_renamed":
+      return `${actor} renamed the store from ${text(detail, "from", "its old name")} to ${text(detail, "to", "a new name")}`;
     case "invitation_accepted":
       return `${actor} joined as ${role}`;
     default:

@@ -3,6 +3,7 @@
 
 "use client";
 
+import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -33,6 +34,9 @@ export function SignInForm({ next }: { next: string | null }) {
       const { error } = await signIn.email({
         email: String(form.get("email")),
         password: String(form.get("password")),
+        // Better Auth: false = a cookie that ends with the browser and a 24-hour session;
+        // true = 7 days, extended each day. Off unless ticked: store tablets are shared.
+        rememberMe: form.get("rememberMe") === "on",
       });
       // Deliberately vague: saying which of the two was wrong tells an
       // attacker whether an email address has an account here.
@@ -68,6 +72,18 @@ export function SignInForm({ next }: { next: string | null }) {
             required
             autoComplete="current-password"
           />
+
+          {/* The real checkbox is the 44 px row, see-through and on top; the box beside it is only the picture of it. */}
+          <label className="group relative flex min-h-11 items-center gap-3 text-ink">
+            <input type="checkbox" name="rememberMe" className="peer absolute inset-0 h-11 w-full cursor-pointer opacity-0" />
+            <span
+              aria-hidden="true"
+              className="flex size-6 shrink-0 items-center justify-center rounded border border-line bg-raised group-has-checked:border-brand group-has-checked:bg-brand peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink"
+            >
+              <Check strokeWidth={2.5} className="size-4 text-on-brand opacity-0 group-has-checked:opacity-100" />
+            </span>
+            Keep me signed in
+          </label>
 
           {error ? (
             <p role="alert" className="text-sm text-danger">

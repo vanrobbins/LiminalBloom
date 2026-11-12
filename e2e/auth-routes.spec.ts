@@ -19,7 +19,8 @@ const GET_ONLY = ["list-invitations", "get-full-organization", "list-members", "
 // already 404 without it (the router is case-sensitive, does not match a doubled
 // slash, and does not decode %2D in the path); they stay as a guard in case that changes.
 const encoded = (name: string) => (name.includes("-") ? name.replace("-", "%2D") : `%${name.charCodeAt(0).toString(16)}${name.slice(1)}`);
-const variants = (name: string) => [`${BASE}${name}`, `${BASE}${name}/`, `${BASE}${name.toUpperCase()}`, `${BASE}${name.toUpperCase()}/`, `${BASE}/${name}`, `${BASE}${encoded(name)}`];
+const variantsAt = (base: string, name: string) => [`${base}${name}`, `${base}${name}/`, `${base}${name.toUpperCase()}`, `${base}${name.toUpperCase()}/`, `${base}/${name}`, `${base}${encoded(name)}`];
+const variants = (name: string) => variantsAt(BASE, name);
 
 test.beforeEach(({}, testInfo) => {
   test.skip(sizeOf(testInfo) !== "desktop", "Server behaviour: one size is enough.");
@@ -43,6 +44,15 @@ test.describe("closed organization endpoints", () => {
       }
     });
   }
+
+  // Closed because the browser's own call cannot be made to revoke the person's other sessions; the
+  // Account page's server action calls auth.api.changePassword instead (lib/change-password.db.test.ts).
+  test("POST /change-password is 404 in every spelling, and so is GET", async ({ request }) => {
+    for (const path of variantsAt("/api/auth/", "change-password")) {
+      expect((await request.post(path, { data: {} })).status(), `POST ${path}`).toBe(404);
+      expect((await request.get(path)).status(), `GET ${path}`).toBe(404);
+    }
+  });
 
   test("what the app still uses is open: the session, and switching stores", async ({ request }) => {
     expect((await request.get("/api/auth/get-session")).status()).toBe(200);
