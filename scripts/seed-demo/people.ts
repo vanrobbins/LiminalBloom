@@ -42,14 +42,40 @@ export async function placeDemoPerson(storeId: string, userId: string, key: Buil
   await db.insert(member).values({ id: randomUUID(), organizationId: storeId, userId, role: "member", roleId: role.id, createdAt: new Date() });
 }
 
-export async function seedDemoPeople(storeId: string): Promise<number> {
-  for (const person of DEMO_PEOPLE) {
-    let [account] = await db.select({ id: user.id }).from(user).where(eq(user.email, person.email));
-    if (!account) {
-      const created = await auth.api.signUpEmail({ body: { email: person.email, password: requiredEnv("DEMO_PASSWORD"), name: person.name } });
-      account = { id: created.user.id };
-    }
-    await placeDemoPerson(storeId, account.id, person.key);
+/**
+ * Production sign-up is open and email is unverified, so anyone may have registered
+ * a demo address before the seed first ran. The seed hands that account a role, so
+ * it adopts an existing account only if it is already in the demo store or still has
+ * the demo password (it is ours); otherwise it stops and names the address.
+ */
+async function checkOurs(storeId: string, accountId: string, person: DemoPerson): Promise<void> {
+  const [there] = await db.select({ id: member.id }).from(member).where(and(eq(member.organizationId, storeId), eq(member.userId, accountId)));
+  if (there) return;
+  try {
+    await auth.api.signInEmail({ body: { email: person.email, password: requiredEnv("DEMO_PASSWORD") } });
+  } catch {
+    throw new Error(`${person.email} already has an account that is not in the demo store and does not use the demo password, so it may not be ours. Nothing was changed. Remove that account, then run this again.`);
   }
-  return DEMO_PEOPLE.length;
+}
+
+type Options = { isProduction?: boolean; people?: DemoPerson[] };
+
+export async function seedDemoPeople(storeId: string, { isProduction = false, people = DEMO_PEOPLE }: Options = {}): Promise<number> {
+  // Every existing account is checked before any role is placed, so a refusal leaves the store as it was.
+  const existing = new Map<string, string>();
+  for (const person of people) {
+    const [account] = await db.select({ id: user.id }).from(user).where(eq(user.email, person.email));
+    if (!account) continue;
+    if (isProduction) await checkOurs(storeId, account.id, person);
+    existing.set(person.email, account.id);
+  }
+  for (const person of people) {
+    let accountId = existing.get(person.email);
+    if (!accountId) {
+      const created = await auth.api.signUpEmail({ body: { email: person.email, password: requiredEnv("DEMO_PASSWORD"), name: person.name } });
+      accountId = created.user.id;
+    }
+    await placeDemoPerson(storeId, accountId, person.key);
+  }
+  return people.length;
 }

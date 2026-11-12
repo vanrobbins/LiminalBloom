@@ -68,7 +68,7 @@ describe("seedDemo", () => {
 
   it("puts one account per built-in role into the demo store, and none when the batch fails", async () => {
     await run();
-    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo");
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: false });
     fake.seedDemoPeople.mockClear();
     fake.withStore.mockRejectedValue(new Error("boom"));
     await expect(run()).rejects.toThrow("boom");
@@ -77,7 +77,7 @@ describe("seedDemo", () => {
 
   it("seeds the role accounts on development, with no flag", async () => {
     await run();
-    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo");
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: false });
   });
 
   it("seeds no role accounts on production without --with-people", async () => {
@@ -91,7 +91,7 @@ describe("seedDemo", () => {
   it("seeds them on production with --with-people, and the prompt names every email", async () => {
     const confirm = vi.fn<(message: string) => Promise<boolean>>(async () => true);
     await seedDemo({ isProduction: true, withPeople: true, confirm });
-    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo");
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo", { isProduction: true });
     const message = confirm.mock.calls[0][0];
     expect(message).toContain("demo.store.manager@liminalbloom.app");
     expect(message).toContain("demo.sales.associate@liminalbloom.app");

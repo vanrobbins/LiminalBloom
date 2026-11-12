@@ -39,6 +39,8 @@ test("renaming the store shows the new name in the header", async ({ page }, tes
 test("Keep me signed in decides whether the session cookie outlives the browser", async ({ page, browser }) => {
   const email = newEmail();
   await signUpWithStore(page, email, "Cookie Store");
+  // Signing up starts the short session too, like signing in without the box ticked (13b M2).
+  expect((await page.context().cookies()).find((c) => SESSION_COOKIE.test(c.name))!.expires).toBe(-1);
 
   const kept = await otherDevice(browser, page);
   await signInOnScreen(kept.page, email, PASSWORD, true);

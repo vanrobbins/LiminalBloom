@@ -29,6 +29,12 @@ describe("SignUpForm", () => {
     expect(screen.getByRole("button", { name: /Creating account…/ })).toBeDisabled();
   });
 
+  it("signs up for the browser session only (rememberMe false), like sign-in's default", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    await submit();
+    expect(mocks.email).toHaveBeenCalledWith({ name: "Van", email: "van@example.com", password: "correct-horse", rememberMe: false });
+  });
+
   it("a rejected sign-up clears the button and shows the server's message", async () => {
     mocks.email.mockResolvedValue({ error: { message: "User already exists" } });
     await submit();

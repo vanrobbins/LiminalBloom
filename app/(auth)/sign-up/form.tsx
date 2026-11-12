@@ -30,11 +30,17 @@ export function SignUpForm({ next }: { next: string | null }) {
     // Offline, the request rejects instead of returning { error }.
     let failure: string | null = null;
     try {
-      const { error } = await signUp.email({
+      // Better Auth's default is a 7-day session; new staff joining on a shared store tablet
+      // start short, like sign-in does until "Keep me signed in" is ticked. The server accepts
+      // rememberMe on sign-up but the client's types leave it out, so the body is built apart
+      // (a variable is not checked for extra keys).
+      const body = {
         name: String(form.get("name")),
         email: String(form.get("email")),
         password: String(form.get("password")),
-      });
+        rememberMe: false,
+      };
+      const { error } = await signUp.email(body);
       if (error) failure = error.message || "Could not create the account.";
     } catch {
       failure = CONNECTION_ERROR;

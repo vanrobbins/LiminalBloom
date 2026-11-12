@@ -50,7 +50,7 @@ export async function seedDemo({ isProduction, withPeople = false, confirm }: Op
   await deleteImagesQuietly(stale);
 
   // One account per built-in role, so a walkthrough can sign in as each (spec 0.7, 4.10).
-  const people = seedPeople ? await seedDemoPeople(found.storeId) : 0;
+  const people = seedPeople ? await seedDemoPeople(found.storeId, { isProduction }) : 0;
 
   const floor = plan.locations.filter((l) => l.faceId).length;
   console.log(`Done: ${plan.products.length} products, ${plan.categories.length} categories, ${floor} floor places, ${plan.locations.length - floor} bin places, ${stale.length} old images removed, ${seedPeople ? `${people} role accounts in place` : "role accounts skipped (production needs --with-people)"}.`);
