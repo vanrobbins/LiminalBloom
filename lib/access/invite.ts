@@ -26,7 +26,7 @@ import { invitation, member, user } from "@/db/auth-schema";
 import { roleDefinitions } from "@/db/schema";
 
 import { canActOn } from "./rank";
-import type { PeopleActor } from "./people-write";
+import { changedRows, stillRanked, type PeopleActor } from "./people-write";
 
 import { INVITATION_HOURS, MAX_INVITATIONS, MAX_PEOPLE } from "./invite-limits";
 
@@ -62,15 +62,16 @@ export async function createInvitation(storeId: string, actor: PeopleActor, rawE
 }
 
 /** The write alone, after the checks above; exported so a test can run it when a check's answer has changed since. */
-export async function applyInvitation(storeId: string, actor: PeopleActor, email: string, role: { id: string; name: string }, now: Date): Promise<InviteOutcome> {
+export async function applyInvitation(storeId: string, actor: PeopleActor, email: string, role: { id: string; name: string; rank: number }, now: Date): Promise<InviteOutcome> {
   const id = newInvitationId();
   const nowText = now.toISOString();
   const expiresAt = new Date(now.getTime() + INVITATION_HOURS * 3_600_000);
   const detail = JSON.stringify({ email, role: role.name });
-  const result = await db.execute(sql`
+  const written = await changedRows(sql`
     with allowed as (
       select 1 where
-        not exists (select 1 from member m join "user" u on u.id = m.user_id where m.organization_id = ${storeId} and lower(u.email) = ${email}::text)
+        ${stillRanked(storeId, role.id, role.rank)}
+        and not exists (select 1 from member m join "user" u on u.id = m.user_id where m.organization_id = ${storeId} and lower(u.email) = ${email}::text)
         and not exists (select 1 from invitation where organization_id = ${storeId} and lower(email) = ${email}::text and status = 'pending' and expires_at > ${nowText}::timestamp)
         and (select count(*) from member where organization_id = ${storeId}) < ${MAX_PEOPLE}
         and (select count(*) from invitation where organization_id = ${storeId} and status = 'pending' and expires_at > ${nowText}::timestamp) < ${MAX_INVITATIONS}),
@@ -81,12 +82,15 @@ export async function applyInvitation(storeId: string, actor: PeopleActor, email
     insert into access_events (store_id, actor_id, actor_name, event, detail)
     select ${storeId}::text, ${actor.userId}::text, ${actor.name}::text, 'invitation_created', ${detail}::jsonb from made
     returning id`);
-  if (result.rows.length > 0) return { status: "created", id, email, roleName: role.name, expiresAt };
-  return whyNotInvited(storeId, email, now);
+  if (written > 0) return { status: "created", id, email, roleName: role.name, expiresAt };
+  return whyNotInvited(storeId, email, now, role);
 }
 
 /** After the statement wrote nothing: which of its checks stopped it, in the order the dialog lists them. */
-async function whyNotInvited(storeId: string, email: string, now: Date): Promise<InviteOutcome> {
+async function whyNotInvited(storeId: string, email: string, now: Date, role: { id: string; rank: number }): Promise<InviteOutcome> {
+  // A role deleted or moved since the check makes the dialog stale, whatever else is true.
+  const [ranked] = await db.select({ id: roleDefinitions.id }).from(roleDefinitions).where(and(eq(roleDefinitions.storeId, storeId), eq(roleDefinitions.id, role.id), eq(roleDefinitions.rank, role.rank)));
+  if (!ranked) return { status: "invalid" };
   const [there] = await db
     .select({ name: user.name })
     .from(member)

@@ -21,6 +21,7 @@ import { roleDefinitions } from "@/db/schema";
 
 import { canActOn, type Actor } from "./rank";
 import { NO_ROLE_NAME, NO_ROLE_RANK } from "./people-view";
+import { refusedBy } from "./roles-write";
 
 export type PeopleActor = Actor & { userId: string; name: string };
 
@@ -68,9 +69,28 @@ const stillManagerSafe = (storeId: string, target: Target) =>
 const logRow = (storeId: string, actor: PeopleActor, event: string, detail: Record<string, unknown>) =>
   sql`select ${storeId}::text, ${actor.userId}::text, ${actor.name}::text, ${event}::text, ${JSON.stringify(detail)}::jsonb`;
 
-async function changedRows(write: SQL): Promise<number> {
-  const result = await db.execute(write);
-  return result.rows.length;
+/**
+ * True while the role still has the rank the rank check saw. Another person can Move a role up
+ * between that check and the write, which would put it at or above the actor's own rank; with
+ * this in the statement the write then matches nothing and the dialog reports a stale picture.
+ */
+export const stillRanked = (storeId: string, roleId: string, rank: number) =>
+  sql`exists (select 1 from role_definitions where store_id = ${storeId} and id = ${roleId}::text and rank = ${rank})`;
+
+/** The target's own role pin; a person with no role has no rank to pin (the role_id check covers it). */
+const targetStillRanked = (storeId: string, target: Target) => (target.roleId ? stillRanked(storeId, target.roleId, target.rank) : sql`true`);
+
+/** True when a failed statement hit a role's composite foreign key: the role was deleted after the checks. */
+const roleDeleted = (error: unknown) => ["member_role_fk", "invitation_role_fk"].some((c) => refusedBy(error, c));
+
+/** How many rows the write changed; 0 when the role it names was deleted after the checks (the foreign key refused), like any other stale pin. */
+export async function changedRows(write: SQL): Promise<number> {
+  try {
+    return (await db.execute(write)).rows.length;
+  } catch (error) {
+    if (roleDeleted(error)) return 0;
+    throw error;
+  }
 }
 
 /** After a write matched nothing: the person is gone, or something about them changed since the dialog opened. */
@@ -93,7 +113,7 @@ export async function changeRole(storeId: string, actor: PeopleActor, memberId: 
 }
 
 /** The write alone, after the checks above. Exported so a test can run it against a row that changed since the target was read: the guards in the SQL are what hold then. */
-export async function applyRoleChange(storeId: string, actor: PeopleActor, target: Target, expectedRoleId: string | null, role: { id: string; name: string }): Promise<ChangeOutcome> {
+export async function applyRoleChange(storeId: string, actor: PeopleActor, target: Target, expectedRoleId: string | null, role: { id: string; name: string; rank: number }): Promise<ChangeOutcome> {
   const memberId = target.memberId;
   const log = logRow(storeId, actor, "member_role_changed", { person: target.name, from: target.roleName, to: role.name, memberId });
   const rows = await changedRows(sql`
@@ -102,6 +122,7 @@ export async function applyRoleChange(storeId: string, actor: PeopleActor, targe
       where id = ${memberId} and organization_id = ${storeId}
         and role_id is not distinct from ${expectedRoleId}::text
         and ${stillManagerSafe(storeId, target)}
+        and ${targetStillRanked(storeId, target)} and ${stillRanked(storeId, role.id, role.rank)}
       returning id)
     insert into access_events (store_id, actor_id, actor_name, event, detail)
     ${log} from changed returning id`);
@@ -129,6 +150,7 @@ export async function applyRemoval(storeId: string, actor: PeopleActor, target: 
       where id = ${memberId} and organization_id = ${storeId}
         and role_id is not distinct from ${expectedRoleId}::text
         and ${stillManagerSafe(storeId, target)}
+        and ${targetStillRanked(storeId, target)}
       returning id)
     insert into access_events (store_id, actor_id, actor_name, event, detail)
     ${log} from removed returning id`);

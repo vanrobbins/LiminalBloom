@@ -32,6 +32,13 @@ describe("InvitationsCard", () => {
     expect(screen.getByText("boss@x.com")).toBeInTheDocument();
   });
 
+  it("offers an invitation with no role (made before roles existed) Cancel only, since its link opens as missing", () => {
+    render(<InvitationsCard invitations={[invitationRow("old@x.com", { linkWorks: false, roleName: "No role" })]} />);
+    expect(screen.queryByRole("button", { name: "Copy link for old@x.com" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cancel invitation for old@x.com" })).toBeInTheDocument();
+    expect(screen.getByText(/^No role · Expires/)).toBeInTheDocument();
+  });
+
   it("shows a row that carries no id (the server withheld it) read-only, without crashing", () => {
     render(<InvitationsCard invitations={[invitationRow("boss@x.com", { id: null }), invitationRow("jane@x.com")]} />);
     expect(screen.queryByRole("button", { name: /boss@x.com/ })).toBeNull();

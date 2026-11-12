@@ -31,6 +31,8 @@ export type InvitationRow = {
   expiresAt: string;
   expired: boolean;
   canAct: boolean;
+  /** False for an invitation made before roles existed (no role): its link opens as "missing", so only Cancel is offered. */
+  linkWorks: boolean;
 };
 
 export type RoleChoice = { id: string; name: string; rank: number };

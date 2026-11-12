@@ -61,10 +61,10 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="font-medium text-ink wrap-break-word">{i.email}</span>
                 <span className="text-sm text-ink-muted">
-                  {i.roleName} role · {i.expired ? "Expired" : "Expires"} <LocalTime at={i.expiresAt} />
+                  {i.linkWorks ? `${i.roleName} role` : i.roleName} · {i.expired ? "Expired" : "Expires"} <LocalTime at={i.expiresAt} />
                 </span>
               </span>
-              {id !== null && !i.expired ? (
+              {id !== null && i.linkWorks && !i.expired ? (
                 <Button variant="secondary" onClick={() => copy(id)} aria-label={`Copy link for ${i.email}`}>
                   Copy link
                 </Button>

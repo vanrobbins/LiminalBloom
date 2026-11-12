@@ -3,10 +3,11 @@
 // and that the invitation and its access_events row are written together or not at all.
 
 import { eq, inArray } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
+import { roleDefinitions } from "@/db/schema";
 import { dropStores } from "@/lib/products/test-stores";
 
 import { applyInvitation, createInvitation, MAX_INVITATIONS, MAX_PEOPLE } from "./invite";
@@ -141,10 +142,45 @@ describe("applyInvitation, the write alone", () => {
   it("re-checks in the statement itself: a duplicate that appeared after the checks writes nothing", async () => {
     const s = await makeStoreWithRoles("inv-race");
     const actor = await actorIn(s, "store_manager");
-    const role = { id: s.roles.sales_associate, name: "Sales Associate" };
+    const role = { id: s.roles.sales_associate, name: "Sales Associate", rank: 500 };
     expect((await applyInvitation(s.store, actor, "race@example.test", role, new Date())).status).toBe("created");
     expect(await applyInvitation(s.store, actor, "race@example.test", role, new Date())).toEqual({ status: "already-invited" });
     expect(await rowsOf(s.store)).toHaveLength(1);
     expect(await eventsOf(s.store)).toHaveLength(1);
+  });
+});
+
+// The role is pinned to the rank the check saw, like the writes in people-write.ts (13b L1, L2).
+describe("applyInvitation, the role changed after the check", () => {
+  it("writes nothing when the role was moved up to the actor's reach: invalid, no invitation, no event", async () => {
+    const s = await makeStoreWithRoles("inv-rank");
+    const actor = await actorIn(s, "vm_manager"); // rank 300 may invite into Sales Associate (500) only
+    const role = { id: s.roles.sales_associate, name: "Sales Associate", rank: 500 };
+    await db.update(roleDefinitions).set({ rank: 250 }).where(eq(roleDefinitions.id, role.id)); // a concurrent Move up
+    expect(await applyInvitation(s.store, actor, "up@example.test", role, new Date())).toEqual({ status: "invalid" });
+    expect(await rowsOf(s.store)).toHaveLength(0);
+    expect(await eventsOf(s.store)).toHaveLength(0);
+  });
+
+  it("is invalid when the role was deleted before the write", async () => {
+    const s = await makeStoreWithRoles("inv-gone");
+    const actor = await actorIn(s, "store_manager");
+    const role = { id: s.roles.vm_worker, name: "Visual Merchandising Worker", rank: 400 };
+    await db.delete(roleDefinitions).where(eq(roleDefinitions.id, role.id));
+    expect(await applyInvitation(s.store, actor, "gone@example.test", role, new Date())).toEqual({ status: "invalid" });
+  });
+
+  it("is invalid, not a thrown error, when the database's foreign key refuses the write", async () => {
+    const s = await makeStoreWithRoles("inv-fk");
+    const actor = await actorIn(s, "store_manager");
+    const role = { id: s.roles.vm_worker, name: "Visual Merchandising Worker", rank: 400 };
+    await db.delete(roleDefinitions).where(eq(roleDefinitions.id, role.id));
+    const refused = Object.assign(new Error("insert failed"), { cause: Object.assign(new Error("fk"), { constraint: "invitation_role_fk" }) });
+    const execute = vi.spyOn(db, "execute").mockRejectedValueOnce(refused);
+    try {
+      expect(await applyInvitation(s.store, actor, "fk@example.test", role, new Date())).toEqual({ status: "invalid" });
+    } finally {
+      execute.mockRestore();
+    }
   });
 });

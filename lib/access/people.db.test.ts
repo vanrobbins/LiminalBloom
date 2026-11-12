@@ -98,6 +98,16 @@ describe("peopleViewFor", () => {
     expect(byRole["Assistant Manager"]).toMatchObject({ canAct: false, expired: false });
   });
 
+  it("offers an invitation from before roles existed (no role) Cancel only: its link opens as missing, so it is not marked as one that works", async () => {
+    const s = await makeStoreWithRoles("pv-inv-norole");
+    const vmm = await viewerIn(s.store, s.roles, "vm_manager");
+    const old = await makeInvitation(s.store, vmm.user.id, null);
+    const fresh = await makeInvitation(s.store, vmm.user.id, s.roles.sales_associate);
+    const view = await peopleViewFor(vmm);
+    expect(view.invitations.find((i) => i.id === old)).toMatchObject({ canAct: true, linkWorks: false, roleName: "No role" });
+    expect(view.invitations.find((i) => i.id === fresh)).toMatchObject({ canAct: true, linkWorks: true });
+  });
+
   it("never sends the id of an invitation the viewer can't act on: the id is the link", async () => {
     const s = await makeStoreWithRoles("pv-inv-id");
     const vmm = await viewerIn(s.store, s.roles, "vm_manager");
