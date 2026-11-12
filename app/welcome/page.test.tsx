@@ -33,7 +33,7 @@ describe("WelcomePage", () => {
     await expect(WelcomePage()).rejects.toThrow("redirect:/products");
   });
 
-  it("lists the invitations waiting for their email by store, role and expiry, and tells them to open their link", async () => {
+  it("lists the invitations waiting for their email by store, role and expiry, and tells them to paste their link", async () => {
     // The ids are in the data here on purpose: nothing from them may reach the page, as text, link or button (the link is the secret, spec 4.9).
     mocks.waiting.mockResolvedValue([
       { id: "SECRET-ID-ONE", storeName: "Spring Street", roleName: "Sales Associate", expiresAt: "2026-11-13T23:40:00.000Z" },
@@ -44,9 +44,11 @@ describe("WelcomePage", () => {
     expect(screen.getByRole("heading", { name: "Invitations for you" })).toBeInTheDocument();
     expect(screen.getByText("Spring Street")).toBeInTheDocument();
     expect(screen.getByText(/Visual Merchandising Worker role/)).toBeInTheDocument();
-    expect(screen.getByText("Open the invite link you were sent to join.")).toBeInTheDocument();
+    expect(screen.getByText("Paste the invite link you were sent below to join.")).toBeInTheDocument();
     expect(container.innerHTML).not.toContain("SECRET-ID");
-    expect(screen.queryByRole("button", { name: /accept/i })).toBeNull();
+    // The only Accept is the paste form's, which takes a link and never carries an id.
+    expect(screen.getAllByRole("button", { name: /accept/i })).toHaveLength(1);
+    expect(screen.getByLabelText("Invite link or code")).toHaveValue("");
     expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store"]);
   });
 
@@ -55,5 +57,7 @@ describe("WelcomePage", () => {
     expect(screen.queryByRole("heading", { name: "Invitations for you" })).toBeNull();
     expect(screen.getByText(/No invitations are waiting for nia@example.test/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Create a store" })).toHaveAttribute("href", "/create-store");
+    expect(screen.getByLabelText("Invite link or code")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument();
   });
 });

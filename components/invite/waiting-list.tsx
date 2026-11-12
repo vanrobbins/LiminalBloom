@@ -1,6 +1,7 @@
 // The invitations waiting for a signed-in person's email, on /welcome (spec 0.7,
 // 4.8). Names the store and role only: accepting takes the invite link they were
-// sent, which is the secret (4.9), so there is no link or Accept here.
+// sent, which is the secret (4.9), so there is no link or Accept here; the paste
+// form beside it (paste-link-form.tsx) is the way in.
 
 import { LocalTime } from "@/components/time/local-time";
 import type { WaitingInvitation } from "@/lib/access/invitation-look";
@@ -23,7 +24,7 @@ export function WaitingList({ invitations }: { invitations: WaitingInvitation[] 
           </li>
         ))}
       </ul>
-      <p className="text-sm text-ink-muted">Open the invite link you were sent to join.</p>
+      <p className="text-sm text-ink-muted">Paste the invite link you were sent below to join.</p>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 // Where a signed-in person with no store lands (spec 0.7, 4.8): accept an invitation
-// that is waiting for their email, or create a store. It replaces the redirect to
+// that is waiting for their email (by name: the invite link is the secret, so they
+// paste it to accept), or create a store. It replaces the redirect to
 // /create-store, which stays the form. Someone who has a store has no business here,
 // and someone signed out has nothing to show.
 
@@ -8,6 +9,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PageShell } from "@/components/invite/page-shell";
+import { PasteLinkForm } from "@/components/invite/paste-link-form";
 import { WaitingList } from "@/components/invite/waiting-list";
 import { Button } from "@/components/ui/button";
 import { pendingInvitationsFor } from "@/lib/access/invitation-look";
@@ -32,9 +34,10 @@ export default async function WelcomePage() {
       {waiting.length > 0 ? (
         <WaitingList invitations={waiting} />
       ) : (
-        <p className="text-sm text-ink-muted">No invitations are waiting for {session.user.email}. If someone invited you, open the link they sent.</p>
+        <p className="text-sm text-ink-muted">No invitations are waiting for {session.user.email}. If someone invited you, paste the link they sent below.</p>
       )}
-      <Button asChild variant={waiting.length > 0 ? "secondary" : "primary"}>
+      <PasteLinkForm />
+      <Button asChild variant="secondary">
         <Link href="/create-store">Create a store</Link>
       </Button>
     </PageShell>

@@ -3,54 +3,13 @@
 // invitation page's messages and /welcome. The test account is its home store's Store Manager;
 // joiners are real @example.test sign-ups (clearPeople removes them).
 
-import type { Browser, Page } from "@playwright/test";
-
 import { expect, hydrated, sizeOf, test } from "./fixtures";
+import { invite, inviteButton, openPeople, roleField, signUp, visitor } from "./invite-page";
 import { clearPeople, emailOf, inviteeEmail, loggedEvents, seedInvitation, seedTeam, setInvitationStatus } from "./people-store";
-import { HOME_STORE, ipFor, TEST_ACCOUNT } from "./test-account";
+import { HOME_STORE, TEST_ACCOUNT } from "./test-account";
 
-test.beforeEach(async () => {
-  await seedTeam();
-});
-test.afterEach(async () => {
-  await clearPeople();
-});
-
-const PASSWORD = "correct-horse-battery";
-const worker = Number(process.env.TEST_PARALLEL_INDEX ?? 0);
-
-/** A browser with nobody signed in, the size of this test's page: the person who was sent the link. */
-async function visitor(browser: Browser, page: Page) {
-  const context = await browser.newContext({ viewport: page.viewportSize()!, storageState: { cookies: [], origins: [] }, extraHTTPHeaders: { "x-forwarded-for": ipFor(worker) } });
-  return { context, page: await context.newPage() };
-}
-
-async function openPeople(page: Page) {
-  await page.goto("/people");
-  await hydrated(page);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
-}
-
-// Exact: "Role" is also inside "Change role for Ann Assistant".
-const roleField = (page: Page) => page.getByLabel("Role", { exact: true });
-const inviteButton = (page: Page) => page.getByRole("button", { name: /^Invite( someone)?$/ });
-
-/** Makes an invitation through the dialog and returns its link; leaves the dialog on the link. */
-async function invite(page: Page, email: string, role: string) {
-  await inviteButton(page).click();
-  await page.getByLabel("Email").fill(email);
-  await roleField(page).selectOption({ label: role });
-  await page.getByRole("button", { name: "Create invite link" }).click();
-  return page.getByLabel("Invite link").inputValue();
-}
-
-async function signUp(page: Page, email: string, name = "Nia Invitee") {
-  await hydrated(page);
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("Work email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-}
+test.beforeEach(async () => seedTeam());
+test.afterEach(async () => clearPeople());
 
 test("invite, sign up from the link, accept: lands in the store with that role and is on People", async ({ page, browser }) => {
   const email = inviteeEmail();
@@ -148,6 +107,10 @@ test("the invitation page says in plain words when a link can't be used", async 
   const expired = await seedInvitation("expired.person@example.test", "sales_associate", true);
   expect(await message(`/invite/${expired}`)).toContain("This invitation has expired.");
 
+  // Into the Store Manager role, which the Store Manager who sent it can't grant: it has lapsed.
+  const lapsed = await seedInvitation("lapsed.person@example.test", "store_manager");
+  expect(await message(`/invite/${lapsed}`)).toContain("This invitation is no longer valid. Ask someone at the store to invite you again.");
+
   const other = await seedInvitation("someone.else@example.test", "sales_associate");
   const wrong = await message(`/invite/${other}`);
   expect(wrong).toContain("sent to a different email address");
@@ -182,8 +145,9 @@ test("/welcome: a new account sees the invitation waiting for its email by name 
   await expect(guest.page).toHaveURL(/\/welcome$/);
   await expect(guest.page.getByRole("heading", { name: "Invitations for you" })).toBeVisible();
   await expect(guest.page.getByText(HOME_STORE, { exact: true })).toBeVisible();
-  await expect(guest.page.getByText("Open the invite link you were sent to join.")).toBeVisible();
-  await expect(guest.page.getByRole("button", { name: /Accept/ })).toHaveCount(0);
+  await expect(guest.page.getByText("Paste the invite link you were sent below to join.")).toBeVisible();
+  // The one Accept is the paste form's: the listed invitation has none, and its id is not on the page.
+  await expect(guest.page.getByRole("button", { name: /Accept/ })).toHaveCount(1);
   expect(await guest.page.content()).not.toContain(id);
   await guest.page.goto(`/invite/${id}`);
   await guest.page.getByRole("button", { name: "Accept invitation" }).click();
@@ -197,4 +161,37 @@ test("/welcome: a new account sees the invitation waiting for its email by name 
   // The Store Manager's own visit goes straight to Products too.
   await page.goto("/welcome");
   await expect(page).toHaveURL(/\/products$/);
+});
+
+test("/welcome: paste the invite link and Accept opens the invitation; accepting joins with its role", async ({ page, browser }) => {
+  const email = inviteeEmail();
+  await openPeople(page);
+  const link = await invite(page, email, "Visual Merchandising Worker");
+  const id = link.split("/invite/")[1];
+  await page.getByRole("button", { name: "Done" }).click();
+
+  const guest = await visitor(browser, page);
+  await guest.page.goto("/sign-up");
+  await signUp(guest.page, email, "Pat Paste");
+  await expect(guest.page).toHaveURL(/\/welcome$/);
+  const field = guest.page.getByLabel("Invite link or code");
+  await hydrated(guest.page);
+
+  // Something that isn't an invitation is refused in place.
+  await field.fill(`https://example.test/products`);
+  await guest.page.getByRole("button", { name: "Accept", exact: true }).click();
+  await expect(guest.page.getByText("That doesn't look like an invite link or code.")).toBeVisible();
+  await expect(guest.page).toHaveURL(/\/welcome$/);
+
+  // A link from any host works: only its /invite/<id> counts.
+  await field.fill(`https://elsewhere.example.test/invite/${id}`);
+  await guest.page.getByRole("button", { name: "Accept", exact: true }).click();
+  await expect(guest.page).toHaveURL(new RegExp(`/invite/${id}$`));
+  await guest.page.getByRole("button", { name: "Accept invitation" }).click();
+  await guest.page.waitForURL("**/products");
+
+  await openPeople(guest.page);
+  await expect(guest.page.getByRole("heading", { name: "Visual Merchandising Worker · 2" })).toBeVisible();
+  await expect(guest.page.getByRole("listitem").filter({ hasText: "Pat Paste" })).toContainText("(you)");
+  await guest.context.close();
 });
