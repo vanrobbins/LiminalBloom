@@ -97,6 +97,7 @@ ${body}
     expect(problemIn(`const c = await ${GUARD}("a"); if (c.status !== "forbidden") { work(); } else { log(); }`)).toContain("never checks c.status");
     expect(problemIn(`const c = await ${GUARD}("a"); if (c.status !== "forbidden" || x) return 1;`)).toContain("never checks c.status");
     expect(problemIn(`if ((await ${GUARD}("a")).status === "forbidden" && x) return 1;`)).toContain("never branches on it");
+    expect(problemIn(`const c = await ${GUARD}("a"); const v = c.status === "forbidden" ? 1 : 2; work(); return v;`)).toContain("never checks c.status");
   });
 
   it("flags the variable and switch forms on purpose: the check must be an inline if or ternary on .status", () => {

@@ -1,7 +1,9 @@
 // The second half of the guard scan (server-actions-guard.test.ts): every awaited switch guard in
 // an action must be branched on, not only the first. "Branched on" means the comparison with
-// "forbidden" is the whole condition of an `if` or a ternary (through parentheses, `!` and `||`
-// only, where any true side still refuses), and an `if`'s refusing branch returns or throws: a
+// "forbidden" is the whole condition of an `if` or a ternary (through parentheses, `!` and `||`,
+// where any true side still refuses, plus `x && (await guard()).status === "forbidden"`, where `x`
+// only decides whether the guard runs), an `if`'s refusing branch returns or throws, and a ternary
+// is itself returned or thrown: a
 // stray comparison (assigned, logged, returned), or one a second condition can outvote, would let
 // a forbidden request carry on.
 //
@@ -56,7 +58,11 @@ function decidesABranch(comparison: ts.BinaryExpression, inline: boolean): boole
     } else if (ts.isIfStatement(up) && up.expression === node) {
       return leaves(refusesWhenTrue ? up.thenStatement : up.elseStatement);
     } else {
-      return ts.isConditionalExpression(up) && up.condition === node;
+      // A ternary leaves only when it is what the function returns or throws; one kept in a
+      // variable lets a forbidden request carry on to the next line.
+      if (!ts.isConditionalExpression(up) || up.condition !== node) return false;
+      const holder = outer(up);
+      return ts.isReturnStatement(holder) || ts.isThrowStatement(holder);
     }
   }
 }

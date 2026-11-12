@@ -63,7 +63,8 @@ type Options = { isProduction?: boolean; people?: DemoPerson[]; existing?: Map<s
 
 /**
  * The accounts that already exist (email to id). On production each must be ours or this throws.
- * It writes nothing, so run.ts calls it before it replaces the catalog: a refusal then leaves the whole store as it was.
+ * It changes no store data (signing in to check an account only adds a Better Auth session row), so run.ts calls it
+ * before it replaces the catalog: a refusal then leaves the whole store as it was.
  */
 export async function checkDemoPeople(storeId: string, { isProduction = false, people = DEMO_PEOPLE }: Options = {}): Promise<Map<string, string>> {
   const existing = new Map<string, string>();
