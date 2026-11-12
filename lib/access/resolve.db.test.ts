@@ -99,7 +99,7 @@ describe("resolveAccess", () => {
   });
 
   it("gives a store with no roles at all its roles, and its Better Auth owner the Store Manager role", async () => {
-    const store = await makeStore("res-noroles");
+    const store = await makeStore("res-noroles", { roles: false });
     const owner = await makePerson(store, null, "owner");
     const other = await makePerson(store, null, "member");
     const access = await resolveAccess(owner.userId, store);

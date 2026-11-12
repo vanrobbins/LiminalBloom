@@ -5,13 +5,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { and, asc, eq, isNotNull, notLike, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { member } from "@/db/auth-schema";
 import { roleDefinitions } from "@/db/schema";
-import { dropStores } from "@/lib/products/test-stores";
+import { dropStores, makeStore } from "@/lib/products/test-stores";
 
 import { BUILTIN_ROLES, type BuiltinRoleKey } from "./roles";
 import { dropPeople, makePerson, makeStoreWithRoles } from "./test-roles";
@@ -41,17 +41,27 @@ const EXPECTED: Record<string, BuiltinRoleKey> = {
   "owner	": "sales_associate",
 };
 
+// The migration's own INSERT is run against a throwaway store that has no roles, narrowed to that
+// store, like the UPDATE below. Reading the statement from the file tests what shipped, and no
+// other store's rows (dev data anyone may have renamed) are involved.
+const migrationStatement = (startsWith: string) => {
+  const statement = readFileSync(resolve(`db/migrations/${MIGRATION}.sql`), "utf8")
+    .split("--> statement-breakpoint")
+    .map((s) => s.trim())
+    .find((s) => s.includes(startsWith));
+  if (!statement) throw new Error(`The backfill statement ${startsWith} is not where this test expects it`);
+  return statement;
+};
+
 describe("the migration's backfill", () => {
-  it("left every store that has built-in roles with exactly the five, matching lib/access/roles.ts", async () => {
-    // Only stores that already hold a built-in row; an empty database passes. Throwaway test
-    // stores (test_ ids) are skipped: other tests edit their roles on purpose, in parallel.
-    const rows = await db.select().from(roleDefinitions).where(and(isNotNull(roleDefinitions.builtin), notLike(roleDefinitions.storeId, "test\_%"))).orderBy(asc(roleDefinitions.rank));
-    const byStore = Map.groupBy(rows, (r) => r.storeId);
-    for (const [, mine] of byStore) {
-      expect(mine.map((r) => [r.builtin, r.name, r.rank, r.switches])).toEqual(
-        BUILTIN_ROLES.map((r) => [r.key, r.name, r.rank, [...r.switches]]),
-      );
-    }
+  it("gives a store with no roles exactly the five, matching lib/access/roles.ts", async () => {
+    const store = await makeStore("bf-insert", { roles: false });
+    const statement = migrationStatement('INSERT INTO "role_definitions"');
+    const anchor = 'AS b("builtin", "name", "rank", "switches")';
+    if (!statement.includes(anchor)) throw new Error("The backfill INSERT is not shaped as this test expects");
+    await db.execute(sql.raw(`${statement.replace(/;$/, "")} WHERE o."id" = '${store}'`));
+    const rows = await db.select().from(roleDefinitions).where(eq(roleDefinitions.storeId, store)).orderBy(asc(roleDefinitions.rank));
+    expect(rows.map((r) => [r.builtin, r.name, r.rank, r.switches])).toEqual(BUILTIN_ROLES.map((r) => [r.key, r.name, r.rank, [...r.switches]]));
   });
 });
 
@@ -63,12 +73,9 @@ describe("the migration's member mapping", () => {
     const { store } = await makeStoreWithRoles("bf-map");
     const made = await Promise.all(Object.keys(EXPECTED).map(async (role) => ({ role, ...(await makePerson(store, null, role)) })));
 
-    const statement = readFileSync(resolve(`db/migrations/${MIGRATION}.sql`), "utf8")
-      .split("--> statement-breakpoint")
-      .map((s) => s.trim())
-      .find((s) => s.includes('UPDATE "member" m SET "role_id"'));
+    const statement = migrationStatement('UPDATE "member" m SET "role_id"');
     const anchor = 'WHERE r."store_id" = m."organization_id"';
-    if (!statement?.includes(anchor)) throw new Error("The backfill UPDATE is not where this test expects it");
+    if (!statement.includes(anchor)) throw new Error("The backfill UPDATE is not where this test expects it");
     await db.execute(sql.raw(statement.replace(anchor, `${anchor} AND m."organization_id" = '${store}'`).replace(/;$/, "")));
 
     for (const { role, memberId } of made) {

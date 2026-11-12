@@ -94,7 +94,7 @@ describe("giveStoreItsRoles", () => {
   });
 
   it("repairs a store missing roles with the migration's mapping, and leaves edits and held roles alone", async () => {
-    const store = await makeStore("seed-repair");
+    const store = await makeStore("seed-repair", { roles: false });
     // An edited Sales Associate at a non-default rank, so only its builtin tag protects it.
     const [edited] = await db
       .insert(roleDefinitions)
@@ -124,7 +124,7 @@ describe("giveStoreItsRoles", () => {
   });
 
   it("leaves out a built-in whose default rank a custom role took, without failing", async () => {
-    const store = await makeStore("seed-rank");
+    const store = await makeStore("seed-rank", { roles: false });
     await db.insert(roleDefinitions).values({ storeId: store, builtin: null, name: "Keyholder", rank: 200, switches: ["view"] });
     const plain = await makePerson(store, null, "admin");
 

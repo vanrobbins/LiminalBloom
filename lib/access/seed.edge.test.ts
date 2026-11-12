@@ -41,7 +41,7 @@ describe("giveStoreItsRoles edge cases", () => {
   });
 
   it("does not add a second Sales Associate when a custom role has the name", async () => {
-    const store = await makeStore("seed-name");
+    const store = await makeStore("seed-name", { roles: false });
     await db.insert(roleDefinitions).values({ storeId: store, builtin: null, name: "Sales Associate", rank: 550, switches: ["view"] });
     const plain = await makePerson(store, null, "member");
 
@@ -55,7 +55,7 @@ describe("giveStoreItsRoles edge cases", () => {
 
   it("warns once, naming the store, when its Store Manager role cannot be made", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const store = await makeStore("seed-nomanager");
+    const store = await makeStore("seed-nomanager", { roles: false });
     await db.insert(roleDefinitions).values({ storeId: store, builtin: null, name: "Boss", rank: 100, switches: ["view"] });
     const owner = await makePerson(store, null, "owner");
 

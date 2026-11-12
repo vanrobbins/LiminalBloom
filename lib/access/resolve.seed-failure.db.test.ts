@@ -24,7 +24,7 @@ afterAll(async () => {
 describe("resolveAccess when seeding fails", () => {
   it("logs it, does not throw, and gives view only with no role", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    const store = await makeStore("res-seedfail");
+    const store = await makeStore("res-seedfail", { roles: false });
     const { userId } = await makePerson(store, null, "owner");
 
     const access = await resolveAccess(userId, store);
