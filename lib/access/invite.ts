@@ -9,7 +9,7 @@
 // appeared after the reads below is still caught. Two requests at the very same
 // instant can both pass (there is no unique index to stop them, and adding one is a
 // migration): the cost is a second link for one address. Counts and "already
-// waiting" ignore an expired invitation: it is dead, and People offers Cancel only.
+// waiting" ignore an expired invitation, and a lapsed one (its inviter can no longer grant its role, invitation-lapse.ts): it is dead, and People offers Cancel only.
 //
 // Runs as the table owner, not through withStore (the store role cannot reach Better
 // Auth's tables), so every statement is filtered by the store id by hand.
@@ -28,6 +28,7 @@ import { roleDefinitions } from "@/db/schema";
 import { canActOn } from "./rank";
 import { changedRows, stillRanked, type PeopleActor } from "./people-write";
 
+import { inviterMayGrant } from "./invitation-lapse";
 import { INVITATION_HOURS, MAX_INVITATIONS, MAX_PEOPLE } from "./invite-limits";
 
 // Also here, so the server code and its tests have one place to import from.
@@ -45,6 +46,9 @@ export function cleanEmail(raw: string): string | null {
   const parsed = emailSchema.safeParse(raw.trim().toLowerCase());
   return parsed.success ? parsed.data : null;
 }
+
+/** An invitation in the statements below whose inviter can still grant its role: a lapsed one is dead, like an expired one. */
+const notLapsed = inviterMayGrant(sql`invitation.organization_id`, sql`invitation.role_id`, sql`invitation.inviter_id`);
 
 /** 192 random bits: the link works for whoever holds it, so it must not be guessable. */
 const newInvitationId = () => randomBytes(24).toString("base64url");
@@ -72,9 +76,9 @@ export async function applyInvitation(storeId: string, actor: PeopleActor, email
       select 1 where
         ${stillRanked(storeId, role.id, role.rank)}
         and not exists (select 1 from member m join "user" u on u.id = m.user_id where m.organization_id = ${storeId} and lower(u.email) = ${email}::text)
-        and not exists (select 1 from invitation where organization_id = ${storeId} and lower(email) = ${email}::text and status = 'pending' and expires_at > ${nowText}::timestamp)
+        and not exists (select 1 from invitation where organization_id = ${storeId} and lower(email) = ${email}::text and status = 'pending' and expires_at > ${nowText}::timestamp and ${notLapsed})
         and (select count(*) from member where organization_id = ${storeId}) < ${MAX_PEOPLE}
-        and (select count(*) from invitation where organization_id = ${storeId} and status = 'pending' and expires_at > ${nowText}::timestamp) < ${MAX_INVITATIONS}),
+        and (select count(*) from invitation where organization_id = ${storeId} and status = 'pending' and expires_at > ${nowText}::timestamp and ${notLapsed}) < ${MAX_INVITATIONS}),
     made as (
       insert into invitation (id, organization_id, email, role, status, expires_at, inviter_id, role_id)
       select ${id}::text, ${storeId}::text, ${email}::text, 'member', 'pending', ${expiresAt.toISOString()}::timestamp, ${actor.userId}::text, ${role.id}::text from allowed
@@ -97,7 +101,7 @@ async function whyNotInvited(storeId: string, email: string, now: Date, role: { 
     .innerJoin(user, eq(user.id, member.userId))
     .where(and(eq(member.organizationId, storeId), sql`lower(${user.email}) = ${email}`));
   if (there) return { status: "already-member", name: there.name };
-  const waiting = and(eq(invitation.organizationId, storeId), eq(invitation.status, "pending"), sql`${invitation.expiresAt} > ${now.toISOString()}::timestamp`);
+  const waiting = and(eq(invitation.organizationId, storeId), eq(invitation.status, "pending"), sql`${invitation.expiresAt} > ${now.toISOString()}::timestamp`, inviterMayGrant(invitation.organizationId, invitation.roleId, invitation.inviterId));
   const [duplicate] = await db.select({ id: invitation.id }).from(invitation).where(and(waiting, sql`lower(${invitation.email}) = ${email}`));
   if (duplicate) return { status: "already-invited" };
   const [people] = await db.select({ n: sql<number>`count(*)::int` }).from(member).where(eq(member.organizationId, storeId));

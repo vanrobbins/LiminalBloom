@@ -6,7 +6,9 @@
 // racing a cancel, cannot both win: the invitation must still be pending and
 // unexpired, its role must be one of that store's (the invitation_role_fk foreign key
 // already says so; this keeps the member insert from relying on it), its email must be
-// this person's, they must not already be in the store, and the store must have room.
+// this person's, they must not already be in the store, the store must have room, and
+// the inviter must still be able to grant the role (invitation-lapse.ts), or the
+// invitation has lapsed.
 //
 // The person comes from the action's session (never the browser). Runs as the table
 // owner, so every condition is spelled out here.
@@ -20,6 +22,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 
 import { lookInvitation, type InvitationState } from "./invitation-look";
+import { inviterMayGrant } from "./invitation-lapse";
 import { MAX_PEOPLE } from "./invite-limits";
 
 export type AcceptOutcome =
@@ -37,6 +40,7 @@ export async function acceptInvitation(person: { id: string; name: string; email
         and lower(i.email) = ${email}::text
         and not exists (select 1 from member m where m.organization_id = i.organization_id and m.user_id = ${person.id}::text)
         and (select count(*) from member m where m.organization_id = i.organization_id) < ${MAX_PEOPLE}
+        and ${inviterMayGrant(sql`i.organization_id`, sql`i.role_id`, sql`i.inviter_id`)}
       returning i.organization_id, i.role_id),
     added as (
       insert into member (id, organization_id, user_id, role, created_at, role_id)

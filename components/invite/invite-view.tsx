@@ -57,7 +57,7 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
           <AcceptButton invitationId={id} storeName={storeName} />
         </>
       ) : null}
-      {look.state === "expired" || look.state === "already-member" || look.state === "full" || look.state === "wrong-email" ? (
+      {look.state === "expired" || look.state === "lapsed" || look.state === "already-member" || look.state === "full" || look.state === "wrong-email" ? (
         <p role="status" className="text-ink">
           {unusableText(look.state, storeName)}
         </p>

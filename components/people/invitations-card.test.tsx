@@ -32,6 +32,14 @@ describe("InvitationsCard", () => {
     expect(screen.getByText("boss@x.com")).toBeInTheDocument();
   });
 
+  it("says a lapsed invitation (its inviter can no longer grant the role) is Lapsed, and offers Cancel only", () => {
+    render(<InvitationsCard invitations={[invitationRow("gone@x.com", { lapsed: true })]} />);
+    expect(screen.getByText(/Sales Associate role · Lapsed/)).toBeInTheDocument();
+    expect(screen.queryByText(/Expires/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy link for gone@x.com" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cancel invitation for gone@x.com" })).toBeInTheDocument();
+  });
+
   it("offers an invitation with no role (made before roles existed) Cancel only, since its link opens as missing", () => {
     render(<InvitationsCard invitations={[invitationRow("old@x.com", { linkWorks: false, roleName: "No role" })]} />);
     expect(screen.queryByRole("button", { name: "Copy link for old@x.com" })).toBeNull();

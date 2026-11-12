@@ -30,6 +30,8 @@ export type InvitationRow = {
   /** ISO text, so it crosses into client components. */
   expiresAt: string;
   expired: boolean;
+  /** The inviter can no longer grant this role (left, re-roled below it, lost people.manage): dead like an expired one, so only Cancel is offered. */
+  lapsed: boolean;
   canAct: boolean;
   /** False for an invitation made before roles existed (no role): its link opens as "missing", so only Cancel is offered. */
   linkWorks: boolean;

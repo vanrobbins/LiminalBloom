@@ -16,6 +16,7 @@ import { db } from "@/db";
 import { invitation, member, organization } from "@/db/auth-schema";
 import { roleDefinitions } from "@/db/schema";
 
+import { inviterMayGrant } from "./invitation-lapse";
 import { MAX_PEOPLE } from "./invite-limits";
 
 export type Viewer = { id: string; email: string };
@@ -27,7 +28,7 @@ export type InvitationState =
   | { state: "missing" }
   | { state: "used" }
   | { state: "cancelled" }
-  | Named<"expired" | "signed-out" | "wrong-email" | "already-member" | "full" | "ready">;
+  | Named<"expired" | "lapsed" | "signed-out" | "wrong-email" | "already-member" | "full" | "ready">;
 
 /** The invitation as `viewer` (null: signed out) would find it, as one plain state for the page to word. */
 export async function lookInvitation(id: string, viewer: Viewer | null, now: Date = new Date()): Promise<InvitationState> {
@@ -41,6 +42,7 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
       expiresAt: invitation.expiresAt,
       storeName: organization.name,
       roleName: roleDefinitions.name,
+      lapsed: sql<boolean>`not ${inviterMayGrant(invitation.organizationId, invitation.roleId, invitation.inviterId)}`,
     })
     .from(invitation)
     .innerJoin(organization, eq(organization.id, invitation.organizationId))
@@ -54,6 +56,8 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
 
   const named = { storeName: row.storeName, roleName: row.roleName };
   if (row.expiresAt <= now) return { state: "expired", ...named };
+  // Like an expired one, whoever holds the link: the inviter can no longer grant this role.
+  if (row.lapsed) return { state: "lapsed", ...named };
   if (!viewer) return { state: "signed-out", ...named };
   if (viewer.email.trim().toLowerCase() !== row.email.trim().toLowerCase()) return { state: "wrong-email", ...named };
 
@@ -80,6 +84,7 @@ export async function pendingInvitationsFor(person: Viewer, now: Date = new Date
         sql`lower(${invitation.email}) = ${person.email.trim().toLowerCase()}`,
         eq(invitation.status, "pending"),
         sql`${invitation.expiresAt} > ${now.toISOString()}::timestamp`,
+        inviterMayGrant(invitation.organizationId, invitation.roleId, invitation.inviterId),
         notExists(db.select({ one: sql`1` }).from(member).where(and(eq(member.organizationId, invitation.organizationId), eq(member.userId, person.id)))),
       ),
     )

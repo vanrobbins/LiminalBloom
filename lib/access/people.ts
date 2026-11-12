@@ -9,7 +9,7 @@
 
 import "server-only";
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
@@ -17,6 +17,7 @@ import { roleDefinitions } from "@/db/schema";
 import type { Member } from "@/lib/current-member";
 
 import { can } from "./can";
+import { inviterMayGrant } from "./invitation-lapse";
 import { canActOn, type Actor } from "./rank";
 import { groupByRole, NO_ROLE_NAME, NO_ROLE_RANK, type InvitationRow, type PeopleView, type PersonRow, type RoleChoice } from "./people-view";
 
@@ -45,7 +46,7 @@ async function readPeople(storeId: string) {
 
 async function readInvitations(storeId: string) {
   return db
-    .select({ id: invitation.id, email: invitation.email, expiresAt: invitation.expiresAt, roleName: roleDefinitions.name, rank: roleDefinitions.rank })
+    .select({ id: invitation.id, email: invitation.email, expiresAt: invitation.expiresAt, roleName: roleDefinitions.name, rank: roleDefinitions.rank, lapsed: sql<boolean>`not ${inviterMayGrant(invitation.organizationId, invitation.roleId, invitation.inviterId)}` })
     .from(invitation)
     .leftJoin(roleDefinitions, and(eq(roleDefinitions.storeId, invitation.organizationId), eq(roleDefinitions.id, invitation.roleId)))
     .where(and(eq(invitation.organizationId, storeId), eq(invitation.status, "pending")))
@@ -80,7 +81,7 @@ export async function peopleViewFor(viewer: Member, now: Date = new Date()): Pro
   const invitations: InvitationRow[] = pending.map((i) => {
     const canAct = canActOn(actor, i.rank ?? NO_ROLE_RANK, "people.manage");
     // The id is the invite link (/invite/<id>), so only someone who may act on the row is sent it.
-    return { id: canAct ? i.id : null, email: i.email, roleName: i.roleName ?? NO_ROLE_NAME, expiresAt: i.expiresAt.toISOString(), expired: i.expiresAt <= now, canAct, linkWorks: i.roleName !== null };
+    return { id: canAct ? i.id : null, email: i.email, roleName: i.roleName ?? NO_ROLE_NAME, expiresAt: i.expiresAt.toISOString(), expired: i.expiresAt <= now, lapsed: i.lapsed, canAct, linkWorks: i.roleName !== null };
   });
 
   return {

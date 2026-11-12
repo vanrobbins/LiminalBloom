@@ -30,6 +30,7 @@ describe("InviteView", () => {
   it.each([
     ["wrong-email", /different email address/],
     ["expired", /has expired/],
+    ["lapsed", /no longer valid\. Ask someone at the store to invite you again\./],
     ["already-member", /already in Spring Street/],
     ["full", /has 100 people/],
   ] as const)("gives one plain message and no Accept for %s", (state, message) => {

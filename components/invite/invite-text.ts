@@ -18,6 +18,8 @@ export function unusableText(state: Unusable | "stale", storeName?: string): str
       return "This invitation was cancelled. Ask for a new one.";
     case "expired":
       return "This invitation has expired. Ask for a new one.";
+    case "lapsed":
+      return "This invitation is no longer valid. Ask someone at the store to invite you again.";
     case "wrong-email":
       return "This invitation was sent to a different email address than the one you're signed in with. Sign in with the address it was sent to.";
     case "already-member":
