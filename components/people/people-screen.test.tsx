@@ -60,6 +60,7 @@ describe("PeopleScreen, for someone who manages people", () => {
   it("says a store always keeps one Store Manager, under the sole manager's own group only", () => {
     renderScreen(managing([sm({ isYou: true }), sa("Zoe Sales")], { isSoleManager: true }));
     expect(screen.getAllByText("A store always keeps one Store Manager.")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "What's store manager?" })).toBeInTheDocument();
   });
 
   it("changes a role: lists only the assignable roles, saves only a different one, toasts, refreshes and refocuses the row's button", async () => {

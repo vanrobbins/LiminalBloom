@@ -76,7 +76,12 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
               <PersonListItem key={p.memberId} person={p} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
             ))}
           </ul>
-          {view.isSoleManager && group.people.some((p) => p.isYou) ? <p className="mt-2 text-sm text-ink-muted">A store always keeps one Store Manager.</p> : null}
+          {view.isSoleManager && group.people.some((p) => p.isYou) ? (
+            <p className="mt-2 flex items-center gap-1 text-sm text-ink-muted">
+              A store always keeps one Store Manager.
+              <InfoPopover term="storeManager" />
+            </p>
+          ) : null}
         </section>
       ))}
       {onlyYou ? (

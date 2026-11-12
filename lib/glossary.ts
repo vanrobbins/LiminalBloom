@@ -21,6 +21,8 @@ export const GLOSSARY = {
   storeTime: { term: "Store time", text: "The time zone the store runs on. Dates like a planogram's due date follow it, wherever you are." },
   role: { term: "Role", text: "What a person can do in this store. Roles are ranked, and you can manage only people ranked below you." },
   invitation: { term: "Invitation link", text: "Whoever opens it signs in with the invited email and joins in that role. It works for 48 hours; send it yourself, because the app doesn't email it yet." },
+  rank: { term: "Rank", text: "A role's place in the store's order, highest first. A role can manage only the people and roles ranked below it." },
+  storeManager: { term: "Store Manager", text: "The top role in a store. It always keeps the permissions to manage people, roles and store settings, and a store always has at least one." },
   permission: { term: "Permission", text: "Something a role lets people do, like publishing planograms. A change reaches everyone with that role on their next tap." },
 } as const satisfies Record<string, { term: string; text: string }>;
 

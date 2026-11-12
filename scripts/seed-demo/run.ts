@@ -28,6 +28,7 @@ export async function seedDemo({ isProduction, confirm }: Options): Promise<void
   const { withStore } = await import("@/lib/db/with-store");
   const { deleteImagesQuietly, listImages } = await import("@/lib/products/images");
   const { buildDemo, demoStatements } = await import("./build");
+  const { seedDemoPeople } = await import("./people");
 
   const plan = buildDemo(found.storeId);
   await withStore(found.storeId, demoStatements(found.storeId, plan));
@@ -38,6 +39,9 @@ export async function seedDemo({ isProduction, confirm }: Options): Promise<void
   const stale = await listImages(`stores/${found.storeId}/products/`);
   await deleteImagesQuietly(stale);
 
+  // One account per built-in role, so a walkthrough can sign in as each (spec 0.7, 4.10).
+  const people = await seedDemoPeople(found.storeId);
+
   const floor = plan.locations.filter((l) => l.faceId).length;
-  console.log(`Done: ${plan.products.length} products, ${plan.categories.length} categories, ${floor} floor places, ${plan.locations.length - floor} bin places, ${stale.length} old images removed.`);
+  console.log(`Done: ${plan.products.length} products, ${plan.categories.length} categories, ${floor} floor places, ${plan.locations.length - floor} bin places, ${stale.length} old images removed, ${people} role accounts in place.`);
 }

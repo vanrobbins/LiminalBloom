@@ -107,6 +107,10 @@ export function RolesScreen({ view }: { view: RolesView }) {
         Every role can view the store: search products and see the map and published planograms.
         <InfoPopover term="permission" />
       </p>
+      <p className="mb-4 inline-flex items-center gap-1 text-ink-muted">
+        Roles are listed from the highest rank down. A role can manage only roles ranked below it.
+        <InfoPopover term="rank" />
+      </p>
       <p aria-live="polite" className="sr-only">
         {count === 0 ? "" : count === 1 ? "1 role changed" : `${count} roles changed`}
       </p>

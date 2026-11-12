@@ -7,16 +7,21 @@
 
 import { test as base, expect, type Page, type TestInfo } from "@playwright/test";
 
+import type { BuiltinRoleKey } from "../lib/access/roles";
+
 import { backToHomeStore } from "./map-store";
-import { authFileFor, ipFor } from "./test-account";
+import { authFileFor, ipFor, roleAuthFile } from "./test-account";
 
 export const test = base.extend<{
+  /** Signs in as the person with this built-in role in the shared role store, not as the worker's own account. */
+  asRole: BuiltinRoleKey | undefined;
   allowedConsoleError: RegExp | undefined;
   consoleErrors: string[];
   homeStoreAfterFailure: void;
 }>({
-  // Each worker signs in as its own account (test-account.ts).
-  storageState: async ({}, provide, testInfo) => provide(authFileFor(testInfo.parallelIndex)),
+  // Each worker signs in as its own account (test-account.ts), unless a spec asks to be a role.
+  asRole: [undefined, { option: true }],
+  storageState: async ({ asRole }, provide, testInfo) => provide(asRole ? roleAuthFile(asRole) : authFileFor(testInfo.parallelIndex)),
   extraHTTPHeaders: async ({}, provide, testInfo) => provide({ "x-forwarded-for": ipFor(testInfo.parallelIndex) }),
   allowedConsoleError: [undefined, { option: true }],
   // A test that fails halfway through a store switch must not strand the next

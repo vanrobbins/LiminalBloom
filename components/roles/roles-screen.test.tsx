@@ -28,6 +28,10 @@ describe("RolesScreen, what each viewer may change", () => {
     for (const role of ["Assistant Manager", "Visual Merchandising Manager", "Visual Merchandising Worker", "Sales Associate"]) expect(cell("Run sales", role)).toBeEnabled();
     expect(table().getByText("Your role")).toBeInTheDocument();
     expect(screen.getByText("Every role can view the store: search products and see the map and published planograms.")).toBeInTheDocument();
+    // The order the table runs in is explained where it shows, with its own ⓘ.
+    expect(screen.getByText("Roles are listed from the highest rank down. A role can manage only roles ranked below it.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "What's rank?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "What's permission?" })).toBeInTheDocument();
   });
 
   it("holds an Assistant Manager's own row and the Store Manager's read-only, and every Store settings cell off", () => {

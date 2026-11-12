@@ -1,9 +1,7 @@
 // The People screen as a Store Manager (spec 0.7, 4.8 part 9). The test account is
 // the Store Manager of its home store; the rest of the team is written to the
-// database (people-store.ts) and cannot sign in, so what the other roles see is
-// covered by component and database tests (lib/access/people.db.test.ts,
-// components/people/) until the per-role accounts of plan task 12. Invite is plan
-// task 9 and is not here yet.
+// database (people-store.ts) and cannot sign in; what each role sees on this
+// screen is in access-managers.spec.ts and access-staff.spec.ts, which sign in as one account per role.
 
 import type { Page } from "@playwright/test";
 

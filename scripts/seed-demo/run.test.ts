@@ -10,6 +10,7 @@ const fake = vi.hoisted(() => ({
   withStore: vi.fn(),
   listImages: vi.fn(),
   deleteImagesQuietly: vi.fn(),
+  seedDemoPeople: vi.fn(),
 }));
 
 vi.mock("./target", () => ({
@@ -22,6 +23,7 @@ vi.mock("./build", () => ({
   buildDemo: () => ({ products: [], categories: [], locations: [] }),
   demoStatements: () => [],
 }));
+vi.mock("./people", () => ({ seedDemoPeople: fake.seedDemoPeople }));
 vi.mock("@/lib/db/with-store", () => ({ withStore: fake.withStore }));
 vi.mock("@/lib/products/images", () => ({
   listImages: fake.listImages,
@@ -45,6 +47,7 @@ beforeEach(() => {
   fake.deleteImagesQuietly.mockReset().mockImplementation(async () => {
     calls.push("delete");
   });
+  fake.seedDemoPeople.mockReset().mockImplementation(async () => 5);
 });
 
 describe("seedDemo", () => {
@@ -58,5 +61,14 @@ describe("seedDemo", () => {
     fake.withStore.mockRejectedValue(new Error("boom"));
     await expect(run()).rejects.toThrow("boom");
     expect(fake.deleteImagesQuietly).not.toHaveBeenCalled();
+  });
+
+  it("puts one account per built-in role into the demo store, and none when the batch fails", async () => {
+    await run();
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo");
+    fake.seedDemoPeople.mockClear();
+    fake.withStore.mockRejectedValue(new Error("boom"));
+    await expect(run()).rejects.toThrow("boom");
+    expect(fake.seedDemoPeople).not.toHaveBeenCalled();
   });
 });

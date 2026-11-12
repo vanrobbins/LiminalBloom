@@ -1,8 +1,8 @@
 // The Roles screen as a Store Manager (spec 0.7, 4.8 "Roles screen design", parts 2, 3, 5 and 9), at the three
 // widths: the grid for this width, staged permission changes with the summary and one save, the nesting rule
 // named on the screen, and adding a role. The test account is its home store's Store Manager; the roles
-// are put back after every test (roles-store.ts). What the other roles see is covered by component and
-// database tests until the per-role e2e accounts of plan task 12.
+// are put back after every test (roles-store.ts). What the other roles see is in access-managers.spec.ts
+// and access-staff.spec.ts.
 
 import { expect, hydrated, test } from "./fixtures";
 import { clearPeople, loggedEvents, seedTeam } from "./people-store";

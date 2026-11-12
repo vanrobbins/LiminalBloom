@@ -2,8 +2,7 @@
 // its home store (it created it); this adds the rest of a team to that store with
 // rows written straight to the development database, as the owner, because setup is
 // not what is being tested. These people have no password and cannot sign in: what
-// each role sees is covered by component and database tests until the per-role e2e
-// accounts of plan task 12.
+// each role sees is tested with the per-role accounts (role-store.ts, access-*.spec.ts).
 
 import { randomUUID } from "node:crypto";
 
