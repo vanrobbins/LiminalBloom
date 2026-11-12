@@ -69,7 +69,9 @@ ${body}
   it("accepts a guard branched on in a variable or inline, whichever way round", () => {
     expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "forbidden") return 1;`)).toBeNull();
     expect(problemIn(`if ((await ${GUARD}("a")).status === "forbidden") return 1;`)).toBeNull();
-    expect(problemIn(`const c = await ${GUARD}("a"); if ("forbidden" !== c.status) return 1;`)).toBeNull();
+    expect(problemIn(`const c = await ${GUARD}("a"); if ("forbidden" === c.status) return 1;`)).toBeNull();
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "forbidden") { log(); return 1; }`)).toBeNull();
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "forbidden") throw new Error("no");`)).toBeNull();
   });
 
   it("flags a second guard whose answer is never compared, and one thrown away", () => {
@@ -78,11 +80,28 @@ ${body}
     expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "ok") return 1;`)).toContain("never checks c.status");
   });
 
-  it("accepts the comparison in a ternary, behind a !, or among other conditions", () => {
+  it("accepts the comparison in a ternary, behind a !, with the matching else, or joined only by ||", () => {
     expect(problemIn(`const c = await ${GUARD}("a"); return c.status === "forbidden" ? 1 : 2;`)).toBeNull();
     expect(problemIn(`const c = await ${GUARD}("a"); if (!(c.status !== "forbidden")) return 1;`)).toBeNull();
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status !== "forbidden") { work(); } else return 1;`)).toBeNull();
     expect(problemIn(`const c = await ${GUARD}("a"); if (x || c.status === "forbidden") return 1;`)).toBeNull();
-    expect(problemIn(`if (x && (await ${GUARD}("a")).status === "forbidden") return 1;`)).toBeNull();
+    expect(problemIn(`if (x && (await ${GUARD}("a")).status === "forbidden") return 1;`)).toBeNull(); // the guard itself only runs when x holds
+  });
+
+  it("flags a comparison that does not alone decide the refusal: && with a variable, a taken branch that carries on, a missing else", () => {
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "forbidden" && x) return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); if (x && c.status === "forbidden") return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "forbidden") { log(); }`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status === "forbidden") log(); else return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status !== "forbidden") return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status !== "forbidden") { work(); } else { log(); }`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); if (c.status !== "forbidden" || x) return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`if ((await ${GUARD}("a")).status === "forbidden" && x) return 1;`)).toContain("never branches on it");
+  });
+
+  it("flags the variable and switch forms on purpose: the check must be an inline if or ternary on .status", () => {
+    expect(problemIn(`const c = await ${GUARD}("a"); const gone = c.status === "forbidden"; if (gone) return 1;`)).toContain("never checks c.status");
+    expect(problemIn(`const c = await ${GUARD}("a"); switch (c.status) { case "forbidden": return 1; }`)).toContain("never checks c.status");
   });
 
   it("flags a comparison that is not the condition of an if or ternary: assigned, passed on, or returned as it is", () => {

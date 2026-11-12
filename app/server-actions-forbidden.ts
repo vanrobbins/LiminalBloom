@@ -1,7 +1,14 @@
 // The second half of the guard scan (server-actions-guard.test.ts): every awaited switch guard in
 // an action must be branched on, not only the first. "Branched on" means the comparison with
-// "forbidden" decides an `if` or a ternary, after the guard was awaited: a stray comparison
-// (assigned, logged, returned) would let a forbidden request carry on.
+// "forbidden" is the whole condition of an `if` or a ternary (through parentheses, `!` and `||`
+// only, where any true side still refuses), and an `if`'s refusing branch returns or throws: a
+// stray comparison (assigned, logged, returned), or one a second condition can outvote, would let
+// a forbidden request carry on.
+//
+// The result must be checked inline: `if (guard.status === "forbidden") return ...` or the same in
+// a ternary. Keeping the comparison in a variable (`const gone = c.status === "forbidden"`) or a
+// `switch` on `.status` is correct code that this scan flags on purpose: it cannot follow the
+// value, and one way to write the check keeps the scan honest.
 
 import ts from "typescript";
 
@@ -18,29 +25,47 @@ function outer(n: ts.Node): ts.Node {
   return up;
 }
 
-/** Whether `node` is compared with the text "forbidden" (=== !== == !=), on either side. */
-function comparedToForbidden(node: ts.Node): boolean {
+/** The comparison of `node` with the text "forbidden" (=== !== == !=, either side), or null. */
+function comparisonWithForbidden(node: ts.Node): ts.BinaryExpression | null {
   const up = outer(node);
-  if (!ts.isBinaryExpression(up) || !EQUALITY.includes(up.operatorToken.kind)) return false;
+  if (!ts.isBinaryExpression(up) || !EQUALITY.includes(up.operatorToken.kind)) return null;
   const other = unparen(unparen(up.left) === node ? up.right : up.left);
-  return ts.isStringLiteral(other) && other.text === "forbidden";
+  return ts.isStringLiteral(other) && other.text === "forbidden" ? up : null;
 }
 
-const LOGICAL = [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken];
+/** Whether a branch leaves the function: a return or throw, alone or at the top level of a block. */
+const leaves = (s: ts.Statement | undefined): boolean => !!s && (ts.isReturnStatement(s) || ts.isThrowStatement(s) || (ts.isBlock(s) && s.statements.some(leaves)));
 
-/** Whether `comparison` is (part of) the condition of an `if` or a ternary, through parentheses, `!`, `&&` and `||`. */
-function decidesABranch(comparison: ts.Node): boolean {
-  let node = comparison;
+/**
+ * Whether `comparison` alone decides a branch, and the branch a forbidden answer takes leaves the
+ * function. `inline` says the guard is awaited inside the comparison, so an `x &&` before it only
+ * decides whether the guard runs at all; with a variable, `&&` would let a forbidden request through.
+ */
+function decidesABranch(comparison: ts.BinaryExpression, inline: boolean): boolean {
+  let refusesWhenTrue = comparison.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken || comparison.operatorToken.kind === ts.SyntaxKind.EqualsEqualsToken;
+  let node: ts.Node = comparison;
   for (;;) {
     const up = node.parent;
-    const passesThrough = ts.isParenthesizedExpression(up) || (ts.isPrefixUnaryExpression(up) && up.operator === ts.SyntaxKind.ExclamationToken) || (ts.isBinaryExpression(up) && LOGICAL.includes(up.operatorToken.kind));
-    if (!passesThrough) return (ts.isIfStatement(up) && up.expression === node) || (ts.isConditionalExpression(up) && up.condition === node);
-    node = up;
+    if (ts.isParenthesizedExpression(up)) {
+      node = up;
+    } else if (ts.isPrefixUnaryExpression(up) && up.operator === ts.SyntaxKind.ExclamationToken) {
+      refusesWhenTrue = !refusesWhenTrue;
+      node = up;
+    } else if (ts.isBinaryExpression(up) && refusesWhenTrue && (up.operatorToken.kind === ts.SyntaxKind.BarBarToken || (inline && up.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && up.right === node))) {
+      node = up;
+    } else if (ts.isIfStatement(up) && up.expression === node) {
+      return leaves(refusesWhenTrue ? up.thenStatement : up.elseStatement);
+    } else {
+      return ts.isConditionalExpression(up) && up.condition === node;
+    }
   }
 }
 
-/** Whether the status read `node` is compared with "forbidden" in a branch condition. */
-const branchesOnForbidden = (node: ts.Node) => comparedToForbidden(node) && decidesABranch(outer(node));
+/** Whether the status read `node` is compared with "forbidden" as the deciding condition of a branch. */
+function branchesOnForbidden(node: ts.Node, inline: boolean) {
+  const comparison = comparisonWithForbidden(node);
+  return comparison !== null && decidesABranch(comparison, inline);
+}
 
 const isStatusRead = (n: ts.Node): n is ts.PropertyAccessExpression => ts.isPropertyAccessExpression(n) && n.name.text === "status";
 
@@ -48,7 +73,7 @@ const isStatusRead = (n: ts.Node): n is ts.PropertyAccessExpression => ts.isProp
 function statusOfIsChecked(body: ts.Node, name: string, after: number): boolean {
   let found = false;
   const visit = (n: ts.Node) => {
-    if (n.pos >= after && isStatusRead(n) && ts.isIdentifier(n.expression) && n.expression.text === name && branchesOnForbidden(n)) found = true;
+    if (n.pos >= after && isStatusRead(n) && ts.isIdentifier(n.expression) && n.expression.text === name && branchesOnForbidden(n, false)) found = true;
     if (!found) ts.forEachChild(n, visit);
   };
   visit(body);
@@ -57,7 +82,7 @@ function statusOfIsChecked(body: ts.Node, name: string, after: number): boolean 
 
 /**
  * Why an action does not branch on its guard's answer, or null when every `await guard(...)` in it
- * has its `.status` compared with "forbidden" in an `if` or ternary condition, inline or through the
+ * has its `.status` compared with "forbidden" as the condition of an `if` or ternary, inline or through the
  * variable it was assigned to (after it was assigned).
  * Awaiting the guard first is not enough: a second guard (the switch depends on the data) whose
  * answer is ignored lets a forbidden request carry on, and the types only force the check when
@@ -69,7 +94,7 @@ export function forbiddenProblem(fn: FunctionNode, guardName: string): string | 
     if (isAwaitOf(n, guardName)) {
       const up = outer(n);
       if (isStatusRead(up) && unparen(up.expression) === n) {
-        if (!branchesOnForbidden(up)) problems.push(`reads await ${guardName}(...).status but never branches on it being "forbidden"`);
+        if (!branchesOnForbidden(up, true)) problems.push(`reads await ${guardName}(...).status but never branches on it being "forbidden"`);
       } else if (ts.isVariableDeclaration(up) && ts.isIdentifier(up.name)) {
         if (!statusOfIsChecked(fn.body!, up.name.text, up.end)) problems.push(`never checks ${up.name.text}.status === "forbidden" in an if or ternary after awaiting ${guardName}(`);
       } else {
