@@ -67,7 +67,7 @@ describe("renameStoreAction", () => {
   it("renames the session's store only: another store, the person's own or not, is untouched", async () => {
     const userId = await signInAs("store_manager");
     const other = await makeStoreWithRoles("rename-other");
-    await db.insert(member).values({ id: randomUUID(), organizationId: other.store, userId, role: "member", roleId: other.roles.store_manager, createdAt: new Date() });
+    await db.insert(member).values({ id: randomUUID(), organizationId: other.store, userId, role: "member", roleId: other.roles.store_manager, createdAt: new Date(0) }); // earlier than the session store's membership, so the earliest-membership fallback would pick it
     const stranger = await makeStoreWithRoles("rename-stranger");
     const [otherName, strangerName] = [await nameOf(other.store), await nameOf(stranger.store)];
 
