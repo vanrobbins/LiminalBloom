@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   requireMember: vi.fn(),
   changePassword: vi.fn(),
   applyAuthCookies: vi.fn(),
+  keepShortSessionShort: vi.fn(),
+  wrong: 0, // the per-person count of wrong guesses, stood in for lib/password-guesses
+  recordWrongGuess: vi.fn(),
+  clearWrongGuesses: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
   }),
@@ -16,6 +20,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ cookie: "session=1" }) }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { changePassword: mocks.changePassword } } }));
 vi.mock("@/lib/auth-cookies", () => ({ applyAuthCookies: mocks.applyAuthCookies }));
+vi.mock("@/lib/change-password", () => ({ keepShortSessionShort: mocks.keepShortSessionShort }));
+vi.mock("@/lib/password-guesses", () => ({
+  tooManyGuesses: async () => mocks.wrong >= 5,
+  recordWrongGuess: mocks.recordWrongGuess,
+  clearWrongGuesses: mocks.clearWrongGuesses,
+}));
 vi.mock("@/lib/current-member", () => ({ requireMember: mocks.requireMember }));
 
 import { changePasswordAction } from "./actions";
@@ -26,7 +36,9 @@ const answer = { headers: new Headers({ "set-cookie": "x=1" }), response: { toke
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.requireMember.mockResolvedValue({ kind: "member" });
+  mocks.wrong = 0;
+  mocks.recordWrongGuess.mockImplementation(async () => void (mocks.wrong += 1));
+  mocks.requireMember.mockResolvedValue({ kind: "member", user: { id: "u1" } });
   mocks.changePassword.mockResolvedValue(answer);
 });
 
@@ -77,5 +89,31 @@ describe("changePasswordAction", () => {
     expect(await changePasswordAction(OLD, NEW, NEW)).toEqual({ status: "refused", message: "Couldn't change the password. Try again." });
     mocks.changePassword.mockRejectedValue(new APIError("INTERNAL_SERVER_ERROR", { message: "secret detail" }));
     expect(await changePasswordAction(OLD, NEW, NEW)).toEqual({ status: "refused", message: "Couldn't change the password. Try again." });
+  });
+
+  it("counts a wrong current password against the person and clears the count on success, after cutting a short session short", async () => {
+    mocks.changePassword.mockRejectedValueOnce(new APIError("BAD_REQUEST", { message: "Invalid password", code: "INVALID_PASSWORD" }));
+    await changePasswordAction(OLD, NEW, NEW);
+    expect(mocks.recordWrongGuess).toHaveBeenCalledWith("u1");
+    expect(mocks.clearWrongGuesses).not.toHaveBeenCalled();
+    await changePasswordAction(OLD, NEW, NEW);
+    expect(mocks.clearWrongGuesses).toHaveBeenCalledWith("u1");
+    expect(mocks.keepShortSessionShort).toHaveBeenCalledWith("t", expect.any(Headers));
+  });
+
+  it("other failures do not count as a wrong guess", async () => {
+    mocks.changePassword.mockRejectedValue(new Error("connect ECONNREFUSED"));
+    await changePasswordAction(OLD, NEW, NEW);
+    expect(mocks.recordWrongGuess).not.toHaveBeenCalled();
+  });
+
+  it("refuses the 6th try after 5 wrong ones without calling Better Auth, even with the right password", async () => {
+    mocks.changePassword.mockRejectedValue(new APIError("BAD_REQUEST", { message: "Invalid password", code: "INVALID_PASSWORD" }));
+    for (let i = 0; i < 5; i++) expect(await changePasswordAction("wrong-guess-" + i, NEW, NEW)).toMatchObject({ field: "current" });
+    expect(mocks.changePassword).toHaveBeenCalledTimes(5);
+    mocks.changePassword.mockResolvedValue(answer);
+    expect(await changePasswordAction(OLD, NEW, NEW)).toEqual({ status: "refused", message: "Too many tries. Try again in a few minutes." });
+    expect(mocks.changePassword).toHaveBeenCalledTimes(5);
+    expect(mocks.applyAuthCookies).not.toHaveBeenCalled();
   });
 });

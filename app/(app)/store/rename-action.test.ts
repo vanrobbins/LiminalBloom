@@ -2,6 +2,8 @@
 // database: only Better Auth's session is stood in for, so who may rename is decided by a
 // real role's switches.
 
+import { randomUUID } from "node:crypto";
+
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,7 +22,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, listOrganizations: mocks.listOrganizations } } }));
 
 import { db } from "@/db";
-import { organization } from "@/db/auth-schema";
+import { member, organization } from "@/db/auth-schema";
 import { dropPeople, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { eventsOf } from "@/lib/access/people-test";
 import { dropStores } from "@/lib/products/test-stores";
@@ -60,6 +62,21 @@ describe("renameStoreAction", () => {
     expect(await nameOf(store)).toBe("Riverside");
     expect((await eventsOf(store)).map((e) => [e.event, e.actorId, e.actorName, e.detail])).toEqual([["store_renamed", userId, "Van", { from: seen, to: "Riverside" }]]);
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("renames the session's store only: another store, the person's own or not, is untouched", async () => {
+    const userId = await signInAs("store_manager");
+    const other = await makeStoreWithRoles("rename-other");
+    await db.insert(member).values({ id: randomUUID(), organizationId: other.store, userId, role: "member", roleId: other.roles.store_manager, createdAt: new Date() });
+    const stranger = await makeStoreWithRoles("rename-stranger");
+    const [otherName, strangerName] = [await nameOf(other.store), await nameOf(stranger.store)];
+
+    expect(await renameStoreAction("Riverside", seen)).toEqual({ status: "saved", message: "Store name saved" });
+
+    expect(await nameOf(store)).toBe("Riverside");
+    expect(await nameOf(other.store)).toBe(otherName);
+    expect(await nameOf(stranger.store)).toBe(strangerName);
+    expect((await eventsOf(other.store)).length + (await eventsOf(stranger.store)).length).toBe(0);
   });
 
   it.each(["assistant_manager", "vm_manager", "vm_worker", "sales_associate", null] as const)("refuses a member whose role is %s, in words, and changes nothing", async (role) => {

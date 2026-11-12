@@ -9,15 +9,21 @@
 
 import "server-only";
 
+import type { BetterAuthOptions } from "better-auth";
 import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies";
 import { cookies } from "next/headers";
 
-/** Sets each cookie in a Better Auth response's `Set-Cookie` on the current Server Action's response. */
+import { auth } from "@/lib/auth";
+
+/** Sets each of Better Auth's cookies in a response's `Set-Cookie` on the current Server Action's response; any other cookie is left alone. */
 export async function applyAuthCookies(responseHeaders: Headers): Promise<void> {
   const setCookie = responseHeaders.get("set-cookie");
   if (!setCookie) return;
   const jar = await cookies();
+  // Better Auth's names are `<prefix>.<name>`, with `__Secure-` in front over https (default prefix "better-auth").
+  const prefix = `${(auth.options as BetterAuthOptions).advanced?.cookiePrefix ?? "better-auth"}.`;
+  const isTheirs = (name: string) => name.startsWith(prefix) || name.startsWith(`__Secure-${prefix}`);
   parseSetCookieHeader(setCookie).forEach((cookie, name) => {
-    if (name) jar.set(name, cookie.value, toCookieOptions(cookie));
+    if (name && isTheirs(name)) jar.set(name, cookie.value, toCookieOptions(cookie));
   });
 }
