@@ -146,6 +146,7 @@ test.describe("Visual Merchandising Manager", () => {
     await page.goto("/products/new");
     await expect(page).not.toHaveURL(/\/no-access$/);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByLabel("Style number")).toBeVisible();
     await page.goto("/layout");
     await expect(setUpLayout(page)).toBeVisible();
   });

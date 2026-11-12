@@ -23,7 +23,10 @@ vi.mock("./build", () => ({
   buildDemo: () => ({ products: [], categories: [], locations: [] }),
   demoStatements: () => [],
 }));
-vi.mock("./people", () => ({ seedDemoPeople: fake.seedDemoPeople }));
+vi.mock("./people", () => ({
+  seedDemoPeople: fake.seedDemoPeople,
+  DEMO_PEOPLE: [{ email: "demo.store.manager@liminalbloom.app" }, { email: "demo.sales.associate@liminalbloom.app" }],
+}));
 vi.mock("@/lib/db/with-store", () => ({ withStore: fake.withStore }));
 vi.mock("@/lib/products/images", () => ({
   listImages: fake.listImages,
@@ -70,5 +73,27 @@ describe("seedDemo", () => {
     fake.withStore.mockRejectedValue(new Error("boom"));
     await expect(run()).rejects.toThrow("boom");
     expect(fake.seedDemoPeople).not.toHaveBeenCalled();
+  });
+
+  it("seeds the role accounts on development, with no flag", async () => {
+    await run();
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo");
+  });
+
+  it("seeds no role accounts on production without --with-people", async () => {
+    const confirm = vi.fn<(message: string) => Promise<boolean>>(async () => true);
+    await seedDemo({ isProduction: true, confirm });
+    expect(fake.withStore).toHaveBeenCalled();
+    expect(fake.seedDemoPeople).not.toHaveBeenCalled();
+    expect(confirm.mock.calls[0][0]).not.toContain("demo.store.manager@liminalbloom.app");
+  });
+
+  it("seeds them on production with --with-people, and the prompt names every email", async () => {
+    const confirm = vi.fn<(message: string) => Promise<boolean>>(async () => true);
+    await seedDemo({ isProduction: true, withPeople: true, confirm });
+    expect(fake.seedDemoPeople).toHaveBeenCalledWith("store_demo");
+    const message = confirm.mock.calls[0][0];
+    expect(message).toContain("demo.store.manager@liminalbloom.app");
+    expect(message).toContain("demo.sales.associate@liminalbloom.app");
   });
 });

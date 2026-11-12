@@ -69,6 +69,7 @@ setup("sign in every worker's account, each with two stores, in the home store",
 setup("sign in one account per built-in role, all in one shared store, each saved to its own file", async ({ browser }) => {
   setup.setTimeout(120_000);
   // The Store Manager account goes first: it makes the store the others are added to.
+  if (ROLE_KEYS[0] !== "store_manager") throw new Error(`ROLE_KEYS must start with store_manager, which makes the store; it starts with ${ROLE_KEYS[0]}.`);
   for (const key of ROLE_KEYS) {
     const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": roleIp(key) } });
     const page = await context.newPage();
