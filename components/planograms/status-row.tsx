@@ -20,12 +20,14 @@ type StatusRowProps = {
   onView: (view: "draft" | "published") => void;
   dueDate: string | null;
   today: string;
+  /** Setting the due date is publishing's: without it the chip only shows the date. */
+  canSetDueDate: boolean;
   /** Only while the draft is being edited. */
   status: DraftStatus | null;
   children: React.ReactNode;
 };
 
-export function StatusRow({ fixtureId, latest, hasDraft, view, onView, dueDate, today, status, children }: StatusRowProps) {
+export function StatusRow({ fixtureId, latest, hasDraft, view, onView, dueDate, today, canSetDueDate, status, children }: StatusRowProps) {
   return (
     <div data-status-row className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <VersionLine latest={latest} />
@@ -43,7 +45,7 @@ export function StatusRow({ fixtureId, latest, hasDraft, view, onView, dueDate, 
           <InfoPopover term="draft" />
         </span>
       ) : null}
-      <DueDateChip fixtureId={fixtureId} dueDate={dueDate} today={today} />
+      <DueDateChip fixtureId={fixtureId} dueDate={dueDate} today={today} canEdit={canSetDueDate} />
       {status ? <DraftStatusLine status={status} /> : null}
       {children}
     </div>

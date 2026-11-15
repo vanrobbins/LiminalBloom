@@ -7,13 +7,19 @@ import { useState } from "react";
 
 import { changeStatus } from "@/app/(app)/products/status-actions";
 import { InfoPopover } from "@/components/ui/info-popover";
+import { StatusBadge } from "@/components/ui/status-badge";
+import type { Holder } from "@/lib/access/can";
+import { allowedStatuses } from "@/lib/access/rank";
 import { PRODUCT_STATUS, type ProductStatus } from "@/lib/product-status";
 import type { ProductRow } from "@/lib/products/queries";
 import { PRODUCT_STATUSES } from "@/lib/products/schemas";
 import { toast } from "@/lib/toast";
 
-export function StatusControl({ product, onChanged }: { product: ProductRow; onChanged: (product: ProductRow) => void }) {
+export function StatusControl({ product, member, onChanged }: { product: ProductRow; member: Holder; onChanged: (product: ProductRow) => void }) {
   const [isSaving, setIsSaving] = useState(false);
+  // Only the current status and the changes this person's switches allow (rank.ts); the server checks the same rule.
+  const switches = new Set(member.switches);
+  const choices = PRODUCT_STATUSES.filter((s) => s === product.status || allowedStatuses(product.status, switches).includes(s));
 
   async function save(from: ProductRow, status: ProductStatus): Promise<ProductRow | null> {
     setIsSaving(true);
@@ -23,6 +29,10 @@ export function StatusControl({ product, onChanged }: { product: ProductRow; onC
         const next = { ...from, status, version: result.version };
         onChanged(next);
         return next;
+      }
+      if (result.status === "forbidden") {
+        toast({ tone: "error", title: "Your role can't make that change", description: "The status was not changed." });
+        return null;
       }
       if (result.product) onChanged(result.product);
       toast({ tone: "error", title: "Changed on another device", description: "The current status is shown." });
@@ -43,7 +53,8 @@ export function StatusControl({ product, onChanged }: { product: ProductRow; onC
     toast({
       tone: "success",
       title: `${product.name}: ${PRODUCT_STATUS[status].label}`,
-      action: { label: "Undo", onSelect: () => void save(next, previous) },
+      // Undo is a change too: a role that may not make it is not offered it.
+      ...(allowedStatuses(status, switches).includes(previous) ? { action: { label: "Undo", onSelect: () => void save(next, previous) } } : {}),
     });
   }
 
@@ -58,10 +69,13 @@ export function StatusControl({ product, onChanged }: { product: ProductRow; onC
     radios[(at + step + radios.length) % radios.length]?.focus();
   }
 
+  // Nothing to choose: show the status, not a control that does nothing.
+  if (choices.length === 1) return <StatusBadge status={product.status} />;
+
   return (
     <div className="flex items-center gap-1">
-      <div role="radiogroup" aria-label="Status" onKeyDown={onKeyDown} className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-lg border border-line-subtle bg-surface p-1">
-        {PRODUCT_STATUSES.map((status) => {
+      <div role="radiogroup" aria-label="Status" onKeyDown={onKeyDown} className="grid min-w-0 flex-1 auto-cols-fr grid-flow-col gap-1 rounded-lg border border-line-subtle bg-surface p-1">
+        {choices.map((status) => {
           const { label, icon: Icon } = PRODUCT_STATUS[status];
           const isChecked = product.status === status;
           return (

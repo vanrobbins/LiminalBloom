@@ -20,13 +20,16 @@ export function switchToProduction(): void {
 export async function findDemoStore(): Promise<{ storeId: string; productCount: number } | null> {
   const { db } = await import("@/db");
   const { member, organization, user } = await import("@/db/auth-schema");
-  const { products } = await import("@/db/schema");
+  const { products, roleDefinitions } = await import("@/db/schema");
+  // Production's store is made on the live site, whose slug may be suffixed, so
+  // the slug is no test; the demo account must hold the Store Manager role there.
   const rows = await db
     .select({ storeId: organization.id })
     .from(organization)
     .innerJoin(member, eq(member.organizationId, organization.id))
     .innerJoin(user, eq(user.id, member.userId))
-    .where(and(eq(organization.name, DEMO_STORE), eq(user.email, DEMO_EMAIL), eq(member.role, "owner")));
+    .innerJoin(roleDefinitions, and(eq(roleDefinitions.storeId, member.organizationId), eq(roleDefinitions.id, member.roleId)))
+    .where(and(eq(organization.name, DEMO_STORE), eq(user.email, DEMO_EMAIL), eq(roleDefinitions.builtin, "store_manager")));
   const storeId = rows[0]?.storeId;
   if (!storeId) return null;
   const [count] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(eq(products.storeId, storeId));

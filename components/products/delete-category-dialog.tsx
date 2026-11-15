@@ -38,6 +38,10 @@ export function DeleteCategoryDialog({ category, open, onOpenChange, onDeleted }
         setNotice("Someone added or removed products meanwhile. Check the new count.");
         return;
       }
+      if (result.status === "forbidden") {
+        setNotice("Your role can't delete categories.");
+        return;
+      }
       if (result.status === "conflict") {
         setIsStale(true);
         setNotice("This category changed on another device. Close and look again.");

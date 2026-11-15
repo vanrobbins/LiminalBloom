@@ -14,9 +14,11 @@ import { dueLabel } from "@/lib/planograms/dates";
 
 import { DueDateForm } from "./due-date-field";
 
-type DueDateChipProps = { fixtureId: string; dueDate: string | null; today: string };
+type DueDateChipProps = { fixtureId: string; dueDate: string | null; today: string; canEdit: boolean };
 
-export function DueDateChip({ fixtureId, dueDate, today }: DueDateChipProps) {
+const CHIP = "inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-raised px-4 text-sm whitespace-nowrap text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-overdue:border-danger data-overdue:text-danger";
+
+export function DueDateChip({ fixtureId, dueDate, today, canEdit }: DueDateChipProps) {
   const [open, setOpen] = useState(false);
   const isPhone = useMediaQuery(PHONE_QUERY);
   const label = dueDate ? dueLabel(dueDate, today) : null;
@@ -25,6 +27,16 @@ export function DueDateChip({ fixtureId, dueDate, today }: DueDateChipProps) {
   const title = dueDate ? "Change due date" : "Set due date";
   const form = open ? <DueDateForm key={dueDate ?? "none"} fixtureId={fixtureId} dueDate={dueDate} onDone={() => setOpen(false)} /> : null;
 
+  // Not theirs to set: the date stays visible, as plain text, and with none set there is nothing to show.
+  if (!canEdit) {
+    return label ? (
+      <span data-overdue={label.overdue ? "" : undefined} className={CHIP}>
+        <Icon aria-hidden="true" strokeWidth={1.75} className="size-4" />
+        {label.text}
+      </span>
+    ) : null;
+  }
+
   return (
     <>
       <button
@@ -32,7 +44,7 @@ export function DueDateChip({ fixtureId, dueDate, today }: DueDateChipProps) {
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
         data-overdue={label?.overdue ? "" : undefined}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-raised px-4 text-sm whitespace-nowrap text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-overdue:border-danger data-overdue:text-danger"
+        className={CHIP}
       >
         <Icon aria-hidden="true" strokeWidth={1.75} className="size-4" />
         {label ? label.text : "Set due date"}

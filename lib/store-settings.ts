@@ -1,15 +1,15 @@
 // A store's time zone (DECISIONS "Time", 10-12): read by every screen that
-// says "today", changed only by the store's Better Auth owner or admin (the
-// people who administer a store, DECISIONS 09-28; Week 7 swaps in the Admin
-// role). Reads and writes go through withStore like every store table.
+// says "today", changed only by a person whose role holds the store.settings
+// switch (spec 0.7, 4.1). Reads and writes go through withStore like every
+// store table.
 
 import "server-only";
 
 import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { member } from "@/db/auth-schema";
 import { storeSettings } from "@/db/schema";
+import { resolveAccess } from "@/lib/access/resolve";
 import { withStore } from "@/lib/db/with-store";
 import { conflictLabel } from "@/lib/layout/save";
 import { guarded } from "@/lib/products/write";
@@ -29,20 +29,20 @@ export async function storeTimezone(storeId: string): Promise<string> {
   return zone && isTimezone(zone) ? zone : DEFAULT_TIMEZONE;
 }
 
-export async function canManageStore(userId: string, storeId: string): Promise<boolean> {
-  const rows = await db
-    .select({ role: member.role })
-    .from(member)
-    .where(and(eq(member.userId, userId), eq(member.organizationId, storeId)));
-  // Better Auth may store several roles, comma-separated.
-  return rows.some((r) => r.role.split(",").some((role) => ["owner", "admin"].includes(role.trim())));
+// Reads the database for the given person and store, never a caller's word for it
+// (create-store calls this straight after making a store). resolveAccess falls back
+// to the person's own store when they do not belong to the one asked for, so the
+// store it settled on must be the one asked for.
+async function mayChangeSettings(userId: string, storeId: string): Promise<boolean> {
+  const access = await resolveAccess(userId, storeId);
+  return access.activeStoreId === storeId && access.switches.has("store.settings");
 }
 
 /** expectedVersion 0 means "this store has no settings row yet": the row is made, unless one appeared meanwhile. */
 export async function setStoreTimezone(storeId: string, userId: string, input: string, expectedVersion: number): Promise<SettingsOutcome> {
   const timezone = canonicalZone(input);
   if (timezone === null) return { status: "invalid" };
-  if (!(await canManageStore(userId, storeId))) return { status: "forbidden" };
+  if (!(await mayChangeSettings(userId, storeId))) return { status: "forbidden" };
   const write =
     expectedVersion === 0
       ? db.insert(storeSettings).values({ storeId, timezone }).onConflictDoNothing().returning({ storeId: storeSettings.storeId })

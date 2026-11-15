@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { LocalTime } from "@/components/time/local-time";
 import { Button } from "@/components/ui/button";
+import { can, type Holder } from "@/lib/access/can";
 
 import { RestoreButton } from "./restore-button";
 
@@ -18,7 +19,7 @@ export type HistoryEntry = {
   gone: { label: string; count: number }[];
 };
 
-export function HistoryList({ fixtureId, expectedVersion, entries }: { fixtureId: string; expectedVersion: number; entries: HistoryEntry[] }) {
+export function HistoryList({ fixtureId, expectedVersion, entries, member }: { fixtureId: string; expectedVersion: number; entries: HistoryEntry[]; member: Holder }) {
   return (
     <ol className="flex flex-col gap-4">
       {entries.map((e) => (
@@ -39,7 +40,7 @@ export function HistoryList({ fixtureId, expectedVersion, entries }: { fixtureId
                   View
                 </Link>
               </Button>
-              <RestoreButton fixtureId={fixtureId} expectedVersion={expectedVersion} number={e.number} />
+              {can(member, "planograms.publish") ? <RestoreButton fixtureId={fixtureId} expectedVersion={expectedVersion} number={e.number} /> : null}
             </div>
           </article>
         </li>

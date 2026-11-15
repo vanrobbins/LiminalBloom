@@ -135,10 +135,24 @@ export function deleteProduct(storeId: string, id: string, expectedVersion: numb
   });
 }
 
+/** A product's status as the database holds it now, or null when this store has no such product. */
+export async function productStatus(storeId: string, id: string): Promise<ProductStatus | null> {
+  const [rows] = await withStore(storeId, [
+    db.select({ status: products.status }).from(products).where(and(eq(products.id, id), eq(products.storeId, storeId))),
+  ] as const);
+  return rows[0]?.status ?? null;
+}
+
+/**
+ * `from` is the status the caller read (and checked the person's switch against); the write
+ * matches only while the product still has it, so a change in between is a conflict, not a
+ * write the check never saw.
+ */
 export function setProductStatus(
   storeId: string,
   id: string,
   expectedVersion: number,
+  from: ProductStatus,
   status: ProductStatus,
 ): Promise<SaveOutcome<{ version: number }>> {
   return attempt(async () => {
@@ -147,7 +161,7 @@ export function setProductStatus(
         db
           .update(products)
           .set({ status, version: sql`${products.version} + 1`, updatedAt: new Date() })
-          .where(productWhere(storeId, id, expectedVersion))
+          .where(and(productWhere(storeId, id, expectedVersion), eq(products.status, from)))
           .returning({ id: products.id }),
         "product",
       ),

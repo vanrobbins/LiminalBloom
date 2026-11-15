@@ -14,7 +14,7 @@ import { createCategory, deleteCategory, updateCategory } from "./category-write
 import { productDetail } from "./queries";
 import type { ProductInput } from "./schemas";
 import { dropStores, makeStore, productCount, seedStoreFixtures } from "./test-stores";
-import { createProduct, deleteProduct, setProductImage, setProductStatus, updateProduct } from "./write";
+import { createProduct, deleteProduct, productStatus, setProductImage, setProductStatus, updateProduct } from "./write";
 
 afterAll(dropStores);
 
@@ -141,8 +141,18 @@ describe("products", () => {
   it("sets status with a version guard", async () => {
     const store = await makeStore("status");
     const f = await seedStoreFixtures(store);
-    expect(await setProductStatus(store, f.productId, 1, "sold_out")).toEqual({ status: "saved", version: 2 });
-    expect(await setProductStatus(store, f.productId, 1, "on_sale")).toEqual({ status: "conflict" });
+    expect(await setProductStatus(store, f.productId, 1, "in_stock", "sold_out")).toEqual({ status: "saved", version: 2 });
+    expect(await setProductStatus(store, f.productId, 1, "sold_out", "on_sale")).toEqual({ status: "conflict" });
+  });
+
+  it("writes a status only while the product still has the one that was read", async () => {
+    const store = await makeStore("status-from");
+    const f = await seedStoreFixtures(store);
+    expect(await productStatus(store, f.productId)).toBe("in_stock");
+    // Right version, but the caller read "on_sale": the product is in stock, so nothing is written.
+    expect(await setProductStatus(store, f.productId, 1, "on_sale", "sold_out")).toEqual({ status: "conflict" });
+    expect(await productStatus(store, f.productId)).toBe("in_stock");
+    expect(await productStatus(store, randomUUID())).toBeNull();
   });
 
   it("swaps the image path and hands back the previous one", async () => {
@@ -161,7 +171,7 @@ describe("products", () => {
     const stamp = async () => (await db.select({ at: products.updatedAt }).from(products).where(eq(products.id, f.productId)))[0].at;
     const writes: [string, () => Promise<unknown>][] = [
       ["form save with an override", () => updateProduct(store, f.productId, 1, productInput(f.categoryId, { overrides: { hung: { columns: 2, rows: 4 }, folded: null } }))],
-      ["status", () => setProductStatus(store, f.productId, 2, "sold_out")],
+      ["status", () => setProductStatus(store, f.productId, 2, "in_stock", "sold_out")],
       ["image", () => setProductImage(store, f.productId, "p/new.webp")],
     ];
     for (const [what, write] of writes) {

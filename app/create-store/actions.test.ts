@@ -1,9 +1,7 @@
 // The real createStore action, with Better Auth and Next stood in for and the
 // time zone write running against the dev database (like lib/store-settings.test.ts).
+// The creator is a Store Manager, as the store-creation hook makes them.
 
-import { randomUUID } from "node:crypto";
-
-import { inArray } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -42,26 +40,22 @@ vi.mock("@/lib/store-settings", async (original) => {
 });
 
 import { db } from "@/db";
-import { member, user } from "@/db/auth-schema";
 import { storeSettings } from "@/db/schema";
-import { dropStores, makeStore } from "@/lib/products/test-stores";
+import { dropPeople, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
+import { dropStores } from "@/lib/products/test-stores";
 import { storeSettingsFor } from "@/lib/store-settings";
 
 import { createStore } from "./actions";
 
-const users: string[] = [];
 afterAll(async () => {
   await dropStores();
-  if (users.length) await db.delete(user).where(inArray(user.id, users));
+  await dropPeople();
 });
 
-/** What Better Auth and its afterCreateOrganization hook leave behind: a store, its owner, Pacific. */
-async function createdStore(role = "owner"): Promise<{ storeId: string; userId: string }> {
-  const storeId = await makeStore("create-action");
-  const userId = `test_cs_${randomUUID().slice(0, 8)}`;
-  users.push(userId);
-  await db.insert(user).values({ id: userId, name: role, email: `${userId}@example.com` });
-  await db.insert(member).values({ id: randomUUID(), organizationId: storeId, userId, role, createdAt: new Date() });
+/** What Better Auth and its afterCreateOrganization hook leave behind: a store, its five roles, its creator in `role`, Pacific. */
+async function createdStore(role: "store_manager" | "sales_associate" = "store_manager"): Promise<{ storeId: string; userId: string }> {
+  const { store: storeId, roles } = await makeStoreWithRoles("create-action");
+  const { userId } = await makePerson(storeId, roles[role]);
   await db.insert(storeSettings).values({ storeId, timezone: "America/Los_Angeles" });
   mocks.getSession.mockResolvedValue({ user: { id: userId }, session: {} });
   mocks.createOrganization.mockResolvedValue({ id: storeId });
@@ -98,7 +92,7 @@ describe("createStore", () => {
   });
 
   it("still makes the store, and says so in the log, when the zone can't be saved", async () => {
-    const { storeId } = await createdStore("member");
+    const { storeId } = await createdStore("sales_associate");
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(createStore(null, form("Washington Square", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
     expect(logged).toHaveBeenCalledWith("create-store: time zone not saved", storeId, "forbidden");

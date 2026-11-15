@@ -5,6 +5,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
+import { EVERYTHING, guardFor, memberWith } from "@/lib/access/test-guard";
+import type { Member } from "@/lib/current-member";
 import * as currentMember from "@/lib/current-member";
 import { addProduct } from "@/lib/planograms/test-planograms";
 import { dropStores, makeStore, seedStoreFixtures, type StoreFixtures } from "@/lib/products/test-stores";
@@ -23,18 +25,16 @@ afterAll(async () => {
 });
 
 describe("planogram actions", () => {
+  let who: Member;
   let store: string;
   let f: StoreFixtures;
   let tee: string;
 
   beforeEach(async () => {
     store = await makeStore(`pg-actions-${randomUUID().slice(0, 6)}`);
-    vi.mocked(currentMember.requireMember).mockResolvedValue({
-      kind: "member",
-      user: VAN,
-      stores: [{ id: store, name: "Test Store" }],
-      activeStoreId: store,
-    });
+    // Everything allowed: the switch rules are in actions.access.test.ts.
+    who = memberWith(store, EVERYTHING.switches, VAN);
+    vi.mocked(currentMember.requireSwitchForAction).mockImplementation(guardFor(() => who));
     f = await seedStoreFixtures(store);
     tee = await addProduct(store, f.categoryId, "Pocket Tee");
     await startDraftAction(f.fixtureId, null);
@@ -74,7 +74,7 @@ describe("planogram actions", () => {
     const other = await makeStore(`pg-actions-other-${randomUUID().slice(0, 6)}`);
     const theirs = await seedStoreFixtures(other, "Their Pant");
     expect(await beginDraftAction(theirs.fixtureId, null)).toMatchObject({ status: "refused", draft: null });
-    vi.mocked(currentMember.requireMember).mockResolvedValue({ kind: "member", user: VAN, stores: [{ id: other, name: "Other" }], activeStoreId: other });
+    who = memberWith(other, EVERYTHING.switches, VAN);
     expect(await reloadDraftAction(theirs.fixtureId)).toBeNull();
   });
 

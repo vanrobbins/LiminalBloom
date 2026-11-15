@@ -17,7 +17,40 @@ import { db } from "@/db";
 import { rememberSwitch, storeForNewSession } from "./active-store";
 import { optionalEnv } from "./env";
 
+// Better Auth's organization endpoints that read or change people. Its own checks
+// know only owner / admin / member, not our roles or the rank rule, and three of them
+// list emails and invitation ids to any member. So the browser cannot reach them: the
+// router answers 404 before anything runs. People, roles and invitations go through the
+// app's own server actions (lib/access/people-write.ts, invite.ts, invitation-accept.ts
+// and roles-*.ts). `auth.api.*` calls from server
+// code are not affected. Not here: `/organization/set-active` (the store switcher).
+// `/change-password` is closed too, below: the browser's own call would not revoke the
+// person's other sessions, so the Account page's server action calls
+// `auth.api.changePassword` with `revokeOtherSessions: true` instead (lib/change-password.db.test.ts
+// proves the server call still works). Spec 0.7, 4.5, "Spike findings";
+// e2e/auth-routes.spec.ts proves each path and its spellings.
+const CLOSED_ORGANIZATION_PATHS = [
+  "invite-member",
+  "cancel-invitation",
+  "accept-invitation",
+  "reject-invitation",
+  "update-member-role",
+  "remove-member",
+  "leave",
+  "update",
+  "delete",
+  "create",
+  "list-invitations",
+  "get-full-organization",
+  "list-members",
+  "get-invitation",
+  "list-user-invitations",
+].map((name) => `/organization/${name}`);
+
+const CLOSED_PATHS = [...CLOSED_ORGANIZATION_PATHS, "/change-password"];
+
 export const auth = betterAuth({
+  disabledPaths: CLOSED_PATHS,
   // Read through optionalEnv so a value pasted into a dashboard with a
   // trailing newline cannot produce an "Invalid URL" build failure.
   baseURL: optionalEnv("BETTER_AUTH_URL"),
@@ -38,7 +71,7 @@ export const auth = betterAuth({
     session: {
       create: {
         // Better Auth starts every session with no active store. Pick one,
-        // or /products and /create-store send a returning member back and
+        // or /products and /welcome send a returning member back and
         // forth forever. This is the pattern the organization plugin docs give.
         before: async (session) => ({
           data: {
@@ -83,10 +116,19 @@ export const auth = betterAuth({
     // invitation tables from section 7, which is why products.store_id was
     // deliberately left out until now. See docs/DECISIONS.md.
     organization({
+      disableOrganizationDeletion: true,
+      schema: {
+        // The app's own role (a role_definitions id). Better Auth's `role` is
+        // left to Better Auth (DECISIONS 09-28). `input: false` so no request
+        // can set it; only the app's own actions write it, with Drizzle.
+        member: { additionalFields: { roleId: { type: "string", required: false, input: false } } },
+        invitation: { additionalFields: { roleId: { type: "string", required: false, input: false } } },
+      },
       organizationHooks: {
-        // Every store gets its own encryption key and its settings row the
-        // moment it exists, however it was created -- the Server Action or
-        // Better Auth's own endpoint. Proposal 8.1.
+        // Every store gets its own encryption key, settings row and roles the
+        // moment it exists, however it was created: the Server Action, or any
+        // server code calling auth.api.createOrganization (Better Auth's own
+        // browser endpoint is closed above). Proposal 8.1.
         //
         // Imported inside the hook: store-keys imports `server-only`, and the
         // Better Auth CLI loads this file outside Next.js, where that throws.
@@ -99,6 +141,16 @@ export const auth = betterAuth({
           const { giveStoreSettings } = await import("./store-settings");
           try {
             await giveStoreSettings(organization.id);
+          } catch (error) {
+            const { removeStore } = await import("./store-keys");
+            await removeStore(organization.id);
+            throw error;
+          }
+          // The five built-in roles, and the creator as Store Manager (0.7.0).
+          // Same rule: a store never exists without them.
+          const { giveStoreItsRoles } = await import("./access/seed");
+          try {
+            await giveStoreItsRoles(organization.id);
           } catch (error) {
             const { removeStore } = await import("./store-keys");
             await removeStore(organization.id);

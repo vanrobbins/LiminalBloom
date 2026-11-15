@@ -16,13 +16,16 @@ import {
   products,
   stockroomBins,
 } from "@/db/schema";
+import { giveStoreItsRoles } from "@/lib/access/seed";
 
 const created: string[] = [];
 
-export async function makeStore(label: string): Promise<string> {
+/** A store with its five built-in roles, as the creation hook leaves one; `roles: false` for a test that needs it bare (backfill, first-use seeding). */
+export async function makeStore(label: string, { roles = true }: { roles?: boolean } = {}): Promise<string> {
   const id = `test_${label}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   await db.insert(organization).values({ id, name: `Test store ${label}`, slug: id, createdAt: new Date() });
   created.push(id);
+  if (roles) await giveStoreItsRoles(id);
   return id;
 }
 

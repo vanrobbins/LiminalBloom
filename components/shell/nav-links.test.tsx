@@ -27,7 +27,7 @@ describe("NavLinks", () => {
     render(<NavLinks variant="tabs" />);
     const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
     expect(links[0]).toHaveAccessibleName("Products");
-    expect(links.map((l) => l.textContent)).toEqual(["Products", "Layout", "Planograms", "Account"]);
+    expect(links.map((l) => l.textContent)).toEqual(["Products", "Layout", "Planograms", "People", "Account"]);
   });
 
   it("is the main navigation landmark, in every form", () => {
@@ -47,6 +47,17 @@ describe("NavLinks", () => {
     expect(link("Account")).toHaveAttribute("href", "/account");
     expect(link("Layout")).toHaveAttribute("href", "/layout");
     expect(link("Planograms")).toHaveAttribute("href", "/planograms");
+  });
+
+  it("lists People in every form, after Planograms and before Account, current on /people", () => {
+    mocks.pathname = "/people";
+    for (const variant of ["tabs", "rail", "sidebar"] as const) {
+      const { unmount } = render(<NavLinks variant={variant} />);
+      expect(link("People")).toHaveAttribute("href", "/people");
+      expect(link("People")).toHaveAttribute("aria-current", "page");
+      expect(link("Planograms")).not.toHaveAttribute("aria-current");
+      unmount();
+    }
   });
 
   it("marks only the page being shown", () => {

@@ -4,9 +4,14 @@
 
 import { DEMO_EMAIL, DEMO_STORE, createDemoStore, findDemoStore } from "./target";
 
-type Options = { isProduction: boolean; confirm: (message: string) => Promise<boolean> };
+type Options = {
+  isProduction: boolean;
+  /** Production only: also create the five role accounts, which share the demo password. */
+  withPeople?: boolean;
+  confirm: (message: string) => Promise<boolean>;
+};
 
-export async function seedDemo({ isProduction, confirm }: Options): Promise<void> {
+export async function seedDemo({ isProduction, withPeople = false, confirm }: Options): Promise<void> {
   const where = isProduction ? "PRODUCTION" : "development";
   let found = await findDemoStore();
   if (!found) {
@@ -20,10 +25,20 @@ export async function seedDemo({ isProduction, confirm }: Options): Promise<void
   }
 
   console.log(`${where} · store "${DEMO_STORE}" (owner ${DEMO_EMAIL}) · ${found.productCount} products now`);
-  if (isProduction && !(await confirm('Everything in this store will be replaced. Type "seed production" to go on: '))) {
+  // Development always seeds the people; production only on an explicit opt-in,
+  // since the accounts share DEMO_PASSWORD (docs/DECISIONS.md, 2026-11-12).
+  const seedPeople = !isProduction || withPeople;
+  const { DEMO_PEOPLE, checkDemoPeople, seedDemoPeople } = await import("./people");
+  const emails = DEMO_PEOPLE.map((p) => `  ${p.email}`).join("\n");
+  const accounts = seedPeople && isProduction ? `\nThese accounts will be created or moved into their roles, all with the demo password:\n${emails}\n` : "";
+  if (isProduction && !(await confirm(`Everything in this store will be replaced.${accounts}Type "seed production" to go on: `))) {
     console.log("Stopped. Nothing changed.");
     return;
   }
+
+  // Before anything is replaced: an account that may not be ours stops the run here, with the catalog untouched
+  // ("Nothing was changed" is true of that refusal only). The answer goes on to seedDemoPeople so ownership is asked once.
+  const existing = seedPeople ? await checkDemoPeople(found.storeId, { isProduction }) : undefined;
 
   const { withStore } = await import("@/lib/db/with-store");
   const { deleteImagesQuietly, listImages } = await import("@/lib/products/images");
@@ -38,6 +53,10 @@ export async function seedDemo({ isProduction, confirm }: Options): Promise<void
   const stale = await listImages(`stores/${found.storeId}/products/`);
   await deleteImagesQuietly(stale);
 
+  // One account per built-in role, so a walkthrough can sign in as each (spec 0.7, 4.10).
+  // A sign-up that fails here comes after the catalog was replaced: that part stays done, and a re-run finishes the people.
+  const people = seedPeople ? await seedDemoPeople(found.storeId, { isProduction, existing }) : 0;
+
   const floor = plan.locations.filter((l) => l.faceId).length;
-  console.log(`Done: ${plan.products.length} products, ${plan.categories.length} categories, ${floor} floor places, ${plan.locations.length - floor} bin places, ${stale.length} old images removed.`);
+  console.log(`Done: ${plan.products.length} products, ${plan.categories.length} categories, ${floor} floor places, ${plan.locations.length - floor} bin places, ${stale.length} old images removed, ${seedPeople ? `${people} role accounts in place` : "role accounts skipped (production needs --with-people)"}.`);
 }

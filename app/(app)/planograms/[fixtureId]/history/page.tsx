@@ -14,7 +14,8 @@ import { listVersions, loadPlanogram } from "@/lib/planograms/queries";
 export const dynamic = "force-dynamic";
 
 export default async function HistoryPage({ params }: { params: Promise<{ fixtureId: string }> }) {
-  const { activeStoreId } = await requireMember();
+  const member = await requireMember();
+  const { activeStoreId } = member;
   const { fixtureId } = await params;
   if (!z.uuid().safeParse(fixtureId).success) notFound();
   const layout = await loadLayout(activeStoreId);
@@ -39,7 +40,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ fixtur
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <PageHeader title="History" back={{ href: `/planograms/${owner.id}`, label: scope.fixtureName }} />
-      {entries.length === 0 ? <p className="text-ink-muted">Nothing published yet.</p> : <HistoryList fixtureId={owner.id} expectedVersion={row.version} entries={entries} />}
+      {entries.length === 0 ? <p className="text-ink-muted">Nothing published yet.</p> : <HistoryList fixtureId={owner.id} expectedVersion={row.version} entries={entries} member={member} />}
     </div>
   );
 }

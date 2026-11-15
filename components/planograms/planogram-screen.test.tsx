@@ -25,6 +25,7 @@ vi.mock("next/link", () => ({
 }));
 vi.mock("@/components/store-map/use-media-query", () => ({ PHONE_QUERY: "", useMediaQuery: () => false }));
 
+import { EVERYTHING } from "@/lib/access/test-guard";
 import { PlanogramScreen } from "./planogram-screen";
 
 const face = (faceId: string, label: string): PlanogramFace => ({ faceId, fixtureId: "r", fixtureName: "Rack 1", fixtureType: "rack", side: "front", setSide: null, label, columns: 4, rows: 3 });
@@ -43,7 +44,7 @@ const published: PublishedVersion = {
 
 function screenWith(latest: PublishedVersion | null, draft: DraftState | null) {
   hook.draft = draft;
-  return <PlanogramScreen scope={scope} row={null} latest={latest} draft={draft} viewing={null} looks={{}} highlightProductId={null} dueDate={null} today="2026-10-11" />;
+  return <PlanogramScreen member={EVERYTHING} scope={scope} row={null} latest={latest} draft={draft} viewing={null} looks={{}} highlightProductId={null} dueDate={null} today="2026-10-11" />;
 }
 
 const tile = () => screen.getByRole("button", { name: /^Pant, / });
@@ -212,7 +213,7 @@ describe("PlanogramScreen", () => {
 
   it("on a past version, Ctrl+Z is left to the browser", () => {
     hook.draft = { planogramVersion: 3, placements: [pant] };
-    render(<PlanogramScreen scope={scope} row={null} latest={published} draft={hook.draft} viewing={published} looks={{}} highlightProductId={null} dueDate={null} today="2026-10-11" />);
+    render(<PlanogramScreen member={EVERYTHING} scope={scope} row={null} latest={published} draft={hook.draft} viewing={published} looks={{}} highlightProductId={null} dueDate={null} today="2026-10-11" />);
     expect(fireEvent.keyDown(window, { key: "z", ctrlKey: true })).toBe(true);
     expect(hook.save).not.toHaveBeenCalled();
   });

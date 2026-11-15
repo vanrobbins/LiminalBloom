@@ -29,6 +29,10 @@ describe("GLOSSARY", () => {
     }
   });
 
+  it("explains every term the 0.7.0 screens use: role, rank, permission, invitation and Store Manager", () => {
+    for (const term of ["role", "rank", "permission", "invitation", "storeManager"]) expect(Object.keys(GLOSSARY), term).toContain(term);
+  });
+
   it("has every term an InfoPopover names", () => {
     const files = ["app", "components"].flatMap((dir) =>
       readdirSync(dir, { recursive: true, encoding: "utf8" }).filter((f) => /\.tsx$/.test(f) && !f.includes(".test.")).map((f) => `${dir}/${f}`),

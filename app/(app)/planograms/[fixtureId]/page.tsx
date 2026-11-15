@@ -22,7 +22,8 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ fixtureId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function PlanogramPage({ params, searchParams }: Params) {
-  const { activeStoreId } = await requireMember();
+  const member = await requireMember();
+  const { activeStoreId } = member;
   const { fixtureId } = await params;
   const query = await searchParams;
   if (!z.uuid().safeParse(fixtureId).success) notFound();
@@ -70,6 +71,7 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         highlightProductId={product}
         dueDate={state.row?.dueDate ?? null}
         today={today}
+        member={member}
       />
     </div>
   );

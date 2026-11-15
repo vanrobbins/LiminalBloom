@@ -37,6 +37,10 @@ export function CategorySelect({ categories, value, onChange, onAdded, error }: 
         setAddError(result.message);
         return;
       }
+      if (result.status === "forbidden") {
+        setAddError("Your role can't add categories.");
+        return;
+      }
       onAdded(result.category);
       onChange(result.category.id);
       setIsAdding(false);

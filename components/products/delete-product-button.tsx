@@ -30,6 +30,10 @@ export function DeleteProductDialog({ productId, version, name, open, onOpenChan
     setIsDeleting(true);
     try {
       const result = await removeProduct(productId, version);
+      if (result.status === "forbidden") {
+        toast({ tone: "error", title: "Your role can't delete products" });
+        return;
+      }
       if (result.status === "conflict") {
         onOpenChange(false);
         toast({ tone: "error", title: "Changed on another device", description: "Look it over, then delete it if you still want to." });

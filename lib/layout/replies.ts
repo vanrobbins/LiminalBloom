@@ -12,6 +12,7 @@ export type SaveReply =
   | SaveResult
   | { status: "rejected"; layout: Layout }
   | { status: "signed-out" }
+  | { status: "forbidden" }
   | { status: "store-changed" };
 
-export type FetchReply = { status: "ok"; layout: Layout } | { status: "signed-out" } | { status: "store-changed" };
+export type FetchReply = { status: "ok"; layout: Layout } | { status: "signed-out" } | { status: "forbidden" } | { status: "store-changed" };

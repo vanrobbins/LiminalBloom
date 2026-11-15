@@ -1,23 +1,25 @@
 "use server";
 
 // Uploading a product's image (spec §5.4). The browser has already shrunk it;
-// the server trusts none of that and checks membership, size and the file's
+// the server trusts none of that and checks the products.edit switch, size and the file's
 // real type before anything is stored.
 
 import { z } from "zod";
 
-import { requireMember } from "@/lib/current-member";
+import { requireSwitchForAction } from "@/lib/current-member";
 import { IMAGE_EXTENSION, MAX_UPLOAD_BYTES, sniffImageType } from "@/lib/products/image-check";
 import { deleteImagesQuietly, putImage, uploadPath, withoutSeedImages } from "@/lib/products/images";
 import { imageKeyOf } from "@/lib/products/queries";
 import { setProductImage } from "@/lib/products/write";
 
-export type UploadResult = { status: "saved"; imageKey: string } | { status: "error"; message: string };
+export type UploadResult = { status: "saved"; imageKey: string } | { status: "error"; message: string } | { status: "forbidden" };
 
 const refuse = (message: string): UploadResult => ({ status: "error", message });
 
 export async function uploadProductImage(productId: string, form: FormData): Promise<UploadResult> {
-  const { activeStoreId } = await requireMember();
+  const check = await requireSwitchForAction("products.edit");
+  if (check.status === "forbidden") return { status: "forbidden" };
+  const { activeStoreId } = check.member;
   if (!z.uuid().safeParse(productId).success) return refuse("That product no longer exists.");
 
   const file = form.get("image");

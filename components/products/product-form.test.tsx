@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 import type { CategoryRow } from "@/lib/products/queries";
 
+import { EVERYTHING } from "@/lib/access/test-guard";
 import { ProductForm } from "./product-form";
 
 const pants: CategoryRow = { id: "6f1c3b4e-8a43-4b8e-9b5d-4f7c2a1e9d10", name: "Pants", hungColumns: 1, hungRows: 3, foldedColumns: 2, foldedRows: 2, sizeRange: "", version: 1, productCount: 0 };
@@ -32,7 +33,7 @@ describe("ProductForm", () => {
   it("sends the product with its own space and goes back to Products", async () => {
     const user = userEvent.setup();
     actions.saveProduct.mockResolvedValue({ status: "saved", id: "new-id" });
-    render(<ProductForm categories={[pants]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants]} />);
     await fillRequired(user);
     const space = screen.getByRole("group", { name: "Space on the fixture" });
     await user.click(within(space).getByRole("radio", { name: "Different for this product" }));
@@ -50,7 +51,7 @@ describe("ProductForm", () => {
 
   it("uses the category's space by default, in words, and says when different numbers match it", async () => {
     const user = userEvent.setup();
-    render(<ProductForm categories={[pants]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants]} />);
     const space = screen.getByRole("group", { name: "Space on the fixture" });
     expect(within(space).getByRole("radio", { name: "Same as Pants" })).toBeChecked();
     expect(within(space).getByText("Hung: ½ ft wide, 3 rows high")).toBeInTheDocument();
@@ -63,7 +64,7 @@ describe("ProductForm", () => {
     const user = userEvent.setup();
     actions.saveProduct.mockResolvedValue({ status: "saved", id: "p" });
     render(
-      <ProductForm
+      <ProductForm member={EVERYTHING}
         categories={[pants]}
         product={{ id: "p", name: "A", styleNumber: "A-1", color: "Red", sizeRange: "", status: "in_stock", version: 2, categoryId: pants.id, categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid" }}
         overrides={{ hung: { columns: 4, rows: 3 } }}
@@ -82,7 +83,7 @@ describe("ProductForm", () => {
   it("inherits the category's size range, or saves its own from a quick pick", async () => {
     const user = userEvent.setup();
     actions.saveProduct.mockResolvedValue({ status: "saved", id: "new-id" });
-    render(<ProductForm categories={[{ ...pants, sizeRange: "24–34" }]} />);
+    render(<ProductForm member={EVERYTHING} categories={[{ ...pants, sizeRange: "24–34" }]} />);
     await fillRequired(user);
     const size = screen.getByRole("group", { name: "Size range" });
     expect(within(size).getByText("24–34")).toBeInTheDocument();
@@ -95,7 +96,7 @@ describe("ProductForm", () => {
   it("shows the server's field errors beside the fields", async () => {
     const user = userEvent.setup();
     actions.saveProduct.mockResolvedValue({ status: "invalid", errors: { styleNumber: "Another product already uses this style number." } });
-    render(<ProductForm categories={[pants]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants]} />);
     await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Add product" }));
     expect(screen.getByLabelText("Style number")).toHaveAccessibleDescription("Another product already uses this style number.");
@@ -105,7 +106,7 @@ describe("ProductForm", () => {
     const user = userEvent.setup();
     actions.saveProduct.mockResolvedValue({ status: "conflict" });
     render(
-      <ProductForm
+      <ProductForm member={EVERYTHING}
         categories={[pants]}
         product={{ id: "p", name: "A", styleNumber: "A-1", color: "Red", sizeRange: "", status: "in_stock", version: 2, categoryId: pants.id, categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid" }}
         overrides={{}}
@@ -121,7 +122,7 @@ describe("ProductForm", () => {
     globalThis.URL.createObjectURL = vi.fn(() => "blob:preview");
     actions.saveProduct.mockResolvedValue({ status: "saved", id: "new-id" });
     images.uploadProductImage.mockResolvedValue({ status: "saved", imageKey: "k" });
-    render(<ProductForm categories={[pants]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants]} />);
     await fillRequired(user);
     await user.upload(screen.getByLabelText("Choose image"), new File(["big"], "photo.jpg", { type: "image/jpeg" }));
     await user.click(screen.getByRole("button", { name: "Add product" }));
@@ -135,7 +136,7 @@ describe("ProductForm", () => {
     globalThis.URL.createObjectURL = vi.fn(() => "blob:preview");
     actions.saveProduct.mockResolvedValue({ status: "saved", id: "new-id" });
     images.uploadProductImage.mockRejectedValue(new TypeError("Failed to fetch"));
-    render(<ProductForm categories={[pants]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants]} />);
     await fillRequired(user);
     await user.upload(screen.getByLabelText("Choose image"), new File(["big"], "photo.jpg", { type: "image/jpeg" }));
     await user.click(screen.getByRole("button", { name: "Add product" }));
@@ -148,7 +149,7 @@ describe("ProductForm", () => {
   it("saves a picked swatch and texture with the form, and the preview follows them", async () => {
     const user = userEvent.setup();
     actions.saveProduct.mockResolvedValue({ status: "saved", id: "new-id" });
-    render(<ProductForm categories={[pants]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants]} />);
     await fillRequired(user);
     const preview = screen.getByRole("img", { name: "Preview" });
     expect(preview).toHaveAttribute("data-drawing", "pants");
@@ -165,7 +166,7 @@ describe("ProductForm", () => {
   it("matches the colour word by default, and saves no swatch", async () => {
     const user = userEvent.setup();
     actions.saveProduct.mockResolvedValue({ status: "saved", id: "new-id" });
-    render(<ProductForm categories={[pants]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants]} />);
     await fillRequired(user);
     expect(screen.getByRole("radio", { name: "Match the color word" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Add product" }));
@@ -175,7 +176,7 @@ describe("ProductForm", () => {
   it("asks for a category when there are several, instead of quietly picking the first", async () => {
     const user = userEvent.setup();
     const tees: CategoryRow = { ...pants, id: "0b7f8e2a-1c3d-4e5f-8a9b-0c1d2e3f4a5b", name: "Tees" };
-    render(<ProductForm categories={[pants, tees]} />);
+    render(<ProductForm member={EVERYTHING} categories={[pants, tees]} />);
     const select = screen.getByLabelText("Category");
     expect(select).toHaveValue("");
     expect(within(select).getByRole("option", { name: "Choose a category" })).toBeInTheDocument();

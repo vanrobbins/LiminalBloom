@@ -1,12 +1,12 @@
 import { CategoryList } from "@/components/products/category-list";
 import { PageHeader } from "@/components/shell/page-header";
-import { requireMember } from "@/lib/current-member";
+import { requireSwitch } from "@/lib/current-member";
 import { listCategories } from "@/lib/products/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
-  const { activeStoreId } = await requireMember();
+  const { activeStoreId } = await requireSwitch("products.edit");
   const categories = await listCategories(activeStoreId);
   return (
     <div className="mx-auto w-full max-w-2xl">

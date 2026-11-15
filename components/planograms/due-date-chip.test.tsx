@@ -17,7 +17,7 @@ beforeEach(() => {
 describe("DueDateChip", () => {
   it("reads Set due date, and saves only on Save", async () => {
     const user = userEvent.setup();
-    render(<DueDateChip fixtureId="f" dueDate={null} today="2026-10-10" />);
+    render(<DueDateChip canEdit fixtureId="f" dueDate={null} today="2026-10-10" />);
     await user.click(screen.getByRole("button", { name: "Set due date" }));
     // Titled for what it does, not the field's own label (B9): "Due date" finds only the field.
     expect(screen.getByRole("dialog", { name: "Set due date" })).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe("DueDateChip", () => {
 
   it("shows the date and clears it", async () => {
     const user = userEvent.setup();
-    render(<DueDateChip fixtureId="f" dueDate="2026-10-14" today="2026-10-10" />);
+    render(<DueDateChip canEdit fixtureId="f" dueDate="2026-10-14" today="2026-10-10" />);
     await user.click(screen.getByRole("button", { name: "Due Oct 14" }));
     await user.click(screen.getByRole("button", { name: "Clear" }));
     expect(mocks.setDue).toHaveBeenCalledWith("f", null);
@@ -40,11 +40,24 @@ describe("DueDateChip", () => {
 
   it("refuses a half-typed year", async () => {
     const user = userEvent.setup();
-    render(<DueDateChip fixtureId="f" dueDate={null} today="2026-10-10" />);
+    render(<DueDateChip canEdit fixtureId="f" dueDate={null} today="2026-10-10" />);
     await user.click(screen.getByRole("button", { name: "Set due date" }));
     await user.type(screen.getByLabelText("Due date"), "0002-10-14");
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByText("Choose a date from 2000 on.")).toBeInTheDocument();
     expect(mocks.setDue).not.toHaveBeenCalled();
+  });
+});
+
+describe("DueDateChip without planograms.publish", () => {
+  it("shows a date that is set as plain text, with nothing to press", () => {
+    render(<DueDateChip canEdit={false} fixtureId="f" dueDate="2026-10-14" today="2026-10-10" />);
+    expect(screen.getByText("Due Oct 14")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("shows nothing when no date is set", () => {
+    const { container } = render(<DueDateChip canEdit={false} fixtureId="f" dueDate={null} today="2026-10-10" />);
+    expect(container).toBeEmptyDOMElement();
   });
 });

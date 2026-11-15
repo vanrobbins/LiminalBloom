@@ -6,6 +6,7 @@ vi.mock("@/app/(app)/products/status-actions", () => ({ changeStatus: vi.fn() })
 import { EMPTY_LAYOUT } from "@/lib/layout/types";
 import type { SearchResult } from "@/lib/products/queries";
 
+import { EVERYTHING } from "@/lib/access/test-guard";
 import { LocationDetails } from "./location-details";
 
 const result: SearchResult = {
@@ -19,7 +20,7 @@ const result: SearchResult = {
 
 describe("LocationDetails", () => {
   it("lists every place with its presentation, and a grid for each floor place", () => {
-    render(<LocationDetails result={result} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    render(<LocationDetails member={EVERYTHING} result={result} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
     expect(screen.getByText("Front table 1 · Left · Middle")).toBeInTheDocument();
     expect(screen.getByText("0–2 ft from left · 0–2 ft from back")).toBeInTheDocument();
     expect(screen.getAllByText("Folded")).toHaveLength(2);
@@ -28,7 +29,7 @@ describe("LocationDetails", () => {
   });
 
   it("links a floor place to its planogram, highlighting the product", () => {
-    render(<LocationDetails result={result} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    render(<LocationDetails member={EVERYTHING} result={result} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
     expect(screen.getByRole("link", { name: "Open planogram" })).toHaveAttribute(
       "href",
       `/planograms/${result.locations[0].floor?.fixtureId}?product=${result.id}`,
@@ -36,7 +37,7 @@ describe("LocationDetails", () => {
   });
 
   it("says plainly when a product has no place yet", () => {
-    render(<LocationDetails result={{ ...result, locations: [] }} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    render(<LocationDetails member={EVERYTHING} result={{ ...result, locations: [] }} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
     expect(screen.getByText("Not placed yet. It gets a place when it goes into a planogram.")).toBeInTheDocument();
   });
 });

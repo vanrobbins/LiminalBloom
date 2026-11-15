@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LayoutScreen } from "@/components/store-map/layout-screen";
 import { PageHeader } from "@/components/shell/page-header";
+import { can } from "@/lib/access/can";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
 import { floorPlanograms } from "@/lib/planograms/floor-view";
@@ -18,12 +19,13 @@ import { fetchLayout, saveLayoutChanges } from "@/app/(editor)/layout/edit/actio
 export const dynamic = "force-dynamic";
 
 export default async function LayoutPage() {
-  const { activeStoreId } = await requireMember();
+  const member = await requireMember();
+  const { activeStoreId } = member;
   const [layout, planograms] = await Promise.all([loadLayout(activeStoreId), floorPlanograms(activeStoreId)]);
   const looks = await productLooks(activeStoreId, Object.values(planograms).flatMap((p) => p.latest?.placements.map((e) => e.productId) ?? []));
 
   if (layout.outline) {
-    return <LayoutScreen storeId={activeStoreId} layout={layout} planograms={planograms} looks={looks} save={saveLayoutChanges} fetchLatest={fetchLayout} />;
+    return <LayoutScreen storeId={activeStoreId} layout={layout} planograms={planograms} looks={looks} save={saveLayoutChanges} fetchLatest={fetchLayout} member={member} />;
   }
 
   return (
@@ -31,10 +33,14 @@ export default async function LayoutPage() {
       <PageHeader title="Store layout" />
       <Card className="flex flex-col items-start gap-3">
         <p className="text-ink">This store has no layout yet.</p>
-        <p className="text-sm text-ink-muted">Draw the sales floor once, and everything else (planograms, search) points at it.</p>
-        <Button asChild>
-          <a href="/layout/edit">Set up your store layout</a>
-        </Button>
+        {can(member, "layout.edit") ? (
+          <>
+            <p className="text-sm text-ink-muted">Draw the sales floor once, and everything else (planograms, search) points at it.</p>
+            <Button asChild>
+              <a href="/layout/edit">Set up your store layout</a>
+            </Button>
+          </>
+        ) : null}
       </Card>
     </>
   );

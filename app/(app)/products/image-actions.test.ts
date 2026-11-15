@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dropStores, makeStore, seedStoreFixtures } from "@/lib/products/test-stores";
+import { EVERYTHING, guardFor, memberWith } from "@/lib/access/test-guard";
 import * as currentMember from "@/lib/current-member";
 import * as imageCheck from "@/lib/products/image-check";
 import * as images from "@/lib/products/images";
@@ -26,12 +27,8 @@ describe("uploadProductImage", () => {
 
   beforeEach(async () => {
     storeId = await makeStore(`image-${Date.now()}-${Math.random()}`);
-    vi.mocked(currentMember.requireMember).mockResolvedValue({
-      kind: "member",
-      user: { id: "member-123", name: "Test User", email: "test@example.com" },
-      stores: [{ id: storeId, name: "Test Store" }],
-      activeStoreId: storeId,
-    });
+    // Everything allowed: the switch rules are in edit-actions.access.test.ts.
+    vi.mocked(currentMember.requireSwitchForAction).mockImplementation(guardFor(() => memberWith(storeId, EVERYTHING.switches)));
 
     vi.mocked(imageCheck.sniffImageType).mockReturnValue("image/jpeg");
   })

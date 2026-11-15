@@ -8,9 +8,12 @@ import { Ellipsis, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { can, type Holder } from "@/lib/access/can";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export function ProductsActions() {
+export function ProductsActions({ member }: { member: Holder }) {
+  // Add product and Categories are for editors; everyone else has no actions here.
+  if (!can(member, "products.edit")) return null;
   return (
     <>
       <div className="hidden items-center gap-2 md:flex">

@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-query";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { can, type Holder } from "@/lib/access/can";
 import type { Layout } from "@/lib/layout/types";
 import type { ProductRow, SearchResult } from "@/lib/products/queries";
 
@@ -18,6 +19,7 @@ import { LocationDetails } from "./location-details";
 type LocationSheetProps = {
   result: SearchResult | null;
   layout: Layout;
+  member: Holder;
   onClose: () => void;
   onChanged: (product: ProductRow) => void;
 };
@@ -34,7 +36,8 @@ function EditLink({ productId }: { productId: string }) {
   );
 }
 
-export function LocationSheet({ result, layout, onClose, onChanged }: LocationSheetProps) {
+export function LocationSheet({ result, layout, member, onClose, onChanged }: LocationSheetProps) {
+  const canEdit = can(member, "products.edit");
   const isPhone = useMediaQuery(PHONE_QUERY);
   const heading = useRef<HTMLHeadingElement>(null);
   const openId = result?.id ?? null;
@@ -50,10 +53,12 @@ export function LocationSheet({ result, layout, onClose, onChanged }: LocationSh
       <BottomSheet open={result !== null} onOpenChange={(open) => (open ? null : onClose())} title={result?.name ?? "Product"}>
         {result ? (
           <div className="flex flex-col gap-4">
-            <div className="self-start">
-              <EditLink productId={result.id} />
-            </div>
-            <LocationDetails result={result} layout={layout} onChanged={onChanged} />
+            {canEdit ? (
+              <div className="self-start">
+                <EditLink productId={result.id} />
+              </div>
+            ) : null}
+            <LocationDetails result={result} layout={layout} member={member} onChanged={onChanged} />
           </div>
         ) : null}
       </BottomSheet>
@@ -73,13 +78,13 @@ export function LocationSheet({ result, layout, onClose, onChanged }: LocationSh
           {result.name}
         </h2>
         <div className="flex shrink-0 items-center gap-1">
-          <EditLink productId={result.id} />
+          {canEdit ? <EditLink productId={result.id} /> : null}
           <Button variant="ghost" icon onClick={onClose} aria-label="Close">
             <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         </div>
       </div>
-      <LocationDetails result={result} layout={layout} onChanged={onChanged} />
+      <LocationDetails result={result} layout={layout} member={member} onChanged={onChanged} />
     </aside>
   );
 }

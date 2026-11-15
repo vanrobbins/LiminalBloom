@@ -7,11 +7,11 @@ const mocks = vi.hoisted(() => ({ email: vi.fn(), push: vi.fn(), refresh: vi.fn(
 vi.mock("@/lib/auth-client", () => ({ signUp: { email: mocks.email } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }) }));
 
-import SignUpPage from "./page";
+import { SignUpForm } from "./form";
 
-async function submit() {
+async function submit(next: string | null = null) {
   const user = userEvent.setup();
-  render(<SignUpPage />);
+  render(<SignUpForm next={next} />);
   await user.type(screen.getByLabelText("Name"), "Van");
   await user.type(screen.getByLabelText("Work email"), "van@example.com");
   await user.type(screen.getByLabelText("Password", { exact: true }), "correct-horse");
@@ -20,13 +20,19 @@ async function submit() {
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("SignUpPage", () => {
+describe("SignUpForm", () => {
   it("stays on Creating account… while the next page loads", async () => {
     mocks.email.mockResolvedValue({ error: null });
     await submit();
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
     expect(mocks.refresh).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: /Creating account…/ })).toBeDisabled();
+  });
+
+  it("signs up for the browser session only (rememberMe false), like sign-in's default", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    await submit();
+    expect(mocks.email).toHaveBeenCalledWith({ name: "Van", email: "van@example.com", password: "correct-horse", rememberMe: false });
   });
 
   it("a rejected sign-up clears the button and shows the server's message", async () => {
@@ -50,5 +56,22 @@ describe("SignUpPage", () => {
     await submit();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach the server. Check the connection and try again.");
     expect(screen.getByRole("button", { name: "Create account" })).toBeEnabled();
+  });
+
+  it("returns to the page it was sent from (an invitation) after creating the account", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    await submit("/invite/abc123");
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/invite/abc123"));
+  });
+
+  it("ignores a return path that leaves the site", async () => {
+    mocks.email.mockResolvedValue({ error: null });
+    await submit("https://evil.example");
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
+  });
+
+  it("keeps the return path on the link to sign in", () => {
+    render(<SignUpForm next="/invite/abc123" />);
+    expect(screen.getByRole("link", { name: "Already have an account? Sign in" })).toHaveAttribute("href", "/sign-in?next=%2Finvite%2Fabc123");
   });
 });
