@@ -4,11 +4,13 @@
 
 "use client";
 
-import { useRef } from "react";
-
-import { DRAG_START_PX } from "@/components/planograms/use-tile-gesture";
+import { useEffect, useRef } from "react";
 
 export const LONG_PRESS_MS = 500;
+/** A touch that travels this far or more is no longer a still press or a tap (the tile gesture's drag start shares it). */
+export const TAP_THRESHOLD_PX = 4;
+// How long after release a swallowed click may still arrive; later, a click is a keyboard one.
+const CLICK_WINDOW_MS = 400;
 
 /** Spread the handlers on the control; `onLongPress` is called once per held press. */
 export function useLongPress(onLongPress: () => void) {
@@ -16,6 +18,7 @@ export function useLongPress(onLongPress: () => void) {
   const start = useRef<{ x: number; y: number } | null>(null);
   const fired = useRef(false);
   const touching = useRef(false);
+  const release = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function cancel() {
     if (timer.current) clearTimeout(timer.current);
@@ -24,9 +27,26 @@ export function useLongPress(onLongPress: () => void) {
     touching.current = false;
   }
 
+  function clearRelease() {
+    if (release.current) clearTimeout(release.current);
+    release.current = null;
+  }
+
+  // A press still pending when the control goes away must not open anything.
+  useEffect(
+    () => () => {
+      cancel();
+      clearRelease();
+    },
+    [],
+  );
+
   return {
     onPointerDown(e: React.PointerEvent) {
+      // A second finger does not restart the press that is already running.
+      if (touching.current && e.pointerType === "touch") return;
       cancel();
+      clearRelease();
       fired.current = false;
       if (e.pointerType !== "touch") return;
       touching.current = true;
@@ -39,14 +59,20 @@ export function useLongPress(onLongPress: () => void) {
     },
     onPointerMove(e: React.PointerEvent) {
       const from = start.current;
-      if (from && Math.hypot(e.clientX - from.x, e.clientY - from.y) > DRAG_START_PX) cancel();
+      if (from && Math.hypot(e.clientX - from.x, e.clientY - from.y) >= TAP_THRESHOLD_PX) cancel();
     },
     // The click that follows a released long press is swallowed (capture, so the control never sees it).
     onPointerUp: () => {
       if (timer.current) cancel();
       touching.current = false;
+      // If the browser never sends the click, a later keyboard click must not be eaten.
+      if (fired.current) release.current = setTimeout(() => (fired.current = false), CLICK_WINDOW_MS);
     },
-    onPointerCancel: cancel,
+    onPointerCancel() {
+      cancel();
+      clearRelease();
+      fired.current = false;
+    },
     onClickCapture(e: React.MouseEvent) {
       if (!fired.current) return;
       fired.current = false;
