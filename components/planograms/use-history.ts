@@ -12,7 +12,7 @@ import { useRef, useState, type RefObject } from "react";
 
 import { advance, holds, prune, rename, sitsAt, undo as undoStep, redo as redoStep, EMPTY_HISTORY, forget, record, type Direction, type History, type Step, type Travel } from "@/lib/planograms/builder/undo";
 import type { DraftState, PlacementFields } from "@/lib/planograms/types";
-import { dismissToast, toast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
@@ -40,15 +40,6 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
   const cleared = useRef(0);
   // The tile an Undo or Redo is saving: no reply in between (a poll, another save's) may drop its step, even when the tile is already gone server-side.
   const flying = useRef<string | null>(null);
-  // Only the latest change offers Undo: an older toast's Undo would undo the newest step.
-  const toastId = useRef<number | null>(null);
-
-  /** The toast that offers the way back (a phone has no Ctrl+Z). */
-  function offer(title: string, action: Direction) {
-    if (toastId.current !== null) dismissToast(toastId.current);
-    toastId.current = toast({ tone: "success", title, action: { label: action === "undo" ? "Undo" : "Redo", onSelect: () => void travel(action) } });
-  }
-
   async function travel(direction: Direction) {
     if (!latest.current.enabled || dragging.current) return;
     const clearedAt = cleared.current;
@@ -87,8 +78,8 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
       setHistory((h) => (renamed ? rename(advance(h, direction, step.step), step.step.id, renamed) : advance(h, direction, step.step)));
       const done = direction === "undo" ? "Undone" : "Redone";
       const faceName = latest.current.reveal?.(step.fields);
-      say(`${done}: ${describe(step.fields)}${faceName ? `, on ${faceName}` : ""}`);
-      return offer(done, direction === "undo" ? "redo" : "undo");
+      // The corner bar's Undo and Redo icons are the way back (no toast); the live region says what happened.
+      return say(`${done}: ${describe(step.fields)}${faceName ? `, on ${faceName}` : ""}`);
     }
     // A refused restore is dropped, and the draft's status line says why.
     setHistory((h) => (result.message ? forget(h, step.step.id) : h));
@@ -108,6 +99,5 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
     },
     /** Every draft taken in: steps for tiles gone elsewhere are dropped quietly (not the one a change in flight is about). */
     take: (_held: DraftState, next: DraftState, cause?: string) => setHistory((h) => prune(h, next.placements, cause ?? flying.current ?? undefined)),
-    offer,
   };
 }

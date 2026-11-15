@@ -4,8 +4,8 @@
 // resize, use the selection bar or the arrow keys; with no draft the first
 // change starts one. One status row above the grid holds the version line,
 // Draft | Published, the due date and the actions (UX audit U20); on a phone
-// the actions are a sticky bar instead, where the selection bar takes its place.
-// With nothing yet, Start draft sits in the empty box (U19).
+// the corner bar (corner-bar.tsx) ends that row; + or a first change starts a draft.
+// With nothing yet, Start planogram sits in the empty box (U19).
 
 "use client";
 
@@ -19,12 +19,13 @@ import { combinedBlocks, singleBlock } from "@/lib/planograms/set-grid";
 import type { DraftState, PlanogramScope, ProductLook } from "@/lib/planograms/types";
 
 import { AddProductDialog } from "./add-product-dialog";
-import { DraftBar } from "./draft-bar";
+import { CornerBar } from "./corner-bar";
 import { itemsFromDraft, itemsFromSnapshot, startFace } from "./grid-items";
 import { MoveToFaceDialog } from "./move-to-face-dialog";
 import { PastVersion } from "./past-version";
 import { PlanogramBody } from "./planogram-body";
 import { SelectionBar } from "./selection-bar";
+import { StartPlanogram } from "./start-planogram";
 import { StatusRow } from "./status-row";
 import { useBuilder } from "./use-builder";
 import { useFaceView } from "./use-face-view";
@@ -140,36 +141,36 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     );
   }
 
-  const draftBar = (inline: boolean) =>
-    canDraft ? (
-    <DraftBar
+  const cornerBar = canDraft ? (
+    <CornerBar
       fixtureId={scope.fixtureId}
       row={row}
-      hasDraft={draft !== null}
-      isEditing={isEditing}
+      editing={isEditing}
       draftVersion={draft?.planogramVersion ?? null}
-      latestNumber={latest?.number ?? null}
+      status={isEditing ? status : null}
+      canAdd={canMove}
       onAdd={() => setAdding(true)}
-      yieldOnPhone={selectedPlacement !== null}
-      inline={inline}
       canPublish={can(member, "planograms.publish")}
+      canUndo={builder.canUndo}
+      canRedo={builder.canRedo}
+      onUndo={() => void builder.undo()}
+      onRedo={() => void builder.redo()}
       onLeave={leave}
     />
-    ) : null;
-  const hasBar = canDraft && !isEmpty && !(draft !== null && !isEditing);
+  ) : null;
 
   return (
     <div className="flex flex-col gap-4">
       {isEmpty ? null : (
         <StatusRow fixtureId={scope.fixtureId} latest={latest} hasDraft={draft !== null} view={view} onView={showView} dueDate={dueDate} canSetDueDate={can(member, "planograms.publish")} today={today} status={isEditing ? status : null}>
-          {draftBar(false)}
+          {cornerBar}
         </StatusRow>
       )}
       {isEmpty ? (
         <div data-empty className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-line p-8">
           <p className="text-lg font-semibold text-ink">No planogram yet</p>
           {canDraft ? <p className="text-sm text-ink-muted">A draft starts from what&apos;s on the floor now.</p> : null}
-          {draftBar(true)}
+          {canDraft ? <StartPlanogram fixtureId={scope.fixtureId} row={row} /> : null}
         </div>
       ) : (
         body
@@ -186,9 +187,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
           layers={actions.layersFor(selectedPlacement)}
         />
       ) : null}
-      {/* Keeps the last card clear of the sticky bar on a phone. */}
-      {hasBar && selectedPlacement === null ? <div aria-hidden="true" className="h-16 md:hidden" /> : null}
-      {isEditing ? <AddProductDialog open={adding} onOpenChange={setAdding} onPick={actions.addProduct} onCloseAutoFocus={actions.focusAdded} /> : null}
+      {canMove ? <AddProductDialog open={adding} onOpenChange={setAdding} onPick={actions.addProduct} onCloseAutoFocus={actions.focusAdded} /> : null}
       {selectedPlacement ? (
         <MoveToFaceDialog open={movingFace} onOpenChange={setMovingFace} faces={scope.faces} currentFaceId={selectedPlacement.faceId} onChoose={chooseFace} />
       ) : null}

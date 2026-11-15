@@ -29,7 +29,7 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
   await page.goto("/planograms");
   await page.getByRole("link", { name: /Frame A1/ }).click();
   await hydrated(page);
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await add(page, "E2E High", /E2E High-Rise Pant/);
   await add(page, "E2E Pocket", /E2E Pocket Tee/);
 

@@ -67,7 +67,7 @@ async function openDraft(page: Page) {
   await page.getByRole("link", { name: /Table 1/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Table 1" })).toBeVisible();
   await hydrated(page);
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 }
 

@@ -54,7 +54,8 @@ describe("useBuilder", () => {
     await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 4, fields: fields(pant, 4) });
     expect(result.current.announcement).toBe("Moved to here");
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Moved", action: expect.objectContaining({ label: "Undo" }) }));
+    // The corner bar’s Undo icon is the way back: no toast offers it.
+    expect(toasts.toast).not.toHaveBeenCalled();
     rerender({ d: state({ ...pant, col: 4, version: 5 }) });
     await act(() => result.current.undo());
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: { ...fields(pant, 0), depth: 0 } });
@@ -91,36 +92,35 @@ describe("useBuilder", () => {
     expect(save).toHaveBeenLastCalledWith({ kind: "add", productId: "pant", fields: { ...fields(pant, 0), depth: 2 } });
   });
 
-  it("says Switched to hung with the Undo, and Undo puts folded product back (frame racks spec §3)", async () => {
+  it("says Switched to hung (no toast), and Undo puts folded product back (frame racks spec §3)", async () => {
     const folded = { ...view("a", 0, 4), presentation: "folded" as const, faceId: "shelf", colSpan: 4, rowSpan: 2 };
     const hung = { ...folded, presentation: "hung" as const, faceId: "rail", col: 2, colSpan: 2, rowSpan: 1, version: 5 };
     const save = vi.fn().mockResolvedValue({ saved: true, draft: state(hung), notice: "Switched to hung" });
     const { result, rerender } = setup(state(folded), save);
     await act(() => result.current.commit(folded, { ...fields(folded, 2), faceId: "rail" }, "Moved"));
 
-    expect(toasts.toast).toHaveBeenCalledTimes(1);
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Switched to hung", action: expect.objectContaining({ label: "Undo" }) }));
+    expect(toasts.toast).not.toHaveBeenCalled();
     expect(result.current.announcement).toBe("Switched to hung to here");
 
     rerender({ d: state(hung) });
     await act(() => result.current.undo());
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: { ...fields(folded, 0), depth: 0 } });
-    expect(toasts.toast).toHaveBeenCalledTimes(2);
+    expect(toasts.toast).not.toHaveBeenCalled();
   });
 
-  it("Undo offers Redo in its toast, for a phone with no keyboard, and Redo offers Undo", async () => {
+  it("Undo and Redo say what they did in the live region and show no toast: the corner bar’s icons are the way back", async () => {
     const pant = view("a", 0, 4);
     const { result, rerender, save } = setup(state(pant));
     await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
     rerender({ d: state({ ...pant, col: 4, version: 5 }) });
     await act(() => result.current.undo());
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Undone", action: expect.objectContaining({ label: "Redo" }) }));
+    expect(result.current.announcement).toBe("Undone: here");
 
     rerender({ d: state({ ...pant, col: 0, version: 6 }) });
-    const { action } = toasts.toast.mock.lastCall![0];
-    await act(async () => action.onSelect());
+    await act(() => result.current.redo());
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 6, fields: fields(pant, 4) });
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Redone", action: expect.objectContaining({ label: "Undo" }) }));
+    expect(result.current.announcement).toBe("Redone: here");
+    expect(toasts.toast).not.toHaveBeenCalled();
   });
 
   it("Undo onto another face shows that face and names it", async () => {
@@ -164,7 +164,7 @@ describe("useBuilder", () => {
     expect(actions.beginDraftAction).toHaveBeenCalledWith("fx", 3);
     expect(adopt).toHaveBeenCalledWith(started);
     expect(onStarted).toHaveBeenCalled();
-    expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Draft started" }));
+    expect(toasts.toast).not.toHaveBeenCalled();
     expect(save).toHaveBeenCalledWith({ kind: "update", id: "real", version: 1, fields: fields(published, 4) });
     expect(outcome).toEqual({ ok: true, id: "real" });
   });
@@ -231,7 +231,29 @@ describe("useBuilder", () => {
     expect(actions.beginDraftAction).toHaveBeenCalledTimes(1);
     expect(adopt).toHaveBeenCalledTimes(1);
     expect(onStarted).toHaveBeenCalledTimes(1);
-    expect(toasts.toast.mock.calls.filter(([t]) => t.title === "Draft started")).toHaveLength(1);
+    expect(toasts.toast).not.toHaveBeenCalled();
+  });
+
+  it("an add with no draft starts one first, then adds; a refused start adds nothing and says why", async () => {
+    actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: state(view("x", 6)) });
+    const save = vi.fn().mockResolvedValue({ saved: true, draft: state(view("x", 6), view("y", 0)), id: "y" });
+    const { result, adopt, onStarted, onStale } = setup(null, save);
+    const pant = view("y", 0);
+    const made = await act(() => result.current.add("pant", fields(pant, 0)));
+    expect(actions.beginDraftAction).toHaveBeenCalledWith("fx", 3);
+    expect(adopt).toHaveBeenCalledTimes(1);
+    expect(onStarted).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith({ kind: "add", productId: "pant", fields: fields(pant, 0) });
+    expect(made).toMatchObject({ saved: true, id: "y" });
+    expect(toasts.toast).not.toHaveBeenCalled();
+
+    actions.beginDraftAction.mockResolvedValue({ status: "refused", message: "Published again on another device.", draft: null });
+    const again = setup(null, save);
+    save.mockClear();
+    expect(await act(() => again.result.current.add("pant", fields(pant, 0)))).toEqual({ saved: false, message: "Published again on another device." });
+    expect(again.onStale).toHaveBeenCalledTimes(1);
+    expect(save).not.toHaveBeenCalled();
+    expect(onStale).not.toHaveBeenCalled();
   });
 
   it("skips steps whose placement left the draft, so Undo isn't stuck", async () => {
@@ -328,15 +350,13 @@ describe("useBuilder", () => {
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 6, fields: { ...fields(pant, 1), depth: 0 } });
   });
 
-  it("only the latest change offers Undo: the toast before it goes", async () => {
+  it("changes leave no Undo toast behind to go stale: nothing is shown, nothing is dismissed", async () => {
     const pant = view("a", 0);
-    toasts.toast.mockReturnValueOnce(7).mockReturnValueOnce(8);
     const { result } = setup(state(pant));
     await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
-    expect(toasts.dismissToast).not.toHaveBeenCalled();
     await act(() => result.current.commit(pant, fields(pant, 6), "Moved"));
-    expect(toasts.dismissToast).toHaveBeenCalledWith(7);
-    expect(toasts.dismissToast).not.toHaveBeenCalledWith(8);
+    expect(toasts.toast).not.toHaveBeenCalled();
+    expect(toasts.dismissToast).not.toHaveBeenCalled();
   });
 
   it("the same words twice still change the live region, so they're read again", () => {
@@ -379,6 +399,6 @@ describe("useBuilder", () => {
     expect(actions.saveChangeAction).toHaveBeenCalledTimes(2);
     expect(actions.saveChangeAction).toHaveBeenLastCalledWith("fx", { kind: "update", id: "a", version: 2, fields: { ...fields(pant, 0), depth: 0 } });
     expect(toasts.toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: "Changed on another device" }));
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Undone" }));
+    expect(toasts.toast).not.toHaveBeenCalled();
   });
 });

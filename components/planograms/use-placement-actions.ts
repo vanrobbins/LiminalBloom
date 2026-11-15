@@ -139,7 +139,8 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
   }
 
   async function addProduct(product: ProductFit): Promise<string | null> {
-    const fields = placeNew([face, ...scope.faces.filter((f) => f.faceId !== face.faceId)], placements, product);
+    // With no draft the add starts one from the latest version, so the spot is picked among its tiles.
+    const fields = placeNew([face, ...scope.faces.filter((f) => f.faceId !== face.faceId)], isEditing ? placements : items, product);
     if (!fields) return `No open spot fits ${product.name}. Make room, then add it.`;
     const result = await builder.add(product.id, fields);
     if (!result.saved) return result.message ?? "Couldn't add it. Try again.";

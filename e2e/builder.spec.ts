@@ -33,7 +33,7 @@ async function openTable(page: Page) {
 }
 
 async function startDraft(page: Page) {
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 }
 
@@ -149,7 +149,9 @@ test("the first drag on a published planogram starts a draft", async ({ page }, 
   await page.getByRole("button", { name: "Publish…" }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start draft" })).toBeVisible();
+  // Nothing to start: with the published version showing, + is there and Undo, Publish and ⋯ wait for a draft.
+  await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
 
   await tile(page, "E2E High-Rise Pant").click();
   // A published tile opens its sheet. On a phone it is a modal dialog: wait for it, then close it (the tile stays selected).
@@ -164,7 +166,6 @@ test("the first drag on a published planogram starts a draft", async ({ page }, 
   }
   const unit = await halfFoot(page);
   await dragBy(page, tile(page, "E2E High-Rise Pant"), unit * 4, 0, info);
-  await expect(page.getByText("Draft started", { exact: true })).toBeVisible();
   await saved(page);
   await expect(page.getByRole("group", { name: "Show" })).toBeVisible();
   await expect(card(page, "E2E High-Rise Pant")).toContainText("Center · Middle");
@@ -220,8 +221,8 @@ test("on a phone, the selection bar sits above the tabs and clears the grid and 
   const tabsBox = await tabs.boundingBox();
   if (!barBox || !tabsBox) throw new Error("no bar or tabs");
   expect(barBox.y + barBox.height).toBeLessThanOrEqual(tabsBox.y + 1);
-  // The draft bar yields to it.
-  await expect(page.getByRole("button", { name: "Add product" })).toBeHidden();
+  // The corner bar stays where it is: the selection bar no longer takes its place.
+  await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 
   await page.locator("[data-planogram-grid]").evaluate((el) => el.scrollIntoView({ block: "start" }));
   const grid = await page.locator("[data-planogram-grid]").boundingBox();

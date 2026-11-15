@@ -18,7 +18,7 @@ async function openTable(page: Page) {
 
 async function startDraft(page: Page) {
   await expect(page.getByText("No planogram yet")).toBeVisible();
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^E2E High-Rise Pant, / })).toBeVisible();
 }
@@ -187,20 +187,27 @@ test("a lower table's id lands on its upper table's planogram", async ({ page })
   await expect(page.getByRole("heading", { level: 1, name: "Table 1" })).toBeVisible();
 });
 
-test("a fixture never published says so, and starts a draft from the bar", async ({ page }) => {
+test("a fixture never published says so, and starts a draft from the empty box", async ({ page }) => {
   await openTable(page);
   await expect(page.getByText("No planogram yet")).toBeVisible();
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 });
 
-test("discarding a draft goes through the ⋯ menu and a confirmation", async ({ page }) => {
+test("discarding a draft goes through the ⋯ menu and a confirmation; Escape on it puts focus back on the ⋯", async ({ page }) => {
   await openTable(page);
   await startDraft(page);
-  await page.getByRole("button", { name: "More draft actions" }).click();
+  const more = page.getByRole("button", { name: "More draft actions" });
+  await more.click();
+  await page.getByRole("menuitem", { name: "Discard draft…" }).click();
+  await expect(page.getByRole("dialog", { name: "Discard this draft?" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Discard this draft?" })).toBeHidden();
+  await expect(more).toBeFocused();
+  await more.click();
   await page.getByRole("menuitem", { name: "Discard draft…" }).click();
   await page.getByRole("dialog", { name: "Discard this draft?" }).getByRole("button", { name: "Discard draft" }).click();
-  await expect(page.getByRole("button", { name: "Start draft" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start planogram" })).toBeVisible();
   await expect(page.getByText("No planogram yet")).toBeVisible();
 });
 
@@ -221,7 +228,7 @@ test("switching faces still lands with reduced motion", async ({ page }) => {
   await page.goto(`/planograms/${rackId}`);
   await hydrated(page);
   // A rack never published shows no grid until a draft starts.
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
   await page.getByRole("group", { name: "Side" }).getByRole("button", { name: "Back" }).click();
   await expect(page.getByRole("button", { name: "Back" })).toHaveAttribute("aria-pressed", "true");
@@ -233,7 +240,7 @@ test("after a face slide with motion on, a grid that fits shows no scroll fade",
   const { rackId } = await seedRack();
   await page.goto(`/planograms/${rackId}`);
   await hydrated(page);
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
   await page.getByRole("group", { name: "Side" }).getByRole("button", { name: "Back" }).click();
   const grid = page.getByRole("region", { name: /, Back:/ });
@@ -244,14 +251,15 @@ test("after a face slide with motion on, a grid that fits shows no scroll fade",
   await expect.poll(() => scroller.evaluate((el) => (el.scrollWidth <= el.clientWidth ? getComputedStyle(el).maskImage : "scrolls"))).toBe("none");
 });
 
-test("on a phone the sticky action bar never hides the last card", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) >= 768, "The bar is inline on tablet and desktop.");
+test("there is no sticky action bar on a phone: the last card scrolls to the bottom with nothing over it", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 768, "A phone thing: the nav tabs are the only fixed bar.");
   await openTable(page);
   await startDraft(page);
+  await expect(page.locator("[data-action-bar]")).toHaveCount(0);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const card = await page.locator("[data-card]").last().boundingBox();
-  const bar = await page.locator("[data-action-bar]").boundingBox();
-  expect(card && bar && card.y + card.height <= bar.y).toBe(true);
+  const tabs = await page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).boundingBox();
+  expect(card && tabs && card.y + card.height <= tabs.y + 1).toBe(true);
 });
 
 test("a long fixture name truncates in the phone header without sideways scroll", async ({ page }, testInfo) => {

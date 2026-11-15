@@ -238,13 +238,13 @@ describe("PlanogramScreen", () => {
   it("says when there is no planogram yet", () => {
     render(screenWith(null, null));
     expect(screen.getByText("No planogram yet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start planogram" })).toBeInTheDocument();
   });
 
-  it("with nothing yet, Start draft sits in the empty box, said once, and no due date is offered", () => {
+  it("with nothing yet, Start planogram sits in the empty box, said once, and no due date is offered", () => {
     render(screenWith(null, null));
     const box = screen.getByText("No planogram yet").closest("[data-empty]") as HTMLElement;
-    expect(within(box).getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+    expect(within(box).getByRole("button", { name: "Start planogram" })).toBeInTheDocument();
     expect(screen.getAllByText(/what.s on the floor now/)).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "Set due date" })).toBeNull();
   });

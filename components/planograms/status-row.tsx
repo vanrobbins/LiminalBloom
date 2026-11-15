@@ -1,5 +1,6 @@
 // The one status row above a planogram's grid (UX audit U20): the version
-// line, Draft | Published, the due date, the save status and the actions.
+// line, Draft | Published, the due date, why a change was refused and the
+// corner bar (corner-bar.tsx: save indicator, Undo, Redo, +, Publish, ⋯).
 
 "use client";
 

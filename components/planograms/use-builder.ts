@@ -54,12 +54,10 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     latest.current = { draft, enabled, reveal };
   });
 
-  async function placementFor(item: GridItem): Promise<{ placement: PlacementView } | { message: string | null }> {
+  /** The draft to work in: the one held, or one started now (a change or an add with none), once however many ask. */
+  async function draftToUse(): Promise<{ draft: DraftState } | { message: string | null }> {
     const held = latest.current.draft;
-    if (held) {
-      const placement = held.placements.find((p) => p.id === item.id);
-      return placement ? { placement } : { message: CONFLICT };
-    }
+    if (held) return { draft: held };
     let pending = starting.current;
     if (!pending) {
       pending = beginDraftAction(fixtureId, expectedVersion).then((reply) => {
@@ -67,7 +65,6 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
           adopt(reply.draft);
           latest.current = { ...latest.current, draft: reply.draft };
           onStarted();
-          toast({ tone: "success", title: "Draft started" });
         } else if (reply.status === "refused") {
           // Published or discarded elsewhere since this page loaded: every later change would be refused too.
           onStale();
@@ -82,8 +79,18 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
         .catch(() => {});
     }
     const reply = await pending;
-    if (!reply.draft) return { message: reply.message };
-    const placement = matchPlacement(item, reply.draft.placements);
+    return reply.draft ? { draft: reply.draft } : { message: reply.message };
+  }
+
+  async function placementFor(item: GridItem): Promise<{ placement: PlacementView } | { message: string | null }> {
+    const held = latest.current.draft;
+    if (held) {
+      const placement = held.placements.find((p) => p.id === item.id);
+      return placement ? { placement } : { message: CONFLICT };
+    }
+    const started = await draftToUse();
+    if (!("draft" in started)) return started;
+    const placement = matchPlacement(item, started.draft.placements);
     return placement ? { placement } : { message: CONFLICT };
   }
 
@@ -133,12 +140,20 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     const after = kept ? fieldsOf(kept, true) : fields;
     history.record({ kind: "update", id: target.id, before: fieldsOf(result.before ?? target, true), after, aheadBefore: result.ahead?.before, aheadAfter: result.ahead?.after });
     say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
-    history.offer(result.notice ?? verb, "undo");
     return { ok: true, id: target.id };
   }
 
   /** An add, on the undo stack under the id the server gave it. */
   async function add(productId: string, fields: PlacementFields): Promise<SaveResult> {
+    // With no draft yet (the latest version is showing) the add starts one: its fields were placed against that version.
+    if (!latest.current.draft) {
+      try {
+        const started = await draftToUse();
+        if (!("draft" in started)) return { saved: false, message: started.message };
+      } catch {
+        return { saved: false, message: "Couldn't start the draft. Check the connection and try again." };
+      }
+    }
     const result = await save({ kind: "add", productId, fields });
     const placed = result.saved ? result.draft.placements.find((p) => p.id === result.id) : undefined;
     if (placed) history.record({ kind: "add", id: placed.id, productId, fields: fieldsOf(placed, true), ahead: result.saved ? result.ahead?.after : undefined });

@@ -1,7 +1,7 @@
 // Add product (Part 2 spec §4 "Add"): find it with the library's search;
 // picking it places it at the first open spot that fits (the shown face first),
-// selected and scrolled into view, with focus on it (its opener, Add product,
-// is hidden on a phone once a tile is selected). "Edit numbers" changes its place after.
+// selected and scrolled into view, with focus on it (not back on the + that
+// opened it). With no draft yet, the add starts one. "Edit numbers" changes its place after.
 // Products show A–Z before anything is typed, and on a phone it's a bottom
 // sheet like everything else there (UX audit U23).
 

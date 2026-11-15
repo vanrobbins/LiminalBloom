@@ -137,7 +137,7 @@ describe("Undo and Redo of a removed or added placement", () => {
     await gone("Pant");
     actions.saveChangeAction.mockResolvedValueOnce({ status: "refused", message: "That spot is taken.", draft: draftOf() });
     await undoKey(user);
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("That spot is taken."));
+    await waitFor(() => expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("That spot is taken."));
     const sent = actions.saveChangeAction.mock.calls.length;
     await undoKey(user);
     await redoKey(user);

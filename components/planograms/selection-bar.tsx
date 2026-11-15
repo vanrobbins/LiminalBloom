@@ -1,6 +1,6 @@
 // What the selected tile can do (Part 2 spec §4 "Draft"): Details · Edit
-// numbers · Move to face… · Remove. On a phone it takes the draft bar's place
-// above the tabs; inline on tablet and desktop, beside the draft bar. Sharing
+// numbers · Move to face… · Remove. On a phone it sits above the tabs; inline
+// on tablet and desktop, under the status row. Sharing
 // rail space, it adds Move forward / Move back (hung layers).
 
 "use client";
