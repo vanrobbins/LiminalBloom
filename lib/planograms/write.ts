@@ -17,7 +17,7 @@ import { withStore } from "@/lib/db/with-store";
 import { guarded } from "@/lib/products/write";
 
 import { floorLocations, productFits } from "./draft-sources";
-import { layersAfter, type Layers } from "./layers";
+import { layersAfter, type Layers } from "./layer-depths";
 import { loadPlanogram, type PlanogramRow } from "./queries";
 import { restoreRows } from "./restore";
 import { checkPlacement } from "./rules";

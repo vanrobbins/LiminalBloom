@@ -230,4 +230,41 @@ describe("usePlanogramDraft", () => {
     act(() => result.current.leave());
     expect(order.slice(-2)).toEqual(["clear", "reload"]);
   });
+
+  it("tells the history of every draft it takes in: the one it held, the new one, and the placement its own change was about", async () => {
+    const onTake = vi.fn();
+    const { result } = renderHook(() => usePlanogramDraft("fx", withTile(1, placed(1)), vi.fn()));
+    result.current.onTakeRef.current = onTake;
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: withTile(2, placed(2, 4)) });
+    await act(() => result.current.save(update(1, 4)));
+    expect(onTake).toHaveBeenCalledWith(withTile(1, placed(1)), withTile(2, placed(2, 4)), ID);
+    // A reload on coming back to the tab is another device's edits arriving: no placement of its own.
+    actions.reloadDraftAction.mockResolvedValue(withTile(3, placed(3, 6)));
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(onTake).toHaveBeenLastCalledWith(withTile(2, placed(2, 4)), withTile(3, placed(3, 6)), undefined));
+  });
+
+  it("an add's reply tells the history the id the server gave it; a reply older than the draft held is not taken in", async () => {
+    const onTake = vi.fn();
+    const { result } = renderHook(() => usePlanogramDraft("fx", withTile(5, placed(5)), vi.fn()));
+    result.current.onTakeRef.current = onTake;
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: withTile(6, placed(6)), id: ID });
+    await act(() => result.current.save({ kind: "add", productId: "pant", fields: at(0) }));
+    expect(onTake).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), ID);
+    onTake.mockClear();
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: withTile(2, placed(2)) });
+    await act(() => result.current.save(update(6, 4)));
+    expect(onTake).not.toHaveBeenCalledWith(expect.anything(), withTile(2, placed(2)), expect.anything());
+  });
+
+  it("returns where the tile sat among the tiles it overlaps, before and after, for the step it records", async () => {
+    const [front, back] = [{ ...placed(1), id: "front", depth: 0 }, { ...placed(1), id: ID, depth: 1 }];
+    const { result } = renderHook(() => usePlanogramDraft("fx", { planogramVersion: 1, placements: [front, back] }, vi.fn()));
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [{ ...front, depth: 1 }, { ...back, depth: 0 }] } });
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.save(update(1, 0));
+    });
+    expect(reply).toMatchObject({ saved: true, ahead: { before: { front: ["front"], back: [], prev: "front" }, after: { front: [], back: ["front"], prev: null } } });
+  });
 });

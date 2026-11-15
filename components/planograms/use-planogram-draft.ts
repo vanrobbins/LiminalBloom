@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 
 import { reloadDraftAction, saveChangeAction } from "@/app/(app)/planograms/actions";
+import { aheadOf, type Ahead } from "@/lib/planograms/builder/undo";
 import type { Change, DraftState, PlacementView } from "@/lib/planograms/types";
 import { toast } from "@/lib/toast";
 
@@ -17,9 +18,12 @@ export type DraftStatus = { kind: "idle" | "saving" | "saved" } | { kind: "refus
  * A refusal's words go to the form that sent it; null when there's nothing to say there. `before` is the placement
  * as this device held it when the change went; `id` is the placement an add made (the server picks it).
  */
-export type SaveResult = { saved: true; draft: DraftState; notice?: string; before?: PlacementView; id?: string } | { saved: false; message: string | null };
+export type SaveResult = { saved: true; draft: DraftState; notice?: string; before?: PlacementView; id?: string; ahead?: { before: Ahead; after: Ahead } } | { saved: false; message: string | null };
 /** A change, or one picked on its turn from the draft as it is then (Undo and Redo); null sends nothing. */
 export type Pending = Change | ((held: DraftState | null) => Change | null);
+
+/** Told of every draft this device takes in: the one it held, the new one, and the placement its own change was about. */
+export type OnTake = (held: DraftState, next: DraftState, cause?: string) => void;
 
 export const refusalOf = (result: SaveResult) => (result.saved ? null : result.message);
 
@@ -43,6 +47,8 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
   const goneRef = useRef(onGone);
   // Set by the builder: its undo history clears when the draft goes (published, discarded, gone), so no step writes to a dead draft.
   const onLeaveRef = useRef<() => void>(() => {});
+  // Set by the builder: the history maps its depths through each draft taken in (use-history.ts).
+  const onTakeRef = useRef<OnTake>(() => {});
 
   useEffect(() => {
     goneRef.current = onGone;
@@ -65,8 +71,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
       reloadDraftAction(fixtureId)
         .then((next) => {
           if (!next) return leave();
-          held.current = newer(held.current, next);
-          setDraft(held.current);
+          hold(next);
         })
         .catch(() => {})
         .finally(() => {
@@ -81,9 +86,11 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     };
   }, [fixtureId, hasDraft]);
 
-  function hold(next: DraftState) {
-    held.current = newer(held.current, next);
+  function hold(next: DraftState, cause?: string) {
+    const prior = held.current;
+    held.current = newer(prior, next);
     setDraft(held.current);
+    if (prior && held.current !== prior) onTakeRef.current(prior, held.current, cause);
   }
 
   function rebase(change: Change): Change {
@@ -104,7 +111,8 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     try {
       const reply = await saveChangeAction(fixtureId, change);
       const next = reply.draft;
-      if (next) hold(next);
+      const cause = change.kind !== "add" ? change.id : reply.status === "saved" ? reply.id : undefined;
+      if (next) hold(next, cause);
       if (reply.status === "saved") {
         if (change.kind === "update") {
           const steps = own.current.get(change.id) ?? new Map<number, number>();
@@ -112,9 +120,11 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
         }
         if (waiting.current === 1) setStatus({ kind: "saved" });
         const was = change.kind === "add" ? undefined : before?.placements.find((p) => p.id === change.id);
+        // Where it sat in its layers when the change went and after it, for the history's step (undo.ts `Ahead`).
+        const ahead = { before: was && before ? aheadOf(was.id, before.placements) : undefined, after: cause ? aheadOf(cause, reply.draft.placements) : undefined };
         // Folded product moved onto a frame rack hangs instead (frame racks spec §3); the builder says so, with its Undo.
         const id = change.kind === "add" ? reply.id : undefined;
-        return { saved: true, draft: reply.draft, ...(reply.notice ? { notice: reply.notice } : {}), ...(was ? { before: was } : {}), ...(id ? { id } : {}) };
+        return { saved: true, draft: reply.draft, ...(reply.notice ? { notice: reply.notice } : {}), ...(was ? { before: was } : {}), ...(id ? { id } : {}), ...(ahead.before || ahead.after ? { ahead } : {}) };
       }
       if (reply.status === "forbidden") {
         // The role lost the switch since the page loaded: nothing was written, and the draft is still there.
@@ -159,5 +169,5 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     hold(next);
   }
 
-  return { draft, status, save, adopt, leave, onLeaveRef: onLeaveRef as RefObject<() => void> };
+  return { draft, status, save, adopt, leave, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };
 }

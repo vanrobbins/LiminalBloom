@@ -19,7 +19,8 @@ import { at, KEEP_TOUCH, placed, type Gestures } from "./grid-units";
 import { TileHandle } from "./tile-handle";
 
 /** A tile sharing rail space with others (hung layers, layers.ts). */
-export type TileLayer = { depth: number; offsetPx: number };
+/** `rank` is its place in the group, 0 = front: the depth numbers have gaps (layers.ts). */
+export type TileLayer = { rank: number; offsetPx: number };
 
 type GridTileProps = {
   item: GridItem;
@@ -59,7 +60,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
   const moveY = offset ? at(offset.dy) : "0px";
   const transform = offset || shift ? `translate(calc(${moveX} + ${shift}px), calc(${moveY} - ${shift}px))` : undefined;
   // Back to front: nearer the front paints over; the selected one above all (lifted tiles are z-10).
-  const zIndex = layer && !movable ? (selected ? 10 : 9 - Math.min(layer.depth, 8)) : undefined;
+  const zIndex = layer && !movable ? (selected ? 10 : 9 - Math.min(layer.rank, 8)) : undefined;
   const grab = movable ? { onPointerDown: gestures.start("move"), ...gestures.handlers, ...KEEP_TOUCH } : {};
   return (
     <>
@@ -74,7 +75,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         data-held={held ? "" : undefined}
         data-invalid={invalid ? "" : undefined}
         data-layered={layer ? "" : undefined}
-        data-depth={layer ? layer.depth : undefined}
+        data-rank={layer ? layer.rank : undefined}
         aria-pressed={selected}
         aria-label={`${item.productName}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
         onClick={(e) => {

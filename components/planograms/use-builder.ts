@@ -17,7 +17,7 @@ import type { DraftState, PlacementFields, PlacementView } from "@/lib/planogram
 import { toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
-import type { Pending, SaveResult } from "./use-planogram-draft";
+import type { OnTake, Pending, SaveResult } from "./use-planogram-draft";
 import { CONFLICT, useHistory } from "./use-history";
 import { useUndoKeys } from "./use-undo-keys";
 
@@ -31,6 +31,8 @@ type Options = {
   adopt: (draft: DraftState) => void;
   /** The draft hook's `onLeaveRef`: set to clear the history when the draft goes. */
   onLeaveRef?: RefObject<() => void>;
+  /** The draft hook's `onTakeRef`: set to map the history's depths through each draft taken in. */
+  onTakeRef?: RefObject<OnTake>;
   onStarted: () => void;
   /** The first change was refused with no draft to work in: this screen is out of date, so reload it. */
   onStale: () => void;
@@ -41,7 +43,7 @@ type Options = {
   reveal?: (fields: PlacementFields) => string | null;
 };
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onLeaveRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
   // One start at a time: a second change before it's back waits for the same reply.
@@ -91,6 +93,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
   const history = useHistory({ save, latest, dragging, say, describe });
   useEffect(() => {
     if (onLeaveRef) onLeaveRef.current = history.clear;
+    if (onTakeRef) onTakeRef.current = history.take;
   });
 
   /** `onFound` hears which tile the change is saved to as soon as it's known: a started draft gives it a new id. */
@@ -128,7 +131,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     const kept = result.draft.placements.find((p) => p.id === target.id);
     // Undo and Redo ask for the depth it had, so a step puts it back in its place front to back.
     const after = kept ? fieldsOf(kept, true) : fields;
-    history.record({ kind: "update", id: target.id, before: fieldsOf(result.before ?? target, true), after });
+    history.record({ kind: "update", id: target.id, before: fieldsOf(result.before ?? target, true), after, aheadBefore: result.ahead?.before, aheadAfter: result.ahead?.after });
     say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
     history.offer(result.notice ?? verb, "undo");
     return { ok: true, id: target.id };
@@ -138,14 +141,14 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
   async function add(productId: string, fields: PlacementFields): Promise<SaveResult> {
     const result = await save({ kind: "add", productId, fields });
     const placed = result.saved ? result.draft.placements.find((p) => p.id === result.id) : undefined;
-    if (placed) history.record({ kind: "add", id: placed.id, productId, fields: fieldsOf(placed, true) });
+    if (placed) history.record({ kind: "add", id: placed.id, productId, fields: fieldsOf(placed, true), ahead: result.saved ? result.ahead?.after : undefined });
     return result;
   }
 
   /** A remove, on the undo stack with everything it needs to come back. */
   async function remove(p: PlacementView): Promise<SaveResult> {
     const result = await save({ kind: "remove", id: p.id, version: p.version });
-    if (result.saved) history.record({ kind: "remove", id: p.id, productId: p.productId, fields: fieldsOf(result.before ?? p, true) });
+    if (result.saved) history.record({ kind: "remove", id: p.id, productId: p.productId, fields: fieldsOf(result.before ?? p, true), ahead: result.ahead?.before });
     else if (result.message) history.forget(p.id);
     return result;
   }

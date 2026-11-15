@@ -10,8 +10,8 @@
 
 import { useRef, useState, type RefObject } from "react";
 
-import { holds, prune, rename, sitsAt, undo as undoStep, redo as redoStep, EMPTY_HISTORY, forget, record, type Direction, type History, type Step, type Travel } from "@/lib/planograms/builder/undo";
-import type { PlacementFields } from "@/lib/planograms/types";
+import { advance, holds, prune, rename, sitsAt, undo as undoStep, redo as redoStep, EMPTY_HISTORY, forget, record, type Direction, type History, type Step, type Travel } from "@/lib/planograms/builder/undo";
+import type { DraftState, PlacementFields } from "@/lib/planograms/types";
 import { dismissToast, toast } from "@/lib/toast";
 
 import type { Pending, SaveResult } from "./use-planogram-draft";
@@ -61,7 +61,7 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
       // Moved since by another device, though the draft now holds its fresh version.
       const placement = current.placements.find((p) => p.id === step.step.id);
       const expected = holds(step.step, direction);
-      if (placement && expected && !sitsAt(placement, expected)) {
+      if (placement && expected && !sitsAt(placement, expected.fields, expected.ahead, current.placements)) {
         picked.moved = step.step.id;
         return null;
       }
@@ -78,14 +78,16 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
     }
     if (!step) return setHistory(pruned);
     if (result.saved) {
-      setHistory(step.change.kind === "add" && result.id ? rename(step.history, step.step.id, result.id) : step.history);
+      // The replies have already dropped steps for tiles gone: only this step moves, under the new id if it came back.
+      const renamed = step.change.kind === "add" ? result.id : undefined;
+      setHistory((h) => (renamed ? rename(advance(h, direction), step.step.id, renamed) : advance(h, direction)));
       const done = direction === "undo" ? "Undone" : "Redone";
       const faceName = latest.current.reveal?.(step.fields);
       say(`${done}: ${describe(step.fields)}${faceName ? `, on ${faceName}` : ""}`);
       return offer(done, direction === "undo" ? "redo" : "undo");
     }
     // A refused restore is dropped, and the draft's status line says why.
-    setHistory(result.message ? forget(pruned, step.step.id) : pruned);
+    setHistory((h) => (result.message ? forget(h, step.step.id) : h));
     if (result.message) toast({ tone: "error", title: result.message });
   }
 
@@ -100,6 +102,8 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
       cleared.current += 1;
       setHistory(EMPTY_HISTORY);
     },
+    /** Every draft taken in: steps for tiles gone elsewhere are dropped quietly (not the one a change in flight is about). */
+    take: (_held: DraftState, next: DraftState, cause?: string) => setHistory((h) => prune(h, next.placements, cause)),
     offer,
   };
 }

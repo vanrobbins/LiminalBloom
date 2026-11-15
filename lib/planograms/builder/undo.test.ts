@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PlacementFields, PlacementView } from "../types";
 
-import { EMPTY_HISTORY, forget, prune, record, redo, rename, sitsAt, undo, type Step } from "./undo";
+import { aheadOf, EMPTY_HISTORY, forget, prune, record, redo, rename, sitsAt, undo, type Step } from "./undo";
 
 const at = (col: number): PlacementFields => ({ faceId: "f", presentation: "hung", col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1 });
 const view = (id: string, col: number, version: number): PlacementView => ({
@@ -50,10 +50,35 @@ describe("undo history", () => {
     expect(sitsAt({ ...view("a", 4, 9), faceId: "g" }, at(4))).toBe(false);
   });
 
-  it("notices a depth-only change by another device, and ignores depth a step never recorded", () => {
-    expect(sitsAt({ ...view("a", 4, 9), depth: 2 }, { ...at(4), depth: 2 })).toBe(true);
-    expect(sitsAt({ ...view("a", 4, 9), depth: 1 }, { ...at(4), depth: 2 })).toBe(false);
-    expect(sitsAt({ ...view("a", 4, 9), depth: 1 }, at(4))).toBe(true);
+  it("notices a layer change by another device: not behind a tile it overlapped, or not in front of one", () => {
+    const [a, other] = [view("a", 4, 9), { ...view("b", 4, 9), depth: 1 }];
+    const behind = { front: ["b"], back: [], prev: "b" };
+    expect(sitsAt({ ...a, depth: 2 }, at(4), behind, [other])).toBe(true);
+    expect(sitsAt({ ...a, depth: 0 }, at(4), behind, [other])).toBe(false);
+    expect(sitsAt({ ...a, depth: 0 }, at(4), { front: [], back: ["b"], prev: null }, [other])).toBe(true);
+    expect(sitsAt({ ...a, depth: 2 }, at(4), { front: [], back: ["b"], prev: null }, [other])).toBe(false);
+    // Numbers alone say nothing, a tile that moved away or is gone doesn't count, and a step with no anchor skips the check.
+    expect(sitsAt({ ...a, depth: 7 }, at(4), behind, [{ ...other, col: 20 }])).toBe(true);
+    expect(sitsAt({ ...a, depth: 0 }, at(4), behind, [])).toBe(true);
+    expect(sitsAt({ ...a, depth: 0 }, at(4))).toBe(true);
+  });
+
+  it("asks for a place behind the tiles it was behind, and the depth it had only when none is left", () => {
+    const ahead = { front: ["b"], back: ["c"], prev: "b" };
+    const history = record(EMPTY_HISTORY, { kind: "remove", id: "a", productId: "pant", fields: { ...at(4), depth: 5 }, ahead });
+    const there = [view("b", 0, 1), view("c", 0, 1)];
+    expect(undo(history, there)?.change).toEqual({ kind: "add", productId: "pant", fields: { ...at(4), depth: undefined, place: { after: "b", front: ["b"], back: ["c"] } } });
+    expect(undo(history, [])?.change).toEqual({ kind: "add", productId: "pant", fields: { ...at(4), depth: 5 } });
+    // The tiles it was behind are re-pointed when one comes back under a new id.
+    const renamed = rename(history, "b", "b2");
+    expect(undo(renamed, [view("b2", 0, 1)])?.change).toMatchObject({ fields: { place: { after: "b2", front: ["b2"] } } });
+  });
+
+  it("finds the tiles overlapping a tile, in front and behind, and the one before it on the face", () => {
+    const rows = [{ ...view("a", 0, 1), colSpan: 2, depth: 0 }, { ...view("b", 1, 1), colSpan: 2, depth: 1 }, { ...view("c", 8, 1), depth: 2 }];
+    expect(aheadOf("b", rows)).toEqual({ front: ["a"], back: [], prev: "a" });
+    expect(aheadOf("a", rows)).toEqual({ front: [], back: ["b"], prev: null });
+    expect(aheadOf("c", rows)).toBeUndefined();
   });
 
   it("keeps the last 50 steps", () => {

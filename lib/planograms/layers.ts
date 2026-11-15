@@ -1,14 +1,16 @@
 // Hung products sharing rail space (DECISIONS 11-09, hung layers spec): any
 // hung placement may overlap another hung one on the same face, fully or
 // partly. Placements joined through overlaps form a layer group, and each has
-// its own depth in it, 0 = front. The server renumbers every group after a
-// change (settleDepths), so the order is always 0…n-1 with no gaps or ties.
+// its own depth in it, lower = nearer the front. Depths are stable (DECISIONS
+// 11-15): a change keeps every number, so a split and a merge put the layers
+// back where they were (Undo of a trash). Gaps are fine and the order is what
+// counts, so drawing and words use a tile's place in its group (layerRanks).
+// settleDepths only breaks the ties a merge leaves, and past 98 (the database
+// check) renumbers every row at once, keeping the order (layer-depths.ts).
 
 import type { Presentation } from "@/lib/products/footprint";
 import { cellsOverlap } from "@/lib/products/placement";
 import type { Cells } from "@/lib/products/location-label";
-
-import type { Change } from "./types";
 
 export type LayerRow = Cells & { id: string; faceId: string; presentation: Presentation; depth?: number };
 
@@ -24,7 +26,7 @@ export function sharesSpace(a: LayerRow, b: LayerRow): boolean {
   return a.id !== b.id && a.faceId === b.faceId && a.presentation === "hung" && b.presentation === "hung" && cellsOverlap(a, b);
 }
 
-const frontToBack = (a: LayerRow, b: LayerRow) => (a.depth ?? 0) - (b.depth ?? 0) || a.col - b.col || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+export const frontToBack = (a: LayerRow, b: LayerRow) => (a.depth ?? 0) - (b.depth ?? 0) || a.col - b.col || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /** Every layer group, each front to back; a placement that shares nothing is a group of one. */
 export function layerGroups<T extends LayerRow>(rows: readonly T[]): T[][] {
@@ -47,35 +49,11 @@ export function layerGroups<T extends LayerRow>(rows: readonly T[]): T[][] {
   return groups;
 }
 
-export type Moved = {
-  id: string;
-  /** The place asked for in its group (a reorder, an undo); left out, it keeps its own or goes to the back on joining. */
-  asked?: number;
-  /** Where it was before the change; null for an add. */
-  before: LayerRow | null;
-};
-
-/**
- * The depth every row should hold. Rows come with the change applied; `moved`
- * is the one that changed. A group keeps its order (merged groups by depth,
- * then left edge); the moved row goes where it asked, else where it was, else
- * to the back when it now shares space with something it didn't before.
- */
-export function settleDepths(rows: readonly LayerRow[], moved?: Moved): Map<string, number> {
-  const depths = new Map<string, number>();
-  for (const group of layerGroups(rows)) {
-    const self = moved ? group.find((r) => r.id === moved.id) : undefined;
-    const others = self ? group.filter((r) => r !== self) : group;
-    const order: LayerRow[] = [...others];
-    if (self && moved) {
-      const was = moved.before;
-      const joined = others.some((o) => sharesSpace(self, o) && !(was && sharesSpace({ ...was, id: self.id }, o)));
-      const at = moved.asked ?? (joined ? others.length : (self.depth ?? 0));
-      order.splice(Math.max(0, Math.min(others.length, Math.round(at))), 0, self);
-    }
-    order.forEach((r, i) => depths.set(r.id, Math.min(i, MAX_DEPTH)));
-  }
-  return depths;
+/** Each tile's place in its layer group, 0 = front: what drawing and words use, never the raw depth. */
+export function layerRanks(rows: readonly LayerRow[]): Map<string, number> {
+  const ranks = new Map<string, number>();
+  for (const group of layerGroups(rows)) group.forEach((r, i) => ranks.set(r.id, i));
+  return ranks;
 }
 
 /** What overlaps this one from in front, nearest first. */
@@ -94,8 +72,8 @@ export function layerOffset(row: LayerRow, rows: readonly LayerRow[]): number {
 }
 
 /**
- * Move forward / back: the place to ask for, swapping with the nearest product
- * in front or behind that overlaps it; null at that end.
+ * Move forward / back: the depth to ask for, that of the nearest product in
+ * front or behind that overlaps it (the mover takes its place); null at that end.
  */
 export function reorderTarget(row: LayerRow, rows: readonly LayerRow[], direction: "forward" | "back"): number | null {
   const group = layerGroups(rows).find((g) => g.some((r) => r.id === row.id)) ?? [];
@@ -103,9 +81,9 @@ export function reorderTarget(row: LayerRow, rows: readonly LayerRow[], directio
   const self = group[at];
   if (!self) return null;
   if (direction === "forward") {
-    for (let j = at - 1; j >= 0; j--) if (sharesSpace(self, group[j])) return j;
+    for (let j = at - 1; j >= 0; j--) if (sharesSpace(self, group[j])) return group[j].depth ?? 0;
   } else {
-    for (let k = at + 1; k < group.length; k++) if (sharesSpace(self, group[k])) return k;
+    for (let k = at + 1; k < group.length; k++) if (sharesSpace(self, group[k])) return group[k].depth ?? 0;
   }
   return null;
 }
@@ -129,24 +107,4 @@ export function behindWords(names: readonly string[]): string | null {
   if (names.length === 1) return `Behind ${names[0]}`;
   if (names.length === 2) return `Behind ${names[0]} and ${names[1]}`;
   return `Behind ${names[0]} and ${names.length - 1} others`;
-}
-
-/** What a change leaves: the changed row's depth, and every other row whose depth moves. */
-export type Layers = { depth: number; others: [id: string, depth: number][] };
-
-/** The depths a change settles to, for the server to write in the same batch. */
-export function layersAfter(rows: readonly (LayerRow & { depth: number })[], change: Change): Layers {
-  const id = change.kind === "add" ? "new" : change.id;
-  const before = change.kind === "add" ? null : (rows.find((r) => r.id === change.id) ?? null);
-  const rest = rows.filter((r) => r.id !== id);
-  const moved: Moved | undefined = change.kind === "remove" ? undefined : { id, asked: change.fields.depth, before };
-  const next: LayerRow[] = change.kind === "remove" ? rest : [...rest, { ...change.fields, id, depth: before?.depth ?? 0 }];
-  const settled = settleDepths(next, moved);
-  return {
-    depth: settled.get(id) ?? 0,
-    others: rest.flatMap((r): [string, number][] => {
-      const depth = settled.get(r.id) ?? 0;
-      return depth === r.depth ? [] : [[r.id, depth]];
-    }),
-  };
 }

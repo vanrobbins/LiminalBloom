@@ -51,7 +51,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const canDraft = can(member, "planograms.draft");
   // A draft is for those who may draft: without the switch the page reads as the published planogram only.
   const initialDraft = canDraft ? pageDraft : null;
-  const { draft, status, save, adopt, leave, onLeaveRef } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
+  const { draft, status, save, adopt, leave, onLeaveRef, onTakeRef } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
   const { face, slideFrom, showFace, onSwipe } = useFaceView(scope, () => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
   const [adding, setAdding] = useState(false);
@@ -76,7 +76,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     // Ctrl+Z only on the draft being edited, never on Published or a past version.
     enabled: isEditing,
     expectedVersion: row?.version ?? null,
-    save, adopt, onLeaveRef,
+    save, adopt, onLeaveRef, onTakeRef,
     onStale: leave,
     // A draft this device started or another device's it adopted: either way it's now the one shown.
     onStarted: () => {

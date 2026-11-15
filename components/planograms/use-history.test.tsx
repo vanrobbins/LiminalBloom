@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlacementFields, PlacementView } from "@/lib/planograms/types";
 
+import { toast } from "@/lib/toast";
+
 import { useHistory } from "./use-history";
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
@@ -101,5 +103,56 @@ describe("Undo or Redo in flight", () => {
     });
     expect(result.current.canUndo).toBe(false);
     expect(result.current.canRedo).toBe(true);
+  });
+
+  it("a draft taken in drops steps for tiles gone elsewhere, quietly; not a remove step, and not the tile the change is about", async () => {
+    const f = flight();
+    const { result } = setUp(f.save);
+    act(() => result.current.record({ kind: "update", id: "gone", before: at(2), after: at(4) }));
+    act(() => result.current.record({ kind: "remove", id: "removed", productId: "tee", fields: at(0) }));
+    act(() => result.current.record({ kind: "update", id: "changing", before: at(2), after: at(4) }));
+    act(() => result.current.take(held, held, "changing"));
+    // a (here), the remove step and the changing tile stay; gone goes without a word.
+    await act(async () => {
+      const travel = result.current.undo();
+      f.reply({ saved: true, draft: held });
+      await travel;
+    });
+    expect(f.save).toHaveBeenCalledTimes(1);
+    expect(toast).not.toHaveBeenCalledWith(expect.objectContaining({ tone: "error" }));
+    expect(result.current.canUndo).toBe(true);
+  });
+
+  it("a draft taken in drops the steps for tiles gone elsewhere at once, so Undo is not offered for them", () => {
+    const { result } = setUp(flight().save);
+    act(() => result.current.forget("a"));
+    act(() => result.current.record({ kind: "update", id: "gone", before: at(2), after: at(4) }));
+    expect(result.current.canUndo).toBe(true);
+    act(() => result.current.take(held, held));
+    expect(result.current.canUndo).toBe(false);
+  });
+
+  it("a reply that drops a step while an Undo is in flight is not undone by that Undo landing", async () => {
+    const f = flight();
+    const { result } = setUp(f.save);
+    act(() => result.current.record({ kind: "update", id: "gone", before: at(2), after: at(4) }));
+    act(() => result.current.record({ kind: "update", id: "a", before: at(6), after: at(8) }));
+    let travel: Promise<void> = Promise.resolve();
+    act(() => {
+      travel = result.current.undo();
+    });
+    // Meanwhile a reply (another device's) says "gone" is gone; the step in flight is for a (the draft still holds it).
+    act(() => result.current.take(held, held));
+    await act(async () => {
+      f.reply({ saved: true, draft: held });
+      await travel;
+    });
+    // The next Undo finds nothing to undo: "gone"'s step was dropped in between and stays dropped.
+    await act(async () => {
+      const travel = result.current.undo();
+      f.reply(nothing);
+      await travel;
+    });
+    expect(result.current.canUndo).toBe(false);
   });
 });

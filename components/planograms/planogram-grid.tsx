@@ -12,7 +12,7 @@
 import { useRef, useState } from "react";
 
 import { dragTarget } from "@/lib/planograms/builder/drag";
-import { layerGroups, layerOffset, sharesSpace } from "@/lib/planograms/layers";
+import { layerGroups, layerOffset, layerRanks, sharesSpace } from "@/lib/planograms/layers";
 import { resizeTarget } from "@/lib/planograms/builder/resize";
 import { spanRect, spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import type { PlacementFields } from "@/lib/planograms/types";
@@ -75,6 +75,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const landed = usePendingLanding();
   // Each layer group front to back, so Tab meets the front one first; z-index paints them back to front.
   const drawn = layerGroups(landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId))).flat();
+  const ranks = layerRanks(drawn);
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
   const mask = edgeFade(edges);
 
@@ -156,7 +157,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                 <GridTile
                   key={item.id}
                   item={item}
-                  layer={shared ? { depth: item.depth ?? 0, offsetPx: layerOffset(item, drawn) } : null}
+                  layer={shared ? { rank: ranks.get(item.id) ?? 0, offsetPx: layerOffset(item, drawn) } : null}
                   block={block}
                   rect={spanRect(block, resized ?? item)}
                   words={spotSummary(spotOf(block, item))}
