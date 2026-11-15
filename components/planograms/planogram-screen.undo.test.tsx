@@ -39,8 +39,10 @@ const teeFit = { id: "tee", name: "Tee", styleNumber: "T-1", footprints: { folde
 /** What the server does with a change: version-checked, a new id for an add. */
 function serve(change: Change) {
   const { server } = fake;
+  let added: string | undefined;
   if (change.kind === "add") {
     const id = `n${++server.next}`;
+    added = id;
     const name = change.productId === "tee" ? "Tee" : "Pant";
     server.rows.push({ ...pant, ...change.fields, id, productId: change.productId, productName: name, depth: change.fields.depth ?? 0, version: 1 });
   } else {
@@ -50,7 +52,7 @@ function serve(change: Change) {
     else Object.assign(row, change.fields, { version: row.version + 1 });
   }
   server.version += 1;
-  return { status: "saved", draft: draftOf() };
+  return { status: "saved", draft: draftOf(), ...(added ? { id: added } : {}) };
 }
 
 type User = ReturnType<typeof userEvent.setup>;

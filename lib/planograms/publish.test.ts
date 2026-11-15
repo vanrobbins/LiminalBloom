@@ -155,8 +155,8 @@ describe("publishDraft", () => {
     await startDraft(store, set.upperId, null);
     const add = (faceId: string) =>
       saveChange(store, set.upperId, { kind: "add", productId: f.productId, fields: { faceId, presentation: "folded", col: 0, row: 0, colSpan: 2, rowSpan: 2, pieceCount: 2 } });
-    expect(await add(set.upperFaceId)).toEqual({ status: "saved" });
-    expect(await add(set.frontFaceId)).toEqual({ status: "saved" });
+    expect(await add(set.upperFaceId)).toMatchObject({ status: "saved" });
+    expect(await add(set.frontFaceId)).toMatchObject({ status: "saved" });
     const first = await previewPublish(store, set.upperId);
     expect(first?.changes.map((c) => c.label)).toEqual(["Upper", "Front table"]);
     await publishDraft(store, set.upperId, first?.planogramVersion ?? 0, null, null, VAN);

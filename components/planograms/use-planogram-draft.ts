@@ -26,14 +26,6 @@ export const refusalOf = (result: SaveResult) => (result.saved ? null : result.m
 const newer = (current: DraftState | null, next: DraftState) => (current && current.planogramVersion > next.planogramVersion ? current : next);
 const NOTHING: SaveResult = { saved: false, message: null };
 
-/** The placement an add made: new since the draft held before it, for that product, at the spot asked for if another device added the same product. */
-function addedId(before: DraftState | null, after: DraftState, change: Extract<Change, { kind: "add" }>): string | undefined {
-  const had = new Set(before?.placements.map((p) => p.id));
-  const fresh = after.placements.filter((p) => !had.has(p.id) && p.productId === change.productId);
-  const { faceId, col, row } = change.fields;
-  return (fresh.find((p) => p.faceId === faceId && p.col === col && p.row === row) ?? fresh[0])?.id;
-}
-
 export function usePlanogramDraft(fixtureId: string, initial: DraftState | null, onGone: () => void) {
   const [draft, setDraft] = useState(initial);
   const [status, setStatus] = useState<DraftStatus>({ kind: "idle" });
@@ -121,7 +113,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
         if (waiting.current === 1) setStatus({ kind: "saved" });
         const was = change.kind === "add" ? undefined : before?.placements.find((p) => p.id === change.id);
         // Folded product moved onto a frame rack hangs instead (frame racks spec §3); the builder says so, with its Undo.
-        const id = change.kind === "add" ? addedId(before, reply.draft, change) : undefined;
+        const id = change.kind === "add" ? reply.id : undefined;
         return { saved: true, draft: reply.draft, ...(reply.notice ? { notice: reply.notice } : {}), ...(was ? { before: was } : {}), ...(id ? { id } : {}) };
       }
       if (reply.status === "forbidden") {

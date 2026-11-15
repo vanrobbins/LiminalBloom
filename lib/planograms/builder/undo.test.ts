@@ -50,6 +50,12 @@ describe("undo history", () => {
     expect(sitsAt({ ...view("a", 4, 9), faceId: "g" }, at(4))).toBe(false);
   });
 
+  it("notices a depth-only change by another device, and ignores depth a step never recorded", () => {
+    expect(sitsAt({ ...view("a", 4, 9), depth: 2 }, { ...at(4), depth: 2 })).toBe(true);
+    expect(sitsAt({ ...view("a", 4, 9), depth: 1 }, { ...at(4), depth: 2 })).toBe(false);
+    expect(sitsAt({ ...view("a", 4, 9), depth: 1 }, at(4))).toBe(true);
+  });
+
   it("keeps the last 50 steps", () => {
     let history = EMPTY_HISTORY;
     for (let i = 0; i < 60; i++) history = record(history, moved(`p${i}`, 0, 1));

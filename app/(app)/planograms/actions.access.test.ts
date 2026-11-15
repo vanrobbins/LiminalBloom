@@ -90,6 +90,12 @@ describe("planograms.draft", () => {
     expect(await saveChangeAction(f, change)).toMatchObject({ status: "saved" });
   });
 
+  it("saveChangeAction hands back the id an add was written under", async () => {
+    as("planograms.draft");
+    fake.saveChange.mockResolvedValueOnce({ status: "saved", id: "new-id" } as never);
+    expect(await saveChangeAction(f, change)).toEqual({ status: "saved", draft: fake.draft, id: "new-id" });
+  });
+
   it("reloadDraftAction reads nothing without the switch", async () => {
     expect(await reloadDraftAction(f)).toBeNull();
     expect(fake.draftState).not.toHaveBeenCalled();

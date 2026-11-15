@@ -73,7 +73,9 @@ export function sitsAt(placement: PlacementFields, fields: PlacementFields): boo
     placement.row === fields.row &&
     placement.colSpan === fields.colSpan &&
     placement.rowSpan === fields.rowSpan &&
-    placement.pieceCount === fields.pieceCount
+    placement.pieceCount === fields.pieceCount &&
+    // Depth is in the step only when it was recorded with it (fields.ts): then a change of layer elsewhere counts.
+    (fields.depth === undefined || placement.depth === fields.depth)
   );
 }
 

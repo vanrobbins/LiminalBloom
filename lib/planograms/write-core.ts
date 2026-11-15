@@ -20,7 +20,8 @@ import type { RestoredRow } from "./restore";
 import type { PlanogramScope } from "./types";
 
 export type Statements = [BatchItem<"pg">, ...BatchItem<"pg">[]];
-export type Outcome = { status: "saved"; switchedToHung?: true } | { status: "conflict" } | { status: "invalid"; message: string } | { status: "not-found" };
+/** `id` is the placement an add wrote: the server picks it, and the screen needs it to follow that placement. */
+export type Outcome = { status: "saved"; switchedToHung?: true; id?: string } | { status: "conflict" } | { status: "invalid"; message: string } | { status: "not-found" };
 
 export const SAVED = { status: "saved" } as const;
 export const CONFLICT = { status: "conflict" } as const;

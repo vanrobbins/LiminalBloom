@@ -39,16 +39,26 @@ describe("usePlanogramDraft", () => {
     expect(reply).toEqual({ saved: true, draft: draft(5) });
   });
 
-  it("returns the id the server gave an add: the new placement of that product, at the asked spot first", async () => {
-    const other = { ...placed(1, 6), id: "theirs" };
-    const mine = { ...placed(1, 2), id: "mine" };
-    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [placed(1), other, mine] } });
-    const { result } = renderHook(() => usePlanogramDraft("fx", withTile(1, placed(1)), vi.fn()));
+  it("returns the id the server gave an add, not one picked from the draft", async () => {
+    const theirs = { ...placed(1, 2), id: "theirs" };
+    const mine = { ...placed(1, 4), id: "mine" };
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [theirs, mine] }, id: "mine" });
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
     let reply: unknown;
     await act(async () => {
       reply = await result.current.save({ kind: "add", productId: "pant", fields: at(2) });
     });
     expect(reply).toMatchObject({ saved: true, id: "mine" });
+  });
+
+  it("an add whose reply names no id returns none, even when the draft holds a new placement of that product", async () => {
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [{ ...placed(1, 2), id: "theirs" }] } });
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.save({ kind: "add", productId: "pant", fields: at(2) });
+    });
+    expect(reply).not.toHaveProperty("id");
   });
 
   it("adopts a draft started on this page, and reloads it on focus from then on", async () => {

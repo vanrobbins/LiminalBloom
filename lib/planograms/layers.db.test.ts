@@ -30,9 +30,9 @@ describe("hung layers", () => {
     const draft = async () => (await draftState(store, rack.fixtureId))?.placements ?? [];
     const depthOf = async (productId: string) => (await draft()).find((p) => p.productId === productId)?.depth;
 
-    expect(await add(navy, 0)).toEqual({ status: "saved" });
-    expect(await add(sand, 1)).toEqual({ status: "saved" });
-    expect(await add(pant, 8)).toEqual({ status: "saved" });
+    expect(await add(navy, 0)).toMatchObject({ status: "saved" });
+    expect(await add(sand, 1)).toMatchObject({ status: "saved" });
+    expect(await add(pant, 8)).toMatchObject({ status: "saved" });
     expect([await depthOf(navy), await depthOf(sand), await depthOf(pant)]).toEqual([0, 1, 0]);
     expect(await add(pant, 2, { presentation: "folded" })).toEqual({ status: "invalid", message: "Blocked by Navy Tee" });
 

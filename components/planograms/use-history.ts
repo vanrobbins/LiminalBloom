@@ -36,6 +36,8 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
     ref.current = typeof next === "function" ? next(ref.current) : next;
     setHistoryState(ref.current);
   };
+  // Bumped by every clear: an Undo or Redo still in flight when the draft went must not refill the history (its reply is for a dead draft).
+  const cleared = useRef(0);
   // Only the latest change offers Undo: an older toast's Undo would undo the newest step.
   const toastId = useRef<number | null>(null);
 
@@ -47,6 +49,7 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
 
   async function travel(direction: Direction) {
     if (!latest.current.enabled || dragging.current) return;
+    const clearedAt = cleared.current;
     // Picked on its turn: a change still saving is on the stack by then.
     const picked: { travel: Travel | null; pruned: History | null; moved: string | null } = { travel: null, pruned: null, moved: null };
     const result = await save((current) => {
@@ -66,7 +69,8 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
       return step.change;
     });
     const { travel: step, pruned, moved } = picked;
-    if (!pruned) return;
+    // The draft went while this was in flight (published, discarded, gone): that clear wins, whatever came back.
+    if (!pruned || clearedAt !== cleared.current) return;
     if (moved) {
       setHistory(forget(pruned, moved));
       toast({ tone: "error", title: CONFLICT });
@@ -92,7 +96,10 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
     redo: () => travel("redo"),
     record: (step: Step) => setHistory((h) => record(h, step)),
     forget: (id: string) => setHistory((h) => forget(h, id)),
-    clear: () => setHistory(EMPTY_HISTORY),
+    clear: () => {
+      cleared.current += 1;
+      setHistory(EMPTY_HISTORY);
+    },
     offer,
   };
 }
