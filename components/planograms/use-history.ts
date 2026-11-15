@@ -38,6 +38,8 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
   };
   // Bumped by every clear: an Undo or Redo still in flight when the draft went must not refill the history (its reply is for a dead draft).
   const cleared = useRef(0);
+  // The tile an Undo or Redo is saving: no reply in between (a poll, another save's) may drop its step, even when the tile is already gone server-side.
+  const flying = useRef<string | null>(null);
   // Only the latest change offers Undo: an older toast's Undo would undo the newest step.
   const toastId = useRef<number | null>(null);
 
@@ -66,8 +68,10 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
         return null;
       }
       picked.travel = step;
+      flying.current = step.step.id;
       return step.change;
     });
+    flying.current = null;
     const { travel: step, pruned, moved } = picked;
     // The draft went while this was in flight (published, discarded, gone): that clear wins, whatever came back.
     if (!pruned || clearedAt !== cleared.current) return;
@@ -80,7 +84,7 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
     if (result.saved) {
       // The replies have already dropped steps for tiles gone: only this step moves, under the new id if it came back.
       const renamed = step.change.kind === "add" ? result.id : undefined;
-      setHistory((h) => (renamed ? rename(advance(h, direction), step.step.id, renamed) : advance(h, direction)));
+      setHistory((h) => (renamed ? rename(advance(h, direction, step.step), step.step.id, renamed) : advance(h, direction, step.step)));
       const done = direction === "undo" ? "Undone" : "Redone";
       const faceName = latest.current.reveal?.(step.fields);
       say(`${done}: ${describe(step.fields)}${faceName ? `, on ${faceName}` : ""}`);
@@ -103,7 +107,7 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
       setHistory(EMPTY_HISTORY);
     },
     /** Every draft taken in: steps for tiles gone elsewhere are dropped quietly (not the one a change in flight is about). */
-    take: (_held: DraftState, next: DraftState, cause?: string) => setHistory((h) => prune(h, next.placements, cause)),
+    take: (_held: DraftState, next: DraftState, cause?: string) => setHistory((h) => prune(h, next.placements, cause ?? flying.current ?? undefined)),
     offer,
   };
 }

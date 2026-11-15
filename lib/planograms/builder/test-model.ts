@@ -45,7 +45,7 @@ export function travel(model: Model, direction: "undo" | "redo"): "none" | "refu
   if (placement && expected && !sitsAt(placement, expected.fields, expected.ahead, model.rows)) return "refused";
   const id = `n${model.next++}`;
   save(model, step.change, id);
-  model.history = advance(model.history, direction);
+  model.history = advance(model.history, direction, step.step);
   if (step.change.kind === "add") model.history = rename(model.history, step.step.id, id);
   return "done";
 }

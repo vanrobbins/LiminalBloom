@@ -4,7 +4,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PlacementFields, PlacementView } from "@/lib/planograms/types";
+import type { Change, DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 
 import { toast } from "@/lib/toast";
 
@@ -18,11 +18,13 @@ const view = (col: number): PlacementView => ({ ...at(col), id: "a", productId: 
 const held = { planogramVersion: 2, placements: [view(4)] };
 const nothing: SaveResult = { saved: false, message: null };
 
+const picks: (Change | null)[] = [];
+
 /** A save that picks its change on the draft as held, then waits for `reply` to be settled by the test. */
-function flight() {
+function flight(draft: DraftState = held) {
   let settle: (result: SaveResult) => void = () => {};
   const save = vi.fn((pending: Pending) => {
-    if (typeof pending === "function") pending(held);
+    if (typeof pending === "function") picks.push(pending(draft));
     return new Promise<SaveResult>((resolve) => {
       settle = resolve;
     });
@@ -39,7 +41,10 @@ function setUp(save: ReturnType<typeof flight>["save"]) {
 }
 
 describe("Undo or Redo in flight", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    picks.length = 0;
+  });
 
   it("a clear between the pick and a saved reply leaves the history empty", async () => {
     const f = flight();
@@ -154,5 +159,36 @@ describe("Undo or Redo in flight", () => {
       await travel;
     });
     expect(result.current.canUndo).toBe(false);
+  });
+
+  it("a draft taken in with no cause while an Undo of an add is in flight (a poll, another save's reply) leaves that step to move: Redo adds it again, and the older step stays", async () => {
+    const view2 = (id: string): PlacementView => ({ ...view(4), id });
+    const both = { planogramVersion: 2, placements: [view2("a"), view2("b")] };
+    const f = flight(both);
+    const { result } = setUp(f.save);
+    act(() => result.current.forget("a"));
+    act(() => result.current.record({ kind: "update", id: "b", before: at(2), after: at(4) }));
+    act(() => result.current.record({ kind: "add", id: "a", productId: "pant", fields: at(4) }));
+    let travel: Promise<void> = Promise.resolve();
+    act(() => {
+      travel = result.current.undo();
+    });
+    // The tile is already deleted server-side when a reload with no cause lands.
+    const gone = { planogramVersion: 3, placements: [view2("b")] };
+    act(() => result.current.take(both, gone));
+    await act(async () => {
+      f.reply({ saved: true, draft: gone });
+      await travel;
+    });
+    expect(picks[0]).toMatchObject({ kind: "remove", id: "a" });
+    expect(result.current.canRedo).toBe(true);
+    expect(result.current.canUndo).toBe(true);
+    // Redo is the add, not the older step on b.
+    await act(async () => {
+      const redo = result.current.redo();
+      f.reply(nothing);
+      await redo;
+    });
+    expect(picks[1]).toMatchObject({ kind: "add", productId: "pant" });
   });
 });

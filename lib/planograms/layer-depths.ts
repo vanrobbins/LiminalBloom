@@ -7,7 +7,7 @@ import type { Change, Place } from "./types";
 
 export type Moved = {
   id: string;
-  /** The depth asked for (a reorder, or Undo's half past the tile it was behind). A free number it takes; one a tile in its group holds, it takes that tile's place, and the face's numbers are dealt out again in the new order. Left out, it keeps its own, or goes to the back on joining. */
+  /** The depth asked for (a reorder, or Undo's half past the tile it was behind). A free number it takes; one a tile in its group holds, it takes that tile's place, and the group's numbers are dealt out again in the new order. Left out, it keeps its own, or goes to the back on joining. */
   asked?: number;
   /** Undo's ask (types.ts `Place`), whatever the numbers are now. Beats `asked`. */
   place?: Place;
@@ -41,34 +41,47 @@ function placed(rows: readonly LayerRow[], moved: Moved): Placed | null {
   return { rows: rows.map((r) => (r === self ? { ...r, depth: slot ? (rest[slot - 1].depth ?? 0) + 1 : 0 } : r)), order: new Map(rest.map((r, i) => [r.id, i])) };
 }
 
-/** Past MAX_DEPTH: every row's number becomes its place among all the numbers in use, so no order changes. */
-function tidy(depths: Map<string, number>): Map<string, number> {
-  if (Math.max(...depths.values(), 0) <= MAX_DEPTH) return depths;
-  const used = [...new Set(depths.values())].sort((a, b) => a - b);
-  for (const [id, depth] of depths) depths.set(id, Math.min(used.indexOf(depth), MAX_DEPTH));
+/**
+ * A face past MAX_DEPTH: each of its hung rows' number becomes its place among the numbers in use on that face (numbers
+ * only order tiles within a face, and another face is left alone), so no order changes and groups' ties are kept. With
+ * more numbers than the database check holds, each group is ranked by itself instead: ties then only where one group
+ * has more than 99 tiles, which no number can order (draftIssues stops publishing a tie).
+ */
+function tidy(depths: Map<string, number>, rows: readonly LayerRow[]): Map<string, number> {
+  const faces = new Map<string, LayerRow[]>();
+  for (const r of rows) if (r.presentation === "hung") faces.set(r.faceId, [...(faces.get(r.faceId) ?? []), { ...r, depth: depths.get(r.id) }]);
+  const rank = (set: readonly LayerRow[]) => {
+    const used = [...new Set(set.map((r) => r.depth))].sort((a, b) => a! - b!);
+    for (const r of set) depths.set(r.id, Math.min(used.indexOf(r.depth), MAX_DEPTH));
+  };
+  for (const face of faces.values()) {
+    if (Math.max(...face.map((r) => r.depth ?? 0)) <= MAX_DEPTH) continue;
+    if (new Set(face.map((r) => r.depth)).size <= MAX_DEPTH + 1) rank(face);
+    else layerGroups(face).forEach(rank);
+  }
   return depths;
 }
 
 /**
- * A reorder: the mover takes the place of the tile in its group that holds the number it asked for, and the numbers on
- * the whole face (not only its group, or one part of a group that later merges would drift) are dealt out again in the
- * new order. None is made up, none lost, so dealing them back is exact. Null when it isn't a reorder. The new order
+ * A reorder: the mover takes the place of the tile in its group that holds the number it asked for, and the group's
+ * numbers are dealt out again in the new order. Other groups on the face keep theirs, so a reorder writes nothing for
+ * them (layers.undo.property.test.ts holds exact undo and redo with this). None is made up, none lost, so dealing them back is exact. Null when it isn't a reorder. The new order
  * comes with it: where two tiles of one group are left on one number, it says which is in front.
  */
 function reordered(rows: readonly LayerRow[], moved: Moved): Placed | null {
   const self = rows.find((r) => r.id === moved.id);
   const was = moved.before;
   if (!self || moved.asked === undefined || !was) return null;
-  const others = (layerGroups(rows).find((g) => g.includes(self)) ?? []).filter((r) => r !== self);
+  const group = layerGroups(rows).find((g) => g.includes(self)) ?? [];
+  const others = group.filter((r) => r !== self);
   if (others.some((o) => sharesSpace(self, o) && !sharesSpace({ ...was, id: self.id }, o))) return null;
   const held = others.filter((o) => o.depth === moved.asked);
   if (!held.length) return null;
   const behind = moved.asked > (was.depth ?? 0);
   const occupant = behind ? held[held.length - 1] : held[0];
-  const face = faceOf(rows, self);
-  const order = face.filter((r) => r !== self);
+  const order = others.slice();
   order.splice(order.indexOf(occupant) + (behind ? 1 : 0), 0, self);
-  const numbers = face.map((r) => r.depth ?? 0).sort((a, b) => a - b);
+  const numbers = group.map((r) => r.depth ?? 0).sort((a, b) => a - b);
   const dealt = new Map(order.map((r, i) => [r.id, numbers[i]]));
   return { rows: rows.map((r) => (dealt.has(r.id) ? { ...r, depth: dealt.get(r.id) } : r)), order: new Map(order.map((r, i) => [r.id, i])) };
 }
@@ -94,7 +107,7 @@ export function settleDepths(rows: readonly LayerRow[], moved?: Moved): Map<stri
     let last = -1;
     for (const r of order) depths.set(r.id, (last = Math.max(Math.ceil(r.depth ?? 0), last + 1)));
   }
-  return tidy(depths);
+  return tidy(depths, dealt?.rows ?? rows);
 }
 
 /** What a change leaves: the changed row's depth, and every other row whose depth moves. */

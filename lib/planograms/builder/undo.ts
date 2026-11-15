@@ -34,10 +34,11 @@ export function aheadOf(id: string, rows: readonly PlacementView[]): Ahead {
   return { front: ids((r) => r.depth < self.depth), back: ids((r) => r.depth >= self.depth), prev: face[face.indexOf(self) - 1]?.id ?? null };
 }
 
-/** The fields to ask for: its place among the tiles it was behind, in front of and after (types.ts `Place`), or the depth it had if none of them is left. */
+/** The fields to ask for: its place among the tiles it was behind, in front of and after (types.ts `Place`). With none of them left no depth is asked: the old number may be a tile's now, and asking for it would swap them. */
 function asking(fields: PlacementFields, ahead: Ahead, placements: readonly PlacementView[]): ChangeFields {
   const there = (id: string | null) => id === null || placements.some((p) => p.id === id);
-  if (!ahead || !(there(ahead.prev) || ahead.front.some(there) || ahead.back.some(there))) return fields;
+  if (!ahead) return fields;
+  if (!(there(ahead.prev) || ahead.front.some(there) || ahead.back.some(there))) return { ...fields, depth: undefined };
   return { ...fields, depth: undefined, place: { after: ahead.prev, front: [...ahead.front], back: [...ahead.back] } };
 }
 
@@ -61,7 +62,7 @@ function travel(history: History, placements: readonly PlacementView[], directio
   const step = (direction === "undo" ? history.done : history.undone).at(-1);
   if (!step) return null;
   const current = placements.find((p) => p.id === step.id);
-  const next = advance(history, direction);
+  const next = advance(history, direction, step);
   if (step.kind === "update") {
     const fields = direction === "undo" ? step.before : step.after;
     const asked = asking(fields, direction === "undo" ? step.aheadBefore : step.aheadAfter, placements);
@@ -71,10 +72,10 @@ function travel(history: History, placements: readonly PlacementView[], directio
   return { step, change: { kind: "add", productId: step.productId, fields: asking(step.fields, step.ahead, placements) }, fields: step.fields, history: next };
 }
 
-/** The stacks after the step on top of `direction` was undone or redone. */
-export function advance(history: History, direction: Direction): History {
+/** The stacks after `from` (the step an Undo or Redo picked) was undone or redone; unchanged if it isn't on top any more, so a step that moved meanwhile never takes an unrelated one with it. A rename may have rewritten the step, so it is told by kind and id. */
+export function advance(history: History, direction: Direction, from: Step): History {
   const step = (direction === "undo" ? history.done : history.undone).at(-1);
-  if (!step) return history;
+  if (!step || step.kind !== from.kind || step.id !== from.id) return history;
   return direction === "undo"
     ? { done: history.done.slice(0, -1), undone: [...history.undone, step] }
     : { done: [...history.done, step], undone: history.undone.slice(0, -1) };

@@ -6,6 +6,7 @@ import { layerRanks } from "../layers";
 import { depthsOf, fieldsOf, rowAt } from "../test-layers";
 
 import { act, modelOf, save, travel } from "./test-model";
+import { EMPTY_HISTORY, record } from "./undo";
 
 const order = (model: ReturnType<typeof modelOf>) => [...layerRanks(model.rows)].sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0])).map(([id]) => id);
 
@@ -84,5 +85,17 @@ describe("another device renumbers a tile", () => {
     save(model, { kind: "remove", id: "b", version: 2 }, "x");
     expect(travel(model, "undo")).toBe("none");
     expect(model.history.done).toEqual([]);
+  });
+});
+
+describe("an Undo whose anchor tiles are all gone (0.7.0.5 task 2 review)", () => {
+  it("leaves the tile where it is instead of asking for its old number, which a tile in its group may hold now", () => {
+    // T (front) has a step that remembers depth 1 behind tiles that have since been trashed; W holds 1 now.
+    const model = modelOf([rowAt("T", 0, 4, 0), rowAt("W", 0, 4, 1), rowAt("V", 0, 4, 2)]);
+    const now = fieldsOf(model.rows[0]);
+    model.history = record(EMPTY_HISTORY, { kind: "update", id: "T", before: { ...now, pieceCount: 2, depth: 1 }, after: now, aheadBefore: { front: ["gone"], back: ["lost"], prev: "gone" } });
+    expect(travel(model, "undo")).toBe("done");
+    expect(model.rows.find((r) => r.id === "T")?.pieceCount).toBe(2);
+    expect(depthsOf(model.rows)).toEqual({ T: 0, W: 1, V: 2 });
   });
 });

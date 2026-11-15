@@ -78,4 +78,35 @@ describe("reorderTarget answers with the neighbour's depth", () => {
     const rows = [rowAt("a", 0, 4, 0), rowAt("b", 0, 4, 5), rowAt("c", 0, 4, 9)];
     expect(layersAfter(rows, { kind: "remove", id: "b", version: 1 })).toEqual({ depth: 0, others: [] });
   });
+
+describe("a reorder deals out only its own group's numbers (0.7.0.5 task 2 review)", () => {
+  it("tiles in other groups on the face keep their numbers, so nothing extra is written", () => {
+    // Two groups sharing the numbers 0 and 1; b asks to go in front of a.
+    const rows = [rowAt("a", 0, 4, 0), rowAt("b", 0, 4, 1), rowAt("c", 10, 4, 0), rowAt("d", 10, 4, 1)];
+    const change = { kind: "update" as const, id: "b", version: 1, fields: { ...fieldsOf(rows[1]), depth: 0 } };
+    expect(layersAfter(rows, change)).toEqual({ depth: 0, others: [["a", 1]] });
+    // Dealing back is exact.
+    const after = serve(rows, change);
+    const back = serve(after, { kind: "update", id: "b", version: 2, fields: { ...fieldsOf(after[1]), depth: 1 } });
+    expect(depthsOf(back)).toEqual(depthsOf(rows));
+  });
+});
+
+describe("the tidy-up past 98 ranks per face (0.7.0.5 task 2 review)", () => {
+  it("renumbers only the face that went past 98; another face keeps its numbers", () => {
+    const rows = [rowAt("a", 0, 4, 0), rowAt("b", 0, 4, 98), rowAt("g1", 0, 4, 50, { faceId: "g" }), rowAt("g2", 10, 4, 60, { faceId: "g" })];
+    const added = { id: "x", before: null, asked: undefined };
+    const next = [...rows, rowAt("x", 0, 4, 0)];
+    expect(object(settleDepths(next, added))).toEqual({ a: 0, b: 1, x: 2, g1: 50, g2: 60 });
+  });
+
+  it("with more than 99 distinct numbers on a face, tiles that overlap still keep their order, no ties", () => {
+    // 99 tiles alone (numbers 0-98) and one overlapping pair past them (99, 100): 101 numbers on the face.
+    const lone = Array.from({ length: 99 }, (_, i) => rowAt(`l${i}`, i * 2, 1, i));
+    const rows = [...lone, rowAt("p", 300, 4, 99), rowAt("q", 300, 4, 100)];
+    const depths = settleDepths(rows);
+    expect(depths.get("p")).toBeLessThan(depths.get("q")!);
+    expect(Math.max(...depths.values())).toBeLessThanOrEqual(98);
+  });
+});
 });

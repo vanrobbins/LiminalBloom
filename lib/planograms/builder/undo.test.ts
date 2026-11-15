@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PlacementFields, PlacementView } from "../types";
 
-import { aheadOf, EMPTY_HISTORY, forget, prune, record, redo, rename, sitsAt, undo, type Step } from "./undo";
+import { advance, aheadOf, EMPTY_HISTORY, forget, prune, record, redo, rename, sitsAt, undo, type Step } from "./undo";
 
 const at = (col: number): PlacementFields => ({ faceId: "f", presentation: "hung", col, row: 0, colSpan: 2, rowSpan: 1, pieceCount: 1 });
 const view = (id: string, col: number, version: number): PlacementView => ({
@@ -63,12 +63,13 @@ describe("undo history", () => {
     expect(sitsAt({ ...a, depth: 0 }, at(4))).toBe(true);
   });
 
-  it("asks for a place behind the tiles it was behind, and the depth it had only when none is left", () => {
+  it("asks for a place behind the tiles it was behind, and no depth when none is left", () => {
     const ahead = { front: ["b"], back: ["c"], prev: "b" };
     const history = record(EMPTY_HISTORY, { kind: "remove", id: "a", productId: "pant", fields: { ...at(4), depth: 5 }, ahead });
     const there = [view("b", 0, 1), view("c", 0, 1)];
     expect(undo(history, there)?.change).toEqual({ kind: "add", productId: "pant", fields: { ...at(4), depth: undefined, place: { after: "b", front: ["b"], back: ["c"] } } });
-    expect(undo(history, [])?.change).toEqual({ kind: "add", productId: "pant", fields: { ...at(4), depth: 5 } });
+    // None left to go by: no depth either (the number may be a tile's now), so it joins as any add does.
+    expect(undo(history, [])?.change).toEqual({ kind: "add", productId: "pant", fields: { ...at(4), depth: undefined } });
     // The tiles it was behind are re-pointed when one comes back under a new id.
     const renamed = rename(history, "b", "b2");
     expect(undo(renamed, [view("b2", 0, 1)])?.change).toMatchObject({ fields: { place: { after: "b2", front: ["b2"] } } });
@@ -139,5 +140,13 @@ describe("undo history", () => {
     // Meant to be there, removed on another device.
     expect(prune({ done: [added("a", 0)], undone: [] }, [])).toEqual(EMPTY_HISTORY);
     expect(prune({ done: [], undone: [removed("a", 0)] }, [])).toEqual(EMPTY_HISTORY);
+  });
+
+  it("advance moves the picked step, and does nothing when that step isn't on top any more (it was pruned in flight), so an older step is not undone with it", () => {
+    const older = moved("b", 0, 2);
+    const picked = added("a", 4);
+    expect(advance({ done: [older, picked], undone: [] }, "undo", picked)).toEqual({ done: [older], undone: [picked] });
+    expect(advance({ done: [older], undone: [] }, "undo", picked)).toEqual({ done: [older], undone: [] });
+    expect(advance({ done: [], undone: [older, picked] }, "redo", older)).toEqual({ done: [], undone: [older, picked] });
   });
 });
