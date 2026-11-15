@@ -197,7 +197,7 @@ describe("PlanogramScreen", () => {
 
   it("Add product places, selects and focuses the new tile, and says where", async () => {
     actions.pickerSearch = vi.fn().mockResolvedValue([teeFit]);
-    hook.save = vi.fn().mockResolvedValue({ saved: true, draft: { planogramVersion: 4, placements: [pant, tee] } });
+    hook.save = vi.fn().mockResolvedValue({ saved: true, id: "d2", draft: { planogramVersion: 4, placements: [pant, tee] } });
     const user = userEvent.setup();
     const { rerender } = render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(screen.getByRole("button", { name: "Add product" }));

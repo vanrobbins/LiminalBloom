@@ -20,9 +20,9 @@ import { toast } from "@/lib/toast";
 
 import { PublishDialog } from "./publish-dialog";
 
-type DraftBarProps = { fixtureId: string; row: PlanogramRow | null; hasDraft: boolean; isEditing: boolean; draftVersion: number | null; latestNumber: number | null; onAdd: () => void; yieldOnPhone?: boolean; inline?: boolean; canPublish: boolean };
+type DraftBarProps = { fixtureId: string; row: PlanogramRow | null; hasDraft: boolean; isEditing: boolean; draftVersion: number | null; latestNumber: number | null; onAdd: () => void; yieldOnPhone?: boolean; inline?: boolean; canPublish: boolean; /** The draft was published or discarded. */ onLeave: () => void };
 
-export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, latestNumber, onAdd, yieldOnPhone = false, inline = false, canPublish }: DraftBarProps) {
+export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, latestNumber, onAdd, yieldOnPhone = false, inline = false, canPublish, onLeave }: DraftBarProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<"start" | "discard" | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -47,7 +47,8 @@ export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, la
       const reply = await discardDraftAction(fixtureId, draftVersion ?? row?.version ?? 0);
       toast({ tone: reply.status === "saved" ? "success" : "error", title: reply.message });
       setDiscarding(false);
-      router.refresh();
+      if (reply.status === "saved") onLeave();
+      else router.refresh();
     } catch {
       toast({ tone: "error", title: "Couldn't discard", description: "Check the connection and try again." });
     } finally {
@@ -98,7 +99,7 @@ export function DraftBar({ fixtureId, row, hasDraft, isEditing, draftVersion, la
           )}
         </div>
       </div>
-      <PublishDialog open={publishing} onOpenChange={setPublishing} fixtureId={fixtureId} />
+      <PublishDialog open={publishing} onOpenChange={setPublishing} fixtureId={fixtureId} onPublished={onLeave} />
       <Dialog open={discarding} onOpenChange={setDiscarding} title="Discard this draft?" description="Every change since it started is lost. The published planogram stays as it is.">
         <Button variant="danger" onClick={discard} loading={busy === "discard"} loadingText="Discarding…">
           Discard draft

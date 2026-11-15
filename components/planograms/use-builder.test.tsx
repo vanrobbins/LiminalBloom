@@ -60,6 +60,37 @@ describe("useBuilder", () => {
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 5, fields: { ...fields(pant, 0), depth: 0 } });
   });
 
+  it("canUndo and canRedo follow the stack: a change enables Undo, Undo enables Redo", async () => {
+    const pant = view("a", 0, 4);
+    const { result, rerender } = setup(state(pant));
+    expect([result.current.canUndo, result.current.canRedo]).toEqual([false, false]);
+    await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
+    expect([result.current.canUndo, result.current.canRedo]).toEqual([true, false]);
+    rerender({ d: state({ ...pant, col: 4, version: 5 }) });
+    await act(() => result.current.undo());
+    expect([result.current.canUndo, result.current.canRedo]).toEqual([false, true]);
+    act(() => result.current.clearHistory());
+    expect([result.current.canUndo, result.current.canRedo]).toEqual([false, false]);
+  });
+
+  it("an add and a remove go on the stack: Undo of the add removes it, Undo of the remove adds it back", async () => {
+    const pant = { ...view("a", 0, 4), depth: 2 };
+    const save = vi.fn().mockResolvedValue({ saved: true, draft: state(pant), id: "a" });
+    const { result, rerender } = setup(state(), save);
+    await act(() => result.current.add("pant", fields(pant, 0)));
+    rerender({ d: state(pant) });
+    await act(() => result.current.undo());
+    expect(save).toHaveBeenLastCalledWith({ kind: "remove", id: "a", version: 4 });
+
+    save.mockResolvedValue({ saved: true, draft: state(), before: pant });
+    rerender({ d: state(pant) });
+    await act(() => result.current.remove(pant));
+    expect(save).toHaveBeenLastCalledWith({ kind: "remove", id: "a", version: 4 });
+    rerender({ d: state() });
+    await act(() => result.current.undo());
+    expect(save).toHaveBeenLastCalledWith({ kind: "add", productId: "pant", fields: { ...fields(pant, 0), depth: 2 } });
+  });
+
   it("says Switched to hung with the Undo, and Undo puts folded product back (frame racks spec §3)", async () => {
     const folded = { ...view("a", 0, 4), presentation: "folded" as const, faceId: "shelf", colSpan: 4, rowSpan: 2 };
     const hung = { ...folded, presentation: "hung" as const, faceId: "rail", col: 2, colSpan: 2, rowSpan: 1, version: 5 };

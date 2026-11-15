@@ -19,7 +19,6 @@ import { toast } from "@/lib/toast";
 import type { GridItem } from "./grid-items";
 import type { GridBuilder } from "./planogram-grid";
 import type { useBuilder } from "./use-builder";
-import type { Pending, SaveResult } from "./use-planogram-draft";
 
 /** Where a placement sits, for a screen reader: "4–6 ft, Top shelf". */
 export function spotWords(faces: readonly PlanogramFace[], fields: PlacementFields): string {
@@ -37,14 +36,13 @@ type Options = {
   canMove: boolean;
   selectedPlacement: PlacementView | null;
   builder: ReturnType<typeof useBuilder>;
-  save: (pending: Pending) => Promise<SaveResult>;
   setSelectedId: (id: string | null) => void;
   /** Selects and keeps the open panel on the selection; null also closes it. */
   select: (id: string | null) => void;
   showFace: (faceId: string) => void;
 };
 
-export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, save, setSelectedId, select, showFace }: Options) {
+export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, setSelectedId, select, showFace }: Options) {
   // The tile an Add just placed: focus goes to it when the dialog closes.
   const added = useRef<string | null>(null);
 
@@ -121,7 +119,7 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     select(null);
     // The button pressed goes with the selection: focus the tile if it's still there (refused),
     // else the grid, else the page's main area, never the page top (B8).
-    void save({ kind: "remove", id: p.id, version: p.version }).then((result) =>
+    void builder.remove(p).then((result) =>
       requestAnimationFrame(() =>
         (
           (result.saved ? null : document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(p.id)}"]`)) ??
@@ -143,10 +141,9 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
   async function addProduct(product: ProductFit): Promise<string | null> {
     const fields = placeNew([face, ...scope.faces.filter((f) => f.faceId !== face.faceId)], placements, product);
     if (!fields) return `No open spot fits ${product.name}. Make room, then add it.`;
-    const before = new Set(placements.map((p) => p.id));
-    const result = await save({ kind: "add", productId: product.id, fields });
+    const result = await builder.add(product.id, fields);
     if (!result.saved) return result.message ?? "Couldn't add it. Try again.";
-    const placed = result.draft.placements.find((p) => !before.has(p.id) && p.productId === product.id);
+    const placed = result.draft.placements.find((p) => p.id === result.id);
     if (placed) {
       added.current = placed.id;
       select(placed.id);

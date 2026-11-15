@@ -39,6 +39,18 @@ describe("usePlanogramDraft", () => {
     expect(reply).toEqual({ saved: true, draft: draft(5) });
   });
 
+  it("returns the id the server gave an add: the new placement of that product, at the asked spot first", async () => {
+    const other = { ...placed(1, 6), id: "theirs" };
+    const mine = { ...placed(1, 2), id: "mine" };
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [placed(1), other, mine] } });
+    const { result } = renderHook(() => usePlanogramDraft("fx", withTile(1, placed(1)), vi.fn()));
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.save({ kind: "add", productId: "pant", fields: at(2) });
+    });
+    expect(reply).toMatchObject({ saved: true, id: "mine" });
+  });
+
   it("adopts a draft started on this page, and reloads it on focus from then on", async () => {
     actions.reloadDraftAction.mockResolvedValue(draft(4));
     const { result } = renderHook(() => usePlanogramDraft("fx", null, vi.fn()));
@@ -191,5 +203,21 @@ describe("usePlanogramDraft", () => {
     await act(() => result.current.save(remove));
     expect(onGone).toHaveBeenCalled();
     expect(result.current.status).toEqual({ kind: "idle" });
+  });
+
+  it("a draft that is gone, however it's found out, clears what the builder registered before the page reloads", async () => {
+    const order: string[] = [];
+    const onGone = vi.fn(() => order.push("reload"));
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), onGone));
+    result.current.onLeaveRef.current = () => order.push("clear");
+
+    actions.saveChangeAction.mockResolvedValue({ status: "refused", message: "Changed on another device", draft: null });
+    await act(() => result.current.save(remove));
+    actions.reloadDraftAction.mockResolvedValue(null);
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(order).toEqual(["clear", "reload", "clear", "reload"]));
+    // Publish and discard call it themselves.
+    act(() => result.current.leave());
+    expect(order.slice(-2)).toEqual(["clear", "reload"]);
   });
 });

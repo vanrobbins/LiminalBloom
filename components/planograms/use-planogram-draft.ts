@@ -6,15 +6,18 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 import { reloadDraftAction, saveChangeAction } from "@/app/(app)/planograms/actions";
 import type { Change, DraftState, PlacementView } from "@/lib/planograms/types";
 import { toast } from "@/lib/toast";
 
 export type DraftStatus = { kind: "idle" | "saving" | "saved" } | { kind: "refused"; message: string };
-/** A refusal's words go to the form that sent it; null when there's nothing to say there. `before` is the placement as this device held it when the change went. */
-export type SaveResult = { saved: true; draft: DraftState; notice?: string; before?: PlacementView } | { saved: false; message: string | null };
+/**
+ * A refusal's words go to the form that sent it; null when there's nothing to say there. `before` is the placement
+ * as this device held it when the change went; `id` is the placement an add made (the server picks it).
+ */
+export type SaveResult = { saved: true; draft: DraftState; notice?: string; before?: PlacementView; id?: string } | { saved: false; message: string | null };
 /** A change, or one picked on its turn from the draft as it is then (Undo and Redo); null sends nothing. */
 export type Pending = Change | ((held: DraftState | null) => Change | null);
 
@@ -22,6 +25,14 @@ export const refusalOf = (result: SaveResult) => (result.saved ? null : result.m
 
 const newer = (current: DraftState | null, next: DraftState) => (current && current.planogramVersion > next.planogramVersion ? current : next);
 const NOTHING: SaveResult = { saved: false, message: null };
+
+/** The placement an add made: new since the draft held before it, for that product, at the spot asked for if another device added the same product. */
+function addedId(before: DraftState | null, after: DraftState, change: Extract<Change, { kind: "add" }>): string | undefined {
+  const had = new Set(before?.placements.map((p) => p.id));
+  const fresh = after.placements.filter((p) => !had.has(p.id) && p.productId === change.productId);
+  const { faceId, col, row } = change.fields;
+  return (fresh.find((p) => p.faceId === faceId && p.col === col && p.row === row) ?? fresh[0])?.id;
+}
 
 export function usePlanogramDraft(fixtureId: string, initial: DraftState | null, onGone: () => void) {
   const [draft, setDraft] = useState(initial);
@@ -38,12 +49,20 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
   const own = useRef(new Map<string, Map<number, number>>());
   const reloading = useRef(false);
   const goneRef = useRef(onGone);
+  // Set by the builder: its undo history clears when the draft goes (published, discarded, gone), so no step writes to a dead draft.
+  const onLeaveRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     goneRef.current = onGone;
   });
 
   const hasDraft = draft !== null;
+
+  /** This draft is published, discarded or gone (here or on another device): the history clears, then the page reloads. */
+  function leave() {
+    onLeaveRef.current();
+    goneRef.current();
+  }
 
   useEffect(() => {
     if (!hasDraft) return;
@@ -53,7 +72,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
       reloading.current = true;
       reloadDraftAction(fixtureId)
         .then((next) => {
-          if (!next) return goneRef.current();
+          if (!next) return leave();
           held.current = newer(held.current, next);
           setDraft(held.current);
         })
@@ -102,7 +121,8 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
         if (waiting.current === 1) setStatus({ kind: "saved" });
         const was = change.kind === "add" ? undefined : before?.placements.find((p) => p.id === change.id);
         // Folded product moved onto a frame rack hangs instead (frame racks spec §3); the builder says so, with its Undo.
-        return { saved: true, draft: reply.draft, ...(reply.notice ? { notice: reply.notice } : {}), ...(was ? { before: was } : {}) };
+        const id = change.kind === "add" ? addedId(before, reply.draft, change) : undefined;
+        return { saved: true, draft: reply.draft, ...(reply.notice ? { notice: reply.notice } : {}), ...(was ? { before: was } : {}), ...(id ? { id } : {}) };
       }
       if (reply.status === "forbidden") {
         // The role lost the switch since the page loaded: nothing was written, and the draft is still there.
@@ -113,7 +133,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
         // Published or discarded on another device: the page reloads to what's there now, and nothing queued is sent.
         round.current += 1;
         setStatus({ kind: "idle" });
-        goneRef.current();
+        leave();
         return NOTHING;
       }
       setStatus({ kind: "refused", message: reply.message });
@@ -147,5 +167,5 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     hold(next);
   }
 
-  return { draft, status, save, adopt };
+  return { draft, status, save, adopt, leave, onLeaveRef: onLeaveRef as RefObject<() => void> };
 }

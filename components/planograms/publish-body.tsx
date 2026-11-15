@@ -10,7 +10,7 @@ import { faceSummary } from "@/lib/planograms/diff";
 import type { Preview } from "@/lib/planograms/publish";
 import { toast } from "@/lib/toast";
 
-export function PublishBody({ fixtureId, store, onDone }: { fixtureId: string; store: string; onDone: () => void }) {
+export function PublishBody({ fixtureId, store, onDone, onPublished }: { fixtureId: string; store: string; onDone: () => void; onPublished?: () => void }) {
   const router = useRouter();
   const [preview, setPreview] = useState<Preview | null | "loading">("loading");
   const [reloads, setReloads] = useState(0);
@@ -52,7 +52,8 @@ export function PublishBody({ fixtureId, store, onDone }: { fixtureId: string; s
       if (reply.status === "saved") {
         toast({ tone: "success", title: reply.message });
         onDone();
-        router.refresh();
+        if (onPublished) onPublished();
+        else router.refresh();
         return;
       }
       setMessage(reply.message);
