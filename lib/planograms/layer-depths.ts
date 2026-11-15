@@ -65,8 +65,9 @@ function tidy(depths: Map<string, number>, rows: readonly LayerRow[]): Map<strin
 /**
  * A reorder: the mover takes the place of the tile in its group that holds the number it asked for, and the group's
  * numbers are dealt out again in the new order. Other groups on the face keep theirs, so a reorder writes nothing for
- * them (layers.undo.property.test.ts holds exact undo and redo with this). None is made up, none lost, so dealing them back is exact. Null when it isn't a reorder. The new order
- * comes with it: where two tiles of one group are left on one number, it says which is in front.
+ * them (layers.undo.property.test.ts holds exact undo and redo with this). None is made up, none lost, so dealing
+ * them back is exact. Null when it isn't a reorder. The new order comes with it: where two tiles of one group are
+ * left on one number, it says which is in front.
  */
 function reordered(rows: readonly LayerRow[], moved: Moved): Placed | null {
   const self = rows.find((r) => r.id === moved.id);
