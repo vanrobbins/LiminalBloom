@@ -132,7 +132,7 @@ describe("PlanogramScreen", () => {
     await user.click(tile());
     tile().focus();
     await user.keyboard("{Enter}");
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Side" })).toHaveFocus());
+    await waitFor(() => expect(screen.getByLabelText("From left (ft)")).toHaveFocus());
     tile().focus();
     await user.keyboard("{Delete}");
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -217,7 +217,7 @@ describe("PlanogramScreen", () => {
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
     await user.click(screen.getByRole("button", { name: "Edit Pant" }));
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Side" })).toHaveFocus());
+    await waitFor(() => expect(screen.getByLabelText("From left (ft)")).toHaveFocus());
   });
 
   it("Add product places, selects and focuses the new tile, and says where", async () => {

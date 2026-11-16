@@ -15,7 +15,7 @@ const SHOW_AFTER_MS = 300;
 const HOLD_MS = 500;
 
 /** The status to show: Saving… waits SHOW_AFTER_MS to appear and stays HOLD_MS once it has. */
-function useCalmStatus(status: DraftStatus): DraftStatus {
+export function useCalmStatus(status: DraftStatus): DraftStatus {
   const [shown, setShown] = useState<DraftStatus>(status.kind === "saving" ? { kind: "idle" } : status);
   const since = useRef<number | null>(null);
   const message = status.kind === "refused" ? status.message : "";

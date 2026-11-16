@@ -34,7 +34,6 @@ type Options = {
   items: readonly GridItem[];
   isEditing: boolean;
   canMove: boolean;
-  selectedPlacement: PlacementView | null;
   /** The selected id, kept even once its placement is gone. */
   selectedId: string | null;
   builder: ReturnType<typeof useBuilder>;
@@ -46,7 +45,7 @@ type Options = {
   editNumbers: (id: string) => void;
 };
 
-export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, selectedId, builder, setSelectedId, select, showFace, editNumbers }: Options) {
+export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers }: Options) {
   // The tile an Add just placed: focus goes to it when the dialog closes.
   const added = useRef<string | null>(null);
   // What is selected now, for a removal that lands after the person has moved on.
@@ -151,12 +150,20 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     return saved;
   }
 
-  function moveToFace(target: string) {
-    if (!selectedPlacement) return;
+  /** The panel's face picker: to the first open spot that fits on that face. The reason it can't shows in the panel, not a toast. */
+  async function moveToFace(p: PlacementView, target: string): Promise<string | null> {
     const to = scope.faces.find((f) => f.faceId === target);
-    const spot = to ? firstOpenSpot([to], placements, selectedPlacement, selectedPlacement.id) : null;
-    if (!spot) return toast({ tone: "error", title: `No open spot fits on ${to?.label ?? "that face"}` });
-    void change(selectedPlacement, { ...selectedPlacement, ...spot }, "Moved");
+    const spot = to ? firstOpenSpot([to], placements, p, p.id) : null;
+    if (!spot) return `No open spot fits on ${to?.label ?? "that face"}`;
+    return change(p, { ...p, ...spot }, "Moved");
+  }
+
+  /**
+   * The panel's numbers, saved as they change. Only the numbers: it never moves the selection, because the panel it
+   * came from may be closed or on another tile by the time this lands (a flush on close or on a new pick).
+   */
+  function edit(p: PlacementView, fields: PlacementFields) {
+    return builder.commit(p, fields, "Changed");
   }
 
   async function addProduct(product: ProductFit): Promise<string | null> {
@@ -189,5 +196,5 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     tile.scrollIntoView?.({ block: "nearest", inline: "center" });
   }
 
-  return { gridBuilder, reorder, remove, moveToFace, addProduct, focusAdded, edit: (p: PlacementView, fields: PlacementFields) => change(p, fields, "Changed") };
+  return { gridBuilder, reorder, remove, moveToFace, addProduct, focusAdded, edit };
 }

@@ -65,8 +65,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks);
   const busy = status.kind === "saving";
   const isEmpty = !latest && !draft;
-  const { selectedId, setSelectedId, sheetId, sheetMode, openSheet, select, onTile, editNumbers } = useSelection(isEditing, items);
-  const selectedPlacement = isEditing ? (placements.find((p) => p.id === selectedId) ?? null) : null;
+  const { selectedId, setSelectedId, sheetId, openSheet, select, onTile, editNumbers } = useSelection(isEditing, items);
 
   const builder = useBuilder({
     fixtureId: scope.fixtureId,
@@ -95,7 +94,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     select(null);
   }
 
-  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, selectedId, builder, setSelectedId, select, showFace, editNumbers });
+  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers });
 
   const body = (
     <PlanogramBody
@@ -109,7 +108,6 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       selectedId={selectedId}
       setSelectedId={select}
       sheetId={sheetId}
-      sheetMode={sheetMode}
       openSheet={openSheet}
       highlightProductId={highlightProductId}
       placements={placements}
@@ -121,6 +119,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       onFace={showFace}
       onEdit={actions.edit}
       onRemove={actions.remove}
+      onMoveToFace={actions.moveToFace}
       onReorder={actions.gridBuilder ? actions.reorder : undefined}
     />
   );

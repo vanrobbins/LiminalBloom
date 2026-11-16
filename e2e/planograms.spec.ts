@@ -57,8 +57,9 @@ async function editNumbers(page: Page, product: string, field: string, value: st
   const pencil = page.getByRole("button", { name: `Edit ${product}` });
   if (!(await pencil.isVisible())) await page.getByRole("button", { name: new RegExp(`^${product}, `) }).filter({ visible: true }).click();
   await pencil.click();
+  // The numbers save as they change (no Save button): leaving the field sends it.
   await page.getByLabel(field).fill(value);
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByLabel(field).press("Tab");
 }
 
 /** `modal`: the page is phone-sized, where the sheet is a dialog; elsewhere it is a side panel. */
@@ -74,6 +75,8 @@ async function closeSheet(page: Page, product: string, modal: boolean) {
 
 async function movePant(page: Page, fromBack: string, modal: boolean) {
   await editNumbers(page, "E2E High-Rise Pant", "From back (ft)", fromBack);
+  // The panel's own line starts empty, so this is this edit's save, not an earlier one's.
+  await expect(page.locator("[data-panel-status]")).toHaveText("Saved");
   await saved(page);
   await closeSheet(page, "E2E High-Rise Pant", modal);
 }
@@ -272,4 +275,22 @@ test("a long fixture name truncates in the phone header without sideways scroll"
   await expect(page.getByRole("heading", { level: 1 })).toHaveAttribute("title", name);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBe(0);
+});
+
+test("the panel's face picker moves a tile to the other face and says nothing in a toast", async ({ page }) => {
+  const { rackId } = await seedRack();
+  await page.goto(`/planograms/${rackId}`);
+  await hydrated(page);
+  await page.getByRole("button", { name: "Start planogram" }).click();
+  await page.getByRole("button", { name: "Add product" }).click();
+  await page.getByLabel("Find a product").fill("E2E High");
+  await page.getByRole("button", { name: /E2E High-Rise Pant/ }).click();
+  await saved(page);
+  await page.getByRole("button", { name: "Edit E2E High-Rise Pant" }).click();
+  const face = page.getByRole("group", { name: "Face" });
+  await expect(face.getByRole("button", { name: "Front" })).toHaveAttribute("aria-pressed", "true");
+  await face.getByRole("button", { name: "Back" }).click();
+  await expect(face.getByRole("button", { name: "Back" })).toHaveAttribute("aria-pressed", "true");
+  // On a phone the sheet is modal and hides the grid from the page's tree; elsewhere the view follows the tile.
+  if (sizeOf(test.info()) !== "phone") await expect(page.getByRole("region", { name: /, Back:/ })).toBeVisible();
 });
