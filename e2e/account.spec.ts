@@ -28,8 +28,10 @@ test("renaming the store shows the new name in the header", async ({ page }, tes
   await hydrated(page);
   await expect(page.getByLabel("Store name")).toHaveValue("Rename Me");
   await page.getByLabel("Store name").fill("Riverside Flagship");
-  await page.getByRole("button", { name: "Save store name" }).click();
-  await expect(page.getByText("Store name saved", { exact: true })).toBeVisible();
+  // Saved on Enter (no Save button, no toast): the indicator beside the field says so.
+  await page.getByLabel("Store name").press("Enter");
+  // Store name's indicator is the first on the page (the time zone's is the second).
+  await expect(page.locator("[data-panel-status]").first()).toHaveText("Saved");
 
   if (headerNamesStore) await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", "Riverside Flagship");
   await page.goto("/account");

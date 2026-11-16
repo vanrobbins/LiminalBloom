@@ -189,7 +189,8 @@ test.describe("editing", () => {
 			await centreOf(page, '[data-fixture-name="Rack 1"]'),
 			await centreOf(page, '[data-fixture-name="Table 1"]'),
 		);
-		await expect(page.getByText("Blocked by Table 1.", { exact: true })).toBeVisible();
+		// On the editor's save status (the phone and the wide bar each hold one; one is showing).
+		await expect(page.getByText("Blocked by Table 1.", { exact: true }).filter({ visible: true })).toBeVisible();
 		await expect(fixtureShape(page, "Rack 1")).toHaveAttribute("transform", before!);
 	});
 
@@ -336,7 +337,8 @@ test.describe("saving", () => {
 			// The editor reloads on its own, so the next page load is the proof.
 			const reloaded = page.waitForEvent("load", { timeout: 10_000 });
 			await page.keyboard.press("ArrowRight");
-			await expect(page.getByText("You switched stores in another tab.", { exact: true })).toBeVisible({
+			// On the editor's save status (no toast), with what it does next after it.
+			await expect(page.getByRole("status").filter({ hasText: "You switched stores in another tab." }).filter({ visible: true })).toBeVisible({
 				timeout: 10_000,
 			});
 			await reloaded;

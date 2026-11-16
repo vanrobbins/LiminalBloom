@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { CollapseItem } from "@/components/ui/collapse-item";
 import { Dialog } from "@/components/ui/dialog";
+import { useCollapseOut } from "@/components/ui/use-collapse-out";
 import { describeDefaults } from "@/lib/products/footprint";
 import type { CategoryRow } from "@/lib/products/queries";
-import { toast } from "@/lib/toast";
 
 import { CategoryForm } from "./category-form";
 import { DeleteCategoryDialog } from "./delete-category-dialog";
@@ -19,6 +20,7 @@ type Open = { kind: "add" } | { kind: "edit"; category: CategoryRow } | { kind: 
 export function CategoryList({ categories }: { categories: CategoryRow[] }) {
   const router = useRouter();
   const [open, setOpen] = useState<Open>(null);
+  const { isLeaving, collapse } = useCollapseOut();
   const close = () => setOpen(null);
   const done = () => {
     close();
@@ -33,7 +35,7 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
       ) : (
         <ul className="mt-6 flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
           {categories.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
+            <CollapseItem key={c.id} leaving={isLeaving(c.id)} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="font-medium text-ink wrap-break-word">{c.name}</span>
                 <span className="text-sm text-ink-muted">
@@ -46,7 +48,7 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
               <Button variant="quiet-danger" onClick={() => setOpen({ kind: "delete", category: c })} aria-label={`Delete ${c.name}`}>
                 Delete
               </Button>
-            </li>
+            </CollapseItem>
           ))}
         </ul>
       )}
@@ -60,8 +62,9 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
           open
           onOpenChange={(isOpen) => (isOpen ? null : close())}
           onDeleted={() => {
-            toast({ tone: "success", title: `Deleted ${open.category.name}` });
-            done();
+            // No toast: the row folds shut, then the list reloads without it (0.7.0.5 spec 3.1).
+            close();
+            collapse(open.category.id, () => router.refresh());
           }}
         />
       ) : null}

@@ -159,23 +159,55 @@ describe("AddRoleDialog", () => {
 });
 
 describe("the ⋯ menu", () => {
-  it("opens Rename from the menu and moves a custom role with the neighbour it saw, saying so, or why not", async () => {
+  const menuOf = () => within(screen.getByRole("region", { name: "Permissions by role" }));
+  async function chooseMoveUp(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(menuOf().getByRole("button", { name: "More for edu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move up" }));
+  }
+
+  it("opens Rename from the menu", async () => {
     const user = userEvent.setup();
-    const view = storeManagerView([customRole("edu", 550, ["view", "products.stock"])]);
-    render(<RolesScreen view={view} />);
-    const menu = within(screen.getByRole("region", { name: "Permissions by role" }));
-    await user.click(menu.getByRole("button", { name: "More for edu" }));
+    render(<RolesScreen view={storeManagerView([customRole("edu", 550, ["view", "products.stock"])])} />);
+    await user.click(menuOf().getByRole("button", { name: "More for edu" }));
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Rename", "Move up", "Delete"]);
-    actions.moveRoleAction.mockResolvedValueOnce({ status: "moved", name: "edu", past: "Sales Associate", direction: "up" });
-    await user.click(screen.getByRole("menuitem", { name: "Move up" }));
-    expect(actions.moveRoleAction).toHaveBeenCalledWith("edu", "up", "sales_associate");
-    await waitFor(() => expect(toastMock.toast).toHaveBeenCalledWith({ tone: "success", title: "Moved edu above Sales Associate" }));
-    actions.moveRoleAction.mockResolvedValueOnce({ status: "nesting", problem: { role: { id: "sales_associate", name: "Sales Associate" }, other: { id: "edu", name: "edu" }, switch: "products.stock", direction: "on" } });
-    await user.click(menu.getByRole("button", { name: "More for edu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Move up" }));
-    await waitFor(() => expect(toastMock.toast).toHaveBeenCalledWith({ tone: "error", title: "Can't move edu there", description: "edu can't mark products sold out, so Sales Associate can't either." }));
-    await user.click(menu.getByRole("button", { name: "More for edu" }));
     await user.click(screen.getByRole("menuitem", { name: "Rename" }));
     expect(screen.getByRole("dialog", { name: "Rename edu" })).toBeInTheDocument();
+  });
+
+  it("moves a custom role with the neighbour it saw: no toast, the row just moves, a screen reader is told", async () => {
+    const user = userEvent.setup();
+    render(<RolesScreen view={storeManagerView([customRole("edu", 550, ["view", "products.stock"])])} />);
+    actions.moveRoleAction.mockResolvedValueOnce({ status: "moved", name: "edu", past: "Sales Associate", direction: "up" });
+    await chooseMoveUp(user);
+    expect(actions.moveRoleAction).toHaveBeenCalledWith("edu", "up", "sales_associate");
+    await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
+    expect(screen.getAllByRole("status").map((s) => s.textContent)).toContain("Moved edu above Sales Associate");
+    expect(toastMock.toast).not.toHaveBeenCalled();
+  });
+
+  it("says why a move can't happen under that role's row, not in a toast, and the next move clears it", async () => {
+    const user = userEvent.setup();
+    render(<RolesScreen view={storeManagerView([customRole("edu", 550, ["view", "products.stock"])])} />);
+    actions.moveRoleAction.mockResolvedValueOnce({ status: "nesting", problem: { role: { id: "sales_associate", name: "Sales Associate" }, other: { id: "edu", name: "edu" }, switch: "products.stock", direction: "on" } });
+    await chooseMoveUp(user);
+    const line = await menuOf().findByText("Can't move edu there. edu can't mark products sold out, so Sales Associate can't either.");
+    expect(line.closest("tr")?.previousElementSibling).toHaveTextContent("edu");
+    expect(toastMock.toast).not.toHaveBeenCalled();
+    // The next move starts: the old refusal goes at once, before its answer is back.
+    actions.moveRoleAction.mockReturnValueOnce(new Promise(() => {}));
+    await chooseMoveUp(user);
+    expect(menuOf().queryByText(/Can't move edu there/)).toBeNull();
+  });
+
+  it("says a refusal under the row, and keeps a lost connection a toast", async () => {
+    const user = userEvent.setup();
+    render(<RolesScreen view={storeManagerView([customRole("edu", 550, ["view", "products.stock"])])} />);
+    actions.moveRoleAction.mockResolvedValueOnce({ status: "forbidden" });
+    await chooseMoveUp(user);
+    expect(await menuOf().findByText("Your role can't do this anymore.")).toBeInTheDocument();
+    expect(toastMock.toast).not.toHaveBeenCalled();
+    actions.moveRoleAction.mockRejectedValueOnce(new Error("offline"));
+    await chooseMoveUp(user);
+    await waitFor(() => expect(toastMock.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error" })));
   });
 });

@@ -24,7 +24,8 @@ test("signing out ends the session and lands on sign-in", async ({ page }) => {
     .click();
 
   await page.waitForURL("**/sign-in");
-  await expect(page.getByText("Signed out.").first()).toBeVisible();
+  // No "Signed out." toast: the sign-in page is the confirmation.
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 
   // Back must not redraw the signed-in page from the client cache: store
   // devices are shared, and the next person would see this one's data.

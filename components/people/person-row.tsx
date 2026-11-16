@@ -2,6 +2,7 @@
 // rule allows them (`canAct`); every other row is read-only.
 
 import { Button } from "@/components/ui/button";
+import { CollapseItem } from "@/components/ui/collapse-item";
 import type { PersonRow } from "@/lib/access/people-view";
 
 type PersonRowProps = {
@@ -9,11 +10,13 @@ type PersonRowProps = {
   /** The button is passed so focus can return to it when the dialog closes. */
   onChangeRole: (person: PersonRow, opener: HTMLElement) => void;
   onRemove: (person: PersonRow, opener: HTMLElement) => void;
+  /** Removed: the row folds shut before the list reloads without it. */
+  leaving?: boolean;
 };
 
-export function PersonListItem({ person, onChangeRole, onRemove }: PersonRowProps) {
+export function PersonListItem({ person, onChangeRole, onRemove, leaving = false }: PersonRowProps) {
   return (
-    <li className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
+    <CollapseItem leaving={leaving} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="font-medium text-ink wrap-break-word">
           {person.name}
@@ -31,6 +34,6 @@ export function PersonListItem({ person, onChangeRole, onRemove }: PersonRowProp
           </Button>
         </>
       ) : null}
-    </li>
+    </CollapseItem>
   );
 }

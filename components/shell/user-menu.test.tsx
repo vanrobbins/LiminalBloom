@@ -81,7 +81,7 @@ describe("UserMenu", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("signing out goes to the sign-in page and says so", async () => {
+  it("signing out goes to the sign-in page, with no toast: the sign-in page is the feedback", async () => {
     const user = userEvent.setup();
     render(<UserMenu user={USER} variant="sidebar" />);
 
@@ -93,7 +93,7 @@ describe("UserMenu", () => {
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/sign-in"));
     expect(mocks.refresh).toHaveBeenCalled();
     expect(mocks.push).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({ tone: "success", title: "Signed out." });
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it("a refused sign-out says what to do and stays put", async () => {

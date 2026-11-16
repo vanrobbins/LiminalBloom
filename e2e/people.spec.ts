@@ -86,7 +86,8 @@ test("changes a role: only lower roles are offered, the person moves group, the 
   await expect(dialog.getByRole("button", { name: "Save role" })).toBeDisabled();
   await select.selectOption({ label: "Visual Merchandising Worker" });
   await dialog.getByRole("button", { name: "Save role" }).click();
-  await expect(page.getByText("Changed Zoe Sales to Visual Merchandising Worker").first()).toBeVisible();
+  // No toast: the row moves to its new group, and a screen reader hears the change.
+  await expect(page.getByRole("status").filter({ hasText: "Changed Zoe Sales to Visual Merchandising Worker" })).toBeAttached();
   await expect(page.getByRole("heading", { name: "Visual Merchandising Worker · 2" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sales Associate · 1" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Change role for Zoe Sales" })).toBeFocused();
@@ -107,13 +108,13 @@ test("says a role changed meanwhile, turns Save off, and shows the new list on c
   expect(await loggedEvents()).toEqual([]);
 });
 
-test("removes someone: confirm words, toast, the row is gone, focus moves to the title, the removal is logged", async ({ page }) => {
+test("removes someone: confirm words, the row folds away, focus moves to the title, the removal is logged", async ({ page }) => {
   await openPeople(page);
   await page.getByRole("button", { name: "Remove Zoe Sales" }).click();
   const dialog = page.getByRole("dialog", { name: "Remove Zoe Sales?" });
   await expect(dialog).toContainText("They lose access to Pioneer Place at once. To bring them back, send a new invitation.");
   await dialog.getByRole("button", { name: "Remove from store" }).click();
-  await expect(page.getByText("Removed Zoe Sales").first()).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Removed Zoe Sales" })).toBeAttached();
   await expect(page.getByText("Zoe Sales", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeFocused();
   expect((await loggedEvents())[0]).toBe("member_removed");
@@ -155,12 +156,12 @@ test("lists waiting invitations: copy the link, cancel one, no buttons where the
   await expect(row("boss@example.test").getByRole("button")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Copy link for jane@example.test" }).click();
-  await expect(page.getByText("Link copied").first()).toBeVisible();
+  // The icon swaps to a check for a moment (no toast), and the link is on the clipboard.
+  await expect(page.getByRole("button", { name: "Copy link for jane@example.test" }).locator("[data-copied]")).toHaveClass(/opacity-100/);
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${new URL(page.url()).origin}/invite/${jane}`);
 
   await page.getByRole("button", { name: "Cancel invitation for jane@example.test" }).click();
-  await expect(page.getByText("Cancelled the invitation for jane@example.test").first()).toBeVisible();
-  // The toast also names the address, so look for her row by its buttons.
+  // The row folds shut, then the list reloads without it.
   await expect(page.getByRole("button", { name: "Cancel invitation for jane@example.test" })).toHaveCount(0);
   expect((await loggedEvents())[0]).toBe("invitation_cancelled");
 });

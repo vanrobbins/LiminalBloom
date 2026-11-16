@@ -34,12 +34,12 @@ test("finds a product through a typo and shows exactly where it goes", async ({ 
   await expect(page).toHaveURL(/\?q=e2e\+hi\+rise\+pnt/);
 });
 
-test("changes status at once, and Undo puts it back", async ({ page }) => {
+test("changes status at once, and choosing the old status again puts it back", async ({ page }) => {
   await openPant(page);
   await page.getByRole("radio", { name: "Sold out" }).click();
-  await expect(page.getByText("E2E High-Rise Pant: Sold out", { exact: true })).toBeVisible();
   await expect(page.getByRole("radio", { name: "Sold out" })).toHaveAttribute("aria-checked", "true");
-  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("radio", { name: "Sold out" }).locator("[data-check]")).toHaveClass(/opacity-100/);
+  await page.getByRole("radio", { name: "In stock" }).click();
   await expect(page.getByRole("radio", { name: "In stock" })).toHaveAttribute("aria-checked", "true");
 });
 
@@ -59,10 +59,10 @@ test("a status change from a stale screen is refused and shows the current statu
     await openFromUrl(otherPage);
 
     await page.getByRole("radio", { name: "Sold out" }).click();
-    await expect(page.getByText("E2E High-Rise Pant: Sold out", { exact: true })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Sold out" })).toHaveAttribute("aria-checked", "true");
 
     await otherPage.getByRole("radio", { name: "On sale" }).click();
-    await expect(otherPage.getByText("Changed on another device", { exact: true })).toBeVisible();
+    await expect(otherPage.getByRole("status").filter({ hasText: "Changed on another device. The current status is shown." })).toBeVisible();
     await expect(otherPage.getByRole("radio", { name: "Sold out" })).toHaveAttribute("aria-checked", "true");
   } finally {
     await other.close();
@@ -150,7 +150,6 @@ test("on desktop a card's ⋯ menu deletes the product and the list drops it", a
   await page.getByRole("button", { name: "More for E2E Card 1" }).click();
   await page.getByRole("menuitem", { name: "Delete" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete product" }).click();
-  await expect(page.getByText("Deleted E2E Card 1", { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/\/products\?q=E2E-CARD-1$/);
   await expect(results(page).locator("[data-result-id]").filter({ hasText: "E2E Card 1" })).toHaveCount(0);
 });

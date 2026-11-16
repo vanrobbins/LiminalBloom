@@ -63,7 +63,7 @@ describe("PeopleScreen, for someone who manages people", () => {
     expect(screen.getByRole("button", { name: "What's store manager?" })).toBeInTheDocument();
   });
 
-  it("changes a role: lists only the assignable roles, saves only a different one, toasts, refreshes and refocuses the row's button", async () => {
+  it("changes a role: lists only the assignable roles, saves only a different one, says so without a toast, refreshes and refocuses the row's button", async () => {
     const user = userEvent.setup();
     actions.changeRoleAction.mockResolvedValue({ status: "changed", name: "Zoe Sales", roleName: "Visual Merchandising Worker" });
     const { rerender } = renderScreen(managing());
@@ -75,7 +75,8 @@ describe("PeopleScreen, for someone who manages people", () => {
     await user.selectOptions(select, "r-vmw");
     await user.click(within(dialog).getByRole("button", { name: "Save role" }));
     expect(actions.changeRoleAction).toHaveBeenCalledWith("m-ZoeSales", "r-sa", "r-vmw");
-    expect(toastMock.toast).toHaveBeenCalledWith({ tone: "success", title: "Changed Zoe Sales to Visual Merchandising Worker" });
+    expect(toastMock.toast).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Changed Zoe Sales to Visual Merchandising Worker");
     expect(routerMock.refresh).toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).toBeNull();
     // The reloaded list has Zoe in another group: her Change role button gets focus.
@@ -88,7 +89,7 @@ describe("PeopleScreen, for someone who manages people", () => {
     expect(screen.getByRole("button", { name: "Change role for Zoe Sales" })).toHaveFocus();
   });
 
-  it("removes: confirm copy, toast, refresh, focus on the page title", async () => {
+  it("removes: confirm copy, no toast, the row folds shut and then the list refreshes, focus on the page title", async () => {
     const user = userEvent.setup();
     actions.removePersonAction.mockResolvedValue({ status: "removed", name: "Zoe Sales" });
     renderScreen(managing());
@@ -97,8 +98,15 @@ describe("PeopleScreen, for someone who manages people", () => {
     expect(within(dialog).getByText("They lose access to Spring Street at once. To bring them back, send a new invitation.")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Remove from store" }));
     expect(actions.removePersonAction).toHaveBeenCalledWith("m-ZoeSales", "r-sa");
-    expect(toastMock.toast).toHaveBeenCalledWith({ tone: "success", title: "Removed Zoe Sales" });
-    expect(routerMock.refresh).toHaveBeenCalled();
+    expect(toastMock.toast).not.toHaveBeenCalled();
+    // Folding, not gone: the refresh that drops the row waits for the fold.
+    const row = screen.getByText("Zoe Sales").closest("li")!;
+    expect(row).toHaveClass("grid-rows-[0fr]");
+    expect(row).toHaveAttribute("inert");
+    expect(screen.getByText("Ann Assistant").closest("li")).toHaveClass("grid-rows-[1fr]");
+    expect(routerMock.refresh).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Removed Zoe Sales");
+    await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveFocus());
   });
 

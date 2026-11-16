@@ -35,7 +35,7 @@ export function StoreSwitcher({
   switchingTo?: string | null;
   switchTo?: (storeId: string) => Promise<boolean>;
 }) {
-  const own = useSwitchStore(stores, activeStoreId);
+  const own = useSwitchStore(activeStoreId);
   const switchingTo = parentSwitchingTo === undefined ? own.switchingTo : parentSwitchingTo;
   const switchTo = parentSwitchTo ?? own.switchTo;
 

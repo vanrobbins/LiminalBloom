@@ -134,13 +134,18 @@ test("an invalid drop snaps back and says why", async ({ page }, info) => {
   await startDraft(page);
   await addTee(page);
   const unit = await halfFoot(page);
-  const before = await tile(page, "E2E Pocket Tee").boundingBox();
+  // Measured from the grid, which the refusal's status line (it takes a line when it appears) moves down.
+  const spot = async () => {
+    const [box, grid] = await Promise.all([tile(page, "E2E Pocket Tee").boundingBox(), page.locator("[data-planogram-grid]").boundingBox()]);
+    return box && grid ? { x: box.x - grid.x, y: box.y - grid.y } : null;
+  };
+  const before = await spot();
   await dragBy(page, tile(page, "E2E Pocket Tee"), -unit * 2, 0, info);
   await expect(page.getByText("Blocked by E2E High-Rise Pant").filter({ visible: true }).first()).toBeVisible();
   await expect(card(page, "E2E Pocket Tee")).toContainText("Center · Middle");
   // The tile itself is back where it started, not left mid-drag.
   await expect(async () => {
-    const after = await tile(page, "E2E Pocket Tee").boundingBox();
+    const after = await spot();
     expect(after && before && Math.abs(after.x - before.x) < 2 && Math.abs(after.y - before.y) < 2).toBe(true);
   }).toPass();
 });

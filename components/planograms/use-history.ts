@@ -12,7 +12,6 @@ import { useRef, useState, type RefObject } from "react";
 
 import { advance, holds, prune, rename, sitsAt, undo as undoStep, redo as redoStep, EMPTY_HISTORY, forget, record, type Direction, type History, type Step, type Travel } from "@/lib/planograms/builder/undo";
 import type { DraftState, PlacementFields } from "@/lib/planograms/types";
-import { toast } from "@/lib/toast";
 
 import type { Pending, SaveResult } from "./use-planogram-draft";
 
@@ -25,10 +24,12 @@ type Options = {
   /** True while a drag is held: Undo is ignored (store-map rule, DECISIONS 10-01). */
   dragging: RefObject<boolean>;
   say: (text: string) => void;
+  /** Says why on the draft's status line (a refusal the server never saw; the server's own are already there). */
+  refuse: (message: string) => void;
   describe: (fields: PlacementFields) => string;
 };
 
-export function useHistory({ save, latest, dragging, say, describe }: Options) {
+export function useHistory({ save, latest, dragging, say, refuse, describe }: Options) {
   const [history, setHistoryState] = useState<History>(EMPTY_HISTORY);
   // Read by a queued Undo on its turn, before React has rendered the step a save just recorded.
   const ref = useRef(history);
@@ -68,7 +69,7 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
     if (!pruned || clearedAt !== cleared.current) return;
     if (moved) {
       setHistory(forget(pruned, moved));
-      toast({ tone: "error", title: CONFLICT });
+      refuse(CONFLICT);
       return;
     }
     if (!step) return setHistory(pruned);
@@ -81,9 +82,8 @@ export function useHistory({ save, latest, dragging, say, describe }: Options) {
       // The corner bar's Undo and Redo icons are the way back (no toast); the live region says what happened.
       return say(`${done}: ${describe(step.fields)}${faceName ? `, on ${faceName}` : ""}`);
     }
-    // A refused restore is dropped, and the draft's status line says why.
+    // A refused restore is dropped; the draft's status line already says why (the save set it).
     setHistory((h) => (result.message ? forget(h, step.step.id) : h));
-    if (result.message) toast({ tone: "error", title: result.message });
   }
 
   return {

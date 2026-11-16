@@ -11,18 +11,21 @@ import { summaryLines } from "@/lib/access/switches";
 
 import { PermissionRow } from "./permission-row";
 import { cellNote, switchesOf, type Staged } from "./staged";
+import type { MoveSaid } from "./use-move-role";
 
 type RoleFoldProps = {
   view: RolesView;
   row: RoleRow;
   staged: Staged;
+  /** Why the last move was refused, shown under that role's title. */
+  refusal: MoveSaid;
   open: boolean;
   onOpen: () => void;
   onToggle: (row: RoleRow, permission: (typeof EDITABLE_SWITCHES)[number]) => void;
   onAction: (row: RoleRow, action: RoleAction, opener: HTMLElement) => void;
 };
 
-export function RoleFold({ view, row, staged, open, onOpen, onToggle, onAction }: RoleFoldProps) {
+export function RoleFold({ view, row, staged, refusal, open, onOpen, onToggle, onAction }: RoleFoldProps) {
   const mine = switchesOf(row, staged);
   const anyStaged = Object.keys(staged).length > 0;
   const summary = row.relation === "you" ? "Your role" : row.relation === "above" ? "Above you" : permissionCount(mine);
@@ -65,6 +68,11 @@ export function RoleFold({ view, row, staged, open, onOpen, onToggle, onAction }
           </div>
         ) : null}
       </Fold>
+      {refusal?.id === row.id ? (
+        <p aria-hidden="true" className="px-2 pb-2 text-sm text-danger">
+          {refusal.text}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -33,16 +33,18 @@ function setup(draft: DraftState | null, save = vi.fn().mockResolvedValue({ save
   const adopt = vi.fn();
   const onStarted = vi.fn();
   const onStale = vi.fn();
+  // The draft's own status line, which a refusal that never reached the server is told on.
+  const refuse = vi.fn();
   let shown = draft;
   const send = queued(save, () => shown);
   const hook = renderHook(
     ({ d, on }: { d: DraftState | null; on?: boolean }) => {
       shown = d;
-      return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt, onStarted, onStale, describe: () => "here", enabled: on });
+      return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt, onStarted, onStale, refuse, describe: () => "here", enabled: on });
     },
     { initialProps: { d: draft } as { d: DraftState | null; on?: boolean } },
   );
-  return { ...hook, save, adopt, onStarted, onStale };
+  return { ...hook, save, adopt, onStarted, onStale, refuse };
 }
 
 describe("useBuilder", () => {
@@ -132,7 +134,7 @@ describe("useBuilder", () => {
     const { result, rerender } = renderHook(
       ({ d }: { d: DraftState }) => {
         shown = d;
-        return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal });
+        return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt: vi.fn(), refuse: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal });
       },
       { initialProps: { d: state(pant) } },
     );
@@ -146,11 +148,13 @@ describe("useBuilder", () => {
   it("drops a placement's undo steps when another device changed it (Review Focus 2)", async () => {
     const pant = view("a", 0);
     const save = vi.fn().mockResolvedValueOnce({ saved: true, draft: state() }).mockResolvedValueOnce({ saved: false, message: "Changed on another device" });
-    const { result } = setup(state(pant), save);
+    const { result, refuse } = setup(state(pant), save);
     await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
     const refused = await act(() => result.current.commit(pant, fields(pant, 6), "Moved"));
     expect(refused).toEqual({ ok: false, message: "Changed on another device" });
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
+    // The draft's save already set its status line; the builder neither toasts nor says it twice.
+    expect(toasts.toast).not.toHaveBeenCalled();
+    expect(refuse).not.toHaveBeenCalled();
     await act(() => result.current.undo());
     expect(save).toHaveBeenCalledTimes(2);
   });
@@ -182,10 +186,11 @@ describe("useBuilder", () => {
     const published = { ...view("v-0", 0), id: "v-0" };
     const theirs = state(view("x", 6));
     actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: theirs });
-    const { result, rerender, save, adopt } = setup(null);
+    const { result, rerender, save, adopt, refuse } = setup(null);
     await act(() => result.current.commit(published, fields(published, 4), "Moved"));
     expect(adopt).toHaveBeenCalledWith(theirs);
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
+    expect(refuse).toHaveBeenLastCalledWith("Changed on another device");
+    expect(toasts.toast).not.toHaveBeenCalled();
     rerender({ d: theirs });
     const again = await act(() => result.current.commit(published, fields(published, 4), "Moved"));
     expect(again).toEqual({ ok: false, message: "Changed on another device" });
@@ -201,7 +206,8 @@ describe("useBuilder", () => {
     rerender({ d: state({ ...pant, col: 4, version: 2 }) });
     await act(() => result.current.undo());
     expect(save).toHaveBeenCalledTimes(2);
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
+    // The draft's status line says why (it set it when the save was refused): no toast.
+    expect(toasts.toast).not.toHaveBeenCalled();
     await act(() => result.current.undo());
     await act(() => result.current.redo());
     expect(save).toHaveBeenCalledTimes(2);
@@ -210,13 +216,14 @@ describe("useBuilder", () => {
   it("won't undo over a placement another device moved since, even at its fresh version (Review Focus 2)", async () => {
     const pant = view("a", 0);
     const tee = { ...view("b", 10), productId: "tee" };
-    const { result, rerender, save } = setup(state(pant, tee));
+    const { result, rerender, save, refuse } = setup(state(pant, tee));
     await act(() => result.current.commit(tee, fields(tee, 12), "Moved"));
     await act(() => result.current.commit(pant, fields(pant, 4), "Moved"));
     rerender({ d: state({ ...pant, col: 8, version: 3 }, { ...tee, col: 12, version: 2 }) });
     await act(() => result.current.undo());
     expect(save).toHaveBeenCalledTimes(2);
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
+    expect(refuse).toHaveBeenLastCalledWith("Changed on another device");
+    expect(toasts.toast).not.toHaveBeenCalled();
     await act(() => result.current.undo());
     expect(save).toHaveBeenCalledTimes(3);
     expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "b", version: 2, fields: { ...fields(tee, 10), depth: 0 } });
@@ -345,10 +352,11 @@ describe("useBuilder", () => {
   it("resyncs when the first change is refused with no draft to work in", async () => {
     const published = { ...view("v-0", 0), id: "v-0" };
     actions.beginDraftAction.mockResolvedValue({ status: "refused", message: "Changed on another device", draft: null });
-    const { result, save, onStale } = setup(null);
+    const { result, save, onStale, refuse } = setup(null);
     const outcome = await act(() => result.current.commit(published, fields(published, 4), "Moved"));
     expect(outcome).toEqual({ ok: false, message: "Changed on another device" });
-    expect(toasts.toast).toHaveBeenLastCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
+    expect(refuse).toHaveBeenLastCalledWith("Changed on another device");
+    expect(toasts.toast).not.toHaveBeenCalled();
     expect(onStale).toHaveBeenCalledTimes(1);
     expect(save).not.toHaveBeenCalled();
   });
@@ -411,7 +419,7 @@ describe("useBuilder", () => {
     // The real draft queue under the builder: the order the two hooks hand off in is what's tested.
     const { result } = renderHook(() => {
       const draft = usePlanogramDraft("fx", state(pant), vi.fn());
-      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
+      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, refuse: draft.refuse, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
       return builder;
     });
 

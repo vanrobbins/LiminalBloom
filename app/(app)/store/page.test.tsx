@@ -18,7 +18,9 @@ describe("StorePage store name", () => {
     mocks.switches = ["view", "store.settings"];
     render(await StorePage());
     expect(screen.getByLabelText("Store name")).toHaveValue("Pioneer Place");
-    expect(screen.getByRole("button", { name: "Save store name" })).toBeInTheDocument();
+    // Both fields save as they are changed: no Save buttons on the page.
+    expect(screen.queryByRole("button", { name: /^Save/ })).toBeNull();
+    expect(screen.getByLabelText("Time zone", { selector: "select" })).toBeInTheDocument();
   });
 
   it("is read-only text with the reason for everyone else", async () => {

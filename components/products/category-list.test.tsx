@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -137,25 +137,22 @@ describe("CategoryList", () => {
       expect(within(dialog).getByRole("button", { name: /Delete category and 3 products/ })).toBeInTheDocument();
     });
 
-    it("calls router.refresh() after successful delete and shows success toast", async () => {
+    it("a deleted category's row folds shut with no toast, then the list reloads and the dialog is closed", async () => {
       const user = userEvent.setup();
       actions.removeCategory.mockResolvedValueOnce({ status: "deleted" });
-      render(<CategoryList categories={[mockCategory({ id: "cat-1", name: "Scarves", productCount: 3 })]} />);
+      render(<CategoryList categories={[mockCategory({ id: "cat-1", name: "Scarves", productCount: 3 }), mockCategory({ id: "cat-2", name: "Hats" })]} />);
 
       await user.click(screen.getByLabelText("Delete Scarves"));
       const dialog = screen.getByRole("dialog", { name: /Delete Scarves/ });
       await user.click(within(dialog).getByRole("button", { name: /Delete category and 3 products/ }));
 
-      // Verify success toast was shown
-      expect(toastMock.toast).toHaveBeenCalledWith({
-        tone: "success",
-        title: "Deleted Scarves",
-      });
-
-      // Verify router.refresh() was called to update the list
-      expect(routerMock.refresh).toHaveBeenCalled();
-
-      // Verify dialog closed
+      expect(toastMock.toast).not.toHaveBeenCalled();
+      const row = screen.getByText("Scarves").closest("li")!;
+      expect(row).toHaveClass("grid-rows-[0fr]");
+      expect(row).toHaveAttribute("inert");
+      expect(screen.getByText("Hats").closest("li")).toHaveClass("grid-rows-[1fr]");
+      expect(routerMock.refresh).not.toHaveBeenCalled();
+      await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
       expect(screen.queryByRole("dialog", { name: /Delete Scarves/ })).not.toBeInTheDocument();
     });
   });

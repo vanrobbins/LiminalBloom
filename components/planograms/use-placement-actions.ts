@@ -13,7 +13,6 @@ import { checkPlacement } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope } from "@/lib/planograms/types";
 import { shortSpot } from "@/lib/products/location-words";
-import { toast } from "@/lib/toast";
 
 import type { Cell } from "./grid-builder";
 import type { GridItem } from "./grid-items";
@@ -99,7 +98,7 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
         canMove: true,
         check,
         onCommit: (item, fields, verb, onFound) => change(item, fields, verb, onFound),
-        onRefused: (message) => toast({ tone: "error", title: message }),
+        onRefused: builder.refuse,
         // The grid holds the nudge where it lands, so a press while it saves starts from there (DECISIONS 11-09).
         onKey: (item, key, shift) => {
           const next = keyTarget(layout, item, key, shift);

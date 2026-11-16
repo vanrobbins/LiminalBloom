@@ -20,9 +20,10 @@ async function setZone(page: import("@playwright/test").Page, search: string, zo
   await page.goto("/store");
   await hydrated(page);
   await page.getByLabel("Find a time zone").fill(search);
+  // Saved as soon as it is chosen: the indicator beside the field says so (no Save button, no toast).
   await page.locator("select[name=timezone]").selectOption(zone);
-  await page.getByRole("button", { name: "Save time zone" }).click();
-  await expect(page.getByText("Time zone saved", { exact: true })).toBeVisible();
+  // The time zone's indicator is the second on the page (the store name's is the first).
+  await expect(page.locator("[data-panel-status]").nth(1)).toHaveText("Saved");
 }
 
 test("the store's time zone decides when a due date is overdue", async ({ page }) => {
@@ -35,7 +36,6 @@ test("the store's time zone decides when a due date is overdue", async ({ page }
   await page.getByRole("button", { name: "Start planogram" }).click();
   await page.getByRole("button", { name: "Set due date" }).click();
   await page.locator("input[type=date]").fill(due);
-  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("button", { name: `Due ${shortDay(due)}` })).toBeVisible();
 
   await setZone(page, "kiritimati", "Pacific/Kiritimati");

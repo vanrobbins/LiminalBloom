@@ -28,7 +28,8 @@ describe("SignInForm", () => {
     await submit();
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
     expect(mocks.refresh).toHaveBeenCalled();
-    expect(sessionStorage.getItem("liminal:signed-in")).toBe("1");
+    // No "Opened <store>" notice any more, so no flag is left for it.
+    expect(sessionStorage.getItem("liminal:signed-in")).toBeNull();
     expect(screen.getByRole("button", { name: /Signing in…/ })).toBeDisabled();
   });
 

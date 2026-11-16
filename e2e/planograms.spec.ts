@@ -218,14 +218,13 @@ test("discarding a draft goes through the ⋯ menu and a confirmation; Escape on
   await expect(page.getByText("No planogram yet")).toBeVisible();
 });
 
-test("the due date is set from its chip, and saved only by Save", async ({ page }) => {
+test("the due date is set from its chip, and saved as soon as a date is picked", async ({ page }) => {
   await openTable(page);
   // Nothing to be due until a draft exists (UX audit U19).
   await expect(page.getByRole("button", { name: "Set due date" })).toHaveCount(0);
   await startDraft(page);
   await page.getByRole("button", { name: "Set due date" }).click();
   await page.getByLabel("Due date", { exact: true }).fill("2099-10-14");
-  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("button", { name: "Due Oct 14" })).toBeVisible();
 });
 

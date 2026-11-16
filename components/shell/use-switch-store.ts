@@ -10,7 +10,7 @@ import { toast } from "@/lib/toast";
 
 export type Store = { id: string; name: string };
 
-export function useSwitchStore(stores: Store[], activeStoreId: string) {
+export function useSwitchStore(activeStoreId: string) {
   const router = useRouter();
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
   const [seenActiveStoreId, setSeenActiveStoreId] = useState(activeStoreId);
@@ -58,8 +58,7 @@ export function useSwitchStore(stores: Store[], activeStoreId: string) {
       return false;
     }
 
-    const name = stores.find((store) => store.id === storeId)?.name;
-    toast({ tone: "success", title: `Now working in ${name}.` });
+    // No success toast: the header's store name is the feedback (0.7.0.5 spec 3.1).
     router.refresh();
     return true;
   }

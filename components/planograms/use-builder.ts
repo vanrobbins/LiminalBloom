@@ -30,6 +30,8 @@ type Options = {
   expectedVersion: number | null;
   save: (pending: Pending) => Promise<SaveResult>;
   adopt: (draft: DraftState) => void;
+  /** Says why on the draft's status line a refusal the server never saw (the draft hook's `refuse`). */
+  refuse: (message: string) => void;
   /** The draft hook's `onLeaveRef`: set to clear the history when the draft goes. */
   onLeaveRef?: RefObject<() => void>;
   /** The draft hook's `onTakeRef`: set to map the history's depths through each draft taken in. */
@@ -44,7 +46,7 @@ type Options = {
   reveal?: (fields: PlacementFields) => string | null;
 };
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
   // One start at a time: a second change before it's back waits for the same reply.
@@ -98,7 +100,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
   // The same words twice must still change the live region, or a screen reader stays silent.
   const say = (text: string) => setAnnouncement((current) => (current === text ? `${text}\u200B` : text));
 
-  const history = useHistory({ save, latest, dragging, say, describe });
+  const history = useHistory({ save, latest, dragging, say, refuse, describe });
   useEffect(() => {
     if (onLeaveRef) onLeaveRef.current = history.clear;
     if (onTakeRef) onTakeRef.current = history.take;
@@ -109,10 +111,6 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     // A move or a resize leaves the depth to the server (kept, or the back when it joins others);
     // a reorder asks for its place.
     const fields = fieldsOf(next, isReorder(verb));
-    // A typed edit shows its refusal in its own form; the others say it in a toast.
-    const tell = (message: string) => {
-      if (verb !== "Changed") toast({ tone: "error", title: message });
-    };
     let found: Awaited<ReturnType<typeof placementFor>>;
     try {
       found = await placementFor(item);
@@ -121,17 +119,16 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
       return { ok: false, message: null };
     }
     if (!("placement" in found)) {
-      if (found.message) tell(found.message);
+      // A typed edit shows its refusal in its own form; the others on the status line.
+      if (found.message && verb !== "Changed") refuse(found.message);
       return { ok: false, message: found.message };
     }
     const target = found.placement;
     onFound?.(target.id);
     const result = await save({ kind: "update", id: target.id, version: target.version, fields });
     if (!result.saved) {
-      if (result.message) {
-        history.forget(target.id);
-        tell(result.message);
-      }
+      // The status line already says why: the save that was refused set it.
+      if (result.message) history.forget(target.id);
       return { ok: false, message: result.message, gone: result.gone };
     }
     // What the server kept, which isn't what was sent when folded product hangs on a rail;
@@ -189,6 +186,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     canRedo: history.canRedo,
     clearHistory: history.clear,
     say,
+    refuse,
     announcement,
     setDragging: (isDragging: boolean) => {
       dragging.current = isDragging;

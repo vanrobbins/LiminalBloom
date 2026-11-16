@@ -6,6 +6,7 @@ import {
   expect,
   hydrated,
   sizeOf,
+  storeChoice,
   storeTrigger,
   switchStore,
   test,
@@ -46,7 +47,8 @@ test("switches stores from the shell, there and back", async ({ page }) => {
   await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", HOME_STORE);
 
   await switchStore(page, SECOND_STORE);
-  await expect(page.getByText(`Now working in ${SECOND_STORE}.`).first()).toBeVisible();
+  // No toast: the header's store name is the confirmation (switchStore waited for it).
+  await expect(page.getByText(`Now working in ${SECOND_STORE}.`)).toHaveCount(0);
   // The second store is empty: the page says so rather than showing a bare list.
   await expect(page.getByText(/No products yet/)).toBeVisible();
 
@@ -81,20 +83,25 @@ test("the bottom tabs never cover the last product", async ({ page }, testInfo) 
   expect(row.y + row.height).toBeLessThanOrEqual(tabs.y);
 });
 
-test("a store-switch toast sits above the bottom tabs", async ({ page }, testInfo) => {
-  test.skip(sizeOf(testInfo) !== "phone", "Only phones have bottom tabs.");
-  await page.goto("/products");
+test.describe("toast position", () => {
+  // The refused request is logged by the browser, on purpose.
+  test.use({ allowedConsoleError: /Failed to load resource|Failed to fetch/ });
 
-  await switchStore(page, SECOND_STORE);
-  const toast = page.getByText(`Now working in ${SECOND_STORE}.`).first();
-  await expect(toast).toBeVisible();
+  test("a toast sits above the bottom tabs (a store switch that can't reach the server)", async ({ page }, testInfo) => {
+    test.skip(sizeOf(testInfo) !== "phone", "Only phones have bottom tabs.");
+    await page.goto("/products");
+    await hydrated(page);
+    await page.route("**/set-active", (route) => route.abort());
 
-  const toastBox = (await toast.boundingBox())!;
-  const tabs = (await page.locator('nav[data-nav="tabs"]').boundingBox())!;
-  expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(tabs.y);
+    await storeTrigger(page).click();
+    await storeChoice(page, SECOND_STORE).click();
+    const toast = page.getByText("Couldn't switch stores.").first();
+    await expect(toast).toBeVisible();
 
-  // Leave the account as it started, for the next project.
-  await switchStore(page, HOME_STORE);
+    const toastBox = (await toast.boundingBox())!;
+    const tabs = (await page.locator('nav[data-nav="tabs"]').boundingBox())!;
+    expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(tabs.y);
+  });
 });
 
 test("create-store offers a way back to members", async ({ page }) => {

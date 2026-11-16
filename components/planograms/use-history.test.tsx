@@ -35,7 +35,7 @@ function flight(draft: DraftState = held) {
 function setUp(save: ReturnType<typeof flight>["save"]) {
   const latest = { current: { enabled: true } };
   const dragging = { current: false };
-  const hook = renderHook(() => useHistory({ save, latest, dragging, say: vi.fn(), describe: () => "" }));
+  const hook = renderHook(() => useHistory({ save, latest, dragging, say: vi.fn(), refuse: vi.fn(), describe: () => "" }));
   act(() => hook.result.current.record({ kind: "update", id: "a", before: at(2), after: at(4) }));
   return hook;
 }

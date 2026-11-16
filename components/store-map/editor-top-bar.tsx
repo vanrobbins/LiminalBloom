@@ -13,6 +13,8 @@ type EditorTopBarProps = {
   title: string;
   inZone: boolean;
   status: Status;
+  /** Why the last change was refused, in the status's place. */
+  refusal: string | null;
   leaving: boolean;
   canUndo: boolean;
   canRedo: boolean;
@@ -24,7 +26,7 @@ type EditorTopBarProps = {
   add: React.ReactNode;
 };
 
-export function EditorTopBar({ title, inZone, status, leaving, canUndo, canRedo, onDone, onLeaveZone, onUndo, onRedo, add }: EditorTopBarProps) {
+export function EditorTopBar({ title, inZone, status, refusal, leaving, canUndo, canRedo, onDone, onLeaveZone, onUndo, onRedo, add }: EditorTopBarProps) {
   return (
     <header className="flex items-center gap-2 border-b border-line-subtle bg-raised px-2 py-1">
       <Button variant="secondary" loading={leaving} loadingText="Saving…" onClick={onDone}>
@@ -37,7 +39,7 @@ export function EditorTopBar({ title, inZone, status, leaving, canUndo, canRedo,
         </Button>
       ) : null}
       <div className="hidden sm:block">
-        <SaveStatus status={status} />
+        <SaveStatus status={status} refusal={refusal} />
       </div>
       {add}
       <Button variant="secondary" icon aria-label="Undo" disabled={!canUndo} onClick={onUndo}>

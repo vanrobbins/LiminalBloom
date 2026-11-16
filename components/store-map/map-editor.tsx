@@ -50,7 +50,7 @@ type MapEditorProps = {
 const ADD_KINDS: readonly string[] = ["zone", "entrance", "table", "wall_bay", "rack", "mannequin", "platform", "prop"];
 
 export function MapEditor({ storeId, initialLayout, save, fetchLatest, embedded = false, onLeft }: MapEditorProps) {
-  const { session, dispatch, status, leaving, done } = useMapEditor({ storeId, initial: initialLayout, save, fetchLatest, onLeft });
+  const { session, dispatch, status, refusal, leaving, done } = useMapEditor({ storeId, initial: initialLayout, save, fetchLatest, onLeft });
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [listOpen, setListOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -100,6 +100,7 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest, embedded 
         title={zone?.name ?? "Store layout"}
         inZone={zone !== undefined}
         status={status}
+        refusal={refusal}
         leaving={leaving}
         canUndo={canUndo(session.history)}
         canRedo={canRedo(session.history)}
@@ -169,7 +170,7 @@ export function MapEditor({ storeId, initialLayout, save, fetchLatest, embedded 
           )}
         </aside>
       </div>
-      <EditorBottomBar status={status} onList={() => setListOpen(true)} />
+      <EditorBottomBar status={status} refusal={refusal} onList={() => setListOpen(true)} />
 
       {isPhone ? (
         <EditorSheets

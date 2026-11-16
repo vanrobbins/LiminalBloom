@@ -16,34 +16,66 @@ const product: ProductRow = { id: "p1", name: "High-Rise Pant", styleNumber: "HR
 
 beforeEach(() => vi.clearAllMocks());
 
+/** The check that cross-fades in on the chosen radio (the status icon fades out as it comes). */
+const checkOf = (name: string) => screen.getByRole("radio", { name }).querySelector("[data-check]");
+
 describe("StatusControl", () => {
-  it("saves a new status at once and offers Undo", async () => {
+  it("saves a new status at once: the chosen radio shows a check, no toast", async () => {
     const user = userEvent.setup();
     actions.changeStatus.mockResolvedValue({ status: "saved", version: 4 });
     const onChanged = vi.fn();
-    render(<StatusControl member={EVERYTHING} product={product} onChanged={onChanged} />);
+    const { rerender } = render(<StatusControl member={EVERYTHING} product={product} onChanged={onChanged} />);
     expect(screen.getByRole("radio", { name: "In stock" })).toBeChecked();
+    expect(checkOf("In stock")).toHaveClass("opacity-100");
+    expect(checkOf("Sold out")).toHaveClass("opacity-0");
     await user.click(screen.getByRole("radio", { name: "Sold out" }));
     expect(actions.changeStatus).toHaveBeenCalledWith("p1", 3, "sold_out");
     expect(onChanged).toHaveBeenCalledWith({ ...product, status: "sold_out", version: 4 });
-    const shown = toasts.toast.mock.calls[0][0];
-    expect(shown.title).toBe("High-Rise Pant: Sold out");
-    actions.changeStatus.mockResolvedValue({ status: "saved", version: 5 });
-    await shown.action.onSelect();
-    expect(actions.changeStatus).toHaveBeenLastCalledWith("p1", 4, "in_stock");
+    expect(toasts.toast).not.toHaveBeenCalled();
+    rerender(<StatusControl member={EVERYTHING} product={{ ...product, status: "sold_out", version: 4 }} onChanged={onChanged} />);
+    expect(checkOf("Sold out")).toHaveClass("opacity-100");
+    expect(checkOf("In stock")).toHaveClass("opacity-0");
   });
 
-  it("takes the other device's value when it saved first", async () => {
+  it("re-picking the previous status is the undo: it saves against the new version", async () => {
+    const user = userEvent.setup();
+    actions.changeStatus.mockResolvedValue({ status: "saved", version: 5 });
+    render(<StatusControl member={EVERYTHING} product={{ ...product, status: "sold_out", version: 4 }} onChanged={vi.fn()} />);
+    await user.click(screen.getByRole("radio", { name: "In stock" }));
+    expect(actions.changeStatus).toHaveBeenCalledWith("p1", 4, "in_stock");
+    expect(toasts.toast).not.toHaveBeenCalled();
+  });
+
+  it("takes the other device's value when it saved first, and says so under the radios", async () => {
     const user = userEvent.setup();
     actions.changeStatus.mockResolvedValue({ status: "conflict", product: { ...product, status: "on_sale", version: 9 } });
     const onChanged = vi.fn();
     render(<StatusControl member={EVERYTHING} product={product} onChanged={onChanged} />);
     await user.click(screen.getByRole("radio", { name: "Sold out" }));
     expect(onChanged).toHaveBeenCalledWith({ ...product, status: "on_sale", version: 9 });
-    expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error", title: "Changed on another device" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Changed on another device. The current status is shown.");
+    expect(toasts.toast).not.toHaveBeenCalled();
   });
 
-  it("says so and frees the control when the save fails", async () => {
+  it("tapping the status it already has saves nothing", async () => {
+    const user = userEvent.setup();
+    render(<StatusControl member={EVERYTHING} product={product} onChanged={vi.fn()} />);
+    await user.click(screen.getByRole("radio", { name: "In stock" }));
+    expect(actions.changeStatus).not.toHaveBeenCalled();
+  });
+
+  it("a refusal is cleared by the next choice that saves", async () => {
+    const user = userEvent.setup();
+    actions.changeStatus.mockResolvedValueOnce({ status: "forbidden" });
+    render(<StatusControl member={EVERYTHING} product={product} onChanged={vi.fn()} />);
+    await user.click(screen.getByRole("radio", { name: "Sold out" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Your role can't make that change. The status was not changed.");
+    actions.changeStatus.mockResolvedValueOnce({ status: "saved", version: 4 });
+    await user.click(screen.getByRole("radio", { name: "On sale" }));
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("a lost connection stays a toast, and frees the control", async () => {
     const user = userEvent.setup();
     actions.changeStatus.mockRejectedValue(new Error("offline"));
     render(<StatusControl member={EVERYTHING} product={product} onChanged={vi.fn()} />);
@@ -100,13 +132,13 @@ describe("StatusControl for a role that can mark sold out but not run sales", ()
     expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["In stock", "Sold out"]);
   });
 
-  it("on a product on sale, offers only Sold out beside the current status, and no Undo back onto a sale", async () => {
+  it("on a product on sale, offers only Sold out beside the current status", async () => {
     const user = userEvent.setup();
     actions.changeStatus.mockResolvedValue({ status: "saved", version: 4 });
     render(<StatusControl member={salesAssociate} product={{ ...product, status: "on_sale" }} onChanged={vi.fn()} />);
     expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["Sold out", "On sale"]);
     await user.click(screen.getByRole("radio", { name: "Sold out" }));
-    expect(toasts.toast.mock.calls[0][0].action).toBeUndefined();
+    expect(toasts.toast).not.toHaveBeenCalled();
   });
 
   it("shows only the status, with nothing to press, for a role that can change neither", () => {
@@ -115,13 +147,14 @@ describe("StatusControl for a role that can mark sold out but not run sales", ()
     expect(screen.getByText("In stock")).toBeInTheDocument();
   });
 
-  it("says so, and changes nothing on screen, when the server refuses", async () => {
+  it("says so under the radios, and changes nothing on screen, when the server refuses", async () => {
     const user = userEvent.setup();
     actions.changeStatus.mockResolvedValue({ status: "forbidden" });
     const onChanged = vi.fn();
     render(<StatusControl member={salesAssociate} product={product} onChanged={onChanged} />);
     await user.click(screen.getByRole("radio", { name: "Sold out" }));
     expect(onChanged).not.toHaveBeenCalled();
-    expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error", title: "Your role can't make that change" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Your role can't make that change. The status was not changed.");
+    expect(toasts.toast).not.toHaveBeenCalled();
   });
 });

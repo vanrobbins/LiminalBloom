@@ -82,7 +82,6 @@ test("tile labels and status chips are readable", async ({ page }) => {
   await check(chip, "due date chip");
   await chip.click();
   await page.locator("input[type=date]").fill("2000-01-02");
-  await page.getByRole("button", { name: "Save" }).click();
   await check(page.getByRole("button", { name: /^Overdue/ }), "overdue chip");
 
   await page.goto("/planograms");

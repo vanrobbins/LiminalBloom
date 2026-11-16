@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SaveStatus } from "./save-status";
 import type { SaveStatus as Status } from "./use-map-editor";
 
-export function EditorBottomBar({ status, onList }: { status: Status; onList: () => void }) {
+export function EditorBottomBar({ status, refusal, onList }: { status: Status; refusal: string | null; onList: () => void }) {
   return (
     <nav aria-label="Editor" className="flex items-center justify-between gap-2 border-t border-line-subtle bg-raised px-3 py-2 md:hidden">
       <Button variant="secondary" onClick={onList}>
@@ -18,7 +18,7 @@ export function EditorBottomBar({ status, onList }: { status: Status; onList: ()
         List
       </Button>
       <div className="sm:hidden">
-        <SaveStatus status={status} />
+        <SaveStatus status={status} refusal={refusal} />
       </div>
     </nav>
   );

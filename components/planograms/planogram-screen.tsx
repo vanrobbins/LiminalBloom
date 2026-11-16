@@ -76,7 +76,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     // Ctrl+Z only on the draft being edited, never on Published or a past version.
     enabled: isEditing,
     expectedVersion: row?.version ?? null,
-    save, adopt, onLeaveRef, onTakeRef,
+    save, adopt, refuse, onLeaveRef, onTakeRef,
     onStale: leave,
     // A draft this device started or another device's it adopted: either way it's now the one shown.
     onStarted: () => {

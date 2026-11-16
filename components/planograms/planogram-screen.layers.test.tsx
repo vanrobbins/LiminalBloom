@@ -66,7 +66,11 @@ const gone = (name: string) => waitFor(() => expect(screen.queryByRole("button",
 const back = (name: string) => waitFor(() => expect(tile(name)).toBeInTheDocument());
 const saves = (n: number) => waitFor(() => expect(actions.saveChangeAction).toHaveBeenCalledTimes(n));
 const undoKey = (user: User) => user.keyboard("{Control>}z{/Control}");
-const conflict = () => expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Changed on another device" }));
+// A refusal is told on the draft's status line, not in a toast.
+const conflict = () => {
+  expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("Changed on another device");
+  expect(toasts.toast).not.toHaveBeenCalled();
+};
 
 function show() {
   return render(<PlanogramScreen member={EVERYTHING} scope={scope} row={null} latest={null} draft={draftOf()} viewing={null} looks={{}} highlightProductId={null} dueDate={null} today="2026-11-15" />);
