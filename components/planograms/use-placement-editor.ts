@@ -18,7 +18,7 @@ import type { Neighbour } from "@/lib/planograms/rules";
 import type { PlacementFields, PlanogramFace } from "@/lib/planograms/types";
 import type { Footprint, Presentation } from "@/lib/products/footprint";
 
-import { readValues, signature, valuesOf, type FormValues } from "./placement-values";
+import { ALL_NUMBERS, readValues, signature, valuesOf, type FieldError, type FormValues } from "./placement-values";
 import type { CommitResult } from "./use-builder";
 import { useAutoSave } from "./use-auto-save";
 import type { DraftStatus } from "./use-planogram-draft";
@@ -40,8 +40,10 @@ type Track = { known: readonly string[]; held: string };
 
 export function usePlacementEditor({ faces, initial, others, excludeId, footprints, onSubmit }: PlacementEditorOptions) {
   const [values, setValues] = useState(() => valuesOf(initial, faces));
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FieldError | null>(null);
   const [status, setStatus] = useState<DraftStatus>({ kind: "idle" });
+  // Counts the re-fills, so what was waiting to be sent is dropped with the numbers it was typed over.
+  const [refills, setRefills] = useState(0);
   const [track, setTrack] = useState<Track>(() => ({ known: [signature(initial)], held: signature(initial) }));
   // The same, for the timer and the blur, which run between renders.
   const trackRef = useRef(track);
@@ -59,6 +61,7 @@ export function usePlacementEditor({ faces, initial, others, excludeId, footprin
     setTrack({ known: [incoming], held: incoming });
     setValues(valuesOf(initial, faces));
     setError(null);
+    setRefills(refills + 1);
   } else if (track.known.length > 1 && incoming === track.held) {
     // The last thing sent has come back: from here on, going back to anything older (an Undo) is a change to show.
     setTrack({ known: [incoming], held: incoming });
@@ -66,7 +69,7 @@ export function usePlacementEditor({ faces, initial, others, excludeId, footprin
 
   async function commit(typed: FormValues) {
     const read = readValues(typed, initial.faceId, faces, others, excludeId);
-    if ("error" in read) return setError(read.error);
+    if ("error" in read) return setError({ message: read.error, fields: read.fields });
     setError(null);
     const sent = signature(read.fields);
     const { known, held } = trackRef.current;
@@ -78,11 +81,16 @@ export function usePlacementEditor({ faces, initial, others, excludeId, footprin
     // Nothing was saved: the same edit may be sent again.
     if (trackRef.current.held === sent) keep({ ...trackRef.current, held });
     const message = result.message ?? LOST_CONNECTION;
-    setError(message);
+    setError({ message, fields: ALL_NUMBERS });
     setStatus({ kind: "refused", message });
   }
 
   const auto = useAutoSave(commit);
+  const { cancel } = auto;
+  // A re-fill from another device or an Undo replaced the numbers: a pause or blur must not send the old typing over it.
+  useEffect(() => {
+    if (refills > 0) cancel();
+  }, [refills, cancel]);
 
   function edit(key: Exclude<keyof FormValues, "presentation">, text: string) {
     const next = { ...values, [key]: text };

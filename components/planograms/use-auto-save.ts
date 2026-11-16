@@ -6,11 +6,23 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export const SAVE_DELAY_MS = 600;
 
-export function useAutoSave<V>(commit: (values: V) => void, delay = SAVE_DELAY_MS) {
+const FLUSH_EVENT = "autosave:flush";
+
+/**
+ * Sends every edit still waiting, for something that must build on what is typed (Undo, a face move): the promise
+ * settles once they have all come back, and is null when nothing was waiting, so the caller need not wait at all.
+ */
+export function flushPendingEdits(): Promise<unknown> | null {
+  const sends: Promise<unknown>[] = [];
+  document.dispatchEvent(new CustomEvent<Promise<unknown>[]>(FLUSH_EVENT, { detail: sends }));
+  return sends.length ? Promise.all(sends) : null;
+}
+
+export function useAutoSave<V>(commit: (values: V) => void | Promise<void>, delay = SAVE_DELAY_MS) {
   const waiting = useRef<{ values: V } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const run = useRef(commit);
@@ -18,16 +30,21 @@ export function useAutoSave<V>(commit: (values: V) => void, delay = SAVE_DELAY_M
     run.current = commit;
   });
 
-  function cancel() {
+  const stop = useCallback(() => {
     if (timer.current !== null) clearTimeout(timer.current);
     timer.current = null;
-  }
+  }, []);
+  /** What is waiting is stale (the numbers were replaced under it): drop it, send nothing. */
+  const cancel = useCallback(() => {
+    stop();
+    waiting.current = null;
+  }, [stop]);
 
   function flush() {
-    cancel();
+    stop();
     const sending = waiting.current;
     waiting.current = null;
-    if (sending) run.current(sending.values);
+    return sending ? run.current(sending.values) : undefined;
   }
 
   // The unmount cleanup below must call the latest flush, which closes over nothing but refs.
@@ -35,21 +52,30 @@ export function useAutoSave<V>(commit: (values: V) => void, delay = SAVE_DELAY_M
   useEffect(() => {
     flushRef.current = flush;
   });
-  useEffect(() => () => flushRef.current(), []);
+  useEffect(() => () => void flushRef.current(), []);
+  useEffect(() => {
+    function onFlush(event: Event) {
+      const sending = flushRef.current();
+      if (sending) (event as CustomEvent<Promise<unknown>[]>).detail.push(sending);
+    }
+    document.addEventListener(FLUSH_EVENT, onFlush);
+    return () => document.removeEventListener(FLUSH_EVENT, onFlush);
+  }, []);
 
   return {
     /** A text field changed: send after the pause. */
     later(values: V) {
-      cancel();
+      stop();
       waiting.current = { values };
       timer.current = setTimeout(flush, delay);
     },
     /** A select, stepper or toggle changed: send now. */
     now(values: V) {
-      cancel();
+      stop();
       waiting.current = null;
-      run.current(values);
+      void run.current(values);
     },
     flush,
+    cancel,
   };
 }

@@ -18,10 +18,11 @@ import { toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
 import type { OnTake, Pending, SaveResult } from "./use-planogram-draft";
+import { flushPendingEdits } from "./use-auto-save";
 import { CONFLICT, useHistory } from "./use-history";
 import { useUndoKeys } from "./use-undo-keys";
 
-export type CommitResult = { ok: true; id: string } | { ok: false; message: string | null };
+export type CommitResult = { ok: true; id: string; draft?: DraftState } | { ok: false; message: string | null };
 
 type Options = {
   fixtureId: string;
@@ -140,7 +141,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     const after = kept ? fieldsOf(kept, true) : fields;
     history.record({ kind: "update", id: target.id, before: fieldsOf(result.before ?? target, true), after, aheadBefore: result.ahead?.before, aheadAfter: result.ahead?.after });
     say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
-    return { ok: true, id: target.id };
+    return { ok: true, id: target.id, draft: result.draft };
   }
 
   /**
@@ -172,14 +173,18 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     return result;
   }
 
-  useUndoKeys(enabled, (direction) => void (direction === "undo" ? history.undo() : history.redo()));
+  // An edit still waiting in the panel goes first, so Undo takes back that edit, not the one before it.
+  const afterPending = (travel: () => Promise<void>) => flushPendingEdits()?.then(travel) ?? travel();
+  const undo = () => afterPending(history.undo);
+  const redo = () => afterPending(history.redo);
+  useUndoKeys(enabled, (direction) => void (direction === "undo" ? undo() : redo()));
 
   return {
     commit,
     add,
     remove,
-    undo: history.undo,
-    redo: history.redo,
+    undo,
+    redo,
     canUndo: history.canUndo,
     canRedo: history.canRedo,
     clearHistory: history.clear,

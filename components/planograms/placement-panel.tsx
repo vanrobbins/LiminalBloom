@@ -64,7 +64,7 @@ export function PlacementEditor({ placement, isGone, faces, others, busy, onClos
         // No stack limit for either presentation (Week 6.5 spec §3.3); hung products share rail space as separate placements (layers.ts).
         onSubmit={(fields) => onSave(placement, fields)}
       />
-      <FacePicker key={`face:${placement.id}`} faces={faces} currentFaceId={placement.faceId} onPick={(faceId) => onMoveToFace(placement, faceId)} />
+      <FacePicker key={`face:${placement.id}`} faces={faces} currentFaceId={placement.faceId} spot={[placement.faceId, placement.col, placement.row].join("|")} onPick={(faceId) => onMoveToFace(placement, faceId)} />
     </div>
   ) : null;
 }

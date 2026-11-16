@@ -166,7 +166,7 @@ describe("useBuilder", () => {
     expect(onStarted).toHaveBeenCalled();
     expect(toasts.toast).not.toHaveBeenCalled();
     expect(save).toHaveBeenCalledWith({ kind: "update", id: "real", version: 1, fields: fields(published, 4) });
-    expect(outcome).toEqual({ ok: true, id: "real" });
+    expect(outcome).toMatchObject({ ok: true, id: "real" });
   });
 
   it("refuses when the draft another device started no longer has the tile (Review Focus 3)", async () => {

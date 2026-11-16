@@ -291,6 +291,8 @@ test("the panel's face picker moves a tile to the other face and says nothing in
   await expect(face.getByRole("button", { name: "Front" })).toHaveAttribute("aria-pressed", "true");
   await face.getByRole("button", { name: "Back" }).click();
   await expect(face.getByRole("button", { name: "Back" })).toHaveAttribute("aria-pressed", "true");
+  // Picking is not leaving: focus stays on the choice, so the next key still acts on it (L3, non-set view).
+  await expect(face.getByRole("button", { name: "Back" })).toBeFocused();
   // On a phone the sheet is modal and hides the grid from the page's tree; elsewhere the view follows the tile.
   if (sizeOf(test.info()) !== "phone") await expect(page.getByRole("region", { name: /, Back:/ })).toBeVisible();
 });

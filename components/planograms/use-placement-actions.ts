@@ -8,7 +8,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
-import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
+import { placeNew } from "@/lib/planograms/builder/place";
 import { reorderTarget } from "@/lib/planograms/layers";
 import { checkPlacement, type Neighbour } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
@@ -19,6 +19,7 @@ import { toast } from "@/lib/toast";
 import type { GridItem } from "./grid-items";
 import type { GridBuilder } from "./planogram-grid";
 import type { useBuilder } from "./use-builder";
+import { usePanelEdits } from "./use-panel-edits";
 
 /** Where a placement sits, for a screen reader: "4–6 ft, Top shelf". */
 export function spotWords(faces: readonly PlanogramFace[], fields: PlacementFields): string {
@@ -150,21 +151,7 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     return saved;
   }
 
-  /** The panel's face picker: to the first open spot that fits on that face. The reason it can't shows in the panel, not a toast. */
-  async function moveToFace(p: PlacementView, target: string): Promise<string | null> {
-    const to = scope.faces.find((f) => f.faceId === target);
-    const spot = to ? firstOpenSpot([to], placements, p, p.id) : null;
-    if (!spot) return `No open spot fits on ${to?.label ?? "that face"}`;
-    return change(p, { ...p, ...spot }, "Moved");
-  }
-
-  /**
-   * The panel's numbers, saved as they change. Only the numbers: it never moves the selection, because the panel it
-   * came from may be closed or on another tile by the time this lands (a flush on close or on a new pick).
-   */
-  function edit(p: PlacementView, fields: PlacementFields) {
-    return builder.commit(p, fields, "Changed");
-  }
+  const { edit, moveToFace } = usePanelEdits({ scope, placements, builder, change });
 
   async function addProduct(product: ProductFit): Promise<string | null> {
     // Nowhere to go: say so before a draft is started for it. With no draft the add starts one, and the spot is

@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SAVE_DELAY_MS, useAutoSave } from "./use-auto-save";
+import { SAVE_DELAY_MS, flushPendingEdits, useAutoSave } from "./use-auto-save";
 
 describe("useAutoSave", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -64,6 +64,36 @@ describe("useAutoSave", () => {
     act(() => result.current.later("typed"));
     act(() => vi.advanceTimersByTime(SAVE_DELAY_MS));
     unmount();
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancel drops what is waiting: neither the pause, a flush nor an unmount sends it", () => {
+    const commit = vi.fn();
+    const { result, unmount } = renderHook(() => useAutoSave<string>(commit));
+    act(() => result.current.later("stale"));
+    act(() => result.current.cancel());
+    act(() => result.current.flush());
+    act(() => vi.advanceTimersByTime(5000));
+    unmount();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("flushPendingEdits sends what is waiting and resolves once it has landed; with nothing waiting it is null", async () => {
+    let land: () => void = () => {};
+    const commit = vi.fn(() => new Promise<void>((resolve) => (land = resolve)));
+    const { result } = renderHook(() => useAutoSave<string>(commit));
+    expect(flushPendingEdits()).toBeNull();
+    act(() => result.current.later("typed"));
+    let settled = false;
+    const sending = flushPendingEdits();
+    void sending?.then(() => (settled = true));
+    expect(commit).toHaveBeenCalledWith("typed");
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    land();
+    await sending;
+    expect(settled).toBe(true);
+    act(() => vi.advanceTimersByTime(5000));
     expect(commit).toHaveBeenCalledTimes(1);
   });
 });
