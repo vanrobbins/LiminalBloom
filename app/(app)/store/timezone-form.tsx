@@ -15,31 +15,37 @@ import { saveTimezoneAction } from "./actions";
 export function TimezoneForm({ zone, version }: { zone: string; version: number }) {
   const { status, save, busy } = useInlineSave();
   const [problem, setProblem] = useState<string | undefined>(undefined);
-  // Bumped by a refusal, so the picker shows the stored zone again instead of the one refused.
-  const [resets, setResets] = useState(0);
+  // The picker follows the stored zone: put back after a refusal, and again when the reload brings the server's current one.
+  const [chosen, setChosen] = useState(zone);
+  const [known, setKnown] = useState(zone);
+  if (known !== zone) {
+    setKnown(zone);
+    setChosen(zone);
+  }
 
   async function choose(next: string) {
+    // The next save needs the version the reload brings, so a pick made while one is out is not sent (and the picker keeps its focus).
+    if (busy) return;
+    setChosen(next);
     setProblem(undefined);
     const reply = await save(() => saveTimezoneAction(next, version));
     if (reply && reply.status !== "saved") {
       setProblem(reply.message);
-      setResets((n) => n + 1);
+      setChosen(zone);
     }
   }
 
   return (
     // The change event rises from the picker's select (the find box is a search input and saves nothing).
     <form
+      aria-busy={busy || undefined}
       className="flex flex-col gap-1"
       onSubmit={(event) => event.preventDefault()}
       onChange={(event) => {
         if (event.target instanceof HTMLSelectElement) void choose(event.target.value);
       }}
     >
-      {/* A fieldset, so the zone can't change under a save: the next one needs the version the reload brings. */}
-      <fieldset disabled={busy} className="contents">
-        <TimezonePicker key={resets} name="timezone" defaultZone={zone} />
-      </fieldset>
+      <TimezonePicker name="timezone" defaultZone={zone} value={chosen} />
       {problem ? <p className="text-sm text-danger">{problem}</p> : null}
       <PanelSaveLine status={status} />
     </form>

@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { InfoPopover } from "@/components/ui/info-popover";
+import { focusNearRow } from "@/components/ui/focus-near-row";
+import { useAnnouncement } from "@/components/ui/use-announcement";
 import { useCollapseOut } from "@/components/ui/use-collapse-out";
 import type { PeopleView, PersonRow } from "@/lib/access/people-view";
 
@@ -27,7 +29,9 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
   const removedRow = useRef(false);
   // No toast for a role change or a removal (0.7.0.5 spec 3.1): the row moves to its new group or folds shut,
   // and this line says it again to a screen reader.
-  const [said, setSaid] = useState("");
+  const [said, setSaid] = useAnnouncement();
+  // A removal whose reload failed: the row opens again with this on it.
+  const [problem, setProblem] = useState<{ id: string; text: string } | null>(null);
   const { isLeaving, collapse } = useCollapseOut();
   // Radix returns focus to a Trigger, and these dialogs have none (they open from state), so the screen does it.
   const opener = useRef<HTMLElement | null>(null);
@@ -51,14 +55,13 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
     opener.current?.focus();
   }
 
-  // The removed row is gone, so focus goes to the page title; it takes focus only by script.
-  function focusTitle(event: Event) {
+  // The removed row is folding away, so focus goes to its neighbour, else the group's heading or the page title.
+  function focusNeighbour(event: Event) {
     if (!removedRow.current) return backToOpener(event);
     removedRow.current = false;
     event.preventDefault();
-    const title = document.querySelector<HTMLElement>("h1");
-    title?.setAttribute("tabindex", "-1");
-    title?.focus();
+    const row = opener.current?.closest("li") ?? null;
+    focusNearRow(row, row?.closest("section")?.querySelector<HTMLElement>("h2") ?? null);
   }
 
   return (
@@ -80,7 +83,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           </h2>
           <ul className="flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
             {group.people.map((p) => (
-              <PersonListItem key={p.memberId} person={p} leaving={isLeaving(p.memberId)} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
+              <PersonListItem key={p.memberId} person={p} leaving={isLeaving(p.memberId)} problem={problem?.id === p.memberId ? problem.text : undefined} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
             ))}
           </ul>
           {view.isSoleManager && group.people.some((p) => p.isYou) ? (
@@ -121,12 +124,18 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           key={open.person.memberId}
           person={open.person}
           storeName={storeName}
-          onCloseAutoFocus={focusTitle}
+          onCloseAutoFocus={focusNeighbour}
           onClose={(removedName) => {
             if (removedName) {
               removedRow.current = true;
               setSaid(`Removed ${removedName}`);
-              collapse(open.person.memberId, () => router.refresh());
+              const id = open.person.memberId;
+              setProblem(null);
+              collapse(id, () => router.refresh(), () => {
+                const text = "Removed, but the list didn't reload. Reload the page.";
+                setProblem({ id, text });
+                setSaid(text);
+              });
             }
             setOpen(null);
           }}

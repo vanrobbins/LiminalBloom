@@ -3,20 +3,23 @@
 // is emailed. Cancel acts at once, like the other one-step actions; a row the rank
 // rule doesn't reach is read-only. No toasts (0.7.0.5 spec §3.1): Copy's icon swaps to
 // a check for 1.5 s, a cancelled row folds shut, and a refusal shows on its row, all
-// said again in one polite live region. A lost connection stays a toast.
+// said again in one polite live region (a cancelled row's focus moves to a neighbour
+// first). A lost connection stays a toast.
 
 "use client";
 
 import { Check, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 import { cancelInvitationAction } from "@/app/(app)/people/actions";
 import { LocalTime } from "@/components/time/local-time";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CollapseItem } from "@/components/ui/collapse-item";
+import { focusNearRow } from "@/components/ui/focus-near-row";
 import { InfoPopover } from "@/components/ui/info-popover";
+import { useAnnouncement } from "@/components/ui/use-announcement";
 import { useCollapseOut } from "@/components/ui/use-collapse-out";
 import type { InvitationRow } from "@/lib/access/people-view";
 import { toast } from "@/lib/toast";
@@ -30,17 +33,25 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  // What went wrong, and on which row (a row with no id never has one).
-  const [problem, setProblem] = useState<{ id: string; text: string } | null>(null);
+  // What went wrong, and on which row (a row with no id never has one); it is also said in the live region.
+  const [problem, showProblem] = useState<{ id: string; text: string } | null>(null);
+  const [said, say] = useAnnouncement();
+  const heading = useRef<HTMLHeadingElement>(null);
   const { isLeaving, collapse } = useCollapseOut();
   const reset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(reset.current), []);
+
+  const setProblem = (next: { id: string; text: string } | null) => {
+    showProblem(next);
+    if (next) say(next.text);
+  };
 
   async function copy(id: string) {
     setProblem(null);
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/invite/${id}`);
       setCopied(id);
+      say("Link copied");
       clearTimeout(reset.current);
       reset.current = setTimeout(() => setCopied(null), COPIED_MS);
     } catch {
@@ -48,13 +59,19 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
     }
   }
 
-  async function cancel(id: string) {
+  async function cancel(id: string, email: string, button: HTMLElement) {
     setBusy(id);
     setProblem(null);
     try {
       const result = await cancelInvitationAction(id);
       // Cancelled, or already used or cancelled: either way it is gone, so the row folds shut and then the list reloads.
-      if (result.status === "cancelled" || result.status === "gone") return collapse(id, () => router.refresh());
+      if (result.status === "cancelled" || result.status === "gone") {
+        say(result.status === "cancelled" ? `Cancelled invitation for ${email}` : `Invitation for ${email} is already gone`);
+        // The folding row goes inert, which would drop focus to the page: move it first, if it was on this row.
+        const row = button.closest("li");
+        if (row?.contains(document.activeElement)) focusNearRow(row, heading.current);
+        return collapse(id, () => router.refresh(), () => setProblem({ id, text: "Cancelled, but the list didn't reload. Reload the page." }));
+      }
       setProblem({ id, text: refusalText("forbidden", "").message });
       router.refresh();
     } catch {
@@ -66,12 +83,12 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
 
   return (
     <Card compact className="mb-6">
-      <h2 className="inline-flex items-center gap-1 text-lg font-semibold text-ink">
+      <h2 ref={heading} className="inline-flex items-center gap-1 text-lg font-semibold text-ink">
         Invitations waiting
         <InfoPopover term="invitation" />
       </h2>
       <p role="status" aria-live="polite" className="sr-only">
-        {copied ? "Link copied" : (problem?.text ?? "")}
+        {said}
       </p>
       <ul className="mt-2 flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
         {invitations.map((i, n) => {
@@ -95,7 +112,7 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
                 </Button>
               ) : null}
               {id !== null ? (
-                <Button variant="quiet-danger" onClick={() => cancel(id)} loading={busy === id} loadingText="Cancelling…" aria-label={`Cancel invitation for ${i.email}`}>
+                <Button variant="quiet-danger" onClick={(event: MouseEvent<HTMLElement>) => cancel(id, i.email, event.currentTarget)} loading={busy === id} loadingText="Cancelling…" aria-label={`Cancel invitation for ${i.email}`}>
                   Cancel
                 </Button>
               ) : null}

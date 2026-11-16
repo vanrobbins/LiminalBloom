@@ -108,7 +108,7 @@ test("says a role changed meanwhile, turns Save off, and shows the new list on c
   expect(await loggedEvents()).toEqual([]);
 });
 
-test("removes someone: confirm words, the row folds away, focus moves to the title, the removal is logged", async ({ page }) => {
+test("removes someone: confirm words, the row folds away, focus moves to a neighbouring row, the removal is logged", async ({ page }) => {
   await openPeople(page);
   await page.getByRole("button", { name: "Remove Zoe Sales" }).click();
   const dialog = page.getByRole("dialog", { name: "Remove Zoe Sales?" });
@@ -116,7 +116,8 @@ test("removes someone: confirm words, the row folds away, focus moves to the tit
   await dialog.getByRole("button", { name: "Remove from store" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Removed Zoe Sales" })).toBeAttached();
   await expect(page.getByText("Zoe Sales", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeFocused();
+  // Zoe was last in her group, so focus goes to the row before her (not to the page).
+  await expect(page.getByRole("button", { name: "Change role for Abe Sales" })).toBeFocused();
   expect((await loggedEvents())[0]).toBe("member_removed");
 });
 

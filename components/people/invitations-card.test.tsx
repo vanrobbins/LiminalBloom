@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -91,9 +91,9 @@ describe("InvitationsCard", () => {
   });
 
   it.each([
-    [{ status: "cancelled", email: "jane@x.com" }],
-    [{ status: "gone" }],
-  ])("a cancelled or already-gone invitation folds shut, then the list reloads (%o)", async (reply) => {
+    [{ status: "cancelled", email: "jane@x.com" }, "Cancelled invitation for jane@x.com"],
+    [{ status: "gone" }, "Invitation for jane@x.com is already gone"],
+  ])("a cancelled or already-gone invitation is said in the live region, folds shut, then the list reloads (%o)", async (reply, said) => {
     const user = userEvent.setup();
     actions.cancelInvitationAction.mockResolvedValue(reply);
     render(<InvitationsCard invitations={[invitationRow("jane@x.com"), invitationRow("sam@x.com")]} />);
@@ -102,9 +102,89 @@ describe("InvitationsCard", () => {
     expect(rowOf("jane@x.com")).toHaveClass("grid-rows-[0fr]");
     expect(rowOf("jane@x.com")).toHaveAttribute("inert");
     expect(rowOf("sam@x.com")).toHaveClass("grid-rows-[1fr]");
+    expect(screen.getByRole("status")).toHaveTextContent(said);
     expect(toastMock.toast).not.toHaveBeenCalled();
     expect(routerMock.refresh).not.toHaveBeenCalled();
     await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
+  });
+
+  describe("focus when the focused row's Cancel folds it away", () => {
+    const cancelled = () => actions.cancelInvitationAction.mockResolvedValue({ status: "cancelled", email: "x" });
+    const open = (...emails: string[]) =>
+      render(
+        <>
+          <h1>People</h1>
+          <InvitationsCard invitations={emails.map((e) => invitationRow(e))} />
+        </>,
+      );
+
+    it("goes to the next row's first control", async () => {
+      const user = userEvent.setup();
+      cancelled();
+      open("jane@x.com", "sam@x.com", "tom@x.com");
+      await user.click(screen.getByRole("button", { name: "Cancel invitation for sam@x.com" }));
+      expect(screen.getByRole("button", { name: "Copy link for tom@x.com" })).toHaveFocus();
+    });
+
+    it("goes to the previous row's when it was the last", async () => {
+      const user = userEvent.setup();
+      cancelled();
+      open("jane@x.com", "sam@x.com");
+      await user.click(screen.getByRole("button", { name: "Cancel invitation for sam@x.com" }));
+      expect(screen.getByRole("button", { name: "Copy link for jane@x.com" })).toHaveFocus();
+    });
+
+    it("goes to the list heading when the others are read-only, and the page title when it was the only row", async () => {
+      const user = userEvent.setup();
+      cancelled();
+      const { unmount } = render(
+        <>
+          <h1>People</h1>
+          <InvitationsCard invitations={[invitationRow("boss@x.com", { id: null }), invitationRow("jane@x.com")]} />
+        </>,
+      );
+      await user.click(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" }));
+      expect(screen.getByRole("heading", { name: "Invitations waiting" })).toHaveFocus();
+      unmount();
+      open("jane@x.com");
+      await user.click(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" }));
+      expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    });
+
+    it("leaves focus alone when it was not in the row", async () => {
+      cancelled();
+      open("jane@x.com", "sam@x.com");
+      const other = screen.getByRole("button", { name: "Copy link for sam@x.com" });
+      // The press lands on the page, not on a control (Safari does not focus a button on click).
+      fireEvent.click(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" }));
+      await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
+      expect(other).not.toHaveFocus();
+    });
+  });
+
+  it("when the reload fails after the fold, the row opens again with the failure on it", async () => {
+    const user = userEvent.setup();
+    actions.cancelInvitationAction.mockResolvedValue({ status: "cancelled", email: "jane@x.com" });
+    routerMock.refresh.mockImplementationOnce(() => {
+      throw new Error("refresh failed");
+    });
+    render(<InvitationsCard invitations={[invitationRow("jane@x.com"), invitationRow("sam@x.com")]} />);
+    await user.click(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" }));
+    await waitFor(() => expect(within(rowOf("jane@x.com")).getByText("Cancelled, but the list didn't reload. Reload the page.")).toBeInTheDocument());
+    expect(rowOf("jane@x.com")).toHaveClass("grid-rows-[1fr]");
+    expect(rowOf("jane@x.com")).not.toHaveAttribute("inert");
+  });
+
+  it("copying the same link twice is announced twice", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    render(<InvitationsCard invitations={[invitationRow("jane@x.com")]} />);
+    const button = screen.getByRole("button", { name: "Copy link for jane@x.com" });
+    await user.click(button);
+    const first = screen.getByRole("status").textContent;
+    await user.click(button);
+    expect(screen.getByRole("status").textContent).not.toBe(first);
+    expect(screen.getByRole("status")).toHaveTextContent("Link copied");
   });
 
   it("a refusal stays on the row, which stays open, and the list reloads at once", async () => {

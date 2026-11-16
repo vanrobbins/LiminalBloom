@@ -89,6 +89,38 @@ describe("StoreNameForm (auto-saves, R3)", () => {
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 
+  it("after a refusal the field shows the server's current name once the reload lands, and a save's reload keeps focus in the field", async () => {
+    mocks.rename.mockResolvedValueOnce({ status: "refused", message: "Changed on another device" });
+    const user = userEvent.setup();
+    const { rerender } = render(<StoreNameForm name="Pioneer Place" />);
+    await user.type(field(), "x");
+    await user.tab();
+    await screen.findByText("Changed on another device");
+    expect(field()).toHaveValue("Pioneer Place");
+    rerender(<StoreNameForm name="Riverside" />);
+    expect(field()).toHaveValue("Riverside");
+    // A save that lands: the page reloads with the typed name, and the field is still the one being used.
+    mocks.rename.mockResolvedValue({ status: "saved", message: "Store name saved" });
+    await user.clear(field());
+    await user.type(field(), "Harbor{Enter}");
+    await screen.findByText("Saved");
+    rerender(<StoreNameForm name="Harbor" />);
+    expect(field()).toHaveValue("Harbor");
+    expect(field()).toHaveFocus();
+  });
+
+  it("the stored name is what a repeat of the old one is compared with after the reload", async () => {
+    mocks.rename.mockResolvedValue({ status: "saved", message: "Store name saved" });
+    const user = userEvent.setup();
+    const { rerender } = render(<StoreNameForm name="Pioneer Place" />);
+    await user.type(field(), "x{Enter}");
+    await screen.findByText("Saved");
+    rerender(<StoreNameForm name="Pioneer Placex" />);
+    await user.clear(field());
+    await user.type(field(), "Pioneer Place{Enter}");
+    await waitFor(() => expect(mocks.rename).toHaveBeenLastCalledWith("Pioneer Place", "Pioneer Placex"));
+  });
+
   it("a lost connection is a toast, and the next blur tries again", async () => {
     mocks.rename.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     mocks.rename.mockResolvedValue({ status: "saved", message: "Store name saved" });

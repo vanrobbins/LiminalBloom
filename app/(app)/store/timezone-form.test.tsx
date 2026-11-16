@@ -31,15 +31,44 @@ describe("TimezoneForm (auto-saves, R3)", () => {
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 
-  it("holds the picker still while a save is out, so the next change can't carry a stale version", async () => {
+  it("holds the picker still while a save is out without taking focus from it: the next change waits for the reload's version", async () => {
     let finish: (reply: { status: string; message: string }) => void = () => {};
     mocks.save.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     const user = userEvent.setup();
     render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
+    zone().focus();
     await user.selectOptions(zone(), "America/Denver");
-    expect(zone()).toBeDisabled();
+    expect(zone()).not.toBeDisabled();
+    expect(zone()).toHaveFocus();
+    // A second pick during the save is not sent, and the picker still shows the zone being saved.
+    await user.selectOptions(zone(), "America/Chicago");
+    expect(mocks.save).toHaveBeenCalledTimes(1);
+    expect(zone()).toHaveValue("America/Denver");
     finish({ status: "saved", message: "Time zone saved" });
-    await waitFor(() => expect(zone()).toBeEnabled());
+    await screen.findByText("Saved");
+    await user.selectOptions(zone(), "America/Chicago");
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(2));
+  });
+
+  it("after a refusal the picker shows the server's current zone once the reload lands", async () => {
+    mocks.save.mockResolvedValue({ status: "refused", message: "Changed on another device" });
+    const user = userEvent.setup();
+    const { rerender } = render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
+    await user.selectOptions(zone(), "America/Denver");
+    await screen.findByText("Changed on another device");
+    expect(zone()).toHaveValue("America/Los_Angeles");
+    rerender(<TimezoneForm zone="America/Chicago" version={3} />);
+    expect(zone()).toHaveValue("America/Chicago");
+  });
+
+  it("keeps focus on the picker through a refusal", async () => {
+    mocks.save.mockResolvedValue({ status: "refused", message: "Changed on another device" });
+    const user = userEvent.setup();
+    render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
+    zone().focus();
+    await user.selectOptions(zone(), "America/Denver");
+    await screen.findByText("Changed on another device");
+    expect(zone()).toHaveFocus();
   });
 
   it("typing in the find box saves nothing", async () => {

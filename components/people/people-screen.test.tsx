@@ -110,6 +110,54 @@ describe("PeopleScreen, for someone who manages people", () => {
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveFocus());
   });
 
+  it("a removed row's neighbour gets focus (the next row's control, else the previous), not the page title", async () => {
+    const user = userEvent.setup();
+    const people = [sm({ email: "sam@x.com" }), sa("Abe Sales", { canAct: true }), sa("Zoe Sales", { canAct: true }), sa("Zed Sales", { canAct: true })];
+    renderScreen(managing(people));
+    const remove = async (name: string) => {
+      actions.removePersonAction.mockResolvedValue({ status: "removed", name });
+      await user.click(screen.getByRole("button", { name: `Remove ${name}` }));
+      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remove from store" }));
+    };
+    await remove("Zoe Sales");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Change role for Zed Sales" })).toHaveFocus());
+    await remove("Zed Sales");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Change role for Abe Sales" })).toHaveFocus());
+  });
+
+  it("when the reload fails after a removal, the row opens again with the failure on it", async () => {
+    const user = userEvent.setup();
+    actions.removePersonAction.mockResolvedValue({ status: "removed", name: "Zoe Sales" });
+    routerMock.refresh.mockImplementationOnce(() => {
+      throw new Error("refresh failed");
+    });
+    renderScreen(managing());
+    await user.click(screen.getByRole("button", { name: "Remove Zoe Sales" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remove from store" }));
+    const row = screen.getByText("Zoe Sales").closest("li")!;
+    await waitFor(() => expect(within(row).getByText("Removed, but the list didn't reload. Reload the page.")).toBeInTheDocument());
+    expect(row).toHaveClass("grid-rows-[1fr]");
+    expect(row).not.toHaveAttribute("inert");
+  });
+
+  it("the same role change twice in a row is announced twice", async () => {
+    const user = userEvent.setup();
+    actions.changeRoleAction.mockResolvedValue({ status: "changed", name: "Zoe Sales", roleName: "Visual Merchandising Worker" });
+    renderScreen(managing());
+    const change = async () => {
+      await user.click(screen.getByRole("button", { name: "Change role for Zoe Sales" }));
+      const dialog = screen.getByRole("dialog");
+      await user.selectOptions(within(dialog).getByRole("combobox", { name: /Role/ }), "r-vmw");
+      await user.click(within(dialog).getByRole("button", { name: "Save role" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    };
+    await change();
+    const first = screen.getByRole("status").textContent;
+    await change();
+    expect(screen.getByRole("status").textContent).not.toBe(first);
+    expect(screen.getByRole("status")).toHaveTextContent("Changed Zoe Sales to Visual Merchandising Worker");
+  });
+
   it("closing a remove dialog without removing puts focus back on its button", async () => {
     const user = userEvent.setup();
     renderScreen(managing());

@@ -8,9 +8,10 @@
 
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 import { beginDraftAction } from "@/app/(app)/planograms/actions";
+import { useAnnouncement } from "@/components/ui/use-announcement";
 import { fieldsOf, isReorder, type Verb } from "@/lib/planograms/builder/fields";
 import { matchPlacement } from "@/lib/planograms/builder/match";
 import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
@@ -47,7 +48,7 @@ type Options = {
 };
 
 export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
-  const [announcement, setAnnouncement] = useState("");
+  const [announcement, say] = useAnnouncement();
   const dragging = useRef(false);
   // One start at a time: a second change before it's back waits for the same reply.
   const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
@@ -96,9 +97,6 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, ref
     const placement = matchPlacement(item, started.draft.placements);
     return placement ? { placement } : { message: CONFLICT };
   }
-
-  // The same words twice must still change the live region, or a screen reader stays silent.
-  const say = (text: string) => setAnnouncement((current) => (current === text ? `${text}\u200B` : text));
 
   const history = useHistory({ save, latest, dragging, say, refuse, describe });
   useEffect(() => {

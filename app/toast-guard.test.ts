@@ -2,6 +2,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { sourceFiles } from "./server-actions-scan";
+import { toastUses } from "./toast-scan";
 
 // R2 (0.7.0.5): a toast is for a result that is out of sight, a long task, a save, or a lost
 // connection. A quick action shows its result where the person is looking, and its refusal beside
@@ -10,6 +11,9 @@ import { sourceFiles } from "./server-actions-scan";
 // Adding a call means adding it here on purpose, with its reason.
 
 type Allowed = { calls: number; why: string };
+
+/** Files that may import the toast module without calling toast(): they show or dismiss what is there. */
+const IMPORTERS = new Set(["components/ui/toaster.tsx"]);
 
 const CONNECTION = "a lost connection (\"Check the connection and try again\")";
 const ALLOWED: Record<string, Allowed> = {
@@ -34,28 +38,51 @@ const ALLOWED: Record<string, Allowed> = {
   "components/store-map/use-map-editor.ts": { calls: 1, why: "too many changes to save at once: an explanation with a how-to" },
 };
 
-/** The line of every call to a function named `toast`, and every way of getting one under another name. */
-function toastUses(source: ts.SourceFile) {
-  const calls: number[] = [];
-  const aliases: number[] = [];
-  const line = (n: ts.Node) => source.getLineAndCharacterOfPosition(n.getStart()).line + 1;
-  const visit = (n: ts.Node) => {
-    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === "toast") calls.push(line(n));
-    if (ts.isImportDeclaration(n) && ts.isStringLiteral(n.moduleSpecifier) && n.moduleSpecifier.text === "@/lib/toast") {
-      const bindings = n.importClause?.namedBindings;
-      if (bindings && ts.isNamedImports(bindings)) for (const el of bindings.elements) if (el.propertyName?.text === "toast") aliases.push(line(n));
-      if (bindings && ts.isNamespaceImport(bindings)) aliases.push(line(n));
-    }
-    ts.forEachChild(n, visit);
-  };
-  visit(source);
-  return { calls, aliases };
-}
+/** Scans a source string as if it were the file `file`. */
+const scan = (code: string, file = "components/x/new-thing.tsx") => toastUses(ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true), file);
+
+describe("the scan sees every way to reach toast (R2 review)", () => {
+  const IMPORT = "import { toast } from \"@/lib/toast\";\n";
+  it("counts a bare toast() call", () => expect(scan(`${IMPORT}toast({ title: "x" });`).calls).toEqual([2]));
+  it("sees an import of sonner, anywhere", () => {
+    expect(scan('import { toast } from "sonner";').sonner).toEqual([1]);
+    expect(scan('import "sonner";').sonner).toEqual([1]);
+    expect(scan('const s = await import("sonner");').sonner).toEqual([1]);
+  });
+  it("sees an import of the toast module by alias path, relative path, with an extension, or by dynamic import", () => {
+    expect(scan('import { dismissToast } from "@/lib/toast";').imports).toEqual([1]);
+    expect(scan('import { dismissToast } from "../../../lib/toast";', "components/a/b/x.tsx").imports).toEqual([1]);
+    expect(scan('import { dismissToast } from "../lib/toast.ts";', "app/x.tsx").imports).toEqual([1]);
+    expect(scan('import "@/lib/toast";').imports).toEqual([1]);
+    expect(scan('const m = await import("@/lib/toast");').imports).toEqual([1]);
+    expect(scan('import { x } from "@/lib/toaster-thing";').imports).toEqual([]);
+    expect(scan('import { x } from "../other/toast";', "components/a/x.tsx").imports).toEqual([]);
+  });
+  it("sees a re-export of toast, by name, by star, or of the imported binding", () => {
+    expect(scan('export { toast } from "@/lib/toast";').reexports).toEqual([1]);
+    expect(scan('export * from "@/lib/toast";').reexports).toEqual([1]);
+    expect(scan('export { toast as notify } from "../lib/toast";', "app/x.ts").reexports).toEqual([1]);
+    expect(scan(`${IMPORT}export { toast };`).reexports).toEqual([2]);
+    expect(scan(`${IMPORT}export const t = toast;`).references).toEqual([2]);
+  });
+  it("sees toast used as a value, not called", () => {
+    expect(scan(`${IMPORT}const t = toast;`).references).toEqual([2]);
+    expect(scan(`${IMPORT}run(toast);`).references).toEqual([2]);
+    expect(scan(`${IMPORT}const o = { toast };`).references).toEqual([2]);
+    expect(scan(`${IMPORT}toast.error("x");`).references).toEqual([2]);
+    expect(scan(`${IMPORT}(0, toast)({});`).references).toEqual([2]);
+  });
+  it("does not mistake a property, a key or the import itself for a use", () => {
+    expect(scan(`${IMPORT}const o = { toast: 1 }; o.toast; toast({});`).references).toEqual([]);
+    expect(scan(`${IMPORT}toast({});`).references).toEqual([]);
+    expect(scan("const toast = 1; show(toast);").references).toEqual([]);
+  });
+});
 
 describe("toasts are kept for what is out of sight (R2, 0.7.0.5)", () => {
   const found = sourceFiles()
     .filter(({ file }) => file !== "lib/toast.ts")
-    .map(({ file, source }) => ({ file, ...toastUses(source) }));
+    .map(({ file, source }) => ({ file, ...toastUses(source, file) }));
 
   it("finds the call sites, so the scan cannot pass by looking at nothing", () => {
     const used = found.filter((f) => f.calls.length > 0).map((f) => f.file);
@@ -72,6 +99,22 @@ describe("toasts are kept for what is out of sight (R2, 0.7.0.5)", () => {
 
   it("nothing hides a toast behind another name (an alias or a namespace import)", () => {
     expect(found.filter((f) => f.aliases.length > 0).map((f) => `${f.file}: line ${f.aliases.join(", ")}`)).toEqual([]);
+  });
+
+  it("sonner is imported nowhere", () => {
+    expect(found.filter((f) => f.sonner.length > 0).map((f) => `${f.file}: line ${f.sonner.join(", ")}`)).toEqual([]);
+  });
+
+  it("only the allow-listed files (and the Toaster) import the toast module, and none re-export it", () => {
+    const offenders = found.flatMap(({ file, imports, reexports }) => {
+      const out = reexports.length > 0 ? [`${file}: re-exports toast at line(s) ${reexports.join(", ")}`] : [];
+      return imports.length > 0 && !(file in ALLOWED) && !IMPORTERS.has(file) ? [...out, `${file}: imports the toast module at line(s) ${imports.join(", ")}`] : out;
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it("toast is never used as a value (assigned, passed along, or reached through a property)", () => {
+    expect(found.filter((f) => f.references.length > 0).map((f) => `${f.file}: line ${f.references.join(", ")}`)).toEqual([]);
   });
 
   it("the allow-list holds only files that exist and still call toast(), each with its reason", () => {

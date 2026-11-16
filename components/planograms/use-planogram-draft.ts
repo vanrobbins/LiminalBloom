@@ -48,6 +48,8 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
   // brought up to date; another device's version is never in here, so its edit still refuses.
   const own = useRef(new Map<string, Map<number, number>>());
   const reloading = useRef(false);
+  // Counts refuse() calls: a save whose count moved while it was out must not say Saved over that refusal.
+  const refusals = useRef(0);
   const noteTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const goneRef = useRef(onGone);
   // Set by the builder: its undo history clears when the draft goes (published, discarded, gone), so no step writes to a dead draft.
@@ -114,6 +116,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     if (!picked) return NOTHING;
     const change = rebase(picked);
     setStatus({ kind: "saving" });
+    const refusalsAtStart = refusals.current;
     try {
       const reply = await saveChangeAction(fixtureId, change);
       const next = reply.draft;
@@ -124,7 +127,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
           const steps = own.current.get(change.id) ?? new Map<number, number>();
           own.current.set(change.id, steps.set(change.version, change.version + 1));
         }
-        if (waiting.current === 1) setStatus({ kind: "saved" });
+        if (waiting.current === 1 && refusals.current === refusalsAtStart) setStatus({ kind: "saved" });
         const was = change.kind === "add" ? undefined : before?.placements.find((p) => p.id === change.id);
         // Where it sat in its layers when the change went and after it, for the history's step (undo.ts `Ahead`).
         const ahead = { before: was && before ? aheadOf(was.id, before.placements) : undefined, after: cause ? aheadOf(cause, reply.draft.placements) : undefined };
@@ -177,6 +180,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
 
   /** Something the form could not send (it was closed with a value that is not valid): said where a refusal is. */
   function refuse(message: string) {
+    refusals.current += 1;
     setStatus({ kind: "refused", message });
   }
 

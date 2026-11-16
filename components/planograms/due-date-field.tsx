@@ -23,6 +23,8 @@ export function DueDateForm({ fixtureId, dueDate, onDone }: DueDateFormProps) {
   const [error, setError] = useState<string | undefined>(undefined);
 
   async function send(next: string | null) {
+    // Read-only and aria-disabled while it saves, not disabled: a disabled control drops focus.
+    if (busy) return;
     setError(undefined);
     const reply = await save(() => setDueDateAction(fixtureId, next));
     if (reply?.status === "saved") onDone();
@@ -42,8 +44,9 @@ export function DueDateForm({ fixtureId, dueDate, onDone }: DueDateFormProps) {
         type="date"
         min={EARLIEST_DUE_DATE}
         value={value}
-        disabled={busy}
+        readOnly={busy}
         onChange={(e) => {
+          if (busy) return;
           const next = e.target.value;
           setValue(next);
           setError(undefined);
@@ -57,7 +60,7 @@ export function DueDateForm({ fixtureId, dueDate, onDone }: DueDateFormProps) {
       />
       <div className="flex items-center gap-3">
         {dueDate ? (
-          <Button variant="secondary" onClick={() => send(null)} disabled={busy}>
+          <Button variant="secondary" onClick={() => send(null)} aria-disabled={busy || undefined} className="aria-disabled:opacity-60">
             Clear
           </Button>
         ) : null}

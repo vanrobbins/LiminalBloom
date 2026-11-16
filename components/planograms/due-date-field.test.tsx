@@ -79,6 +79,41 @@ describe("DueDateForm (auto-saves, R3)", () => {
     expect(actions.setDueDateAction).not.toHaveBeenCalled();
   });
 
+  it("keeps focus in the field while the save is out (read-only, not disabled), and ignores a second pick", async () => {
+    let finish: (reply: unknown) => void = () => {};
+    actions.setDueDateAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(<DueDateForm fixtureId="fx" dueDate={null} onDone={vi.fn()} />);
+    field().focus();
+    fireEvent.change(field(), { target: { value: "2026-10-15" } });
+    await waitFor(() => expect(field()).toHaveAttribute("readonly"));
+    expect(field()).toBeEnabled();
+    expect(field()).toHaveFocus();
+    fireEvent.change(field(), { target: { value: "2026-10-16" } });
+    expect(actions.setDueDateAction).toHaveBeenCalledTimes(1);
+    expect(field()).toHaveValue("2026-10-15");
+    finish({ status: "refused", message: "Changed on another device" });
+    await screen.findByText("Changed on another device");
+    expect(field()).not.toHaveAttribute("readonly");
+    expect(field()).toHaveFocus();
+  });
+
+  it("keeps focus on Clear while it saves (aria-disabled, not disabled), and a second press sends nothing", async () => {
+    let finish: (reply: unknown) => void = () => {};
+    actions.setDueDateAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(<DueDateForm fixtureId="fx" dueDate="2026-10-01" onDone={vi.fn()} />);
+    const clear = screen.getByRole("button", { name: "Clear" });
+    await userEvent.click(clear);
+    expect(clear).toHaveFocus();
+    expect(clear).toBeEnabled();
+    expect(clear).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(clear);
+    expect(actions.setDueDateAction).toHaveBeenCalledTimes(1);
+    finish({ status: "refused", message: "Changed on another device" });
+    await screen.findByText("Couldn't save");
+    expect(clear).toHaveFocus();
+    expect(clear).not.toHaveAttribute("aria-disabled");
+  });
+
   it("stays open and says why, under the field and beside it, when the server refuses; no toast", async () => {
     actions.setDueDateAction.mockResolvedValue({ status: "refused", message: "Changed on another device" });
     const onDone = vi.fn();

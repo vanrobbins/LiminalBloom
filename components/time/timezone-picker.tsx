@@ -11,11 +11,13 @@ import { Input } from "@/components/ui/input";
 import { FIELD_CLASSES } from "@/components/ui/password-field";
 import { zoneChoices, zoneLabel } from "@/lib/time/zones";
 
-type TimezonePickerProps = { name: string; defaultZone: string; label?: string };
+/** `value` makes the zone the caller's to hold (a form that can put it back); without it the picker keeps its own. */
+type TimezonePickerProps = { name: string; defaultZone: string; label?: string; value?: string };
 
-export function TimezonePicker({ name, defaultZone, label = "Time zone" }: TimezonePickerProps) {
+export function TimezonePicker({ name, defaultZone, label = "Time zone", value }: TimezonePickerProps) {
   const [query, setQuery] = useState("");
-  const [zone, setZone] = useState(defaultZone);
+  const [own, setZone] = useState(defaultZone);
+  const zone = value ?? own;
   const { us, others } = zoneChoices(query);
   const listed = us.some((z) => z.zone === zone) || others.some((z) => z.zone === zone);
 

@@ -3,11 +3,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CollapseItem } from "@/components/ui/collapse-item";
 import { Dialog } from "@/components/ui/dialog";
+import { focusNearRow } from "@/components/ui/focus-near-row";
+import { useAnnouncement } from "@/components/ui/use-announcement";
 import { useCollapseOut } from "@/components/ui/use-collapse-out";
 import { describeDefaults } from "@/lib/products/footprint";
 import type { CategoryRow } from "@/lib/products/queries";
@@ -21,6 +23,12 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
   const router = useRouter();
   const [open, setOpen] = useState<Open>(null);
   const { isLeaving, collapse } = useCollapseOut();
+  const [said, say] = useAnnouncement();
+  // A deletion whose reload failed: the row opens again with this on it.
+  const [problem, setProblem] = useState<{ id: string; text: string } | null>(null);
+  // The row whose Delete opened the dialog; when that row is deleted, focus goes to a neighbour instead of back to it.
+  const opener = useRef<HTMLElement | null>(null);
+  const deleted = useRef(false);
   const close = () => setOpen(null);
   const done = () => {
     close();
@@ -29,6 +37,9 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
 
   return (
     <>
+      <p role="status" aria-live="polite" className="sr-only">
+        {said}
+      </p>
       <Button onClick={() => setOpen({ kind: "add" })}>Add category</Button>
       {categories.length === 0 ? (
         <p className="mt-6 rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">No categories yet.</p>
@@ -45,9 +56,21 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
               <Button variant="secondary" onClick={() => setOpen({ kind: "edit", category: c })} aria-label={`Edit ${c.name}`}>
                 Edit
               </Button>
-              <Button variant="quiet-danger" onClick={() => setOpen({ kind: "delete", category: c })} aria-label={`Delete ${c.name}`}>
+              <Button
+                variant="quiet-danger"
+                onClick={(event) => {
+                  opener.current = event.currentTarget;
+                  setOpen({ kind: "delete", category: c });
+                }}
+                aria-label={`Delete ${c.name}`}
+              >
                 Delete
               </Button>
+              {problem?.id === c.id ? (
+                <p aria-hidden="true" className="w-full text-sm text-danger">
+                  {problem.text}
+                </p>
+              ) : null}
             </CollapseItem>
           ))}
         </ul>
@@ -61,10 +84,25 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
           category={open.category}
           open
           onOpenChange={(isOpen) => (isOpen ? null : close())}
+          onCloseAutoFocus={(event) => {
+            if (!deleted.current) return;
+            deleted.current = false;
+            event.preventDefault();
+            // No heading on the list: with no neighbour left, the page title.
+            focusNearRow(opener.current?.closest("li") ?? null, null);
+          }}
           onDeleted={() => {
-            // No toast: the row folds shut, then the list reloads without it (0.7.0.5 spec 3.1).
+            // No toast: the row folds shut, then the list reloads without it (0.7.0.5 spec 3.1). Said in the live region.
+            const { id, name } = open.category;
+            deleted.current = true;
+            say(`Deleted ${name}`);
+            setProblem(null);
             close();
-            collapse(open.category.id, () => router.refresh());
+            collapse(id, () => router.refresh(), () => {
+              const text = "Deleted, but the list didn't reload. Reload the page.";
+              setProblem({ id, text });
+              say(text);
+            });
           }}
         />
       ) : null}

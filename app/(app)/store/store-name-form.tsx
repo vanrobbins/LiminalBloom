@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PanelSaveLine } from "@/components/planograms/panel-save-line";
 import { Input } from "@/components/ui/input";
@@ -19,10 +19,18 @@ const LENGTH = `Give the store a name of ${MIN_STORE_NAME} to ${MAX_STORE_NAME} 
 export function StoreNameForm({ name }: { name: string }) {
   const { status, save, busy } = useInlineSave();
   const [problem, setProblem] = useState<string | undefined>(undefined);
-  // Bumped by a refusal, so the field shows what is stored again instead of what was refused.
-  const [resets, setResets] = useState(0);
+  // The field follows the stored name: put back after a refusal, and again when the reload brings the server's current one.
+  const [value, setValue] = useState(name);
+  const [known, setKnown] = useState(name);
+  if (known !== name) {
+    setKnown(name);
+    setValue(name);
+  }
   // The name last sent (or shown): blur after Enter, or a second blur, sends nothing.
   const sent = useRef(name);
+  useEffect(() => {
+    sent.current = name;
+  }, [name]);
 
   async function commit(raw: string) {
     const clean = cleanStoreName(raw);
@@ -37,7 +45,7 @@ export function StoreNameForm({ name }: { name: string }) {
     sent.current = before;
     if (reply) {
       setProblem(reply.message);
-      setResets((n) => n + 1);
+      setValue(name);
     }
   }
 
@@ -50,17 +58,19 @@ export function StoreNameForm({ name }: { name: string }) {
         void commit(String(new FormData(event.currentTarget).get("name") ?? ""));
       }}
     >
-      {/* Keyed on the refusals, so the field shows what is stored after one. Read-only (not disabled) while it saves, to keep focus. */}
+      {/* Read-only (not disabled) while it saves, to keep focus. */}
       <Input
-        key={resets}
         label="Store name"
         name="name"
-        defaultValue={name}
+        value={value}
         maxLength={MAX_STORE_NAME}
         autoComplete="off"
         readOnly={busy}
         error={problem}
-        onChange={() => setProblem(undefined)}
+        onChange={(event) => {
+          setValue(event.target.value);
+          setProblem(undefined);
+        }}
         onBlur={(event) => void commit(event.target.value)}
       />
       <PanelSaveLine status={status} />

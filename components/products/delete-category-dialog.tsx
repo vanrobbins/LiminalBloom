@@ -17,11 +17,13 @@ type DeleteCategoryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDeleted: () => void;
+  /** Called as the dialog closes; `event.preventDefault()` sends focus somewhere other than back to Delete. */
+  onCloseAutoFocus?: (event: Event) => void;
 };
 
 const products = (n: number) => `${n} ${n === 1 ? "product" : "products"}`;
 
-export function DeleteCategoryDialog({ category, open, onOpenChange, onDeleted }: DeleteCategoryDialogProps) {
+export function DeleteCategoryDialog({ category, open, onOpenChange, onDeleted, onCloseAutoFocus }: DeleteCategoryDialogProps) {
   const [count, setCount] = useState(category.productCount);
   const [notice, setNotice] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -62,6 +64,7 @@ export function DeleteCategoryDialog({ category, open, onOpenChange, onDeleted }
         if (!isOpen && isStale) router.refresh();
         onOpenChange(isOpen);
       }}
+      onCloseAutoFocus={onCloseAutoFocus}
       title={`Delete ${category.name}?`}
       description={count > 0 ? `This also deletes its ${products(count)}, with their locations and images. This can't be undone.` : undefined}
     >

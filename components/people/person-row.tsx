@@ -12,9 +12,11 @@ type PersonRowProps = {
   onRemove: (person: PersonRow, opener: HTMLElement) => void;
   /** Removed: the row folds shut before the list reloads without it. */
   leaving?: boolean;
+  /** Said on the row when the reload after a removal failed. */
+  problem?: string;
 };
 
-export function PersonListItem({ person, onChangeRole, onRemove, leaving = false }: PersonRowProps) {
+export function PersonListItem({ person, onChangeRole, onRemove, leaving = false, problem }: PersonRowProps) {
   return (
     <CollapseItem leaving={leaving} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
       <span className="flex min-w-0 flex-1 flex-col">
@@ -33,6 +35,11 @@ export function PersonListItem({ person, onChangeRole, onRemove, leaving = false
             Remove
           </Button>
         </>
+      ) : null}
+      {problem ? (
+        <p aria-hidden="true" className="w-full text-sm text-danger">
+          {problem}
+        </p>
       ) : null}
     </CollapseItem>
   );

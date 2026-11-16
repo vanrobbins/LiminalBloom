@@ -155,5 +155,33 @@ describe("CategoryList", () => {
       await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
       expect(screen.queryByRole("dialog", { name: /Delete Scarves/ })).not.toBeInTheDocument();
     });
+
+    it("says the deletion in a live region, and focus goes to the next row's control (else the previous) instead of dropping to the page", async () => {
+      const user = userEvent.setup();
+      actions.removeCategory.mockResolvedValue({ status: "deleted" });
+      render(<CategoryList categories={[mockCategory({ id: "cat-1", name: "Scarves", productCount: 0 }), mockCategory({ id: "cat-2", name: "Hats", productCount: 0 }), mockCategory({ id: "cat-3", name: "Belts", productCount: 0 })]} />);
+      await user.click(screen.getByLabelText("Delete Hats"));
+      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Delete category/ }));
+      expect(screen.getByRole("status")).toHaveTextContent("Deleted Hats");
+      await waitFor(() => expect(screen.getByLabelText("Edit Belts")).toHaveFocus());
+      await user.click(screen.getByLabelText("Delete Belts"));
+      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Delete category/ }));
+      await waitFor(() => expect(screen.getByLabelText("Edit Scarves")).toHaveFocus());
+    });
+
+    it("when the reload fails after the fold, the row opens again with the failure on it", async () => {
+      const user = userEvent.setup();
+      actions.removeCategory.mockResolvedValue({ status: "deleted" });
+      routerMock.refresh.mockImplementationOnce(() => {
+        throw new Error("refresh failed");
+      });
+      render(<CategoryList categories={[mockCategory({ id: "cat-1", name: "Scarves", productCount: 0 }), mockCategory({ id: "cat-2", name: "Hats" })]} />);
+      await user.click(screen.getByLabelText("Delete Scarves"));
+      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Delete category/ }));
+      const row = screen.getByText("Scarves").closest("li")!;
+      await waitFor(() => expect(within(row).getByText("Deleted, but the list didn't reload. Reload the page.")).toBeInTheDocument());
+      expect(row).toHaveClass("grid-rows-[1fr]");
+      expect(row).not.toHaveAttribute("inert");
+    });
   });
 });

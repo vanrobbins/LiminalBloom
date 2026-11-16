@@ -76,6 +76,24 @@ describe("usePlanogramDraft", () => {
     });
   });
 
+  it("a refusal made while a save is out is not erased by that save's Saved, and the next save replaces it", async () => {
+    let finish: (reply: unknown) => void = () => {};
+    actions.saveChangeAction.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    let saving: Promise<unknown> = Promise.resolve();
+    await act(async () => void (saving = result.current.save(remove)));
+    expect(result.current.status).toEqual({ kind: "saving" });
+    act(() => result.current.refuse("That doesn't fit"));
+    await act(async () => {
+      finish({ status: "saved", draft: draft(5) });
+      await saving;
+    });
+    expect(result.current.status).toEqual({ kind: "refused", message: "That doesn't fit" });
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(6) });
+    await act(() => result.current.save(remove));
+    expect(result.current.status).toEqual({ kind: "saved" });
+  });
+
   it("returns the saved draft with a save", async () => {
     actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
     const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
