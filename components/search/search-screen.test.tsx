@@ -139,15 +139,31 @@ describe("SearchScreen Load more", () => {
     expect(watching).toHaveLength(0);
   });
 
-  it("loads the next page by itself when the end scrolls into view, without taking focus", async () => {
+  it("loads the next page by itself when the end scrolls into view, without taking focus or announcing", async () => {
     actions.runSearch.mockResolvedValueOnce({ results: [product("p3", "Ink Jacket")], total: 3 });
     renderScreen({ initialTotal: 3 });
     expect(liveObservers()).toHaveLength(1);
     scrollToEnd();
     expect(actions.runSearch).toHaveBeenCalledWith(expect.objectContaining({ offset: 2 }));
-    expect(await screen.findByText("Showing 3 of 3")).toBeInTheDocument();
+    expect(await screen.findByText("3 products")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ink Jacket/ })).not.toHaveFocus();
+    expect(screen.queryByText(/Showing/)).toBeNull();
     expect(liveObservers()).toHaveLength(0);
+  });
+
+  it("disables Load more, and loads nothing, while a search is pending", async () => {
+    const user = userEvent.setup();
+    let finish: (page: unknown) => void = () => {};
+    actions.runSearch.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    renderScreen({ initialTotal: 5 });
+    await user.type(screen.getByRole("searchbox", { name: "Search products" }), "x");
+    expect(screen.getByRole("button", { name: "Load more" })).toBeDisabled();
+    expect(liveObservers()).toHaveLength(0);
+    await vi.waitFor(() => expect(actions.runSearch).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("Searching…")).toBeInTheDocument();
+    await act(async () => finish({ results: [pant, tee], total: 5 }));
+    expect(screen.getByText("2 of 5 products")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
   });
 
   it("does not load a second page while one is on its way", async () => {

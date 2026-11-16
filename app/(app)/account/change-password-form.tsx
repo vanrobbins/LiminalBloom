@@ -25,7 +25,17 @@ export function ChangePasswordForm() {
   const [isOpen, setIsOpen] = useState(false);
   const bodyId = useId();
   const trigger = useRef<HTMLButtonElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [problem, setProblem] = useState<{ field?: Field; message: string } | null>(null);
+
+  // Folding forgets what was typed and any error, so reopening starts clean.
+  function toggle() {
+    if (isOpen) {
+      formRef.current?.reset();
+      setProblem(null);
+    }
+    setIsOpen(!isOpen);
+  }
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,13 +68,13 @@ export function ChangePasswordForm() {
     <Card className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold text-ink">Change password</h2>
       <p className="text-sm text-ink-muted">Changing it signs you out everywhere else, on every phone, tablet and computer, but not here.</p>
-      <Button ref={trigger} variant="secondary" className="self-start" aria-expanded={isOpen} aria-controls={bodyId} onClick={() => setIsOpen((now) => !now)}>
+      <Button ref={trigger} variant="secondary" className="self-start" aria-expanded={isOpen} aria-controls={bodyId} onClick={toggle}>
         Change password
       </Button>
       {/* One grid row, 0fr to 1fr; inert while folded so its fields can't be tabbed to. */}
       <div id={bodyId} inert={!isOpen} className={`grid motion-safe:transition-[grid-template-rows] motion-safe:duration-[190ms] motion-safe:ease-[var(--ease-enter)] ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-hidden">
-          <form onSubmit={save} className="flex flex-col gap-4 p-1">
+          <form ref={formRef} onSubmit={save} className="flex flex-col gap-4 p-1">
             <Input label="Current password" name="current" type="password" required autoComplete="current-password" error={errorFor("current")} />
             <Input label="New password" name="new" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" hint={`At least ${MIN_PASSWORD} characters.`} error={errorFor("new")} />
             <Input label="Confirm new password" name="confirm" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" error={errorFor("confirm")} />

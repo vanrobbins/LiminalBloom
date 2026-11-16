@@ -108,6 +108,60 @@ describe("useSearch", () => {
     expect(result.current.moreFailed).toBe(true);
   });
 
+  it("loads nothing more while a debounced search is waiting, so new-filter rows never join the old list", async () => {
+    actions.runSearch.mockResolvedValue({ results: [{ id: "n" }], total: 1 });
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [{ id: "a" }] as never[], 5));
+    act(() => result.current.update({ q: "new" }));
+    expect(result.current.isPending).toBe(true);
+    let more: unknown = "unset";
+    await act(async () => {
+      more = await result.current.showMore();
+    });
+    expect(more).toBeNull();
+    expect(actions.runSearch).not.toHaveBeenCalled();
+    await act(async () => vi.advanceTimersByTime(150));
+    expect(result.current.results).toEqual([{ id: "n" }]);
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it("drops a Load more answer that a newer search overtook", async () => {
+    let answerMore: (value: unknown) => void = () => {};
+    actions.runSearch.mockReturnValueOnce(new Promise((resolve) => (answerMore = resolve))).mockResolvedValueOnce({ results: [{ id: "n" }], total: 1 });
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [{ id: "a" }] as never[], 5));
+    let more: unknown = "unset";
+    act(() => void result.current.showMore().then((grown) => (more = grown)));
+    act(() => result.current.update({ q: "n" }));
+    await act(async () => vi.advanceTimersByTime(150));
+    await act(async () => answerMore({ results: [{ id: "late" }], total: 5 }));
+    expect(more).toBeNull();
+    expect(result.current.results).toEqual([{ id: "n" }]);
+    expect(result.current.total).toBe(1);
+    expect(result.current.isLoadingMore).toBe(false);
+  });
+
+  it("lets a Load more click during a search change nothing: the search still answers and clears pending", async () => {
+    let answerSearch: (value: unknown) => void = () => {};
+    actions.runSearch.mockReturnValueOnce(new Promise((resolve) => (answerSearch = resolve)));
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [{ id: "a" }] as never[], 5));
+    act(() => result.current.update({ q: "n" }));
+    await act(async () => vi.advanceTimersByTime(150));
+    expect(result.current.isPending).toBe(true);
+    await act(async () => void (await result.current.showMore()));
+    expect(actions.runSearch).toHaveBeenCalledTimes(1);
+    await act(async () => answerSearch({ results: [{ id: "n" }], total: 1 }));
+    expect(result.current.results).toEqual([{ id: "n" }]);
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it("doesn't call an empty page a failure when the count says the list is complete", async () => {
+    vi.useRealTimers();
+    actions.runSearch.mockResolvedValueOnce({ results: [{ id: "a" }], total: 1 });
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [{ id: "a" }] as never[], 3));
+    await act(async () => void (await result.current.showMore()));
+    expect(result.current.total).toBe(1);
+    expect(result.current.moreFailed).toBe(false);
+  });
+
   it("starts again from the first page when the query changes", async () => {
     actions.runSearch.mockResolvedValue({ results: [], total: 0 });
     const { result } = renderHook(() => useSearch(searchInput.parse({}), [], 0));

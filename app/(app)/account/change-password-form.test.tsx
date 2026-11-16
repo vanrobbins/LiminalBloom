@@ -69,6 +69,16 @@ describe("ChangePasswordForm", () => {
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
+  it("forgets the typed passwords and the error when the form folds shut", async () => {
+    mocks.change.mockResolvedValue({ status: "refused", field: "current", message: "That isn't your current password." });
+    await fill();
+    await screen.findByText("That isn't your current password.");
+    await userEvent.setup().click(screen.getByRole("button", { name: "Change password" }));
+    expect(screen.queryByText("That isn't your current password.")).toBeNull();
+    for (const name of ["current", "new", "confirm"]) expect(document.querySelector<HTMLInputElement>(`input[name=${name}]`)).toHaveValue("");
+    expect(screen.getByLabelText("Current password")).not.toHaveAttribute("aria-invalid", "true");
+  });
+
   it("shows a mismatch next to the confirmation field", async () => {
     mocks.change.mockResolvedValue({ status: "refused", field: "confirm", message: "The two new passwords don't match." });
     await fill("old-password-1", "new-password-2", "new-password-3");

@@ -23,12 +23,18 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
   const [moreFailed, setMoreFailed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(0);
+  // Load more's own ticket: a newer Load more drops an older one without touching a search.
+  const moreTicket = useRef(0);
+  // True from a keystroke until its search answers, debounce included; the state above
+  // is for the screen, this is for showMore, which can't wait for a re-render.
+  const searching = useRef(false);
 
   // A pending search must not fire after the screen is gone.
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   async function run(next: SearchInput) {
     const ticket = ++latest.current;
+    searching.current = true;
     setIsPending(true);
     // A new search overtakes a Show more still on its way.
     setIsLoadingMore(false);
@@ -44,22 +50,29 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
     } catch {
       if (ticket === latest.current) setIsOffline(true);
     } finally {
-      if (ticket === latest.current) setIsPending(false);
+      if (ticket === latest.current) {
+        searching.current = false;
+        setIsPending(false);
+      }
     }
   }
 
   /**
    * The next 30, appended (spec §2.2). Resolves to the first new card's id (for
    * focus) and the new counts, or null when nothing new came (overtaken,
-   * refused, offline or empty; all but overtaken set `moreFailed`).
+   * refused, offline or empty; all but overtaken set `moreFailed`). Does nothing
+   * while a search is pending: its list isn't the one this page would extend.
    */
   async function showMore(): Promise<{ firstId: string; shown: number; total: number } | null> {
-    const ticket = ++latest.current;
+    if (searching.current) return null;
+    const search = latest.current;
+    const ticket = ++moreTicket.current;
+    const overtaken = () => search !== latest.current || ticket !== moreTicket.current;
     setIsLoadingMore(true);
     setMoreFailed(false);
     try {
       const found = await runSearch({ ...input, offset: results.length });
-      if (ticket !== latest.current) return null;
+      if (overtaken()) return null;
       if (!found) {
         setMoreFailed(true);
         return null;
@@ -72,20 +85,21 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
       const nextTotal = found.results.length > 0 ? found.total : total;
       setTotal(nextTotal);
       setIsOffline(false);
-      // A page with nothing new (a delete shifted it) counts as a failure too, so auto-load can't loop on it.
+      // A page with nothing new (a delete shifted it) counts as a failure too, so auto-load can't loop on it,
+      // unless the count says the list is complete: then Load more just goes away.
       if (!fresh[0]) {
-        setMoreFailed(true);
+        if (results.length < nextTotal) setMoreFailed(true);
         return null;
       }
       return { firstId: fresh[0].id, shown: results.length + fresh.length, total: nextTotal };
     } catch {
-      if (ticket === latest.current) {
+      if (!overtaken()) {
         setIsOffline(true);
         setMoreFailed(true);
       }
       return null;
     } finally {
-      if (ticket === latest.current) setIsLoadingMore(false);
+      if (!overtaken()) setIsLoadingMore(false);
     }
   }
 
@@ -93,6 +107,11 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
     // A changed query, filter or sort starts again from the first 30.
     const next = { ...input, ...change, offset: 0 };
     setInput(next);
+    // Pending from the keystroke, not from the request: until it answers, the list
+    // on screen is the old one, so nothing may be loaded onto it. Overtakes what's in flight.
+    latest.current++;
+    searching.current = true;
+    setIsPending(true);
     // The native History API keeps Next's router in step without a server round trip.
     const query = toSearchParams(next).toString();
     window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);

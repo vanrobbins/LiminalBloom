@@ -67,14 +67,14 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
     pendingFocus.current = null;
   }, [results]);
 
-  async function more(moveFocus: boolean) {
+  // `byButton`: the worded Load more. It moves focus and announces; auto-load, which fires
+  // while scrolling, stays silent (a failure still shows its own alert).
+  async function more(byButton: boolean) {
     const grown = await showMore();
-    if (!grown) return;
-    if (moveFocus) {
-      const card = cardOf(grown.firstId);
-      if (card) card.focus();
-      else pendingFocus.current = grown.firstId;
-    }
+    if (!grown || !byButton) return;
+    const card = cardOf(grown.firstId);
+    if (card) card.focus();
+    else pendingFocus.current = grown.firstId;
     setAnnouncement(`Showing ${grown.shown.toLocaleString("en-US")} of ${grown.total.toLocaleString("en-US")}`);
   }
   const end = useAutoLoad(canShowMore && !isLoadingMore && !isPending && !moreFailed, () => void more(false));
@@ -128,7 +128,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
         {canShowMore ? (
           <div className="mt-4 flex flex-col items-center gap-2">
             <div ref={end} aria-hidden="true" />
-            <Button variant="secondary" onClick={() => void more(true)} loading={isLoadingMore} loadingText="Loading more…">
+            <Button variant="secondary" onClick={() => void more(true)} disabled={isPending} loading={isLoadingMore} loadingText="Loading more…">
               Load more
             </Button>
             {moreFailed ? (
