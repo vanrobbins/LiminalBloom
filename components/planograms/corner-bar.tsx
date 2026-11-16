@@ -54,12 +54,15 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
   const [discarding, setDiscarding] = useState(false);
   const [busy, setBusy] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
+  // A discard that went through takes the ⋯ away on the reload that follows, whenever that lands.
+  const discarded = useRef(false);
 
   async function discard() {
     setBusy(true);
     try {
       const reply = await discardDraftAction(fixtureId, draftVersion ?? row?.version ?? 0);
       toast({ tone: reply.status === "saved" ? "success" : "error", title: reply.message });
+      discarded.current = reply.status === "saved";
       setDiscarding(false);
       if (reply.status === "saved") onLeave();
       else router.refresh();
@@ -113,6 +116,7 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
                 <DropdownMenuItem
                   onSelect={() => {
                     setBusy(false);
+                    discarded.current = false;
                     setDiscarding(true);
                   }}
                 >
@@ -133,10 +137,10 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
         title="Discard this draft?"
         description="Every change since it started is lost. The published planogram stays as it is."
         // Opened from a menu item that is gone by now, so Radix has nothing to give focus back to: it goes to the ⋯,
-        // or, once a discard has taken the ⋯ away, to the page's main area (as a removed tile's does) rather than the page top.
+        // or, after a discard that went through (the ⋯ is on its way out), to the page's main area as a removed tile's does.
         onCloseAutoFocus={(event) => {
           event.preventDefault();
-          (more.current ?? document.getElementById("content"))?.focus();
+          (discarded.current ? document.getElementById("content") : more.current)?.focus();
         }}
       >
         <Button variant="danger" onClick={discard} loading={busy} loadingText="Discarding…">

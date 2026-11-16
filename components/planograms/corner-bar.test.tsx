@@ -176,4 +176,32 @@ describe("CornerBar", () => {
     await waitFor(() => expect(main).toHaveFocus());
     main.remove();
   });
+
+  it("after a successful discard focus goes to the main area even while the ⋯ is still mounted (it goes on the reload)", async () => {
+    actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
+    const main = document.createElement("main");
+    main.id = "content";
+    main.tabIndex = -1;
+    document.body.append(main);
+    const user = userEvent.setup();
+    show();
+    const dialog = await openDiscard(user);
+    await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("button", { name: "More draft actions" })).toBeInTheDocument();
+    await waitFor(() => expect(main).toHaveFocus());
+    main.remove();
+  });
+
+  it("a refused discard closes the dialog, says why, reloads, and leaves nothing to confirm", async () => {
+    actions.discardDraftAction.mockResolvedValue({ status: "refused", message: "Already published on another device" });
+    const user = userEvent.setup();
+    show();
+    const dialog = await openDiscard(user);
+    await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error", title: "Already published on another device" }));
+    expect(router.refresh).toHaveBeenCalledTimes(1);
+    expect(base.onLeave).not.toHaveBeenCalled();
+  });
 });

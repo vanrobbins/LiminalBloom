@@ -10,10 +10,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PublishedVersion } from "@/lib/planograms/queries";
 import type { DraftState, PlacementView, PlanogramFace, PlanogramScope } from "@/lib/planograms/types";
 
-const hook = vi.hoisted(() => ({ refuse: (() => {}) as (message: string) => void, draft: null as DraftState | null, save: (() => {}) as (...args: unknown[]) => unknown, leave: (() => {}) as () => void }));
+const hook = vi.hoisted(() => ({ draft: null as DraftState | null, save: (() => {}) as (...args: unknown[]) => unknown, leave: (() => {}) as () => void }));
 vi.mock("./use-planogram-draft", async (original) => ({
   ...(await original<typeof import("./use-planogram-draft")>()),
-  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (pending: unknown) => hook.save(typeof pending === "function" ? pending(hook.draft) : pending), adopt: (next: DraftState) => (hook.draft = next), refuse: hook.refuse, leave: hook.leave }),
+  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (pending: unknown) => hook.save(typeof pending === "function" ? pending(hook.draft) : pending), adopt: (next: DraftState) => (hook.draft = next), leave: hook.leave }),
 }));
 const actions = vi.hoisted(() => ({
   pickerSearch: vi.fn(),
@@ -56,7 +56,6 @@ describe("PlanogramScreen corner bar", () => {
     hook.draft = null;
     hook.save = vi.fn();
     hook.leave = vi.fn();
-    hook.refuse = vi.fn();
     actions.pickerSearch.mockResolvedValue([teeFit]);
   });
 
@@ -104,7 +103,7 @@ describe("PlanogramScreen corner bar", () => {
     expect(hook.save).toHaveBeenCalledWith({ kind: "add", productId: "tee", fields: expect.objectContaining({ faceId: front.faceId, col: 0, row: 1 }) });
   });
 
-  it("a draft that fills the face leaves the add with no room: the Add dialog and the status line both say so, and nothing is saved", async () => {
+  it("a draft that fills the face leaves the add with no room: the Add dialog says so, once, and nothing is saved", async () => {
     const wall: PlacementView = { ...pant, id: "d4", colSpan: 4, rowSpan: 3, col: 0 };
     actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 3, placements: [wall] } });
     const user = userEvent.setup();
@@ -112,7 +111,6 @@ describe("PlanogramScreen corner bar", () => {
     await user.click(screen.getByRole("button", { name: "Add product" }));
     await user.click(await screen.findByRole("button", { name: /Tee/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No open spot fits Tee. Make room, then add it.");
-    expect(hook.refuse).toHaveBeenCalledWith("No open spot fits Tee. Make room, then add it.");
     expect(hook.save).not.toHaveBeenCalled();
   });
 
@@ -124,7 +122,6 @@ describe("PlanogramScreen corner bar", () => {
     await user.click(await screen.findByRole("button", { name: /Tee/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No open spot fits Tee");
     expect(actions.beginDraftAction).not.toHaveBeenCalled();
-    expect(hook.refuse).not.toHaveBeenCalled();
   });
 
   it("a refused start says why in the Add dialog and saves nothing", async () => {

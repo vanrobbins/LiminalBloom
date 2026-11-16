@@ -29,8 +29,6 @@ type Options = {
   expectedVersion: number | null;
   save: (pending: Pending) => Promise<SaveResult>;
   adopt: (draft: DraftState) => void;
-  /** Puts a refusal on the status line when nothing was sent to refuse it (an add with no room in the draft). */
-  refuse: (message: string) => void;
   /** The draft hook's `onLeaveRef`: set to clear the history when the draft goes. */
   onLeaveRef?: RefObject<() => void>;
   /** The draft hook's `onTakeRef`: set to map the history's depths through each draft taken in. */
@@ -45,7 +43,7 @@ type Options = {
   reveal?: (fields: PlacementFields) => string | null;
 };
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
   // One start at a time: a second change before it's back waits for the same reply.
@@ -159,11 +157,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, ref
     }
     if (!("draft" in started)) return { saved: false, message: started.message };
     const fields = pick(started.draft.placements);
-    if (typeof fields === "string") {
-      // The draft may have just started and the screen switched to it: the status line says why nothing was added.
-      refuse(fields);
-      return { saved: false, message: fields };
-    }
+    if (typeof fields === "string") return { saved: false, message: fields };
     const result = await save({ kind: "add", productId, fields });
     const placed = result.saved ? result.draft.placements.find((p) => p.id === result.id) : undefined;
     if (placed) history.record({ kind: "add", id: placed.id, productId, fields: fieldsOf(placed, true), ahead: result.saved ? result.ahead?.after : undefined });

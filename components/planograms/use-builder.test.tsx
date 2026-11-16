@@ -33,17 +33,16 @@ function setup(draft: DraftState | null, save = vi.fn().mockResolvedValue({ save
   const adopt = vi.fn();
   const onStarted = vi.fn();
   const onStale = vi.fn();
-  const refuse = vi.fn();
   let shown = draft;
   const send = queued(save, () => shown);
   const hook = renderHook(
     ({ d, on }: { d: DraftState | null; on?: boolean }) => {
       shown = d;
-      return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt, refuse, onStarted, onStale, describe: () => "here", enabled: on });
+      return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt, onStarted, onStale, describe: () => "here", enabled: on });
     },
     { initialProps: { d: draft } as { d: DraftState | null; on?: boolean } },
   );
-  return { ...hook, save, adopt, refuse, onStarted, onStale };
+  return { ...hook, save, adopt, onStarted, onStale };
 }
 
 describe("useBuilder", () => {
@@ -133,7 +132,7 @@ describe("useBuilder", () => {
     const { result, rerender } = renderHook(
       ({ d }: { d: DraftState }) => {
         shown = d;
-        return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt: vi.fn(), refuse: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal });
+        return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal });
       },
       { initialProps: { d: state(pant) } },
     );
@@ -269,14 +268,13 @@ describe("useBuilder", () => {
     expect(save).toHaveBeenCalledWith({ kind: "add", productId: "pant", fields: fields(pant, 2) });
   });
 
-  it("an add with no room in the draft that came back saves nothing and says so on the status line", async () => {
+  it("an add with no room in the draft that came back saves nothing and hands back why", async () => {
     actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: state(view("x", 0)) });
-    const { result, save, refuse, onStarted } = setup(null);
+    const { result, save, onStarted } = setup(null);
     const made = await act(() => result.current.add("pant", () => "No open spot fits Pant."));
     expect(made).toEqual({ saved: false, message: "No open spot fits Pant." });
-    expect(refuse).toHaveBeenCalledWith("No open spot fits Pant.");
     expect(save).not.toHaveBeenCalled();
-    // The draft did start, and the screen has switched to it: the status line is how the person learns why.
+    // The draft did start; the Add dialog, still open, shows the reason the reply carries.
     expect(onStarted).toHaveBeenCalledTimes(1);
   });
 
@@ -413,7 +411,7 @@ describe("useBuilder", () => {
     // The real draft queue under the builder: the order the two hooks hand off in is what's tested.
     const { result } = renderHook(() => {
       const draft = usePlanogramDraft("fx", state(pant), vi.fn());
-      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, refuse: draft.refuse, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
+      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
       return builder;
     });
 
