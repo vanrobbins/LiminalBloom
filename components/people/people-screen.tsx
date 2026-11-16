@@ -31,7 +31,6 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
   // and this line says it again to a screen reader.
   const [said, setSaid] = useAnnouncement();
   // A removal whose reload failed: the row opens again with this on it.
-  const [problem, setProblem] = useState<{ id: string; text: string } | null>(null);
   const { isLeaving, collapse } = useCollapseOut();
   // Radix returns focus to a Trigger, and these dialogs have none (they open from state), so the screen does it.
   const opener = useRef<HTMLElement | null>(null);
@@ -83,7 +82,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           </h2>
           <ul className="flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
             {group.people.map((p) => (
-              <PersonListItem key={p.memberId} person={p} leaving={isLeaving(p.memberId)} problem={problem?.id === p.memberId ? problem.text : undefined} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
+              <PersonListItem key={p.memberId} person={p} leaving={isLeaving(p.memberId)} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
             ))}
           </ul>
           {view.isSoleManager && group.people.some((p) => p.isYou) ? (
@@ -130,12 +129,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
               removedRow.current = true;
               setSaid(`Removed ${removedName}`);
               const id = open.person.memberId;
-              setProblem(null);
-              collapse(id, () => router.refresh(), () => {
-                const text = "Removed, but the list didn't reload. Reload the page.";
-                setProblem({ id, text });
-                setSaid(text);
-              });
+              collapse(id, () => router.refresh());
             }
             setOpen(null);
           }}

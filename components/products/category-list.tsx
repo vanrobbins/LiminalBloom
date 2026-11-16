@@ -25,7 +25,6 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
   const { isLeaving, collapse } = useCollapseOut();
   const [said, say] = useAnnouncement();
   // A deletion whose reload failed: the row opens again with this on it.
-  const [problem, setProblem] = useState<{ id: string; text: string } | null>(null);
   // The row whose Delete opened the dialog; when that row is deleted, focus goes to a neighbour instead of back to it.
   const opener = useRef<HTMLElement | null>(null);
   const deleted = useRef(false);
@@ -66,11 +65,6 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
               >
                 Delete
               </Button>
-              {problem?.id === c.id ? (
-                <p aria-hidden="true" className="w-full text-sm text-danger">
-                  {problem.text}
-                </p>
-              ) : null}
             </CollapseItem>
           ))}
         </ul>
@@ -96,13 +90,8 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
             const { id, name } = open.category;
             deleted.current = true;
             say(`Deleted ${name}`);
-            setProblem(null);
             close();
-            collapse(id, () => router.refresh(), () => {
-              const text = "Deleted, but the list didn't reload. Reload the page.";
-              setProblem({ id, text });
-              say(text);
-            });
+            collapse(id, () => router.refresh());
           }}
         />
       ) : null}

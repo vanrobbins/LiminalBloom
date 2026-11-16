@@ -9,6 +9,8 @@ import { toastUses } from "./toast-scan";
 // the control, so a new `toast(` call has to be argued for. This lists every call site allowed
 // (file, how many calls, and why) and fails on any other, in the pattern of server-actions-guard.test.ts.
 // Adding a call means adding it here on purpose, with its reason.
+// Accepted gap: the scan reads string literals, so `import(p)` or `require(p)` with a non-literal
+// path, then `m.toast({})`, is not seen. Closing it would need type information; review catches it.
 
 type Allowed = { calls: number; why: string };
 
@@ -37,6 +39,15 @@ const ALLOWED: Record<string, Allowed> = {
   "components/ui/use-inline-save.ts": { calls: 1, why: `the due date, store name and time zone save as they change; only ${CONNECTION} is a toast` },
   "components/store-map/use-map-editor.ts": { calls: 1, why: "too many changes to save at once: an explanation with a how-to" },
 };
+
+type Found = { file: string; calls: number[] } & Partial<ReturnType<typeof toastUses>>;
+
+/** The allow-list rule: a file must call toast() exactly as often as `allowed` says (none when it is not listed). */
+const callCountOffenders = (found: Found[], allowed: Record<string, Allowed>) =>
+  found.flatMap(({ file, calls }) => {
+    const count = allowed[file]?.calls ?? 0;
+    return calls.length === count ? [] : [`${file}: ${calls.length} toast() call(s) at line(s) ${calls.join(", ") || "none"}, ${count} allowed`];
+  });
 
 /** Scans a source string as if it were the file `file`. */
 const scan = (code: string, file = "components/x/new-thing.tsx") => toastUses(ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true), file);
@@ -79,6 +90,19 @@ describe("the scan sees every way to reach toast (R2 review)", () => {
   });
 });
 
+describe("the allow-list rule itself (fixtures)", () => {
+  const listed = { "components/x/a.tsx": { calls: 1, why: "a reason that is long enough" } };
+  const A = "components/x/a.tsx";
+  const IMPORT = "import { toast } from \"@/lib/toast\";\n";
+  it("passes a listed file with exactly its calls", () => expect(callCountOffenders([{ file: A, ...scan(`${IMPORT}toast({});`, A) }], listed)).toEqual([]));
+  it("fails an unlisted file that calls toast()", () => expect(callCountOffenders([{ file: "components/x/b.tsx", ...scan(`${IMPORT}toast({});`) }], listed)).toHaveLength(1));
+  it("fails a listed file with one call too many, and one too few", () => {
+    expect(callCountOffenders([{ file: A, ...scan(`${IMPORT}toast({}); toast({});`, A) }], listed)).toHaveLength(1);
+    expect(callCountOffenders([{ file: A, ...scan("const a = 1;", A) }], listed)).toHaveLength(1);
+  });
+  it("lets a file with no calls and no listing alone", () => expect(callCountOffenders([{ file: "components/x/c.tsx", ...scan("const a = 1;") }], listed)).toEqual([]));
+});
+
 describe("toasts are kept for what is out of sight (R2, 0.7.0.5)", () => {
   const found = sourceFiles()
     .filter(({ file }) => file !== "lib/toast.ts")
@@ -90,11 +114,7 @@ describe("toasts are kept for what is out of sight (R2, 0.7.0.5)", () => {
   });
 
   it("every file calls toast() exactly as often as it is allowed to, and no other file calls it", () => {
-    const offenders = found.flatMap(({ file, calls }) => {
-      const allowed = ALLOWED[file]?.calls ?? 0;
-      return calls.length === allowed ? [] : [`${file}: ${calls.length} toast() call(s) at line(s) ${calls.join(", ") || "none"}, ${allowed} allowed`];
-    });
-    expect(offenders).toEqual([]);
+    expect(callCountOffenders(found, ALLOWED)).toEqual([]);
   });
 
   it("nothing hides a toast behind another name (an alias or a namespace import)", () => {

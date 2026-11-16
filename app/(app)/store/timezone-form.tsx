@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PanelSaveLine } from "@/components/planograms/panel-save-line";
 import { TimezonePicker } from "@/components/time/timezone-picker";
@@ -23,9 +23,7 @@ export function TimezoneForm({ zone, version }: { zone: string; version: number 
     setChosen(zone);
   }
 
-  async function choose(next: string) {
-    // The next save needs the version the reload brings, so a pick made while one is out is not sent (and the picker keeps its focus).
-    if (busy) return;
+  async function send(next: string) {
     setChosen(next);
     setProblem(undefined);
     const reply = await save(() => saveTimezoneAction(next, version));
@@ -35,6 +33,25 @@ export function TimezoneForm({ zone, version }: { zone: string; version: number 
     }
   }
 
+  // A pick made while a save is out waits here (the latest one wins) and goes once the reload has brought the version it needs.
+  const queued = useRef<string | null>(null);
+  useEffect(() => {
+    if (busy || queued.current === null) return;
+    const next = queued.current;
+    queued.current = null;
+    void send(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when a save and its reload finish
+  }, [busy]);
+
+  function choose(next: string) {
+    if (busy) {
+      queued.current = next;
+      setChosen(next);
+      return;
+    }
+    void send(next);
+  }
+
   return (
     // The change event rises from the picker's select (the find box is a search input and saves nothing).
     <form
@@ -42,7 +59,7 @@ export function TimezoneForm({ zone, version }: { zone: string; version: number 
       className="flex flex-col gap-1"
       onSubmit={(event) => event.preventDefault()}
       onChange={(event) => {
-        if (event.target instanceof HTMLSelectElement) void choose(event.target.value);
+        if (event.target instanceof HTMLSelectElement) choose(event.target.value);
       }}
     >
       <TimezonePicker name="timezone" defaultZone={zone} value={chosen} />

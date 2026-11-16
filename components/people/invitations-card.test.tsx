@@ -151,6 +151,18 @@ describe("InvitationsCard", () => {
       expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
     });
 
+    it("decides by where focus was when Cancel was pressed, since a browser drops it to the page once the button is disabled", async () => {
+      const user = userEvent.setup();
+      // Disabling the focused button (the busy state) blurs it in a real browser; jsdom does not, so do it as the server call starts.
+      actions.cancelInvitationAction.mockImplementation(async () => {
+        (document.activeElement as HTMLElement | null)?.blur();
+        return { status: "cancelled", email: "sam@x.com" };
+      });
+      open("jane@x.com", "sam@x.com", "tom@x.com");
+      await user.click(screen.getByRole("button", { name: "Cancel invitation for sam@x.com" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Copy link for tom@x.com" })).toHaveFocus());
+    });
+
     it("leaves focus alone when it was not in the row", async () => {
       cancelled();
       open("jane@x.com", "sam@x.com");
@@ -160,19 +172,6 @@ describe("InvitationsCard", () => {
       await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
       expect(other).not.toHaveFocus();
     });
-  });
-
-  it("when the reload fails after the fold, the row opens again with the failure on it", async () => {
-    const user = userEvent.setup();
-    actions.cancelInvitationAction.mockResolvedValue({ status: "cancelled", email: "jane@x.com" });
-    routerMock.refresh.mockImplementationOnce(() => {
-      throw new Error("refresh failed");
-    });
-    render(<InvitationsCard invitations={[invitationRow("jane@x.com"), invitationRow("sam@x.com")]} />);
-    await user.click(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" }));
-    await waitFor(() => expect(within(rowOf("jane@x.com")).getByText("Cancelled, but the list didn't reload. Reload the page.")).toBeInTheDocument());
-    expect(rowOf("jane@x.com")).toHaveClass("grid-rows-[1fr]");
-    expect(rowOf("jane@x.com")).not.toHaveAttribute("inert");
   });
 
   it("copying the same link twice is announced twice", async () => {

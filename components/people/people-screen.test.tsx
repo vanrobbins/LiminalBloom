@@ -125,21 +125,6 @@ describe("PeopleScreen, for someone who manages people", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Change role for Abe Sales" })).toHaveFocus());
   });
 
-  it("when the reload fails after a removal, the row opens again with the failure on it", async () => {
-    const user = userEvent.setup();
-    actions.removePersonAction.mockResolvedValue({ status: "removed", name: "Zoe Sales" });
-    routerMock.refresh.mockImplementationOnce(() => {
-      throw new Error("refresh failed");
-    });
-    renderScreen(managing());
-    await user.click(screen.getByRole("button", { name: "Remove Zoe Sales" }));
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remove from store" }));
-    const row = screen.getByText("Zoe Sales").closest("li")!;
-    await waitFor(() => expect(within(row).getByText("Removed, but the list didn't reload. Reload the page.")).toBeInTheDocument());
-    expect(row).toHaveClass("grid-rows-[1fr]");
-    expect(row).not.toHaveAttribute("inert");
-  });
-
   it("the same role change twice in a row is announced twice", async () => {
     const user = userEvent.setup();
     actions.changeRoleAction.mockResolvedValue({ status: "changed", name: "Zoe Sales", roleName: "Visual Merchandising Worker" });

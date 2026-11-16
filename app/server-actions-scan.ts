@@ -12,7 +12,7 @@ export function sourceFiles() {
   return SCANNED_ROOTS.flatMap((root) =>
     readdirSync(root, { recursive: true, encoding: "utf8" })
       .map((file) => `${root}/${file.replaceAll("\\", "/")}`)
-      .filter((file) => /\.tsx?$/.test(file) && !file.includes(".test.") && !file.endsWith(".d.ts"))
+      .filter((file) => /\.[cm]?[jt]sx?$/.test(file) && !file.includes(".test.") && !file.endsWith(".d.ts"))
       .map((file) => ({ file, source: ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true) })),
   );
 }

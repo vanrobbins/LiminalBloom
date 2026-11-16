@@ -73,31 +73,4 @@ describe("useCollapseOut", () => {
     vi.advanceTimersByTime(COLLAPSE_MS * 2);
     expect(then).not.toHaveBeenCalled();
   });
-
-  it("opens the row again and says so when what follows the fold throws (the reload failed)", () => {
-    const { result } = renderHook(() => useCollapseOut());
-    const onFail = vi.fn();
-    act(() =>
-      result.current.collapse(
-        "a",
-        () => {
-          throw new Error("refresh failed");
-        },
-        onFail,
-      ),
-    );
-    expect(result.current.isLeaving("a")).toBe(true);
-    act(() => void vi.advanceTimersByTime(COLLAPSE_MS));
-    expect(result.current.isLeaving("a")).toBe(false);
-    expect(onFail).toHaveBeenCalledTimes(1);
-  });
-
-  it("does the same when what follows is asynchronous and rejects", async () => {
-    const { result } = renderHook(() => useCollapseOut());
-    const onFail = vi.fn();
-    act(() => result.current.collapse("a", () => Promise.reject(new Error("no")), onFail));
-    await act(async () => void vi.advanceTimersByTime(COLLAPSE_MS));
-    expect(result.current.isLeaving("a")).toBe(false);
-    expect(onFail).toHaveBeenCalledTimes(1);
-  });
 });

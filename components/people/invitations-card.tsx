@@ -60,6 +60,9 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
   }
 
   async function cancel(id: string, email: string, button: HTMLElement) {
+    // Asked before the busy state disables this button: a browser drops focus to the page when its focused button is disabled.
+    const row = button.closest("li");
+    const hadFocus = row?.contains(document.activeElement) ?? false;
     setBusy(id);
     setProblem(null);
     try {
@@ -68,9 +71,8 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
       if (result.status === "cancelled" || result.status === "gone") {
         say(result.status === "cancelled" ? `Cancelled invitation for ${email}` : `Invitation for ${email} is already gone`);
         // The folding row goes inert, which would drop focus to the page: move it first, if it was on this row.
-        const row = button.closest("li");
-        if (row?.contains(document.activeElement)) focusNearRow(row, heading.current);
-        return collapse(id, () => router.refresh(), () => setProblem({ id, text: "Cancelled, but the list didn't reload. Reload the page." }));
+        if (hadFocus) focusNearRow(row, heading.current);
+        return collapse(id, () => router.refresh());
       }
       setProblem({ id, text: refusalText("forbidden", "").message });
       router.refresh();

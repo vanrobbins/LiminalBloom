@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,23 +32,34 @@ describe("TimezoneForm (auto-saves, R3)", () => {
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 
-  it("holds the picker still while a save is out without taking focus from it: the next change waits for the reload's version", async () => {
+  it("a pick made while a save is out is kept and sent once the reload brings the new version: the latest pick wins, and the picker keeps its focus", async () => {
     let finish: (reply: { status: string; message: string }) => void = () => {};
-    mocks.save.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    mocks.save.mockReturnValueOnce(new Promise((resolve) => (finish = resolve))).mockResolvedValue({ status: "saved", message: "Time zone saved" });
     const user = userEvent.setup();
-    render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
+    // The reload lands as new props, in the same transition that ends the busy state, as the real refresh does.
+    let land: (zone: string, version: number) => void = () => {};
+    function Page() {
+      const [page, setPage] = useState({ zone: "America/Los_Angeles", version: 2 });
+      land = (z, v) => setPage({ zone: z, version: v });
+      return <TimezoneForm zone={page.zone} version={page.version} />;
+    }
+    mocks.refresh.mockImplementation(() => land("America/Denver", 3));
+    render(<Page />);
     zone().focus();
     await user.selectOptions(zone(), "America/Denver");
     expect(zone()).not.toBeDisabled();
     expect(zone()).toHaveFocus();
-    // A second pick during the save is not sent, and the picker still shows the zone being saved.
     await user.selectOptions(zone(), "America/Chicago");
+    await user.selectOptions(zone(), "America/New_York");
+    // Nothing is sent while the first is out, and the picker shows the latest pick.
     expect(mocks.save).toHaveBeenCalledTimes(1);
-    expect(zone()).toHaveValue("America/Denver");
+    expect(zone()).toHaveValue("America/New_York");
     finish({ status: "saved", message: "Time zone saved" });
-    await screen.findByText("Saved");
-    await user.selectOptions(zone(), "America/Chicago");
+    // The reload lands with the first zone and the next version; only then does the last pick go.
     await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(2));
+    expect(mocks.save).toHaveBeenLastCalledWith("America/New_York", 3);
+    expect(zone()).toHaveValue("America/New_York");
+    expect(zone()).toHaveFocus();
   });
 
   it("after a refusal the picker shows the server's current zone once the reload lands", async () => {
