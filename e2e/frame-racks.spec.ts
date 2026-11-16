@@ -65,8 +65,8 @@ test("a run is one planogram: both rails on one grid, hung only", async ({ page 
   await expect(tile).toBeVisible();
   await expect(tile.locator("svg[data-view]")).toHaveAttribute("data-view", "hung");
 
-  // Add leaves the new tile selected, with its toolbar open.
-  await page.getByRole("button", { name: "Edit numbers" }).click();
+  // Add leaves the new tile selected, with its corner discs on: the pencil opens its panel.
+  await page.getByRole("button", { name: "Edit E2E High-Rise Pant" }).click();
   await expect(page.getByRole("radio", { name: "Folded" })).toBeDisabled();
   await expect(page.getByText("Frame racks hold hung product only, on their one rail.")).toBeVisible();
 });

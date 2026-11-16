@@ -82,7 +82,7 @@ describe("Undo and Redo of a removed or added placement", () => {
     const user = userEvent.setup();
     show();
     await user.click(tile("Pant"));
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove Pant" }));
     await gone("Pant");
     expect(lastChange()).toEqual({ kind: "remove", id: "d1", version: 3 });
 
@@ -133,7 +133,7 @@ describe("Undo and Redo of a removed or added placement", () => {
     const user = userEvent.setup();
     show();
     await user.click(tile("Pant"));
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove Pant" }));
     await gone("Pant");
     actions.saveChangeAction.mockResolvedValueOnce({ status: "refused", message: "That spot is taken.", draft: draftOf() });
     await undoKey(user);

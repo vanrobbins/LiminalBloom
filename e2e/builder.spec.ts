@@ -24,7 +24,9 @@ test.beforeEach(async () => {
 const tile = (page: Page, product: string) => page.getByRole("button", { name: new RegExp(`^${product}, `) }).filter({ visible: true });
 const card = (page: Page, product: string) => page.locator("[data-card]").filter({ hasText: product });
 const saved = (page: Page) => expect(page.locator("[data-draft-status]")).toHaveText("Saved");
-const selectedBar = (page: Page, product: string) => page.getByRole("toolbar", { name: `${product} selected` });
+/** The selected tile's trash disc: there while the tile is selected, gone when it isn't. */
+const trashDisc = (page: Page, product: string) => page.getByRole("button", { name: `Remove ${product}` });
+const pencilDisc = (page: Page, product: string) => page.getByRole("button", { name: `Edit ${product}` });
 
 async function openTable(page: Page) {
   await page.goto("/planograms");
@@ -43,7 +45,7 @@ async function addTee(page: Page) {
   await page.getByLabel("Find a product").fill("E2E Pocket");
   await page.getByRole("button", { name: /E2E Pocket Tee/ }).click();
   await saved(page);
-  await expect(selectedBar(page, "E2E Pocket Tee")).toBeVisible();
+  await expect(trashDisc(page, "E2E Pocket Tee")).toBeVisible();
 }
 
 /** A real touch stroke through the browser's input pipeline, so scrolling and pointer capture behave as on a phone. */
@@ -80,7 +82,7 @@ test("a selected tile drags two feet, then Undo and Redo move it back and forth"
   await openTable(page);
   await startDraft(page);
   await tile(page, "E2E High-Rise Pant").click();
-  await expect(selectedBar(page, "E2E High-Rise Pant")).toBeVisible();
+  await expect(trashDisc(page, "E2E High-Rise Pant")).toBeVisible();
   const unit = await halfFoot(page);
   const canScroll = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight > 20);
   if (canScroll) await page.evaluate(() => window.scrollTo(0, 20));
@@ -123,7 +125,7 @@ test("the right handle widens a tile half a foot at a time", async ({ page }, in
   const unit = await halfFoot(page);
   await dragBy(page, page.locator('[data-handle="right"]'), unit * 2, 0, info);
   await saved(page);
-  await page.getByRole("button", { name: "Details" }).click();
+  await pencilDisc(page, "E2E High-Rise Pant").click();
   await expect(page.getByText("0–3 ft from left · 0–2 ft from back").filter({ visible: true })).toBeVisible();
 });
 
@@ -198,41 +200,37 @@ test("by touch, the selected tile drags without scrolling or swiping; a swipe el
   if (canScroll) expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
 
   // A swipe on empty grid (the bottom row, right side) changes face. Bring the grid on screen
-  // and make sure the start point is in the viewport and not under the phone's selection bar.
+  // and make sure the start point is in the viewport.
   await front.scrollIntoViewIfNeeded();
   const grid = await front.boundingBox();
   if (!grid) throw new Error("no grid");
   const startY = grid.y + grid.height - 16;
-  const bar = await selectedBar(page, "E2E Pocket Tee").boundingBox();
-  expect(startY).toBeLessThan(Math.min(page.viewportSize()?.height ?? Infinity, bar ? bar.y : Infinity));
+  expect(startY).toBeLessThan(page.viewportSize()?.height ?? Infinity);
   await touchDrag(page, grid.x + grid.width - 24, startY, -160, 0);
   await expect(page.getByRole("region", { name: /Rack 1, Back/ })).toBeVisible();
 });
 
-test("on a phone, the selection bar sits above the tabs and clears the grid and the last card", async ({ page }, info) => {
+test("on a phone, the selected tile's corner discs are there, no bar takes the screen, and the last card clears the tabs", async ({ page }, info) => {
   test.skip(sizeOf(info) !== "phone", "phone only");
   await openTable(page);
   await startDraft(page);
   await tile(page, "E2E High-Rise Pant").click();
-  const bar = selectedBar(page, "E2E High-Rise Pant");
-  await expect(bar).toBeVisible();
-  const tabs = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
-  const barBox = await bar.boundingBox();
-  const tabsBox = await tabs.boundingBox();
-  if (!barBox || !tabsBox) throw new Error("no bar or tabs");
-  expect(barBox.y + barBox.height).toBeLessThanOrEqual(tabsBox.y + 1);
-  // The corner bar stays where it is: the selection bar no longer takes its place.
+  const trash = trashDisc(page, "E2E High-Rise Pant");
+  const pencil = pencilDisc(page, "E2E High-Rise Pant");
+  await expect(trash).toBeVisible();
+  for (const disc of [trash, pencil]) {
+    const box = await disc.boundingBox();
+    // 44 px, or smaller only where a resize handle's target would touch it (never under 24 px).
+    expect(box && Math.min(box.width, box.height)).toBeGreaterThanOrEqual(24);
+  }
+  await expect(page.locator("[data-action-bar]")).toHaveCount(0);
+  // The corner bar stays where it is.
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 
-  await page.locator("[data-planogram-grid]").evaluate((el) => el.scrollIntoView({ block: "start" }));
-  const grid = await page.locator("[data-planogram-grid]").boundingBox();
-  if (!grid) throw new Error("no grid");
-  expect(grid.y + grid.height).toBeLessThanOrEqual(barBox.y);
-
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const tabs = await page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).boundingBox();
   const last = await page.locator("[data-card]").last().boundingBox();
-  const barNow = await bar.boundingBox();
-  expect(last && barNow && last.y + last.height <= barNow.y).toBe(true);
+  expect(last && tabs && last.y + last.height <= tabs.y + 1).toBe(true);
 });
 
 test("arrow keys move the selected tile and say where it went; Ctrl+Z undoes", async ({ page }, info) => {

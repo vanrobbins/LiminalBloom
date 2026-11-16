@@ -20,35 +20,22 @@ import { shortSpot, spotSummary } from "@/lib/products/location-words";
 
 import { DragChip, DragGuides, DropGhost } from "./drag-guides";
 import { BlockView } from "./block-view";
+import type { GridBuilder } from "./grid-builder";
 import { GridTile } from "./grid-tile";
 import { at } from "./grid-units";
 import type { GridItem } from "./grid-items";
 import { edgeFade, useFaceSwipe } from "./use-face-swipe";
+import { useCellPx } from "./use-cell-px";
 import { usePendingLanding } from "./use-pending-landing";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
 import { useTileGesture, type Gesture } from "./use-tile-gesture";
+import { useTileRemoval } from "./use-tile-removal";
 
 /** Room above the grid for a table set's labels, the ruler and the drag chip. */
 const GUTTER = "1.5rem";
 const OFF_FACE = "Off the edge of the face";
 
-export type GridBuilder = {
-  /** The selected tile may be dragged, resized and moved with the arrow keys. */
-  canMove: boolean;
-  /** Why a tile can't go there (rules.ts words), or null. */
-  check: (item: GridItem, fields: PlacementFields) => string | null;
-  /** Saves a drop; the tile stays where it landed until this settles. `onFound` names the tile it was saved to (a started draft renames it). */
-  onCommit: (item: GridItem, fields: PlacementFields, verb: "Moved" | "Resized", onFound: (id: string) => void) => Promise<unknown>;
-  /** An invalid drop: it has already snapped back; say why. */
-  onRefused: (message: string) => void;
-  /** An arrow key on the selected tile: where it goes, or null (it can't; the builder has said why). Held and saved like a drop. */
-  onKey: (item: GridItem, key: string, shift: boolean) => { fields: PlacementFields; verb: "Moved" | "Resized" } | null;
-  /** Alt+Up / Alt+Down on the selected tile: Move forward / Move back on a shared rail. */
-  onReorder: (item: GridItem, direction: "forward" | "back") => void;
-  /** Tap on empty space, or Escape on the selected tile. */
-  onEmpty: () => void;
-  onDragging: (isDragging: boolean) => void;
-};
+export type { GridBuilder };
 
 type PlanogramGridProps = {
   layout: GridLayout;
@@ -73,6 +60,10 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const swipe = useFaceSwipe(edges, onSwipe);
   const [drag, setDrag] = useState<Gesture | null>(null);
   const landed = usePendingLanding();
+  const cellPx = useCellPx(space, layout.width, faceKey);
+  const removal = useTileRemoval(builder?.onRemove);
+  // A keyboard selection shows the corner discs with no animation.
+  const [byKeyboard, setByKeyboard] = useState(false);
   // Each layer group front to back, so Tab meets the front one first; z-index paints them back to front.
   const drawn = layerGroups(landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId))).flat();
   const ranks = layerRanks(drawn);
@@ -170,7 +161,16 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   invalid={isMoving && refusal !== null}
                   bounds={layout}
                   gestures={gestures}
-                  onSelect={onSelect}
+                  onSelect={(id, keyboard) => {
+                    setByKeyboard(keyboard);
+                    onSelect(id);
+                  }}
+                  leaving={removal.leaving === item.id}
+                  corners={
+                    builder?.onRemove && builder.onEdit
+                      ? { cellPx, instant: byKeyboard, hidden: drag !== null || removal.leaving === item.id, onRemove: () => removal.remove(item), onEdit: () => builder.onEdit?.(item) }
+                      : undefined
+                  }
                   onKey={
                     builder && isMoving
                       ? (key, shift) => {

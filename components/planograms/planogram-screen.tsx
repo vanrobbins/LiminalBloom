@@ -1,7 +1,7 @@
 // Planogram Detail's body (spec §5.2–5.3; Part 2 §4): published, draft or a
 // past version, face by face (a table set as one combined view). The draft and
 // the latest version are editable on the grid: tap to select, then drag,
-// resize, use the selection bar or the arrow keys; with no draft the first
+// resize, use the corner discs (trash, pencil) or the keys; with no draft the first
 // change starts one. One status row above the grid holds the version line,
 // Draft | Published, the due date and the actions (UX audit U20); on a phone
 // the corner bar (corner-bar.tsx) ends that row; + or a first change starts a draft.
@@ -21,10 +21,8 @@ import type { DraftState, PlanogramScope, ProductLook } from "@/lib/planograms/t
 import { AddProductDialog } from "./add-product-dialog";
 import { CornerBar } from "./corner-bar";
 import { itemsFromDraft, itemsFromSnapshot, startFace } from "./grid-items";
-import { MoveToFaceDialog } from "./move-to-face-dialog";
 import { PastVersion } from "./past-version";
 import { PlanogramBody } from "./planogram-body";
-import { SelectionBar } from "./selection-bar";
 import { StartPlanogram } from "./start-planogram";
 import { StatusRow } from "./status-row";
 import { useBuilder } from "./use-builder";
@@ -56,7 +54,6 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
   const { face, slideFrom, showFace, onSwipe } = useFaceView(scope, () => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
   const [adding, setAdding] = useState(false);
-  const [movingFace, setMovingFace] = useState(false);
 
   const shownFaces = scope.isSet ? scope.faces : [face];
   const layout = scope.isSet ? combinedBlocks(scope) : singleBlock(face);
@@ -98,12 +95,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     select(null);
   }
 
-  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, setSelectedId, select, showFace });
-
-  function chooseFace(id: string) {
-    setMovingFace(false);
-    actions.moveToFace(id);
-  }
+  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, setSelectedId, select, showFace, editNumbers });
 
   const body = (
     <PlanogramBody
@@ -175,22 +167,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       ) : (
         body
       )}
-      {selectedPlacement ? (
-        <SelectionBar
-          name={selectedPlacement.productName}
-          canMoveFace={scope.faces.length > 1}
-          busy={busy}
-          onDetails={() => openSheet(selectedPlacement.id, "details")}
-          onEdit={() => editNumbers(selectedPlacement.id)}
-          onMoveFace={() => setMovingFace(true)}
-          onRemove={() => actions.remove(selectedPlacement)}
-          layers={actions.layersFor(selectedPlacement)}
-        />
-      ) : null}
       {canMove ? <AddProductDialog open={adding} onOpenChange={setAdding} onPick={actions.addProduct} onCloseAutoFocus={actions.focusAdded} /> : null}
-      {selectedPlacement ? (
-        <MoveToFaceDialog open={movingFace} onOpenChange={setMovingFace} faces={scope.faces} currentFaceId={selectedPlacement.faceId} onChoose={chooseFace} />
-      ) : null}
       <p aria-live="polite" className="sr-only">
         {builder.announcement}
       </p>

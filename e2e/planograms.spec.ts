@@ -49,12 +49,14 @@ async function addTee(page: Page) {
   await page.getByLabel("Find a product").fill("E2E Pocket");
   await page.getByRole("button", { name: /E2E Pocket Tee/ }).click();
   await saved(page);
-  await expect(page.getByRole("toolbar", { name: "E2E Pocket Tee selected" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove E2E Pocket Tee" })).toBeVisible();
 }
 
 async function editNumbers(page: Page, product: string, field: string, value: string) {
-  await page.getByRole("button", { name: new RegExp(`^${product}, `) }).filter({ visible: true }).click();
-  await page.getByRole("button", { name: "Edit numbers" }).click();
+  // Select it (another tap on a selected tile would open the panel itself), then the pencil.
+  const pencil = page.getByRole("button", { name: `Edit ${product}` });
+  if (!(await pencil.isVisible())) await page.getByRole("button", { name: new RegExp(`^${product}, `) }).filter({ visible: true }).click();
+  await pencil.click();
   await page.getByLabel(field).fill(value);
   await page.getByRole("button", { name: "Save" }).click();
 }
@@ -83,13 +85,13 @@ test("a draft from the floor is edited, published, and Search shows the new cell
   await movePant(page, "1", sizeOf(info) === "phone");
   await expect(page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" })).toContainText("Left · Front");
 
-  // The pant is still selected, and on a phone its selection bar takes the draft bar's place.
+  // The pant is still selected, with its corner discs on.
   // A tap on empty grid deselects, as a phone user would (Table 1 is 6 ft wide; the right 2 ft are empty).
   const block = page.locator("[data-block]").filter({ visible: true }).first();
   const blockBox = await block.boundingBox();
   if (!blockBox) throw new Error("no grid");
   await block.click({ position: { x: blockBox.width - 12, y: blockBox.height / 2 } });
-  await expect(page.getByRole("toolbar", { name: "E2E High-Rise Pant selected" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Remove E2E High-Rise Pant" })).toBeHidden();
   await page.getByRole("button", { name: "Publish…" }).click();
   await expect(page.getByText("Top: 2 added")).toBeVisible();
   await page.getByLabel("Summary (optional)").fill("E2E reset");

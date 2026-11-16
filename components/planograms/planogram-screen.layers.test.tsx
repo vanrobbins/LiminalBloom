@@ -95,7 +95,7 @@ describe("Undo after trashing a tile on a shared rail", () => {
     expect(depths()).toMatchObject({ r0: 0, r3: 1, r2: 2, r1: 3 });
 
     fireEvent.click(tile("R0"));
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove R0" }));
     await gone("R0");
     // Nothing renumbers when it goes: the two parts keep their numbers.
     expect(depths()).toMatchObject({ r3: 1, r2: 2, r1: 3 });

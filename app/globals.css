@@ -104,6 +104,11 @@
   /* A panel that opens out of the button that opened it (A3); set its transform-origin. */
   --animate-grow-in: grow-in var(--duration-base) var(--ease-out-soft);
 
+  /* 0.7.0.5: a tile's corner discs appear and leave (tile-corners.tsx); a trashed tile fades and shrinks out (150 ms, ease-in). */
+  --animate-disc-in: disc-in var(--duration-fast) var(--ease-enter) both;
+  --animate-disc-out: disc-out var(--duration-exit) var(--ease-exit) both;
+  --animate-tile-out: tile-out 150ms var(--ease-exit) both;
+
   @keyframes tile-pulse {
     50% { transform: scale(1.06); }
   }
@@ -115,6 +120,15 @@
   }
   @keyframes fade-in {
     from { opacity: 0; }
+  }
+  @keyframes disc-in {
+    from { opacity: 0; scale: 0.95; }
+  }
+  @keyframes disc-out {
+    to { opacity: 0; scale: 0.95; }
+  }
+  @keyframes tile-out {
+    to { opacity: 0; scale: 0.95; }
   }
   @keyframes grow-in {
     from { transform: scale(0.6); opacity: 0; }

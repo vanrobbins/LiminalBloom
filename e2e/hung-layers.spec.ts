@@ -47,6 +47,8 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
   await expect(page.getByText(/behind E2E High-Rise Pant/)).toBeVisible();
   await page.mouse.up();
   await saved(page);
+  // The drop is held where it landed until its save is back; a key pressed before then would work from the old spot.
+  await expect(tee).not.toHaveAttribute("data-held", "");
   await expect(tee).toHaveAttribute("data-rank", "1");
   await expect(pant).toHaveAttribute("data-rank", "0");
 
@@ -60,7 +62,8 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
   await saved(page);
   await expect(tee).toHaveAttribute("data-rank", "0");
   await expect(pant).toHaveAttribute("data-rank", "1");
-  // At the front now: the selection bar's Move forward is spent, Move back isn't.
+  // At the front now: the pencil opens its panel, where Move forward is spent and Move back isn't.
+  await page.getByRole("button", { name: "Edit E2E Pocket Tee" }).click();
   await expect(page.getByRole("button", { name: "Move forward" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Move back" })).toBeEnabled();
   await expect(page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" }).locator("[data-layer-words]")).toHaveText("2nd from front");

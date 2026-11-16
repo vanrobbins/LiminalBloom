@@ -1,5 +1,5 @@
 // What Planogram Detail does to a placement (Part 2 spec §4): the grid's
-// builder (check, drop, arrow keys), Remove, Move to face… and Add product.
+// builder (check, drop, arrow keys, trash, pencil), Remove, Move to face and Add product.
 // The screen holds the state; this is its wiring, with no JSX.
 
 "use client";
@@ -9,7 +9,7 @@ import { useRef } from "react";
 import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
 import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
-import { reorderTarget, sharesSpace } from "@/lib/planograms/layers";
+import { reorderTarget } from "@/lib/planograms/layers";
 import { checkPlacement, type Neighbour } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
@@ -40,9 +40,11 @@ type Options = {
   /** Selects and keeps the open panel on the selection; null also closes it. */
   select: (id: string | null) => void;
   showFace: (faceId: string) => void;
+  /** Opens the product panel on its numbers, with focus in the form. */
+  editNumbers: (id: string) => void;
 };
 
-export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, setSelectedId, select, showFace }: Options) {
+export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, setSelectedId, select, showFace, editNumbers }: Options) {
   // The tile an Add just placed: focus goes to it when the dialog closes.
   const added = useRef<string | null>(null);
 
@@ -84,14 +86,6 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     void change(item, { ...item, depth: at }, direction === "forward" ? "Moved forward" : "Moved back");
   }
 
-  /** The selection bar's Move forward / Move back, while it shares rail space and may move. */
-  function layersFor(item: GridItem) {
-    const rows = isEditing ? placements : items;
-    if (!canMove || !rows.some((o) => sharesSpace(item, o))) return undefined;
-    const step = (direction: "forward" | "back") => (reorderTarget(item, rows, direction) === null ? null : () => reorder(item, direction));
-    return { onForward: step("forward"), onBack: step("back") };
-  }
-
   const gridBuilder: GridBuilder | undefined = canMove
     ? {
         canMove: true,
@@ -112,22 +106,37 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
         onReorder: reorder,
         onEmpty: () => select(null),
         onDragging: builder.setDragging,
+        // The corner discs: only on a draft's tiles, which have rows to remove and edit.
+        ...(isEditing ? { onRemove: trash, onEdit: (item: GridItem) => editNumbers(item.id) } : {}),
       }
     : undefined;
 
+  /** After a removal settles. The control pressed goes with the selection: focus the tile if it's still there (refused),
+   * else the grid, else the page's main area, never the page top (B8). */
+  function settled(id: string, saved: boolean) {
+    requestAnimationFrame(() =>
+      (
+        (saved ? null : document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(id)}"]`)) ??
+        document.querySelector<HTMLElement>("[data-planogram-grid]") ??
+        document.getElementById("content")
+      )?.focus(),
+    );
+  }
+
+  /** The panel's Remove: deselects at once. */
   function remove(p: PlacementView) {
     select(null);
-    // The button pressed goes with the selection: focus the tile if it's still there (refused),
-    // else the grid, else the page's main area, never the page top (B8).
-    void builder.remove(p).then((result) =>
-      requestAnimationFrame(() =>
-        (
-          (result.saved ? null : document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(p.id)}"]`)) ??
-          document.querySelector<HTMLElement>("[data-planogram-grid]") ??
-          document.getElementById("content")
-        )?.focus(),
-      ),
-    );
+    void builder.remove(p).then((result) => settled(p.id, result.saved));
+  }
+
+  /** The trash disc and Delete: the grid fades the tile first; a refusal leaves it selected, with the status line saying why. */
+  async function trash(item: GridItem): Promise<boolean> {
+    const p = placements.find((o) => o.id === item.id);
+    if (!p) return false;
+    const { saved } = await builder.remove(p);
+    if (saved) select(null);
+    settled(p.id, saved);
+    return saved;
   }
 
   function moveToFace(target: string) {
@@ -168,5 +177,5 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     tile.scrollIntoView?.({ block: "nearest", inline: "center" });
   }
 
-  return { gridBuilder, reorder, layersFor, remove, moveToFace, addProduct, focusAdded, edit: (p: PlacementView, fields: PlacementFields) => change(p, fields, "Changed") };
+  return { gridBuilder, reorder, remove, moveToFace, addProduct, focusAdded, edit: (p: PlacementView, fields: PlacementFields) => change(p, fields, "Changed") };
 }
