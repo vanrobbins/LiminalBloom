@@ -2,7 +2,7 @@
 // status: a check or an alert, the words on tablet and up and for screen
 // readers only on a phone; "Saving…" shows after 300 ms and, once shown, holds
 // 500 ms so a quick save never flashes and a slow one never blinks away
-// (Doherty). DraftStatusLine says why a change was refused, in full, below.
+// (Doherty). DraftStatusLine says why a change was refused, or a note that came with a save, in full, below.
 
 "use client";
 
@@ -61,12 +61,13 @@ export function SaveIndicator({ status }: { status: DraftStatus }) {
   );
 }
 
-/** Why a change was refused. Always mounted, so a refusal that arrives is announced. */
+/** Why a change was refused, or a note that came with a save. Always mounted, so what arrives is announced. */
 export function DraftStatusLine({ status }: { status: DraftStatus }) {
   const refused = status.kind === "refused";
+  const words = refused ? status.message : status.kind === "saved" ? status.note : undefined;
   return (
-    <p role="status" aria-live="polite" data-draft-refusal className={refused ? "flex min-h-6 items-center gap-1 text-sm text-danger" : "sr-only"}>
-      {refused ? status.message : null}
+    <p role="status" aria-live="polite" data-draft-refusal data-draft-note={status.kind === "saved" && words ? "" : undefined} className={words ? `flex min-h-6 items-center gap-1 text-sm ${refused ? "text-danger" : "text-ink-muted"}` : "sr-only"}>
+      {words ?? null}
     </p>
   );
 }

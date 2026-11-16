@@ -88,12 +88,14 @@ test("a draft from the floor is edited, published, and Search shows the new cell
   await movePant(page, "1", sizeOf(info) === "phone");
   await expect(page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" })).toContainText("Left · Front");
 
-  // The pant is still selected, with its corner discs on.
-  // A tap on empty grid deselects, as a phone user would (Table 1 is 6 ft wide; the right 2 ft are empty).
-  const block = page.locator("[data-block]").filter({ visible: true }).first();
-  const blockBox = await block.boundingBox();
-  if (!blockBox) throw new Error("no grid");
-  await block.click({ position: { x: blockBox.width - 12, y: blockBox.height / 2 } });
+  // Beside the grid the pant is still selected, with its corner discs on: a tap on empty grid deselects (Table 1 is 6 ft
+  // wide; the right 2 ft are empty). On a phone closing the sheet already deselected it, and a tap now would open Add.
+  if (sizeOf(info) !== "phone") {
+    const block = page.locator("[data-block]").filter({ visible: true }).first();
+    const blockBox = await block.boundingBox();
+    if (!blockBox) throw new Error("no grid");
+    await block.click({ position: { x: blockBox.width - 12, y: blockBox.height / 2 } });
+  }
   await expect(page.getByRole("button", { name: "Remove E2E High-Rise Pant" })).toBeHidden();
   await page.getByRole("button", { name: "Publish…" }).click();
   await expect(page.getByText("Top: 2 added")).toBeVisible();

@@ -29,6 +29,16 @@ describe("usePlanogramDraft", () => {
     expect(result.current.status).toEqual({ kind: "saved" });
   });
 
+  it("note puts words on the status line beside Saved, and the next save's Saved has none", async () => {
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    await act(() => result.current.save(remove));
+    act(() => result.current.note("Placed at the nearest open spot"));
+    expect(result.current.status).toEqual({ kind: "saved", note: "Placed at the nearest open spot" });
+    await act(() => result.current.save(remove));
+    expect(result.current.status).toEqual({ kind: "saved" });
+  });
+
   it("returns the saved draft with a save", async () => {
     actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
     const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));

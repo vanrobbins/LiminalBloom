@@ -8,14 +8,14 @@ import { useLayoutEffect, useRef } from "react";
 
 import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
-import { placeNew } from "@/lib/planograms/builder/place";
 import { reorderTarget } from "@/lib/planograms/layers";
-import { checkPlacement, type Neighbour } from "@/lib/planograms/rules";
+import { checkPlacement } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
-import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
+import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope } from "@/lib/planograms/types";
 import { shortSpot } from "@/lib/products/location-words";
 import { toast } from "@/lib/toast";
 
+import type { Cell } from "./grid-builder";
 import type { GridItem } from "./grid-items";
 import type { GridBuilder } from "./planogram-grid";
 import type { useBuilder } from "./use-builder";
@@ -44,11 +44,11 @@ type Options = {
   showFace: (faceId: string) => void;
   /** Opens the product panel on its numbers, with focus in the form. */
   editNumbers: (id: string) => void;
+  /** Opens Add product, at the cell tapped or (none) the first open spot. */
+  onAdd: (cell?: Cell) => void;
 };
 
-export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers }: Options) {
-  // The tile an Add just placed: focus goes to it when the dialog closes.
-  const added = useRef<string | null>(null);
+export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers, onAdd }: Options) {
   // What is selected now, for a removal that lands after the person has moved on.
   const current = useRef(selectedId);
   // A layout effect, so it is current before any later task (a save landing) can read it.
@@ -113,6 +113,7 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
         },
         onReorder: reorder,
         onEmpty: () => select(null),
+        onAdd,
         onDragging: builder.setDragging,
         // The corner discs: only on a draft's tiles, which have rows to remove and edit.
         ...(isEditing ? { onRemove: trash, onEdit: (item: GridItem) => editNumbers(item.id) } : {}),
@@ -153,35 +154,5 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
 
   const { edit, moveToFace } = usePanelEdits({ scope, placements, builder, change });
 
-  async function addProduct(product: ProductFit): Promise<string | null> {
-    // Nowhere to go: say so before a draft is started for it. With no draft the add starts one, and the spot is
-    // picked again among that draft's placements, which may differ from the tiles shown.
-    const faces = [face, ...scope.faces.filter((f) => f.faceId !== face.faceId)];
-    const pick = (others: readonly Neighbour[]) => placeNew(faces, others, product) ?? `No open spot fits ${product.name}. Make room, then add it.`;
-    const first = pick(isEditing ? placements : items);
-    if (typeof first === "string") return first;
-    const result = await builder.add(product.id, pick);
-    if (!result.saved) return result.message ?? "Couldn't add it. Try again.";
-    const placed = result.draft.placements.find((p) => p.id === result.id);
-    if (placed) {
-      added.current = placed.id;
-      select(placed.id);
-      if (!scope.isSet && placed.faceId !== face.faceId) showFace(placed.faceId);
-      builder.say(`Added ${product.name} at ${spotWords(scope.faces, placed)}`);
-    }
-    return null;
-  }
-
-  /** The Add dialog's close: focus the placed tile, not the opener (hidden on a phone while a tile is selected). */
-  function focusAdded(event: Event) {
-    const id = added.current;
-    added.current = null;
-    const tile = id ? document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(id)}"]`) : null;
-    if (!tile) return;
-    event.preventDefault();
-    tile.focus();
-    tile.scrollIntoView?.({ block: "nearest", inline: "center" });
-  }
-
-  return { gridBuilder, reorder, remove, moveToFace, addProduct, focusAdded, edit };
+  return { gridBuilder, reorder, remove, moveToFace, edit };
 }

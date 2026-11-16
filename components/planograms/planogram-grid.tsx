@@ -27,6 +27,7 @@ import type { GridItem } from "./grid-items";
 import { edgeFade, useFaceSwipe } from "./use-face-swipe";
 import { useCellPx } from "./use-cell-px";
 import { usePendingLanding } from "./use-pending-landing";
+import { useEmptyTap } from "./use-empty-tap";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
 import { useTileGesture, type Gesture } from "./use-tile-gesture";
 import { useTileRemoval } from "./use-tile-removal";
@@ -83,6 +84,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const joining = drag && moving && target && !refusal ? drawn.filter((o) => sharesSpace({ ...target, id: moving.id }, o) && !sharesSpace(moving, o)) : [];
   const behind = joining.length === 0 ? "" : ` · behind ${joining.length === 1 ? joining[0].productName : `${joining.length} others`}`;
 
+  const empty = useEmptyTap({ builder, selected: selectedId != null, layout, space: () => space.current, scroller: () => ref.current });
   const gestures = useTileGesture({
     unitPx: () => (space.current?.getBoundingClientRect().width ?? 0) / layout.width,
     scroller: () => ref.current,
@@ -111,6 +113,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
       data-planogram-grid
       // Focus lands here when the tile that had it is removed.
       tabIndex={-1}
+      onKeyDown={empty.onKeyDown}
       className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <div
@@ -134,7 +137,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
         >
           <div ref={space} className="absolute inset-x-0 bottom-0" style={{ top: GUTTER }}>
             {layout.blocks.map((block) => (
-              <BlockView key={block.faceId} block={block} labelled={layout.blocks.length > 1} onEmpty={builder?.onEmpty} />
+              <BlockView key={block.faceId} block={block} labelled={layout.blocks.length > 1} empty={empty.block} />
             ))}
             {drag ? <DragGuides layout={layout} /> : null}
             {drag?.mode === "move" && target && targetBlock ? <DropGhost rect={spanRect(targetBlock, target)} invalid={refusal !== null} /> : null}

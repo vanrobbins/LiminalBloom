@@ -23,9 +23,11 @@ type AddProductDialogProps = {
   onPick: (product: ProductFit) => Promise<string | null>;
   /** On closing: `event.preventDefault()` to focus the placed tile instead of the opener. */
   onCloseAutoFocus?: (event: Event) => void;
+  /** Opened by a tap on empty space: it goes there if it can. */
+  tapped?: boolean;
 };
 
-export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus }: AddProductDialogProps) {
+export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus, tapped = false }: AddProductDialogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProductFit[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,7 @@ export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus 
     else close(false);
   }
 
+  const where = tapped ? "It goes where you tapped, or the nearest open spot that fits." : "It goes to the first open spot that fits.";
   const body = (
     <div className="flex flex-col gap-3">
       <Input label="Find a product" type="search" value={query} onChange={(e) => search(e.target.value)} autoFocus={!isPhone} />
@@ -103,14 +106,14 @@ export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus 
   if (isPhone) {
     return (
       <BottomSheet open={open} onOpenChange={close} title="Add product" tall onCloseAutoFocus={onCloseAutoFocus}>
-        <p className="mb-3 text-sm text-ink-muted">It goes to the first open spot that fits.</p>
+        <p className="mb-3 text-sm text-ink-muted">{where}</p>
         {body}
       </BottomSheet>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={close} title="Add product" description="It goes to the first open spot that fits." onCloseAutoFocus={onCloseAutoFocus}>
+    <Dialog open={open} onOpenChange={close} title="Add product" description={where} onCloseAutoFocus={onCloseAutoFocus}>
       {body}
     </Dialog>
   );

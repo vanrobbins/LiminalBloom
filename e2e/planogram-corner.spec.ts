@@ -1,6 +1,7 @@
 // The planogram's corner bar (0.7.0.5 task 4, spec §2.1): every control in one
 // row at the top right of the status row, even at 360 px wide; Publish says its
-// word from tablet width; + starts a draft on the published planogram.
+// word from tablet width; + starts a draft on the published planogram. Tap empty
+// space adds a product at that spot (0.7.0.5 task 7); trash then Undo brings it back.
 
 import { expect, hydrated, sizeOf, test } from "./fixtures";
 import { seedLayout } from "./map-store";
@@ -95,4 +96,83 @@ test("+ on the published planogram starts the draft and adds the product; Undo t
   await expect(tee).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^E2E High-Rise Pant, / }).filter({ visible: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Redo" })).toBeEnabled();
+});
+
+/**
+ * A point in a cell with a clear 4 column x 2 row span (a product here is that size) to its right and below, inside the face:
+ * empty space a tapped add can land on. Table 1 is 12 columns of half a foot and 3 rows of two units.
+ */
+async function emptyPoint(page: Page) {
+  return page.evaluate(() => {
+    const block = document.querySelector<HTMLElement>("[data-block]")!.getBoundingClientRect();
+    const unit = block.width / 12;
+    const tiles = [...document.querySelectorAll("[data-placement]")].map((t) => t.getBoundingClientRect());
+    const free = (x: number, y: number, w: number, h: number) => !tiles.some((t) => x < t.right && x + w > t.left && y < t.bottom && y + h > t.top);
+    for (let col = 0; col <= 8; col++) {
+      for (let row = 0; row <= 1; row++) {
+        const x = block.left + col * unit;
+        const y = block.top + row * 2 * unit;
+        if (free(x, y, 4 * unit, 4 * unit)) return { x: x + unit / 2, y: y + unit, unit };
+      }
+    }
+    return null;
+  });
+}
+
+async function tapAt(page: Page, info: import("@playwright/test").TestInfo, at: { x: number; y: number }) {
+  if (sizeOf(info) === "desktop") await page.mouse.click(at.x, at.y);
+  else await page.touchscreen.tap(at.x, at.y);
+}
+
+async function addTee(page: Page) {
+  await expect(page.getByRole("dialog", { name: "Add product" })).toBeVisible();
+  await page.getByLabel("Find a product").fill("E2E Pocket");
+  await page.getByRole("button", { name: /E2E Pocket Tee/ }).click();
+}
+
+test("tapping empty space adds the product at that spot; trash then Undo brings it back", async ({ page }, info) => {
+  await openTable(page);
+  await startDraft(page);
+  const spot = await emptyPoint(page);
+  if (!spot) throw new Error("no empty space on Table 1");
+  await tapAt(page, info, spot);
+  await addTee(page);
+  const tee = page.getByRole("button", { name: /^E2E Pocket Tee, / }).filter({ visible: true });
+  await expect(tee).toBeVisible();
+  await expect(page.locator("[data-draft-status]")).toHaveText("Saved");
+  // Its top-left cell is the one tapped: the tile starts at or just before the point and runs right and down from it.
+  const tile = (await tee.boundingBox())!;
+  expect(tile.x).toBeLessThanOrEqual(spot.x);
+  expect(tile.x).toBeGreaterThan(spot.x - spot.unit - 1);
+  expect(tile.y).toBeLessThanOrEqual(spot.y);
+  expect(tile.y).toBeGreaterThan(spot.y - 2 * spot.unit - 1);
+  await expect(page.locator("[data-draft-note]")).toHaveCount(0);
+
+  // It was selected on landing: trash takes it off, Undo puts it back.
+  await page.getByRole("button", { name: "Remove E2E Pocket Tee" }).click();
+  await expect(tee).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(tee).toBeVisible();
+  const back = (await tee.boundingBox())!;
+  expect(Math.abs(back.x - tile.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(back.y - tile.y)).toBeLessThanOrEqual(1);
+});
+
+test("a tap with a tile selected only deselects, and Enter on the grid opens Add at the first open spot", async ({ page }, info) => {
+  await openTable(page);
+  await startDraft(page);
+  const pant = page.getByRole("button", { name: /^E2E High-Rise Pant, / }).filter({ visible: true });
+  await pant.click();
+  await expect(pant).toHaveAttribute("aria-pressed", "true");
+  const spot = await emptyPoint(page);
+  if (!spot) throw new Error("no empty space on Table 1");
+  await tapAt(page, info, spot);
+  await expect(pant).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("dialog", { name: "Add product" })).toHaveCount(0);
+
+  // Nothing is selected now: Enter on the focused grid opens Add, with no cell.
+  await page.locator("[data-planogram-grid]").focus();
+  await page.keyboard.press("Enter");
+  await addTee(page);
+  await expect(page.getByRole("button", { name: /^E2E Pocket Tee, / }).filter({ visible: true })).toBeVisible();
 });

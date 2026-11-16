@@ -5,6 +5,9 @@ import type { PlacementFields } from "@/lib/planograms/types";
 
 import type { GridItem } from "./grid-items";
 
+/** The empty cell a tap pointed at. */
+export type Cell = { faceId: string; col: number; row: number };
+
 export type GridBuilder = {
   /** The selected tile may be dragged, resized and moved with the arrow keys. */
   canMove: boolean;
@@ -18,8 +21,10 @@ export type GridBuilder = {
   onKey: (item: GridItem, key: string, shift: boolean) => { fields: PlacementFields; verb: "Moved" | "Resized" } | null;
   /** Alt+Up / Alt+Down on the selected tile: Move forward / Move back on a shared rail. */
   onReorder: (item: GridItem, direction: "forward" | "back") => void;
-  /** Tap on empty space, or Escape on the selected tile. */
+  /** Tap on empty space while a tile is selected, or Escape on the selected tile. */
   onEmpty: () => void;
+  /** A still tap on empty space with nothing selected (the cell tapped), or Enter on the focused grid (no cell): opens Add product. */
+  onAdd?: (cell?: Cell) => void;
   onDragging: (isDragging: boolean) => void;
   /** Trash on the selected tile: resolves true once it's gone, false if refused (the tile comes back). With onEdit, shows the corner discs. */
   onRemove?: (item: GridItem) => Promise<boolean>;

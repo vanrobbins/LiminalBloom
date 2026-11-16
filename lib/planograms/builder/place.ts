@@ -4,7 +4,7 @@
 
 import { firstFreeSpot } from "@/lib/products/placement";
 
-import type { Neighbour } from "../rules";
+import { checkPlacement, type Neighbour } from "../rules";
 import type { PlacementFields, PlanogramFace, ProductFit } from "../types";
 
 export function firstOpenSpot(
@@ -32,6 +32,29 @@ export function placeNew(faces: readonly PlanogramFace[], others: readonly Neigh
       const spot = firstOpenSpot([face], others, { colSpan: columns, rowSpan }, null);
       if (spot) return { ...spot, presentation, colSpan: columns, rowSpan, pieceCount: 1 };
     }
+  }
+  return null;
+}
+
+/**
+ * Where the person pointed: the product's top-left corner on that cell, folded first, if the rules allow it there
+ * (checkPlacement: on the face, clear of everything else); null otherwise, and the caller falls back to placeNew.
+ */
+export function placeAt(
+  faces: readonly PlanogramFace[],
+  others: readonly Neighbour[],
+  product: ProductFit,
+  cell: { faceId: string; col: number; row: number },
+): PlacementFields | null {
+  const face = faces.find((f) => f.faceId === cell.faceId);
+  if (!face) return null;
+  for (const presentation of ["folded", "hung"] as const) {
+    const { columns, rows } = product.footprints[presentation];
+    // A frame rack's rail takes hung product only, on its one row (frame racks spec §3).
+    const rail = face.fixtureType === "frame_rack";
+    if (rail && presentation === "folded") continue;
+    const fields: PlacementFields = { faceId: face.faceId, presentation, col: cell.col, row: rail ? 0 : cell.row, colSpan: columns, rowSpan: rail ? 1 : rows, pieceCount: 1 };
+    if (!checkPlacement({ ...fields, id: null }, others, faces)) return fields;
   }
   return null;
 }

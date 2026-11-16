@@ -13,7 +13,8 @@ import { aheadOf, type Ahead } from "@/lib/planograms/builder/undo";
 import type { Change, DraftState, PlacementView } from "@/lib/planograms/types";
 import { toast } from "@/lib/toast";
 
-export type DraftStatus = { kind: "idle" | "saving" | "saved" } | { kind: "refused"; message: string };
+/** `note`: something to say beside Saved that is not a refusal (an add that went to the nearest open spot). */
+export type DraftStatus = { kind: "idle" | "saving" } | { kind: "saved"; note?: string } | { kind: "refused"; message: string };
 /**
  * A refusal's words go to the form that sent it; null when there's nothing to say there. `before` is the placement
  * as this device held it when the change went; `id` is the placement an add made (the server picks it).
@@ -176,5 +177,10 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     setStatus({ kind: "refused", message });
   }
 
-  return { draft, status, save, adopt, leave, refuse, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };
+  /** Words beside Saved for what the save just did (no toast: the result is on screen). The next status replaces them. */
+  function note(message: string) {
+    setStatus({ kind: "saved", note: message });
+  }
+
+  return { draft, status, save, adopt, leave, refuse, note, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };
 }

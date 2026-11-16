@@ -20,11 +20,13 @@ import type { DraftState, PlanogramScope, ProductLook } from "@/lib/planograms/t
 
 import { AddProductDialog } from "./add-product-dialog";
 import { CornerBar } from "./corner-bar";
+import type { Cell } from "./grid-builder";
 import { itemsFromDraft, itemsFromSnapshot, startFace } from "./grid-items";
 import { PastVersion } from "./past-version";
 import { PlanogramBody } from "./planogram-body";
 import { StartPlanogram } from "./start-planogram";
 import { StatusRow } from "./status-row";
+import { useAddProduct } from "./use-add-product";
 import { useBuilder } from "./use-builder";
 import { useFaceView } from "./use-face-view";
 import { spotWords, usePlacementActions } from "./use-placement-actions";
@@ -50,10 +52,11 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const canDraft = can(member, "planograms.draft");
   // A draft is for those who may draft: without the switch the page reads as the published planogram only.
   const initialDraft = canDraft ? pageDraft : null;
-  const { draft, status, save, adopt, leave, refuse, onLeaveRef, onTakeRef } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
+  const { draft, status, save, adopt, leave, refuse, note, onLeaveRef, onTakeRef } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
   const { face, slideFrom, showFace, onSwipe } = useFaceView(scope, () => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
-  const [adding, setAdding] = useState(false);
+  // The Add dialog, and the empty cell a tap opened it at (none from + or Enter: the first open spot).
+  const [adding, setAdding] = useState<{ cell: Cell | null } | null>(null);
 
   const shownFaces = scope.isSet ? scope.faces : [face];
   const layout = scope.isSet ? combinedBlocks(scope) : singleBlock(face);
@@ -94,7 +97,8 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     select(null);
   }
 
-  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers });
+  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers, onAdd: (cell) => setAdding({ cell: cell ?? null }) });
+  const add = useAddProduct({ scope, face, placements, items, isEditing, builder, select, showFace, note });
 
   const body = (
     <PlanogramBody
@@ -141,7 +145,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       draftVersion={draft?.planogramVersion ?? null}
       status={isEditing ? status : null}
       canAdd={canMove}
-      onAdd={() => setAdding(true)}
+      onAdd={() => setAdding({ cell: null })}
       canPublish={can(member, "planograms.publish")}
       canUndo={builder.canUndo}
       canRedo={builder.canRedo}
@@ -167,7 +171,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       ) : (
         body
       )}
-      {canMove ? <AddProductDialog open={adding} onOpenChange={setAdding} onPick={actions.addProduct} onCloseAutoFocus={actions.focusAdded} /> : null}
+      {canMove ? <AddProductDialog open={adding !== null} onOpenChange={(open) => !open && setAdding(null)} onPick={(product) => add.addProduct(product, adding?.cell)} tapped={adding?.cell != null} onCloseAutoFocus={add.focusAdded} /> : null}
       <p aria-live="polite" className="sr-only">
         {builder.announcement}
       </p>

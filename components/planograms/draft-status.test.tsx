@@ -126,4 +126,12 @@ describe("DraftStatusLine", () => {
     rerender(<DraftStatusLine status={saved} />);
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
+
+  it("says a note that comes with a saved change, calmly (not as a refusal), and clears with the next status", () => {
+    const { rerender } = render(<DraftStatusLine status={{ kind: "saved", note: "Placed at the nearest open spot" }} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Placed at the nearest open spot");
+    expect(screen.getByRole("status")).not.toHaveClass("text-danger");
+    rerender(<DraftStatusLine status={saved} />);
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
 });
