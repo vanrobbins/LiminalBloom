@@ -95,7 +95,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     select(null);
   }
 
-  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, setSelectedId, select, showFace, editNumbers });
+  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, selectedId, builder, setSelectedId, select, showFace, editNumbers });
 
   const body = (
     <PlanogramBody

@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
@@ -35,6 +35,8 @@ type Options = {
   isEditing: boolean;
   canMove: boolean;
   selectedPlacement: PlacementView | null;
+  /** The selected id, kept even once its placement is gone. */
+  selectedId: string | null;
   builder: ReturnType<typeof useBuilder>;
   setSelectedId: (id: string | null) => void;
   /** Selects and keeps the open panel on the selection; null also closes it. */
@@ -44,9 +46,14 @@ type Options = {
   editNumbers: (id: string) => void;
 };
 
-export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, setSelectedId, select, showFace, editNumbers }: Options) {
+export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, selectedId, builder, setSelectedId, select, showFace, editNumbers }: Options) {
   // The tile an Add just placed: focus goes to it when the dialog closes.
   const added = useRef<string | null>(null);
+  // What is selected now, for a removal that lands after the person has moved on.
+  const current = useRef(selectedId);
+  useEffect(() => {
+    current.current = selectedId;
+  });
 
   function check(item: GridItem, fields: PlacementFields): string | null {
     // In the draft, its rows; on the published version, its tiles.
@@ -134,8 +141,11 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     const p = placements.find((o) => o.id === item.id);
     if (!p) return false;
     const { saved } = await builder.remove(p);
-    if (saved) select(null);
-    settled(p.id, saved);
+    // The fade and the save take a moment: if another tile was picked meanwhile, its selection and focus stay.
+    if (current.current === p.id) {
+      if (saved) select(null);
+      settled(p.id, saved);
+    }
     return saved;
   }
 

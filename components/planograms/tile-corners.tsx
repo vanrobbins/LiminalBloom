@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import type { Edge } from "@/lib/planograms/builder/resize";
 import type { Rect } from "@/lib/planograms/set-grid";
 
-import { at } from "./grid-units";
+import { at, KEEP_TOUCH } from "./grid-units";
 import { handleBox } from "./tile-handle";
 
 const TARGET = 44;
@@ -125,6 +125,7 @@ export function TileCorners({ name, rect, bounds, edges, cellPx, shift = 0, show
             inert={!shown}
             aria-hidden={!shown || undefined}
             onClick={act}
+            {...KEEP_TOUCH}
             onKeyDown={(e) => {
               if (e.key === "Escape") onEscape();
             }}

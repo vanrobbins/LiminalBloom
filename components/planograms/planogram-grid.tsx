@@ -61,7 +61,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const [drag, setDrag] = useState<Gesture | null>(null);
   const landed = usePendingLanding();
   const cellPx = useCellPx(space, layout.width, faceKey);
-  const removal = useTileRemoval(builder?.onRemove);
+  const removal = useTileRemoval(builder?.onRemove, items);
   // A keyboard selection shows the corner discs with no animation.
   const [byKeyboard, setByKeyboard] = useState(false);
   // Each layer group front to back, so Tab meets the front one first; z-index paints them back to front.

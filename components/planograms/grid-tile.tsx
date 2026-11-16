@@ -83,6 +83,8 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
   const zIndex = layer && !movable ? (selected ? 10 : 9 - Math.min(layer.rank, 8)) : undefined;
   const self = useRef<HTMLButtonElement>(null);
   const edges = resizeEdges(block);
+  // Shrunk only where a corner disc would touch a handle; the same for every handle, so worked out once.
+  const handleSize = movable && !offset && corners ? targetSize(rect, bounds, edges, corners.cellPx) : 44;
   const grab = movable ? { onPointerDown: gestures.start("move"), ...gestures.handlers, ...KEEP_TOUCH } : {};
   return (
     <>
@@ -183,11 +185,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         />
       ) : null}
       {movable && !offset
-        ? edges.map((edge) => {
-            // Shrunk only where a corner disc would touch it.
-            const size = corners ? targetSize(rect, bounds, edges, corners.cellPx) : 44;
-            return <TileHandle key={edge} edge={edge} rect={rect} bounds={bounds} gestures={gestures} size={size < 44 ? size : undefined} />;
-          })
+        ? edges.map((edge) => <TileHandle key={edge} edge={edge} rect={rect} bounds={bounds} gestures={gestures} size={handleSize < 44 ? handleSize : undefined} />)
         : null}
     </>
   );

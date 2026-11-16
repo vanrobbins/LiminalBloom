@@ -119,6 +119,30 @@ describe("the selected tile's corner discs", () => {
     expect(disc("Edit Pant")).not.toBeNull();
   });
 
+  it("a second Delete after a removal went through does nothing, and the tile stays faded until the grid drops it", async () => {
+    const builder = builderWith({ onRemove: vi.fn().mockResolvedValueOnce(true).mockResolvedValue(false) });
+    render(grid([pant, tee], "p1", builder));
+    fireEvent.keyDown(tile("Pant"), { key: "Delete" });
+    await waitFor(() => expect(builder.onRemove).toHaveBeenCalledTimes(1));
+    await act(async () => void (await new Promise((resolve) => setTimeout(resolve, 50))));
+    fireEvent.keyDown(tile("Pant"), { key: "Delete" });
+    await act(async () => void (await new Promise((resolve) => setTimeout(resolve, 200))));
+    expect(builder.onRemove).toHaveBeenCalledTimes(1);
+    expect(tile("Pant")).toHaveAttribute("data-leaving");
+  });
+
+  it("a placement that comes back under the same id after the grid dropped it is not faded", async () => {
+    const builder = builderWith();
+    const { rerender } = render(grid([pant, tee], "p1", builder));
+    fireEvent.keyDown(tile("Pant"), { key: "Delete" });
+    await waitFor(() => expect(builder.onRemove).toHaveBeenCalledTimes(1));
+    await act(async () => void (await new Promise((resolve) => setTimeout(resolve, 50))));
+    rerender(grid([tee], "p1", builder));
+    rerender(grid([pant, tee], "p1", builder));
+    expect(tile("Pant")).not.toHaveAttribute("data-leaving");
+    expect(disc("Remove Pant")).not.toBeNull();
+  });
+
   it("are hidden while the tile is dragged and come back on the drop", () => {
     sized();
     render(grid([pant, tee], "p1", builderWith()));

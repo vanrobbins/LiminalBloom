@@ -45,6 +45,22 @@ describe("TileCorners", () => {
     expect(p.onEdit).toHaveBeenCalledTimes(1);
   });
 
+  // The discs sit inside the face-swipe scroller: a sloppy tap must not start a swipe (KEEP_TOUCH, grid-units.ts).
+  it("a touch on a disc stays on the disc, so it can't start a face swipe or a scroll", () => {
+    const swipe = { start: vi.fn(), end: vi.fn() };
+    render(
+      <div onTouchStart={swipe.start} onTouchEnd={swipe.end}>
+        <TileCorners {...props()} />
+      </div>,
+    );
+    for (const name of ["trash", "pencil"]) {
+      fireEvent.touchStart(disc(name), { touches: [{ clientX: 0, clientY: 0 }] });
+      fireEvent.touchEnd(disc(name), { changedTouches: [{ clientX: 0, clientY: 0 }] });
+    }
+    expect(swipe.start).not.toHaveBeenCalled();
+    expect(swipe.end).not.toHaveBeenCalled();
+  });
+
   it("Escape on either disc deselects", () => {
     const p = props();
     render(<TileCorners {...p} />);
