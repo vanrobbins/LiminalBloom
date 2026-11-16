@@ -71,17 +71,21 @@ test("changing the password signs out the other devices, keeps this one, and the
   await page.goto("/account");
   await hydrated(page);
   // A wrong current password says so beside the field, and changes nothing.
+  await page.getByRole("button", { name: "Change password" }).click();
   await page.getByLabel("Current password").fill("not-my-password");
   await page.getByLabel("New password", { exact: true }).fill(NEW);
   await page.getByLabel("Confirm new password").fill(NEW);
-  await page.getByRole("button", { name: "Change password" }).click();
+  await page.getByRole("button", { name: "Save new password" }).click();
   await expect(page.getByText("That isn't your current password.")).toBeVisible();
   await other.page.goto("/account");
   await expect(other.page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
 
   await page.getByLabel("Current password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Change password" }).click();
+  await page.getByRole("button", { name: "Save new password" }).click();
   await expect(page.getByText("Password changed. Your other sessions were signed out.", { exact: true })).toBeVisible();
+  // The form folds shut and focus is back on the button that opened it.
+  await expect(page.getByRole("button", { name: "Change password" })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: "Change password" })).toBeFocused();
 
   // This device is still signed in, and still is after a reload (its session cookie was replaced).
   await page.reload();

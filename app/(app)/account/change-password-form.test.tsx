@@ -15,13 +15,30 @@ beforeEach(() => vi.clearAllMocks());
 async function fill(current = "old-password-1", next = "new-password-2", confirm = "new-password-2") {
   const user = userEvent.setup();
   render(<ChangePasswordForm />);
+  await user.click(screen.getByRole("button", { name: "Change password" }));
   await user.type(screen.getByLabelText("Current password"), current);
   await user.type(screen.getByLabelText("New password"), next);
   await user.type(screen.getByLabelText("Confirm new password"), confirm);
-  await user.click(screen.getByRole("button", { name: "Change password" }));
+  await user.click(screen.getByRole("button", { name: "Save new password" }));
 }
 
 describe("ChangePasswordForm", () => {
+  it("keeps the form folded, out of reach, behind a worded button until it is pressed", async () => {
+    const user = userEvent.setup();
+    render(<ChangePasswordForm />);
+    const button = screen.getByRole("button", { name: "Change password" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    const body = document.getElementById(button.getAttribute("aria-controls") ?? "");
+    expect(body).toContainElement(screen.getByLabelText("Current password"));
+    expect(body).toHaveAttribute("inert");
+    await user.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(body).not.toHaveAttribute("inert");
+    await user.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(body).toHaveAttribute("inert");
+  });
+
   it("asks for the current password, the new one and a confirmation, and says other sessions end", () => {
     render(<ChangePasswordForm />);
     for (const label of ["Current password", "New password", "Confirm new password"]) expect(screen.getByLabelText(label)).toBeRequired();
@@ -35,8 +52,11 @@ describe("ChangePasswordForm", () => {
     await waitFor(() => expect(mocks.change).toHaveBeenCalledWith("old-password-1", "new-password-2", "new-password-2"));
     expect(mocks.toast).toHaveBeenCalledWith({ tone: "success", title: "Password changed. Your other sessions were signed out." });
     expect(mocks.refresh).toHaveBeenCalled();
-    await waitFor(() => expect(screen.getByLabelText("Current password")).toHaveValue(""));
-    expect(screen.getByLabelText("New password")).toHaveValue("");
+    const button = screen.getByRole("button", { name: "Change password" });
+    await waitFor(() => expect(button).toHaveAttribute("aria-expanded", "false"));
+    expect(button).toHaveFocus();
+    expect(document.querySelector<HTMLInputElement>("input[name=current]")).toHaveValue("");
+    expect(document.querySelector<HTMLInputElement>("input[name=new]")).toHaveValue("");
   });
 
   it("shows a wrong current password next to that field and keeps what was typed", async () => {
@@ -60,7 +80,8 @@ describe("ChangePasswordForm", () => {
     mocks.change.mockResolvedValueOnce({ status: "refused", message: "Couldn't change the password. Try again." });
     await fill();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't change the password. Try again.");
-    expect(screen.getByRole("button", { name: "Change password" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save new password" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Change password" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("names the connection when the request throws", async () => {

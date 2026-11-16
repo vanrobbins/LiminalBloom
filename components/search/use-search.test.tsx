@@ -85,6 +85,29 @@ describe("useSearch", () => {
     expect(result.current.isLoadingMore).toBe(false);
   });
 
+  it("flags a failed load, and clears the flag on the next try", async () => {
+    vi.useRealTimers();
+    actions.runSearch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [{ id: "a" }] as never[], 3));
+    await act(async () => void (await result.current.showMore()));
+    expect(result.current.moreFailed).toBe(true);
+    expect(result.current.isLoadingMore).toBe(false);
+    actions.runSearch.mockResolvedValueOnce({ results: [{ id: "b" }], total: 3 });
+    await act(async () => void (await result.current.showMore()));
+    expect(result.current.moreFailed).toBe(false);
+  });
+
+  it("counts a refused or empty page as a failure, so auto-load stops", async () => {
+    vi.useRealTimers();
+    actions.runSearch.mockResolvedValueOnce(null);
+    const { result } = renderHook(() => useSearch(searchInput.parse({}), [{ id: "a" }] as never[], 3));
+    await act(async () => void (await result.current.showMore()));
+    expect(result.current.moreFailed).toBe(true);
+    actions.runSearch.mockResolvedValueOnce({ results: [{ id: "a" }], total: 3 });
+    await act(async () => void (await result.current.showMore()));
+    expect(result.current.moreFailed).toBe(true);
+  });
+
   it("starts again from the first page when the query changes", async () => {
     actions.runSearch.mockResolvedValue({ results: [], total: 0 });
     const { result } = renderHook(() => useSearch(searchInput.parse({}), [], 0));

@@ -10,7 +10,8 @@ type StagedBarProps = {
   count: number;
   /** Why the staged state can't be saved yet, or null. */
   problem: string | null;
-  onDiscard: () => void;
+  /** Opens the confirm; the opener gets focus back on Cancel. */
+  onDiscard: (opener: HTMLElement) => void;
   onReview: (opener: HTMLElement) => void;
 };
 
@@ -27,7 +28,7 @@ export function StagedBar({ count, problem, onDiscard, onReview }: StagedBarProp
         </p>
       ) : null}
       <div className="mt-2 flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={onDiscard}>
+        <Button variant="secondary" onClick={(event) => onDiscard(event.currentTarget)}>
           Discard
         </Button>
         <Button disabled={problem !== null} onClick={(event) => onReview(event.currentTarget)}>

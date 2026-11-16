@@ -1,13 +1,12 @@
 // Filters (§3.2 item 3): category, color, status and place, combined with the
-// text, and the sort (Week 6.5 spec §2.2). A sheet on phones; a bar on wider screens.
+// text, and the sort (Week 6.5 spec §2.2). One icon button beside the search field at every
+// size (0.7.0.5 spec 3.4, U13); the menu opens out of it in place, no popover or sheet.
 
 "use client";
 
 import { SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
-import { useMediaQuery, PHONE_QUERY } from "@/components/store-map/use-media-query";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { InfoPopover } from "@/components/ui/info-popover";
 import type { Term } from "@/lib/glossary";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,8 @@ const PLACE_LABEL: Record<Place, string> = { floor: "On the floor", stockroom: "
 const SORT_LABEL: Record<Sort, string> = { match: "Best match", name: "Name A–Z", updated: "Recently updated", added: "Newest added" };
 
 type SearchFiltersProps = {
+  /** The search field, which the Filters button sits beside. */
+  children: React.ReactNode;
   input: SearchInput;
   categories: { id: string; name: string }[];
   colors: string[];
@@ -41,7 +42,7 @@ function Chip({ label, checked, disabled = false, type = "checkbox", name, onCha
 // A search takes at most MAX_FILTER_CHOICES of each; past that, the rest wait.
 const isFull = (chosen: readonly string[]) => chosen.length >= MAX_FILTER_CHOICES;
 
-function Groups({ input, categories, colors, onChange }: SearchFiltersProps) {
+function Groups({ input, categories, colors, onChange }: Omit<SearchFiltersProps, "children">) {
   const group = (legend: string, chips: React.ReactNode, limit?: string, term?: Term) => (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1 text-sm font-medium text-ink">
@@ -87,33 +88,40 @@ function Groups({ input, categories, colors, onChange }: SearchFiltersProps) {
   );
 }
 
-export function SearchFilters(props: SearchFiltersProps) {
-  const isPhone = useMediaQuery(PHONE_QUERY);
-  const [isOpen, setIsOpen] = useState(false);
-  // Kept locally so unticking the last chip does not close the bar under the pointer.
-  const [isBarOpen, setIsBarOpen] = useState(() => props.input.categoryIds.length + props.input.colors.length + props.input.statuses.length + props.input.places.length > 0);
+export function SearchFilters({ children, ...props }: SearchFiltersProps) {
   const { input } = props;
   const count = input.categoryIds.length + input.colors.length + input.statuses.length + input.places.length;
+  // Kept locally so unticking the last chip does not close the menu under the pointer.
+  const [isOpen, setIsOpen] = useState(count > 0);
+  const id = useId();
 
-  if (!isPhone) {
-    return (
-      <details className="mt-3 rounded-lg border border-line-subtle bg-raised p-4" open={isBarOpen} onToggle={(event) => setIsBarOpen(event.currentTarget.open)}>
-        <summary className="min-h-11 cursor-pointer content-center font-medium text-ink">Filters{count > 0 ? ` (${count})` : ""}</summary>
-        <div className="mt-3">
-          <Groups {...props} />
-        </div>
-      </details>
-    );
-  }
   return (
     <>
-      <Button variant="secondary" onClick={() => setIsOpen(true)} aria-haspopup="dialog" aria-expanded={isOpen}>
-        <SlidersHorizontal aria-hidden="true" strokeWidth={1.75} className="size-5" />
-        Filters{count > 0 ? ` (${count})` : ""}
-      </Button>
-      <BottomSheet open={isOpen} onOpenChange={setIsOpen} title="Filters">
-        <Groups {...props} />
-      </BottomSheet>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">{children}</div>
+        {/* Level with the field: the label above it is 20 px and the gap 4. */}
+        <Button variant="secondary" icon aria-label="Filters" aria-expanded={isOpen} aria-controls={`${id}-menu`} aria-describedby={count > 0 ? `${id}-count` : undefined} className="relative mt-6 aria-expanded:border-ink" onClick={() => setIsOpen((now) => !now)}>
+          <SlidersHorizontal aria-hidden="true" strokeWidth={1.75} className="size-5" />
+          {count > 0 ? (
+            <>
+              <span aria-hidden="true" className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-ink text-xs font-medium text-surface">
+                {count}
+              </span>
+              <span id={`${id}-count`} className="sr-only">
+                {count === 1 ? "1 filter on" : `${count} filters on`}
+              </span>
+            </>
+          ) : null}
+        </Button>
+      </div>
+      {/* One grid row, 0fr to 1fr; inert while folded so its chips can't be tabbed to. The padding keeps focus rings from being clipped. */}
+      <div id={`${id}-menu`} inert={!isOpen} className={`grid motion-safe:transition-[grid-template-rows] motion-safe:duration-[190ms] motion-safe:ease-[var(--ease-enter)] ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="p-1 pt-3">
+            <Groups {...props} />
+          </div>
+        </div>
+      </div>
     </>
   );
 }

@@ -20,6 +20,7 @@ import { ActivityCard } from "./activity-card";
 import { AddRoleButton } from "./add-role-button";
 import { AddRoleDialog } from "./add-role-dialog";
 import { DeleteDialog } from "./delete-dialog";
+import { DiscardDialog } from "./discard-dialog";
 import { RenameDialog } from "./rename-dialog";
 import { ResetDialog } from "./reset-dialog";
 import { ReviewDialog } from "./review-dialog";
@@ -30,7 +31,7 @@ import { StagedBar } from "./staged-bar";
 import { useFocusAfter } from "./use-focus-after";
 import { useMoveRole } from "./use-move-role";
 
-type Open = { kind: "review" } | { kind: "add" } | { kind: "rename" | "reset" | "delete"; row: RoleRow } | null;
+type Open = { kind: "review" } | { kind: "discard" } | { kind: "add" } | { kind: "rename" | "reset" | "delete"; row: RoleRow } | null;
 
 export function RolesScreen({ view }: { view: RolesView }) {
   const router = useRouter();
@@ -124,10 +125,7 @@ export function RolesScreen({ view }: { view: RolesView }) {
         <StagedBar
           count={count}
           problem={problem ? nestingText(problem) : null}
-          onDiscard={() => {
-            focusAfter(firstChanged());
-            setStaged({});
-          }}
+          onDiscard={(trigger) => openFrom(trigger, { kind: "discard" })}
           onReview={(trigger) => openFrom(trigger, { kind: "review" })}
         />
       ) : null}
@@ -144,6 +142,20 @@ export function RolesScreen({ view }: { view: RolesView }) {
             }
             finish(`Saved changes to ${saved === 1 ? "1 role" : `${saved} roles`}`, () => focusAfter(firstChanged()));
             setStaged({});
+          }}
+        />
+      ) : null}
+      {open?.kind === "discard" ? (
+        <DiscardDialog
+          count={count}
+          onCloseAutoFocus={backToOpener}
+          onClose={(discarded) => {
+            // After a discard focus goes to the first checkbox that was changed; after Cancel it stays on Discard.
+            if (discarded) {
+              focusAfter(firstChanged());
+              setStaged({});
+            }
+            setOpen(null);
           }}
         />
       ) : null}

@@ -98,16 +98,41 @@ test("an old /search link lands on Products with its query and result", async ({
   await expect(card(page, "E2E High-Rise Pant")).toBeVisible();
 });
 
-test("Show more adds the next 30 and moves focus to the first new card", async ({ page }) => {
+test("the next 30 load as the end of the list scrolls into view, without taking focus", async ({ page }) => {
   await seedCardProducts(31);
+  await page.goto("/products");
+  await hydrated(page);
+  const cards = results(page).locator("[data-result-id]");
+  await expect(cards.first()).toBeVisible();
+  // Scrolling the 30th card into view brings the list end within reach of the observer.
+  await cards.nth(29).scrollIntoViewIfNeeded();
+  await expect.poll(() => cards.count()).toBeGreaterThan(30);
+  await expect(cards.nth(30)).not.toBeFocused();
+  const ids = await cards.evaluateAll((all) => all.map((c) => c.getAttribute("data-result-id")));
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
+test("Load more is a worded button for the keyboard, and moves focus to the first new card", async ({ page }) => {
+  await seedCardProducts(31);
+  // An observer that never reports, as for someone the scroll can't reach: only the button is left.
+  await page.addInitScript(() => {
+    window.IntersectionObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+    } as unknown as typeof IntersectionObserver;
+  });
   await page.goto("/products");
   await hydrated(page);
   const cards = results(page).locator("[data-result-id]");
   await expect(cards).toHaveCount(30);
   await expect(page.getByText(/^30 of [\d,]+ products$/)).toBeVisible();
-  await page.getByRole("button", { name: "Show more" }).click();
+  await page.getByRole("button", { name: "Load more" }).focus();
+  await page.keyboard.press("Enter");
   await expect(cards.nth(30)).toBeFocused();
-  expect(await cards.count()).toBeGreaterThan(30);
   const ids = await cards.evaluateAll((all) => all.map((c) => c.getAttribute("data-result-id")));
   expect(new Set(ids).size).toBe(ids.length);
 });
@@ -115,8 +140,8 @@ test("Show more adds the next 30 and moves focus to the first new card", async (
 test("sorting is kept in the URL", async ({ page }) => {
   await page.goto("/products?q=e2e");
   await hydrated(page);
-  if (sizeOf(test.info()) === "phone") await page.getByRole("button", { name: /^Filters/ }).click();
-  else await page.getByText("Filters", { exact: true }).click();
+  await page.getByRole("button", { name: "Filters" }).click();
+  await expect(page.getByRole("button", { name: "Filters" })).toHaveAttribute("aria-expanded", "true");
   // The radio is visually hidden inside its chip; a person taps the chip.
   await page.getByText("Recently updated", { exact: true }).click();
   await expect(page).toHaveURL(/sort=updated/);

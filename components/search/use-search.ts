@@ -19,6 +19,8 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
   const [isPending, setIsPending] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // The last Load more failed: the screen says so beside its button and stops auto-loading.
+  const [moreFailed, setMoreFailed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(0);
 
@@ -30,6 +32,7 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
     setIsPending(true);
     // A new search overtakes a Show more still on its way.
     setIsLoadingMore(false);
+    setMoreFailed(false);
     try {
       const found = await runSearch(next);
       if (ticket !== latest.current) return;
@@ -48,14 +51,19 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
   /**
    * The next 30, appended (spec §2.2). Resolves to the first new card's id (for
    * focus) and the new counts, or null when nothing new came (overtaken,
-   * refused or offline).
+   * refused, offline or empty; all but overtaken set `moreFailed`).
    */
   async function showMore(): Promise<{ firstId: string; shown: number; total: number } | null> {
     const ticket = ++latest.current;
     setIsLoadingMore(true);
+    setMoreFailed(false);
     try {
       const found = await runSearch({ ...input, offset: results.length });
-      if (ticket !== latest.current || !found) return null;
+      if (ticket !== latest.current) return null;
+      if (!found) {
+        setMoreFailed(true);
+        return null;
+      }
       const seen = new Set(results.map((r) => r.id));
       const fresh = found.results.filter((r) => !seen.has(r.id));
       // Against the latest list, in case a delete landed meanwhile.
@@ -64,9 +72,17 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
       const nextTotal = found.results.length > 0 ? found.total : total;
       setTotal(nextTotal);
       setIsOffline(false);
-      return fresh[0] ? { firstId: fresh[0].id, shown: results.length + fresh.length, total: nextTotal } : null;
+      // A page with nothing new (a delete shifted it) counts as a failure too, so auto-load can't loop on it.
+      if (!fresh[0]) {
+        setMoreFailed(true);
+        return null;
+      }
+      return { firstId: fresh[0].id, shown: results.length + fresh.length, total: nextTotal };
     } catch {
-      if (ticket === latest.current) setIsOffline(true);
+      if (ticket === latest.current) {
+        setIsOffline(true);
+        setMoreFailed(true);
+      }
       return null;
     } finally {
       if (ticket === latest.current) setIsLoadingMore(false);
@@ -96,5 +112,5 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
     setTotal((count) => Math.max(0, count - 1));
   }
 
-  return { input, results, total, isPending, isOffline, isLoadingMore, update, showMore, patchProduct, removeProduct };
+  return { input, results, total, isPending, isOffline, isLoadingMore, moreFailed, update, showMore, patchProduct, removeProduct };
 }

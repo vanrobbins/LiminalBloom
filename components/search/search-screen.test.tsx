@@ -1,6 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({ runSearch: vi.fn() }));
 const mediaQuery = vi.hoisted(() => ({ PHONE_QUERY: "(max-width: 767px)", useMediaQuery: vi.fn((query: string) => (void query, false)) }));
@@ -94,24 +94,92 @@ describe("SearchScreen title and actions", () => {
   });
 });
 
-describe("SearchScreen Show more", () => {
-  it("shows more under the cards, then moves focus to the first new card and says how many", async () => {
+describe("SearchScreen Load more", () => {
+  // jsdom has no IntersectionObserver: this one reports a sighting when the test says so.
+  type Entries = { isIntersecting: boolean }[];
+  const watching: { callback: (entries: Entries) => void; disconnected: boolean }[] = [];
+  beforeEach(() => {
+    watching.length = 0;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        entry: { callback: (entries: Entries) => void; disconnected: boolean };
+        constructor(callback: (entries: Entries) => void) {
+          this.entry = { callback, disconnected: false };
+          watching.push(this.entry);
+        }
+        observe() {}
+        disconnect() {
+          this.entry.disconnected = true;
+        }
+      },
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const liveObservers = () => watching.filter((w) => !w.disconnected);
+  const scrollToEnd = () => act(() => liveObservers().forEach((w) => w.callback([{ isIntersecting: true }])));
+
+  it("loads more under the cards, then moves focus to the first new card and says how many", async () => {
     const user = userEvent.setup();
     const ink = product("p3", "Ink Jacket");
     actions.runSearch.mockResolvedValueOnce({ results: [ink], total: 3 });
     renderScreen({ initialTotal: 3 });
     expect(screen.getByText("2 of 3 products")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Show more" }));
+    await user.click(screen.getByRole("button", { name: "Load more" }));
     expect(actions.runSearch).toHaveBeenCalledWith(expect.objectContaining({ offset: 2 }));
     await vi.waitFor(() => expect(screen.getByRole("button", { name: /Ink Jacket/ })).toHaveFocus());
     expect(screen.getByText("Showing 3 of 3")).toBeInTheDocument();
     expect(screen.getByText("3 products")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
-  it("has no Show more when everything is shown", () => {
+  it("has no Load more, and watches nothing, when everything is shown", () => {
     renderScreen();
-    expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+    expect(watching).toHaveLength(0);
+  });
+
+  it("loads the next page by itself when the end scrolls into view, without taking focus", async () => {
+    actions.runSearch.mockResolvedValueOnce({ results: [product("p3", "Ink Jacket")], total: 3 });
+    renderScreen({ initialTotal: 3 });
+    expect(liveObservers()).toHaveLength(1);
+    scrollToEnd();
+    expect(actions.runSearch).toHaveBeenCalledWith(expect.objectContaining({ offset: 2 }));
+    expect(await screen.findByText("Showing 3 of 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ink Jacket/ })).not.toHaveFocus();
+    expect(liveObservers()).toHaveLength(0);
+  });
+
+  it("does not load a second page while one is on its way", async () => {
+    let finish: (page: unknown) => void = () => {};
+    actions.runSearch.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    renderScreen({ initialTotal: 5 });
+    scrollToEnd();
+    expect(liveObservers()).toHaveLength(0);
+    scrollToEnd();
+    expect(actions.runSearch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Loading more…" })).toBeInTheDocument();
+    await act(async () => finish({ results: [product("p3", "Ink Jacket")], total: 5 }));
+  });
+
+  it("says a failed load inline, stops auto-loading and keeps the button to try again", async () => {
+    const user = userEvent.setup();
+    actions.runSearch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    renderScreen({ initialTotal: 3 });
+    scrollToEnd();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load more. Try again.");
+    expect(liveObservers()).toHaveLength(0);
+    actions.runSearch.mockResolvedValueOnce({ results: [product("p3", "Ink Jacket")], total: 3 });
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    expect(await screen.findByText("Showing 3 of 3")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("disconnects its observer when the screen goes", () => {
+    const { unmount } = renderScreen({ initialTotal: 3 });
+    expect(liveObservers()).toHaveLength(1);
+    unmount();
+    expect(liveObservers()).toHaveLength(0);
   });
 });
 
