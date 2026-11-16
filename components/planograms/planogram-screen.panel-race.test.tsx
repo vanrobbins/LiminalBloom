@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Change, DraftState, PlacementView, PlanogramFace, PlanogramScope } from "@/lib/planograms/types";
 
@@ -109,10 +109,13 @@ describe("a refusal that lands after the form is gone", () => {
     });
     fireEvent.change(pieces(), { target: { value: "5" } });
     fireEvent.click(tile("Tee"));
-    await waitFor(() => expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("Blocked by Tee"));
+    // Well inside the 600 ms pause: it is the unmount that sent it, not the timer left running behind.
+    await pause(100);
+    expect(saves()).toHaveLength(1);
+    expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("Blocked by Tee");
   });
 
-  it("is not lost when the placement has left the draft by then (the edit is refused before it is sent)", async () => {
+  it("is not lost when the placement has left the draft by then (the edit goes out and the server refuses it)", async () => {
     const user = userEvent.setup();
     show();
     await openPanel(user, "Pant");
@@ -123,6 +126,58 @@ describe("a refusal that lands after the form is gone", () => {
     window.dispatchEvent(new Event("focus"));
     await screen.findByText("Removed on another device");
     await waitFor(() => expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("Changed on another device"));
+  });
+
+  it("an invalid value left in the form when the panel closes is told on the status line, not dropped", async () => {
+    const user = userEvent.setup();
+    show();
+    await openPanel(user, "Pant");
+    const fromLeft = screen.getByLabelText("From left (ft)");
+    fireEvent.change(fromLeft, { target: { value: "2.25" } });
+    fireEvent.keyDown(fromLeft, { key: "Escape" });
+    // Inside the 600 ms pause: it is the closing that says so, not the timer left running behind.
+    await pause(100);
+    expect(screen.queryByLabelText("Pieces")).toBeNull();
+    expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("Use feet in half steps");
+    expect(saves()).toHaveLength(0);
+  });
+
+  it("the same when another tile is picked", async () => {
+    const user = userEvent.setup();
+    show();
+    await openPanel(user, "Pant");
+    fireEvent.change(screen.getByLabelText("From left (ft)"), { target: { value: "2.25" } });
+    fireEvent.click(tile("Tee"));
+    await pause(100);
+    expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("Use feet in half steps");
+    expect(saves()).toHaveLength(0);
+  });
+});
+
+describe("a draft published elsewhere while an edit is sent", () => {
+  it("does not blame the connection: the page reloads to what is there now", async () => {
+    const user = userEvent.setup();
+    show();
+    await openPanel(user, "Pant");
+    actions.saveChangeAction.mockImplementationOnce(async () => ({ status: "refused", message: "Changed on another device", draft: null }));
+    fireEvent.change(pieces(), { target: { value: "5" } });
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(screen.queryByText(/check the connection/i)).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent("published or discarded on another device");
+  });
+});
+
+describe("the panel's own face move coming back", () => {
+  it("does not take back what is typed meanwhile: the new spot shows, the typed pieces stay and are saved there", async () => {
+    const user = userEvent.setup();
+    show();
+    await openPanel(user, "Pant");
+    fireEvent.click(faceButton("Back"));
+    fireEvent.change(pieces(), { target: { value: "9" } });
+    await waitFor(() => expect(fake.server.rows[0]).toMatchObject({ faceId: back.faceId }));
+    await pause(50);
+    expect(pieces()).toHaveValue("9");
+    await waitFor(() => expect(fake.server.rows[0]).toMatchObject({ pieceCount: 9, faceId: back.faceId }), { timeout: 2000 });
   });
 });
 

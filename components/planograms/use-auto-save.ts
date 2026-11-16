@@ -40,6 +40,11 @@ export function useAutoSave<V>(commit: (values: V) => void | Promise<void>, dela
     waiting.current = null;
   }, [stop]);
 
+  /** The numbers under what is waiting were replaced, and it was typed over only some of them: it waits on as `values`, on its own pause. */
+  const rebase = useCallback((values: V) => {
+    if (waiting.current) waiting.current = { values };
+  }, []);
+
   function flush() {
     stop();
     const sending = waiting.current;
@@ -77,5 +82,6 @@ export function useAutoSave<V>(commit: (values: V) => void | Promise<void>, dela
     },
     flush,
     cancel,
+    rebase,
   };
 }

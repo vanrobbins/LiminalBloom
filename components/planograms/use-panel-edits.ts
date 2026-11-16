@@ -12,6 +12,7 @@ import type { PlacementFields, PlacementView, PlanogramScope } from "@/lib/plano
 import type { GridItem } from "./grid-items";
 import { flushPendingEdits } from "./use-auto-save";
 import type { CommitResult, useBuilder } from "./use-builder";
+import { expectMove } from "./use-placement-editor";
 
 type Options = {
   scope: PlanogramScope;
@@ -50,7 +51,10 @@ export function usePanelEdits({ scope, placements, builder, change }: Options) {
     const to = scope.faces.find((f) => f.faceId === target);
     const spot = to ? firstOpenSpot([to], fresh?.placements ?? placements, now, now.id) : null;
     if (!spot) return `No open spot fits on ${to?.label ?? "that face"}`;
-    return change(now, { ...now, ...spot }, "Moved");
+    const moved = { ...now, ...spot };
+    // The form hears where it is going, so the placement landing there is not taken for another device's change.
+    expectMove(now.id, moved);
+    return change(now, moved, "Moved");
   }
 
   return { edit, moveToFace };

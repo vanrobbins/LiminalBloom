@@ -50,7 +50,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const canDraft = can(member, "planograms.draft");
   // A draft is for those who may draft: without the switch the page reads as the published planogram only.
   const initialDraft = canDraft ? pageDraft : null;
-  const { draft, status, save, adopt, leave, onLeaveRef, onTakeRef } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
+  const { draft, status, save, adopt, leave, refuse, onLeaveRef, onTakeRef } = usePlanogramDraft(scope.fixtureId, initialDraft, () => router.refresh());
   const [view, setView] = useState<"draft" | "published">(initialDraft ? "draft" : "published");
   const { face, slideFrom, showFace, onSwipe } = useFaceView(scope, () => startFace(scope, (viewing ?? latest)?.placements ?? [], viewing ? null : initialDraft, highlightProductId));
   const [adding, setAdding] = useState(false);
@@ -120,6 +120,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       onEdit={actions.edit}
       onRemove={actions.remove}
       onMoveToFace={actions.moveToFace}
+      onInvalid={refuse}
       onReorder={actions.gridBuilder ? actions.reorder : undefined}
     />
   );

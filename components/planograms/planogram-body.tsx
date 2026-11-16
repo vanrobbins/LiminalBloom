@@ -44,6 +44,8 @@ type PlanogramBodyProps = {
   onRemove: (placement: PlacementView) => void;
   /** The panel's face picker: resolves to the refusal to show there, or null. */
   onMoveToFace: (placement: PlacementView, faceId: string) => Promise<string | null>;
+  /** The panel closed holding a value that is not valid: said on the status line. */
+  onInvalid?: (message: string) => void;
   /** Move forward / Move back on a shared rail; absent where nothing may move. */
   onReorder?: (item: GridItem, direction: "forward" | "back") => void;
 };
@@ -71,6 +73,7 @@ export function PlanogramBody({
   onEdit,
   onRemove,
   onMoveToFace,
+  onInvalid,
   onReorder,
 }: PlanogramBodyProps) {
   const orphans = isEditing ? items.filter((i) => !scope.faces.some((f) => f.faceId === i.faceId)) : [];
@@ -119,6 +122,7 @@ export function PlanogramBody({
                   onSave={onEdit}
                   onRemove={onRemove}
                   onMoveToFace={onMoveToFace}
+                  onInvalid={onInvalid}
                 />
               </div>
             ) : null}

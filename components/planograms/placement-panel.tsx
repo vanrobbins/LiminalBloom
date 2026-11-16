@@ -28,9 +28,11 @@ type PlacementEditorProps = {
   onRemove: (placement: PlacementView) => void;
   /** Resolves to the refusal to show in the panel, or null. */
   onMoveToFace: (placement: PlacementView, faceId: string) => Promise<string | null>;
+  /** Said on the status line when the form closes holding a value that is not valid. */
+  onInvalid?: (message: string) => void;
 };
 
-export function PlacementEditor({ placement, isGone, faces, others, busy, onClose, onSave, onRemove, onMoveToFace }: PlacementEditorProps) {
+export function PlacementEditor({ placement, isGone, faces, others, busy, onClose, onSave, onRemove, onMoveToFace, onInvalid }: PlacementEditorProps) {
   // Its face left the set (spec §3.3): it can only be removed, never saved there.
   const isOrphan = placement !== null && !faces.some((f) => f.faceId === placement.faceId);
   return isGone ? (
@@ -63,8 +65,9 @@ export function PlacementEditor({ placement, isGone, faces, others, busy, onClos
         excludeId={placement.id}
         // No stack limit for either presentation (Week 6.5 spec §3.3); hung products share rail space as separate placements (layers.ts).
         onSubmit={(fields) => onSave(placement, fields)}
+        onInvalid={onInvalid}
       />
-      <FacePicker key={`face:${placement.id}`} faces={faces} currentFaceId={placement.faceId} spot={[placement.faceId, placement.col, placement.row].join("|")} onPick={(faceId) => onMoveToFace(placement, faceId)} />
+      <FacePicker key={`face:${placement.id}`} faces={faces} currentFaceId={placement.faceId} spot={[placement.faceId, placement.col, placement.row, placement.colSpan, placement.rowSpan].join("|")} onPick={(faceId) => onMoveToFace(placement, faceId)} />
     </div>
   ) : null;
 }

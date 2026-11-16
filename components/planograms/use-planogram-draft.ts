@@ -18,7 +18,7 @@ export type DraftStatus = { kind: "idle" | "saving" | "saved" } | { kind: "refus
  * A refusal's words go to the form that sent it; null when there's nothing to say there. `before` is the placement
  * as this device held it when the change went; `id` is the placement an add made (the server picks it).
  */
-export type SaveResult = { saved: true; draft: DraftState; notice?: string; before?: PlacementView; id?: string; ahead?: { before: Ahead; after: Ahead } } | { saved: false; message: string | null };
+export type SaveResult = { saved: true; draft: DraftState; notice?: string; before?: PlacementView; id?: string; ahead?: { before: Ahead; after: Ahead } } | { saved: false; message: string | null; gone?: true };
 /** A change, or one picked on its turn from the draft as it is then (Undo and Redo); null sends nothing. */
 export type Pending = Change | ((held: DraftState | null) => Change | null);
 
@@ -29,6 +29,8 @@ export const refusalOf = (result: SaveResult) => (result.saved ? null : result.m
 
 const newer = (current: DraftState | null, next: DraftState) => (current && current.planogramVersion > next.planogramVersion ? current : next);
 const NOTHING: SaveResult = { saved: false, message: null };
+/** Published or discarded on another device: not a failed connection, and the page reloads. */
+const GONE: SaveResult = { saved: false, message: null, gone: true };
 
 export function usePlanogramDraft(fixtureId: string, initial: DraftState | null, onGone: () => void) {
   const [draft, setDraft] = useState(initial);
@@ -136,7 +138,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
         round.current += 1;
         setStatus({ kind: "idle" });
         leave();
-        return NOTHING;
+        return GONE;
       }
       setStatus({ kind: "refused", message: reply.message });
       return { saved: false, message: reply.message };
@@ -169,5 +171,10 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     hold(next);
   }
 
-  return { draft, status, save, adopt, leave, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };
+  /** Something the form could not send (it was closed with a value that is not valid): said where a refusal is. */
+  function refuse(message: string) {
+    setStatus({ kind: "refused", message });
+  }
+
+  return { draft, status, save, adopt, leave, refuse, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };
 }

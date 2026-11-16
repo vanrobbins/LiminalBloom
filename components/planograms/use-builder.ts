@@ -22,7 +22,7 @@ import { flushPendingEdits } from "./use-auto-save";
 import { CONFLICT, useHistory } from "./use-history";
 import { useUndoKeys } from "./use-undo-keys";
 
-export type CommitResult = { ok: true; id: string; draft?: DraftState } | { ok: false; message: string | null };
+export type CommitResult = { ok: true; id: string; draft?: DraftState } | { ok: false; message: string | null; gone?: true };
 
 type Options = {
   fixtureId: string;
@@ -132,7 +132,7 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
         history.forget(target.id);
         tell(result.message);
       }
-      return { ok: false, message: result.message };
+      return { ok: false, message: result.message, gone: result.gone };
     }
     // What the server kept, which isn't what was sent when folded product hangs on a rail;
     // and where it sat when this change went, which a change queued behind another moved.

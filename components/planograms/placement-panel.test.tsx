@@ -111,5 +111,14 @@ describe("PlacementEditor", () => {
       await userEvent.click(screen.getByRole("button", { name: "Front" }));
       expect(screen.queryByRole("alert")).toBeNull();
     });
+
+    it("drops a refusal once the width changes: it was about a placement that size", async () => {
+      const wide = { ...placement, colSpan: 8 };
+      const { props, rerender } = renderPanel({ faces: [top, front], placement: wide, onMoveToFace: vi.fn().mockResolvedValue("No open spot fits on Front") });
+      await userEvent.click(screen.getByRole("button", { name: "Front" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("No open spot fits on Front");
+      rerender(<PlacementEditor {...props} placement={{ ...wide, colSpan: 2 }} />);
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
   });
 });
