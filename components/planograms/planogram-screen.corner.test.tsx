@@ -10,10 +10,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PublishedVersion } from "@/lib/planograms/queries";
 import type { DraftState, PlacementView, PlanogramFace, PlanogramScope } from "@/lib/planograms/types";
 
-const hook = vi.hoisted(() => ({ draft: null as DraftState | null, save: (() => {}) as (...args: unknown[]) => unknown, leave: (() => {}) as () => void }));
+const hook = vi.hoisted(() => ({ refuse: (() => {}) as (message: string) => void, draft: null as DraftState | null, save: (() => {}) as (...args: unknown[]) => unknown, leave: (() => {}) as () => void }));
 vi.mock("./use-planogram-draft", async (original) => ({
   ...(await original<typeof import("./use-planogram-draft")>()),
-  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (pending: unknown) => hook.save(typeof pending === "function" ? pending(hook.draft) : pending), adopt: (next: DraftState) => (hook.draft = next), leave: hook.leave }),
+  usePlanogramDraft: () => ({ draft: hook.draft, status: { kind: "idle" }, save: (pending: unknown) => hook.save(typeof pending === "function" ? pending(hook.draft) : pending), adopt: (next: DraftState) => (hook.draft = next), refuse: hook.refuse, leave: hook.leave }),
 }));
 const actions = vi.hoisted(() => ({
   pickerSearch: vi.fn(),
@@ -56,6 +56,7 @@ describe("PlanogramScreen corner bar", () => {
     hook.draft = null;
     hook.save = vi.fn();
     hook.leave = vi.fn();
+    hook.refuse = vi.fn();
     actions.pickerSearch.mockResolvedValue([teeFit]);
   });
 
@@ -87,6 +88,43 @@ describe("PlanogramScreen corner bar", () => {
     expect(actions.beginDraftAction).toHaveBeenCalledTimes(1);
     // The pant holds cells 0–2 of the published version: the tee goes beside it, not on it.
     expect(hook.save).toHaveBeenCalledWith({ kind: "add", productId: "tee", fields: expect.objectContaining({ faceId: front.faceId, col: 2, row: 0 }) });
+  });
+
+  it("with no draft, the add is placed among the draft that comes back, which may hold more than the latest version", async () => {
+    // Another device's draft already has a belt beside the pant, where the published version has open cells.
+    const belt: PlacementView = { ...pant, id: "d3", productId: "belt", productName: "Belt", styleNumber: "B-1", col: 2 };
+    actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 3, placements: [pant, belt] } });
+    hook.save = vi.fn(() => Promise.resolve({ saved: false, message: "stop here" }));
+    const user = userEvent.setup();
+    render(screenWith(published, null));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
+    await user.click(await screen.findByRole("button", { name: /Tee/ }));
+    await waitFor(() => expect(hook.save).toHaveBeenCalledTimes(1));
+    // Published alone, the tee would go at col 2, row 0: the draft's belt is there, so it goes on the next row.
+    expect(hook.save).toHaveBeenCalledWith({ kind: "add", productId: "tee", fields: expect.objectContaining({ faceId: front.faceId, col: 0, row: 1 }) });
+  });
+
+  it("a draft that fills the face leaves the add with no room: the Add dialog and the status line both say so, and nothing is saved", async () => {
+    const wall: PlacementView = { ...pant, id: "d4", colSpan: 4, rowSpan: 3, col: 0 };
+    actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 3, placements: [wall] } });
+    const user = userEvent.setup();
+    render(screenWith(published, null));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
+    await user.click(await screen.findByRole("button", { name: /Tee/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No open spot fits Tee. Make room, then add it.");
+    expect(hook.refuse).toHaveBeenCalledWith("No open spot fits Tee. Make room, then add it.");
+    expect(hook.save).not.toHaveBeenCalled();
+  });
+
+  it("with no room on the published version either, no draft is started for the add", async () => {
+    const full: PublishedVersion = { ...published, placements: [{ ...published.placements[0], colSpan: 4, rowSpan: 3 }] };
+    const user = userEvent.setup();
+    render(screenWith(full, null));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
+    await user.click(await screen.findByRole("button", { name: /Tee/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No open spot fits Tee");
+    expect(actions.beginDraftAction).not.toHaveBeenCalled();
+    expect(hook.refuse).not.toHaveBeenCalled();
   });
 
   it("a refused start says why in the Add dialog and saves nothing", async () => {

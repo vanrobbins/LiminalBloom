@@ -33,16 +33,17 @@ function setup(draft: DraftState | null, save = vi.fn().mockResolvedValue({ save
   const adopt = vi.fn();
   const onStarted = vi.fn();
   const onStale = vi.fn();
+  const refuse = vi.fn();
   let shown = draft;
   const send = queued(save, () => shown);
   const hook = renderHook(
     ({ d, on }: { d: DraftState | null; on?: boolean }) => {
       shown = d;
-      return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt, onStarted, onStale, describe: () => "here", enabled: on });
+      return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt, refuse, onStarted, onStale, describe: () => "here", enabled: on });
     },
     { initialProps: { d: draft } as { d: DraftState | null; on?: boolean } },
   );
-  return { ...hook, save, adopt, onStarted, onStale };
+  return { ...hook, save, adopt, refuse, onStarted, onStale };
 }
 
 describe("useBuilder", () => {
@@ -78,7 +79,7 @@ describe("useBuilder", () => {
     const pant = { ...view("a", 0, 4), depth: 2 };
     const save = vi.fn().mockResolvedValue({ saved: true, draft: state(pant), id: "a" });
     const { result, rerender } = setup(state(), save);
-    await act(() => result.current.add("pant", fields(pant, 0)));
+    await act(() => result.current.add("pant", () => fields(pant, 0)));
     rerender({ d: state(pant) });
     await act(() => result.current.undo());
     expect(save).toHaveBeenLastCalledWith({ kind: "remove", id: "a", version: 4 });
@@ -132,7 +133,7 @@ describe("useBuilder", () => {
     const { result, rerender } = renderHook(
       ({ d }: { d: DraftState }) => {
         shown = d;
-        return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal });
+        return useBuilder({ fixtureId: "fx", draft: d, expectedVersion: 3, save: send, adopt: vi.fn(), refuse: vi.fn(), onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here", reveal });
       },
       { initialProps: { d: state(pant) } },
     );
@@ -239,7 +240,7 @@ describe("useBuilder", () => {
     const save = vi.fn().mockResolvedValue({ saved: true, draft: state(view("x", 6), view("y", 0)), id: "y" });
     const { result, adopt, onStarted, onStale } = setup(null, save);
     const pant = view("y", 0);
-    const made = await act(() => result.current.add("pant", fields(pant, 0)));
+    const made = await act(() => result.current.add("pant", () => fields(pant, 0)));
     expect(actions.beginDraftAction).toHaveBeenCalledWith("fx", 3);
     expect(adopt).toHaveBeenCalledTimes(1);
     expect(onStarted).toHaveBeenCalledTimes(1);
@@ -250,10 +251,42 @@ describe("useBuilder", () => {
     actions.beginDraftAction.mockResolvedValue({ status: "refused", message: "Published again on another device.", draft: null });
     const again = setup(null, save);
     save.mockClear();
-    expect(await act(() => again.result.current.add("pant", fields(pant, 0)))).toEqual({ saved: false, message: "Published again on another device." });
+    expect(await act(() => again.result.current.add("pant", () => fields(pant, 0)))).toEqual({ saved: false, message: "Published again on another device." });
     expect(again.onStale).toHaveBeenCalledTimes(1);
     expect(save).not.toHaveBeenCalled();
     expect(onStale).not.toHaveBeenCalled();
+  });
+
+  it("an add picks its spot among the draft that came back, not the version the draft was started from", async () => {
+    // Another device's draft already holds a pant at col 0, which the latest version didn't have.
+    actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: state(view("x", 0)) });
+    const save = vi.fn().mockResolvedValue({ saved: true, draft: state(view("x", 0), view("y", 2)), id: "y" });
+    const { result } = setup(null, save);
+    const pant = view("y", 0);
+    const pick = vi.fn((others: readonly PlacementView[]) => fields(pant, others.some((p) => p.col === 0) ? 2 : 0));
+    await act(() => result.current.add("pant", pick));
+    expect(pick).toHaveBeenCalledWith([view("x", 0)]);
+    expect(save).toHaveBeenCalledWith({ kind: "add", productId: "pant", fields: fields(pant, 2) });
+  });
+
+  it("an add with no room in the draft that came back saves nothing and says so on the status line", async () => {
+    actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: state(view("x", 0)) });
+    const { result, save, refuse, onStarted } = setup(null);
+    const made = await act(() => result.current.add("pant", () => "No open spot fits Pant."));
+    expect(made).toEqual({ saved: false, message: "No open spot fits Pant." });
+    expect(refuse).toHaveBeenCalledWith("No open spot fits Pant.");
+    expect(save).not.toHaveBeenCalled();
+    // The draft did start, and the screen has switched to it: the status line is how the person learns why.
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it("a + and a move that both find no draft start one between them", async () => {
+    const pant = view("v-0", 0);
+    actions.beginDraftAction.mockResolvedValue({ status: "saved", draft: state({ ...pant, id: "p" }) });
+    const { result, adopt } = setup(null);
+    await act(() => Promise.all([result.current.add("tee", () => fields(pant, 6)), result.current.commit(pant, fields(pant, 4), "Moved")]));
+    expect(actions.beginDraftAction).toHaveBeenCalledTimes(1);
+    expect(adopt).toHaveBeenCalledTimes(1);
   });
 
   it("skips steps whose placement left the draft, so Undo isn't stuck", async () => {
@@ -380,7 +413,7 @@ describe("useBuilder", () => {
     // The real draft queue under the builder: the order the two hooks hand off in is what's tested.
     const { result } = renderHook(() => {
       const draft = usePlanogramDraft("fx", state(pant), vi.fn());
-      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
+      const builder = useBuilder({ fixtureId: "fx", draft: draft.draft, expectedVersion: 3, save: draft.save, adopt: draft.adopt, refuse: draft.refuse, onStarted: vi.fn(), onStale: vi.fn(), describe: () => "here" });
       return builder;
     });
 

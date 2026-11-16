@@ -10,7 +10,7 @@ import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
 import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
 import { reorderTarget, sharesSpace } from "@/lib/planograms/layers";
-import { checkPlacement } from "@/lib/planograms/rules";
+import { checkPlacement, type Neighbour } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
 import { shortSpot } from "@/lib/products/location-words";
@@ -139,10 +139,13 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
   }
 
   async function addProduct(product: ProductFit): Promise<string | null> {
-    // With no draft the add starts one from the latest version, so the spot is picked among its tiles.
-    const fields = placeNew([face, ...scope.faces.filter((f) => f.faceId !== face.faceId)], isEditing ? placements : items, product);
-    if (!fields) return `No open spot fits ${product.name}. Make room, then add it.`;
-    const result = await builder.add(product.id, fields);
+    // Nowhere to go: say so before a draft is started for it. With no draft the add starts one, and the spot is
+    // picked again among that draft's placements, which may differ from the tiles shown.
+    const faces = [face, ...scope.faces.filter((f) => f.faceId !== face.faceId)];
+    const pick = (others: readonly Neighbour[]) => placeNew(faces, others, product) ?? `No open spot fits ${product.name}. Make room, then add it.`;
+    const first = pick(isEditing ? placements : items);
+    if (typeof first === "string") return first;
+    const result = await builder.add(product.id, pick);
     if (!result.saved) return result.message ?? "Couldn't add it. Try again.";
     const placed = result.draft.placements.find((p) => p.id === result.id);
     if (placed) {

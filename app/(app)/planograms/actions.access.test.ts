@@ -73,7 +73,7 @@ describe("planograms.draft", () => {
     expect(await startDraftAction(f, null)).toEqual({ status: "forbidden", message: DRAFT });
     nothingWritten();
     as("planograms.draft");
-    expect(await startDraftAction(f, null)).toEqual({ status: "saved", message: "Draft started" });
+    expect(await startDraftAction(f, null)).toEqual({ status: "saved", message: "Draft ready" });
   });
 
   it("beginDraftAction", async () => {

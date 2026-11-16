@@ -71,6 +71,34 @@ describe("SaveIndicator", () => {
     expect(words()).toBe("Saved");
   });
 
+  it("a save that starts inside the hold window holds its own Saved 500 ms from where it started", () => {
+    const { rerender } = render(<SaveIndicator status={saving} />);
+    later(350);
+    // Shown at 300 ms, so the first Saved waits until 800 ms.
+    rerender(<SaveIndicator status={saved} />);
+    later(250);
+    rerender(<SaveIndicator status={{ kind: "saving" }} />);
+    expect(words()).toBe("Saving…");
+    later(50);
+    rerender(<SaveIndicator status={saved} />);
+    // The second save began at 600 ms: Saving… holds to 1100 ms, not the first save's 800.
+    later(299);
+    expect(words()).toBe("Saving…");
+    later(150);
+    expect(words()).toBe("Saving…");
+    later(1);
+    expect(words()).toBe("Saved");
+  });
+
+  it("only settled states are announced: Saving… is hidden from screen readers, Saved is not", () => {
+    const { rerender } = render(<SaveIndicator status={saving} />);
+    later(300);
+    expect(screen.getByText("Saving…").closest("[aria-hidden='true']")).not.toBeNull();
+    rerender(<SaveIndicator status={saved} />);
+    later(500);
+    expect(screen.getByText("Saved").closest("[aria-hidden='true']")).toBeNull();
+  });
+
   it("is a status, not a button: nothing to focus or press", () => {
     render(<SaveIndicator status={saved} />);
     expect(screen.queryByRole("button")).toBeNull();

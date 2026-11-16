@@ -4,12 +4,15 @@
 
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({ previewPublishAction: vi.fn(), publishAction: vi.fn(), discardDraftAction: vi.fn() }));
 vi.mock("@/app/(app)/planograms/actions", () => actions);
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+const toasts = vi.hoisted(() => ({ toast: vi.fn(), dismissToast: vi.fn() }));
+vi.mock("@/lib/toast", () => toasts);
 
 import { CornerBar } from "./corner-bar";
 
@@ -118,5 +121,59 @@ describe("CornerBar", () => {
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() => expect(screen.getByRole("button", { name: "More draft actions" })).toHaveFocus());
+  });
+  async function openDiscard(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "More draft actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Discard draft…" }));
+    return screen.findByRole("dialog", { name: "Discard this draft?" });
+  }
+
+  it("while a discard is in flight the dialog can't be dismissed, so it can't be confirmed twice", async () => {
+    let finish: (reply: { status: "saved"; message: string }) => void = () => {};
+    actions.discardDraftAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    const user = userEvent.setup();
+    show();
+    const dialog = await openDiscard(user);
+    await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
+    expect(within(dialog).getByRole("button", { name: "Discarding…" })).toBeDisabled();
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "Discard this draft?" })).toBeInTheDocument();
+    finish({ status: "saved", message: "Draft discarded" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(actions.discardDraftAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("a discard that throws says so, keeps the dialog open and lets it be confirmed again", async () => {
+    actions.discardDraftAction.mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce({ status: "saved", message: "Draft discarded" });
+    const user = userEvent.setup();
+    show();
+    const dialog = await openDiscard(user);
+    await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
+    await waitFor(() => expect(toasts.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error", title: "Couldn't discard" })));
+    expect(within(dialog).getByRole("button", { name: "Discard draft" })).toBeEnabled();
+    expect(base.onLeave).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
+    await waitFor(() => expect(base.onLeave).toHaveBeenCalledTimes(1));
+    expect(actions.discardDraftAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("when the ⋯ is gone after a discard, focus goes to the page's main area, not the top of the page", async () => {
+    actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
+    const main = document.createElement("main");
+    main.id = "content";
+    main.tabIndex = -1;
+    document.body.append(main);
+    function Host() {
+      const [editing, setEditing] = useState(true);
+      return <CornerBar {...base} editing={editing} onLeave={() => setEditing(false)} />;
+    }
+    const user = userEvent.setup();
+    render(<Host />);
+    const dialog = await openDiscard(user);
+    await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.queryByRole("button", { name: "More draft actions" })).toBeNull();
+    await waitFor(() => expect(main).toHaveFocus());
+    main.remove();
   });
 });

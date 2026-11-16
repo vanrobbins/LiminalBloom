@@ -169,5 +169,10 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     hold(next);
   }
 
-  return { draft, status, save, adopt, leave, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };
+  /** A refusal that came from this device, before anything was sent: the status line says it like any other. */
+  function refuse(message: string) {
+    setStatus({ kind: "refused", message });
+  }
+
+  return { draft, status, save, adopt, refuse, leave, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };
 }

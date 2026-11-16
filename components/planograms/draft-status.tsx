@@ -21,8 +21,11 @@ function useCalmStatus(status: DraftStatus): DraftStatus {
   const message = status.kind === "refused" ? status.message : "";
   useEffect(() => {
     if (status.kind === "saving") {
-      // A second save while Saving… shows, or is about to, changes nothing.
-      if (shown.kind === "saving") return;
+      // A save that starts while Saving… shows keeps it up, and its own Saved holds from now.
+      if (shown.kind === "saving") {
+        since.current = Date.now();
+        return;
+      }
       const timer = setTimeout(() => {
         since.current = Date.now();
         setShown({ kind: "saving" });
@@ -47,7 +50,8 @@ export function SaveIndicator({ status }: { status: DraftStatus }) {
   const text = kind === "saving" ? "Saving…" : kind === "saved" ? "Saved" : "";
   return (
     <p role="status" aria-live="polite" data-draft-status className={`flex size-6 shrink-0 items-center justify-center gap-1 text-sm sm:size-auto sm:min-w-20 sm:justify-end ${kind === "refused" ? "text-danger" : "text-ink-muted"}`}>
-      <span key={kind} className="inline-flex items-center gap-1 motion-safe:animate-fade-in">
+      {/* Saving… is for the eye only: a screen reader hears the settled state, not "Saving…" then "Saved" on every edit. */}
+      <span key={kind} aria-hidden={kind === "saving" || undefined} className="inline-flex items-center gap-1 motion-safe:animate-fade-in">
         {kind === "refused" ? <AlertTriangle aria-hidden="true" strokeWidth={1.75} className="size-4" /> : null}
         {kind === "saved" ? <Check aria-hidden="true" strokeWidth={2} className="size-4" /> : null}
         {kind === "saving" ? <LoaderCircle aria-hidden="true" strokeWidth={1.75} className="size-4 motion-safe:animate-spin" /> : null}

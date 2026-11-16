@@ -64,10 +64,11 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
       if (reply.status === "saved") onLeave();
       else router.refresh();
     } catch {
+      // Nothing was discarded: the dialog stays for another try.
       toast({ tone: "error", title: "Couldn't discard", description: "Check the connection and try again." });
-    } finally {
       setBusy(false);
     }
+    // Otherwise busy holds while the dialog closes and until it is opened again, so a click on its way out can't confirm twice.
   }
 
   if (!editing && !canAdd) return null;
@@ -109,7 +110,12 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="bottom" align="end">
-                <DropdownMenuItem onSelect={() => setDiscarding(true)}>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setBusy(false);
+                    setDiscarding(true);
+                  }}
+                >
                   <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-4" />
                   Discard draft…
                 </DropdownMenuItem>
@@ -121,13 +127,16 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
       <PublishDialog open={publishing} onOpenChange={setPublishing} fixtureId={fixtureId} onPublished={onLeave} />
       <Dialog
         open={discarding}
-        onOpenChange={setDiscarding}
+        onOpenChange={(open) => {
+          if (!busy) setDiscarding(open);
+        }}
         title="Discard this draft?"
         description="Every change since it started is lost. The published planogram stays as it is."
-        // Opened from a menu item that is gone by now, so Radix has nothing to give focus back to: it goes to the ⋯.
+        // Opened from a menu item that is gone by now, so Radix has nothing to give focus back to: it goes to the ⋯,
+        // or, once a discard has taken the ⋯ away, to the page's main area (as a removed tile's does) rather than the page top.
         onCloseAutoFocus={(event) => {
           event.preventDefault();
-          more.current?.focus();
+          (more.current ?? document.getElementById("content"))?.focus();
         }}
       >
         <Button variant="danger" onClick={discard} loading={busy} loadingText="Discarding…">

@@ -38,7 +38,7 @@ export async function startDraftAction(fixtureId: string, expectedVersion: numbe
   const { activeStoreId } = check.member;
   if (!isId(fixtureId) || !optionalVersion.safeParse(expectedVersion).success) return { status: "refused", message: RELOAD };
   const result = await startDraft(activeStoreId, fixtureId, expectedVersion);
-  return result.status === "saved" ? { status: "saved", message: "Draft started" } : { status: "refused", message: CONFLICT };
+  return result.status === "saved" ? { status: "saved", message: "Draft ready" } : { status: "refused", message: CONFLICT };
 }
 
 /**

@@ -29,6 +29,8 @@ type Options = {
   expectedVersion: number | null;
   save: (pending: Pending) => Promise<SaveResult>;
   adopt: (draft: DraftState) => void;
+  /** Puts a refusal on the status line when nothing was sent to refuse it (an add with no room in the draft). */
+  refuse: (message: string) => void;
   /** The draft hook's `onLeaveRef`: set to clear the history when the draft goes. */
   onLeaveRef?: RefObject<() => void>;
   /** The draft hook's `onTakeRef`: set to map the history's depths through each draft taken in. */
@@ -43,7 +45,7 @@ type Options = {
   reveal?: (fields: PlacementFields) => string | null;
 };
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
   const [announcement, setAnnouncement] = useState("");
   const dragging = useRef(false);
   // One start at a time: a second change before it's back waits for the same reply.
@@ -143,16 +145,24 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onL
     return { ok: true, id: target.id };
   }
 
-  /** An add, on the undo stack under the id the server gave it. */
-  async function add(productId: string, fields: PlacementFields): Promise<SaveResult> {
-    // With no draft yet (the latest version is showing) the add starts one: its fields were placed against that version.
-    if (!latest.current.draft) {
-      try {
-        const started = await draftToUse();
-        if (!("draft" in started)) return { saved: false, message: started.message };
-      } catch {
-        return { saved: false, message: "Couldn't start the draft. Check the connection and try again." };
-      }
+  /**
+   * An add, on the undo stack under the id the server gave it. `pick` chooses the fields among the placements it will be
+   * saved beside, or says why there's no room: with no draft yet it's asked again once one has started, because that
+   * draft (another device's, say) may differ from the version the screen showed.
+   */
+  async function add(productId: string, pick: (others: readonly PlacementView[]) => PlacementFields | string): Promise<SaveResult> {
+    let started: Awaited<ReturnType<typeof draftToUse>>;
+    try {
+      started = await draftToUse();
+    } catch {
+      return { saved: false, message: "Couldn't start the draft. Check the connection and try again." };
+    }
+    if (!("draft" in started)) return { saved: false, message: started.message };
+    const fields = pick(started.draft.placements);
+    if (typeof fields === "string") {
+      // The draft may have just started and the screen switched to it: the status line says why nothing was added.
+      refuse(fields);
+      return { saved: false, message: fields };
     }
     const result = await save({ kind: "add", productId, fields });
     const placed = result.saved ? result.draft.placements.find((p) => p.id === result.id) : undefined;
