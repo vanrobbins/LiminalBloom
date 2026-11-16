@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 
@@ -37,6 +37,43 @@ describe("usePlanogramDraft", () => {
     expect(result.current.status).toEqual({ kind: "saved", note: "Placed at the nearest open spot" });
     await act(() => result.current.save(remove));
     expect(result.current.status).toEqual({ kind: "saved" });
+  });
+
+  describe("the note", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("clears itself after a few seconds, back to a plain Saved", async () => {
+      actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
+      const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+      await act(() => result.current.save(remove));
+      vi.useFakeTimers();
+      act(() => result.current.note("Placed at the nearest open spot"));
+      act(() => void vi.advanceTimersByTime(3900));
+      expect(result.current.status).toEqual({ kind: "saved", note: "Placed at the nearest open spot" });
+      act(() => void vi.advanceTimersByTime(200));
+      expect(result.current.status).toEqual({ kind: "saved" });
+    });
+
+    it("does not wipe a refusal that came after it", async () => {
+      actions.saveChangeAction.mockResolvedValue({ status: "refused", message: "No room", draft: draft(5) });
+      const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+      vi.useFakeTimers();
+      act(() => result.current.note("Placed at the nearest open spot"));
+      await act(() => result.current.save(remove));
+      expect(result.current.status).toEqual({ kind: "refused", message: "No room" });
+      act(() => void vi.advanceTimersByTime(10_000));
+      expect(result.current.status).toEqual({ kind: "refused", message: "No room" });
+    });
+
+    it("a second note gets its full time, not what was left of the first", async () => {
+      const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+      vi.useFakeTimers();
+      act(() => result.current.note("one"));
+      act(() => void vi.advanceTimersByTime(3000));
+      act(() => result.current.note("two"));
+      act(() => void vi.advanceTimersByTime(3000));
+      expect(result.current.status).toEqual({ kind: "saved", note: "two" });
+    });
   });
 
   it("returns the saved draft with a save", async () => {

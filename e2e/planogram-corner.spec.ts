@@ -170,8 +170,10 @@ test("a tap with a tile selected only deselects, and Enter on the grid opens Add
   await expect(pant).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("dialog", { name: "Add product" })).toHaveCount(0);
 
-  // Nothing is selected now: Enter on the focused grid opens Add, with no cell.
-  await page.locator("[data-planogram-grid]").focus();
+  // Nothing is selected now: the grid is a tab stop, and Enter on it opens Add, with no cell.
+  await page.locator("body").click({ position: { x: 1, y: 1 } });
+  for (let i = 0; i < 60 && !(await page.evaluate(() => document.activeElement?.hasAttribute("data-planogram-grid"))); i++) await page.keyboard.press("Tab");
+  await expect(page.locator("[data-planogram-grid]")).toBeFocused();
   await page.keyboard.press("Enter");
   await addTee(page);
   await expect(page.getByRole("button", { name: /^E2E Pocket Tee, / }).filter({ visible: true })).toBeVisible();

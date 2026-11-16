@@ -29,6 +29,7 @@ export type OnTake = (held: DraftState, next: DraftState, cause?: string) => voi
 export const refusalOf = (result: SaveResult) => (result.saved ? null : result.message);
 
 const newer = (current: DraftState | null, next: DraftState) => (current && current.planogramVersion > next.planogramVersion ? current : next);
+const NOTE_MS = 4000;
 const NOTHING: SaveResult = { saved: false, message: null };
 /** Published or discarded on another device: not a failed connection, and the page reloads. */
 const GONE: SaveResult = { saved: false, message: null, gone: true };
@@ -47,6 +48,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
   // brought up to date; another device's version is never in here, so its edit still refuses.
   const own = useRef(new Map<string, Map<number, number>>());
   const reloading = useRef(false);
+  const noteTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const goneRef = useRef(onGone);
   // Set by the builder: its undo history clears when the draft goes (published, discarded, gone), so no step writes to a dead draft.
   const onLeaveRef = useRef<() => void>(() => {});
@@ -58,6 +60,7 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
   });
 
   const hasDraft = draft !== null;
+  useEffect(() => () => clearTimeout(noteTimer.current), []);
 
   /** This draft is published, discarded or gone (here or on another device): the history clears, then the page reloads. */
   function leave() {
@@ -177,9 +180,12 @@ export function usePlanogramDraft(fixtureId: string, initial: DraftState | null,
     setStatus({ kind: "refused", message });
   }
 
-  /** Words beside Saved for what the save just did (no toast: the result is on screen). The next status replaces them. */
+  /** Words beside Saved for what the save just did (no toast: the result is on screen). The next status replaces them; left alone they fade after a few seconds. */
   function note(message: string) {
+    clearTimeout(noteTimer.current);
     setStatus({ kind: "saved", note: message });
+    // Only this note is cleared: a refusal or a later save that came first is not touched.
+    noteTimer.current = setTimeout(() => setStatus((s) => (s.kind === "saved" && s.note === message ? { kind: "saved" } : s)), NOTE_MS);
   }
 
   return { draft, status, save, adopt, leave, refuse, note, onLeaveRef: onLeaveRef as RefObject<() => void>, onTakeRef: onTakeRef as RefObject<OnTake> };

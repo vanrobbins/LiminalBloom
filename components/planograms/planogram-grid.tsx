@@ -111,9 +111,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
     <section
       aria-label={`${label}: ${count}`}
       data-planogram-grid
-      // Focus lands here when the tile that had it is removed.
-      tabIndex={-1}
-      onKeyDown={empty.onKeyDown}
+      // Focus lands here when the tile that had it is removed; a tab stop while Enter can add (use-empty-tap.ts).
+      {...empty.section}
       className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <div
