@@ -32,7 +32,10 @@ function tap(at: { x: number; y: number }, to = at) {
 }
 
 describe("tap empty space to add", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
 
   it("a still tap with nothing selected asks to add at the tapped face, column and row", () => {
     sized();
@@ -79,6 +82,41 @@ describe("tap empty space to add", () => {
     fireEvent.pointerCancel(block(), { pointerType: "touch" });
     fireEvent.click(block(), { clientX: 190, clientY: 50 });
     expect(builder.onAdd).toHaveBeenCalledWith({ faceId: "u", col: 9, row: 1 });
+  });
+
+  it("an old press's timer can't wipe a newer press held past it: its moved release on the grid does not add", () => {
+    vi.useFakeTimers();
+    sized();
+    const builder = builderWith();
+    render(grid(null, builder));
+    // Press A is released with no click; press B starts inside the 300 ms and is held past it.
+    fireEvent.pointerDown(block(), { pointerType: "mouse", button: 0, clientX: 130, clientY: 50 });
+    fireEvent.pointerUp(block(), { pointerType: "mouse", clientX: 130, clientY: 50 });
+    vi.advanceTimersByTime(100);
+    fireEvent.pointerDown(block(), { pointerType: "mouse", button: 0, clientX: 130, clientY: 50 });
+    vi.advanceTimersByTime(350);
+    fireEvent.pointerUp(block(), { pointerType: "mouse", clientX: 190, clientY: 50 });
+    fireEvent.click(block(), { clientX: 190, clientY: 50 });
+    expect(builder.onAdd).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("leaving removes the pointerup listener and the pending timer", () => {
+    vi.useFakeTimers();
+    sized();
+    const remove = vi.spyOn(window, "removeEventListener");
+    const { unmount } = render(grid(null, builderWith()));
+    fireEvent.pointerDown(block(), { pointerType: "mouse", button: 0, clientX: 130, clientY: 50 });
+    unmount();
+    expect(remove).toHaveBeenCalledWith("pointerup", expect.any(Function));
+    // A release before leaving leaves a timer; leaving clears that too.
+    const second = render(grid(null, builderWith()));
+    fireEvent.pointerDown(block(), { pointerType: "mouse", button: 0, clientX: 130, clientY: 50 });
+    fireEvent.pointerUp(block(), { pointerType: "mouse", clientX: 130, clientY: 50 });
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    second.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
   });
 
   it("a click with no press before it (assistive tech) is a tap", () => {

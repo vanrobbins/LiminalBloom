@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { cellAt, type GridLayout } from "@/lib/planograms/set-grid";
 
@@ -31,6 +31,10 @@ const HINT = "Press Enter to add a product at the first open spot.";
 export function useEmptyTap({ builder, selected, layout, space, scroller }: Options) {
   const canAdd = !selected && builder?.onAdd != null;
   const press = useRef<{ x: number; y: number; scroll: number } | null>(null);
+
+  /** Drops the last press's pending release listener and timer (a newer press, or leaving). */
+  const forget = useRef<(() => void) | null>(null);
+  useEffect(() => () => forget.current?.(), []);
 
   function still(e: React.MouseEvent): boolean {
     const from = press.current;
@@ -55,9 +59,21 @@ export function useEmptyTap({ builder, selected, layout, space, scroller }: Opti
     block: builder
       ? {
           onPointerDown: (e: React.PointerEvent) => {
-            press.current = { x: e.clientX, y: e.clientY, scroll: scroller()?.scrollLeft ?? 0 };
-            // Released anywhere: the click, if any, is on its way; if none came the press is stale.
-            window.addEventListener("pointerup", () => setTimeout(() => (press.current = null), CLICK_WAITS_MS), { once: true });
+            forget.current?.();
+            const mine = { x: e.clientX, y: e.clientY, scroll: scroller()?.scrollLeft ?? 0 };
+            press.current = mine;
+            // Released anywhere: the click, if any, is on its way; if none came the press is stale. Only its own.
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            const released = () => {
+              timer = setTimeout(() => {
+                if (press.current === mine) press.current = null;
+              }, CLICK_WAITS_MS);
+            };
+            window.addEventListener("pointerup", released, { once: true });
+            forget.current = () => {
+              window.removeEventListener("pointerup", released);
+              clearTimeout(timer);
+            };
           },
           onPointerCancel: () => {
             press.current = null;
