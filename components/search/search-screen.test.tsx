@@ -162,7 +162,7 @@ describe("SearchScreen Load more", () => {
     await vi.waitFor(() => expect(actions.runSearch).toHaveBeenCalledTimes(1));
     expect(screen.getByText("Searching…")).toBeInTheDocument();
     await act(async () => finish({ results: [pant, tee], total: 5 }));
-    expect(screen.getByText("2 of 5 products")).toBeInTheDocument();
+    expect(screen.getAllByText("2 of 5 products")[0]).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
   });
 

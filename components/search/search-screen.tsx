@@ -58,6 +58,16 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A search's answer (or its failure) is announced once it lands, as the count line used to
+  // do by itself; a page appended by auto-load changes the count line but says nothing.
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !isPending) setAnnouncement(isOffline ? "You're offline. These are the last results." : resultCount(results.length, total));
+    wasPending.current = isPending;
+    // Only a search settling is news; the counts it settles on are read as it does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending]);
+
   // After Load more, focus goes to the first new card: now if it has rendered,
   // else as soon as it does. Auto-load leaves focus alone: it fires while scrolling.
   const cardOf = (id: string) => document.querySelector<HTMLElement>(`[data-result-id="${id}"]`);
@@ -111,7 +121,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
             />
           </SearchFilters>
         </form>
-        <p className="mt-4 min-h-6 text-sm text-ink-muted" aria-live="polite">
+        <p className="mt-4 min-h-6 text-sm text-ink-muted">
           {isOffline ? "You're offline. These are the last results." : isPending ? "Searching…" : resultCount(results.length, total)}
         </p>
         <SearchResults

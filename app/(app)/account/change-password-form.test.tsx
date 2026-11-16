@@ -100,3 +100,17 @@ describe("ChangePasswordForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach the server");
   });
 });
+
+describe("ChangePasswordForm folded mid-save", () => {
+  it("drops an error that arrives after the form was folded", async () => {
+    let answer: (value: unknown) => void = () => {};
+    mocks.change.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const user = userEvent.setup();
+    await fill();
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+    answer({ status: "error", field: "current", message: "That isn't your current password." });
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save new password" })).toBeEnabled());
+    expect(screen.queryByText("That isn't your current password.")).toBeNull();
+  });
+});

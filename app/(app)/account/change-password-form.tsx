@@ -28,8 +28,12 @@ export function ChangePasswordForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [problem, setProblem] = useState<{ field?: Field; message: string } | null>(null);
 
+  // Bumped on every fold and open: a save that began before one is stale when it answers.
+  const session = useRef(0);
+
   // Folding forgets what was typed and any error, so reopening starts clean.
   function toggle() {
+    session.current++;
     if (isOpen) {
       formRef.current?.reset();
       setProblem(null);
@@ -43,6 +47,7 @@ export function ChangePasswordForm() {
     const data = new FormData(form);
     setProblem(null);
     setIsSaving(true);
+    const mine = session.current;
     try {
       const reply = await changePasswordAction(data.get("current"), data.get("new"), data.get("confirm"));
       if (reply.status === "saved") {
@@ -52,11 +57,11 @@ export function ChangePasswordForm() {
         toast({ tone: "success", title: reply.message });
         // The person's session was replaced; the page reads the new one.
         router.refresh();
-      } else {
+      } else if (mine === session.current) {
         setProblem({ field: reply.field, message: reply.message });
       }
     } catch {
-      setProblem({ message: CONNECTION_ERROR });
+      if (mine === session.current) setProblem({ message: CONNECTION_ERROR });
     } finally {
       setIsSaving(false);
     }

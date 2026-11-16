@@ -81,8 +81,9 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
       const fresh = found.results.filter((r) => !seen.has(r.id));
       // Against the latest list, in case a delete landed meanwhile.
       setResults((list) => [...list, ...fresh.filter((r) => !list.some((l) => l.id === r.id))]);
-      // Past the end the window count is empty; keep the total we had.
-      const nextTotal = found.results.length > 0 ? found.total : total;
+      // Past the end the window count comes back empty (0): the catalog has shrunk to
+      // what we already show, so that is the total.
+      const nextTotal = found.results.length > 0 || found.total > 0 ? found.total : results.length;
       setTotal(nextTotal);
       setIsOffline(false);
       // A page with nothing new (a delete shifted it) counts as a failure too, so auto-load can't loop on it,
@@ -114,7 +115,11 @@ export function useSearch(initial: SearchInput, initialResults: SearchResult[], 
     setIsPending(true);
     // The native History API keeps Next's router in step without a server round trip.
     const query = toSearchParams(next).toString();
-    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+    try {
+      window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+    } catch {
+      // A refused URL write must not strand the search that is already marked pending.
+    }
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => void run(next), DEBOUNCE_MS);
   }
