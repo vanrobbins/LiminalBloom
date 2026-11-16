@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
@@ -51,7 +51,8 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
   const added = useRef<string | null>(null);
   // What is selected now, for a removal that lands after the person has moved on.
   const current = useRef(selectedId);
-  useEffect(() => {
+  // A layout effect, so it is current before any later task (a save landing) can read it.
+  useLayoutEffect(() => {
     current.current = selectedId;
   });
 
@@ -142,7 +143,8 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     if (!p) return false;
     const { saved } = await builder.remove(p);
     // The fade and the save take a moment: if another tile was picked meanwhile, its selection and focus stay.
-    if (current.current === p.id) {
+    // With nothing selected (Escape during the fade), focus still settles, so it doesn't drop to the page.
+    if (current.current === p.id || current.current === null) {
       if (saved) select(null);
       settled(p.id, saved);
     }

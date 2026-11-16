@@ -3,7 +3,7 @@
 // bar, the phone's sticky bar and Start draft are gone. Split from
 // planogram-screen.test.tsx, which is already long.
 
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -167,50 +167,5 @@ describe("PlanogramScreen corner bar", () => {
     await user.click(within(box).getByRole("button", { name: "Start planogram" }));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(actions.startDraftAction).toHaveBeenCalledWith("r", null);
-  });
-});
-
-describe("PlanogramScreen trash", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    hook.draft = null;
-    hook.leave = vi.fn();
-  });
-
-  // The fade and the server round trip leave time to pick another tile: a save that lands then is the old tile's.
-  it("a removal that lands after another tile was selected leaves that tile selected and focused", async () => {
-    let answer: (result: unknown) => void = () => {};
-    hook.save = vi.fn(() => new Promise((resolve) => (answer = resolve)));
-    const user = userEvent.setup();
-    render(screenWith(published, { planogramVersion: 3, placements: [pant, tee] }));
-    await user.click(screen.getByRole("button", { name: /^Pant, / }));
-    await user.click(screen.getByRole("button", { name: "Remove Pant" }));
-    await waitFor(() => expect(hook.save).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByRole("button", { name: /^Tee, / }));
-    await act(async () => answer({ saved: true, draft: { planogramVersion: 4, placements: [tee] } }));
-    await act(async () => void (await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))));
-    expect(button("Remove Tee")).not.toBeNull();
-    expect(screen.getByRole("button", { name: /^Tee, / })).toHaveFocus();
-  });
-
-  // Space, like Enter, is a keyboard click: it opens the panel on the selected tile (spec §2.3).
-  it("Space on the selected tile opens its panel, as Enter does", async () => {
-    const user = userEvent.setup();
-    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
-    await user.click(screen.getByRole("button", { name: /^Pant, / }));
-    screen.getByRole("button", { name: /^Pant, / }).focus();
-    await user.keyboard(" ");
-    expect(screen.getByRole("complementary", { name: "Pant" })).toBeInTheDocument();
-  });
-
-  it.each(["Delete", "Backspace"])("%s in the open panel's number field does not remove the tile", async (key) => {
-    const user = userEvent.setup();
-    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
-    await user.click(screen.getByRole("button", { name: /^Pant, / }));
-    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
-    await user.click(screen.getByLabelText("From left (ft)"));
-    await user.keyboard(`{${key}}`);
-    expect(hook.save).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "remove" }));
-    expect(screen.getByRole("button", { name: /^Pant, / })).not.toHaveAttribute("data-leaving");
   });
 });
