@@ -61,11 +61,11 @@ test.describe("Visual Merchandising Worker", () => {
   });
 
   test("marks a product sold out and puts it on sale, both theirs to do", async ({ page }, testInfo) => {
-    const name = await openMyProduct(page, testInfo);
+    await openMyProduct(page, testInfo);
     await page.getByRole("radio", { name: "On sale" }).click();
-    await expect(page.getByText(`${name}: On sale`, { exact: true })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "On sale" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("radio", { name: "On sale" }).locator("[data-check]")).toHaveClass(/opacity-100/);
     await page.getByRole("radio", { name: "Sold out" }).click();
-    await expect(page.getByText(`${name}: Sold out`, { exact: true })).toBeVisible();
     await expect(page.getByRole("radio", { name: "Sold out" })).toHaveAttribute("aria-checked", "true");
   });
 });
@@ -82,15 +82,16 @@ test.describe("Sales Associate", () => {
   });
 
   test("can mark a product sold out and put it back, but is never offered On sale", async ({ page }, testInfo) => {
-    const name = await openMyProduct(page, testInfo);
+    await openMyProduct(page, testInfo);
     // The control offers only what this role may choose.
     await expect(page.getByRole("radio", { name: "Sold out" })).toBeVisible();
     await expect(page.getByRole("radio", { name: "On sale" })).toHaveCount(0);
     await page.getByRole("radio", { name: "Sold out" }).click();
-    await expect(page.getByText(`${name}: Sold out`, { exact: true })).toBeVisible();
     await expect(page.getByRole("radio", { name: "Sold out" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("radio", { name: "Sold out" }).locator("[data-check]")).toHaveClass(/opacity-100/);
     await expect(page.getByRole("radio", { name: "On sale" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Undo" }).click();
+    // Choosing the previous status again is the undo (no toast, no Undo button).
+    await page.getByRole("radio", { name: "In stock" }).click();
     await expect(page.getByRole("radio", { name: "In stock" })).toHaveAttribute("aria-checked", "true");
   });
 });
