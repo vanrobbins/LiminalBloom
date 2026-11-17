@@ -18,3 +18,6 @@ export const fieldsOf = (p: PlacementFields, withDepth = false): PlacementFields
   pieceCount: p.pieceCount,
   ...(withDepth && p.depth !== undefined ? { depth: p.depth } : {}),
 });
+
+/** A move's fields with the numbers the panel owns (pieces, presentation) taken from the placement as it is now, if it still is. */
+export const keepPanelNumbers = (fields: PlacementFields, now?: PlacementFields): PlacementFields => (now ? { ...fields, pieceCount: now.pieceCount, presentation: now.presentation } : fields);

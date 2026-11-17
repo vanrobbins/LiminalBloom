@@ -10,17 +10,16 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 
-import { beginDraftAction } from "@/app/(app)/planograms/actions";
 import { useAnnouncement } from "@/components/ui/use-announcement";
-import { fieldsOf, isReorder, type Verb } from "@/lib/planograms/builder/fields";
-import { matchPlacement } from "@/lib/planograms/builder/match";
+import { fieldsOf, isReorder, keepPanelNumbers, type Verb } from "@/lib/planograms/builder/fields";
 import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 import { toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
 import type { OnTake, Pending, SaveResult } from "./use-planogram-draft";
 import { flushPendingEdits } from "./use-auto-save";
-import { CONFLICT, useHistory } from "./use-history";
+import { useDraftToUse } from "./use-draft-to-use";
+import { useHistory } from "./use-history";
 import { useUndoKeys } from "./use-undo-keys";
 
 export type CommitResult = { ok: true; id: string; draft?: DraftState } | { ok: false; message: string | null; gone?: true };
@@ -52,53 +51,13 @@ type Options = {
 export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal, onGone }: Options) {
   const [announcement, say] = useAnnouncement();
   const dragging = useRef(false);
-  // One start at a time: a second change before it's back waits for the same reply.
-  const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
   // Toast actions and the key listener outlive the render that made them.
   const latest = useRef({ draft, enabled, reveal, onGone });
   useEffect(() => {
     latest.current = { draft, enabled, reveal, onGone };
   });
 
-  /** The draft to work in: the one held, or one started now (a change or an add with none), once however many ask. */
-  async function draftToUse(): Promise<{ draft: DraftState } | { message: string | null }> {
-    const held = latest.current.draft;
-    if (held) return { draft: held };
-    let pending = starting.current;
-    if (!pending) {
-      pending = beginDraftAction(fixtureId, expectedVersion).then((reply) => {
-        if (reply.draft) {
-          adopt(reply.draft);
-          latest.current = { ...latest.current, draft: reply.draft };
-          onStarted();
-        } else if (reply.status === "refused") {
-          // Published or discarded elsewhere since this page loaded: every later change would be refused too.
-          onStale();
-        }
-        return reply;
-      });
-      starting.current = pending;
-      pending
-        .finally(() => {
-          starting.current = null;
-        })
-        .catch(() => {});
-    }
-    const reply = await pending;
-    return reply.draft ? { draft: reply.draft } : { message: reply.message };
-  }
-
-  async function placementFor(item: GridItem): Promise<{ placement: PlacementView } | { message: string | null }> {
-    const held = latest.current.draft;
-    if (held) {
-      const placement = held.placements.find((p) => p.id === item.id);
-      return placement ? { placement } : { message: CONFLICT };
-    }
-    const started = await draftToUse();
-    if (!("draft" in started)) return started;
-    const placement = matchPlacement(item, started.draft.placements);
-    return placement ? { placement } : { message: CONFLICT };
-  }
+  const { draftToUse, placementFor } = useDraftToUse({ fixtureId, expectedVersion, adopt, onStarted, onStale, latest });
 
   const history = useHistory({ save, latest, dragging, say, refuse, describe });
   useEffect(() => {
@@ -111,6 +70,9 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, ref
     // A move or a resize leaves the depth to the server (kept, or the back when it joins others);
     // a reorder asks for its place.
     const fields = fieldsOf(next, isReorder(verb));
+    // The panel's numbers still waiting (a pause not over, a tap that never blurred) go first, so a move queues behind them.
+    const waiting = verb === "Changed" ? null : flushPendingEdits();
+    if (waiting) await waiting;
     let found: Awaited<ReturnType<typeof placementFor>>;
     try {
       found = await placementFor(item);
@@ -125,7 +87,11 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, ref
     }
     const target = found.placement;
     onFound?.(target.id);
-    const result = await save({ kind: "update", id: target.id, version: target.version, fields });
+    // A move, resize or reorder is built from the tile as rendered, which can be older than the panel's last typed edit
+    // (sent, not yet rendered): it takes the panel's numbers from the draft as it is when it goes.
+    const result = await save(
+      verb === "Changed" ? { kind: "update", id: target.id, version: target.version, fields } : (held) => ({ kind: "update", id: target.id, version: target.version, fields: keepPanelNumbers(fields, held?.placements.find((p) => p.id === target.id)) }),
+    );
     if (!result.saved) {
       // The status line already says why: the save that was refused set it.
       if (result.message) history.forget(target.id);
