@@ -112,8 +112,8 @@ describe("the panel's numbers save as they change", () => {
     await sent(2);
     expect(saves()[1]).toMatchObject({ kind: "update", id: "d1", fields: expect.objectContaining({ pieceCount: 7 }) });
     await waitFor(() => expect(pieces()).toHaveValue("7"));
-    // One step: a second Undo has nothing left (the button is disabled).
-    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+    // One step: a second Undo has nothing left (the button is aria-disabled).
+    expect(screen.getByRole("button", { name: "Undo" })).toHaveAttribute("aria-disabled", "true");
     expect(actions.saveChangeAction).toHaveBeenCalledTimes(2);
   });
 

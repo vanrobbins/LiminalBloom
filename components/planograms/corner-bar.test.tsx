@@ -95,18 +95,42 @@ describe("CornerBar", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("Undo and Redo are disabled with nothing to undo or redo, and act when pressed", async () => {
+  it("Undo and Redo are aria-disabled (not disabled) with nothing to undo or redo, do nothing then, and act when pressed", async () => {
     const user = userEvent.setup();
     const { rerender } = show({ canUndo: false, canRedo: false });
-    expect(button("Undo")).toBeDisabled();
-    expect(button("Redo")).toBeDisabled();
+    for (const name of ["Undo", "Redo"]) {
+      expect(button(name)).toHaveAttribute("aria-disabled", "true");
+      expect(button(name)).toBeEnabled();
+      expect(button(name)).toHaveClass("aria-disabled:opacity-60");
+      await user.click(screen.getByRole("button", { name }));
+    }
+    expect(base.onUndo).not.toHaveBeenCalled();
+    expect(base.onRedo).not.toHaveBeenCalled();
     rerender(<CornerBar {...base} canUndo canRedo={false} />);
     await user.click(screen.getByRole("button", { name: "Undo" }));
     expect(base.onUndo).toHaveBeenCalledTimes(1);
-    expect(button("Redo")).toBeDisabled();
+    expect(button("Undo")).not.toHaveAttribute("aria-disabled", "true");
+    expect(button("Redo")).toHaveAttribute("aria-disabled", "true");
     rerender(<CornerBar {...base} canUndo={false} canRedo />);
     await user.click(screen.getByRole("button", { name: "Redo" }));
     expect(base.onRedo).toHaveBeenCalledTimes(1);
+  });
+
+  it("pressing Undo from the keyboard until nothing is left keeps focus on Undo", async () => {
+    function Host() {
+      const [steps, setSteps] = useState(2);
+      return <CornerBar {...base} canUndo={steps > 0} canRedo={false} onUndo={() => setSteps((n) => n - 1)} />;
+    }
+    const user = userEvent.setup();
+    render(<Host />);
+    const undo = screen.getByRole("button", { name: "Undo" });
+    undo.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Enter}");
+    expect(undo).toHaveAttribute("aria-disabled", "true");
+    expect(undo).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(undo).toHaveFocus();
   });
 
   it("Add opens through the caller", async () => {

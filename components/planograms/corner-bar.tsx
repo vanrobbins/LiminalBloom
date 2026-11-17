@@ -101,10 +101,11 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
         {editing ? (
           <div className={GROUP}>
             {status ? <SaveIndicator status={status} /> : null}
-            <Button variant="ghost" icon aria-label="Undo" disabled={!canUndo} onClick={onUndo}>
+            {/* aria-disabled, not disabled: a disabled button drops keyboard focus when the last step is undone and can't be named by a touch long-press. Pressing it with nothing to do does nothing. */}
+            <Button variant="ghost" icon aria-label="Undo" aria-disabled={!canUndo} className="aria-disabled:opacity-60" onClick={canUndo ? onUndo : undefined}>
               <Undo2 {...ICON} />
             </Button>
-            <Button variant="ghost" icon aria-label="Redo" disabled={!canRedo} onClick={onRedo}>
+            <Button variant="ghost" icon aria-label="Redo" aria-disabled={!canRedo} className="aria-disabled:opacity-60" onClick={canRedo ? onRedo : undefined}>
               <Redo2 {...ICON} />
             </Button>
           </div>

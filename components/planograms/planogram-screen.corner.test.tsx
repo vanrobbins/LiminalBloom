@@ -136,21 +136,21 @@ describe("PlanogramScreen corner bar", () => {
     expect(hook.leave).toHaveBeenCalledTimes(1);
   });
 
-  it("Undo and Redo are disabled until a move gives them something to do, then act", async () => {
+  it("Undo and Redo are aria-disabled until a move gives them something to do, then act", async () => {
     const moved = { ...pant, col: 1, version: 2 };
     hook.save = vi.fn().mockResolvedValue({ saved: true, draft: { planogramVersion: 4, placements: [moved] }, before: pant });
     const user = userEvent.setup();
     const { rerender } = render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
-    expect(button("Undo")).toBeDisabled();
-    expect(button("Redo")).toBeDisabled();
+    expect(button("Undo")).toHaveAttribute("aria-disabled", "true");
+    expect(button("Redo")).toHaveAttribute("aria-disabled", "true");
     await user.click(screen.getByRole("button", { name: /^Pant, / }));
     await user.keyboard("{ArrowRight}");
-    await waitFor(() => expect(button("Undo")).toBeEnabled());
+    await waitFor(() => expect(button("Undo")).not.toHaveAttribute("aria-disabled", "true"));
     rerender(screenWith(published, { planogramVersion: 4, placements: [moved] }));
     await user.click(screen.getByRole("button", { name: "Undo" }));
     expect(hook.save).toHaveBeenLastCalledWith({ kind: "update", id: "d1", version: 2, fields: expect.objectContaining({ col: 0 }) });
-    await waitFor(() => expect(button("Redo")).toBeEnabled());
-    expect(button("Undo")).toBeDisabled();
+    await waitFor(() => expect(button("Redo")).not.toHaveAttribute("aria-disabled", "true"));
+    expect(button("Undo")).toHaveAttribute("aria-disabled", "true");
   });
 
   it("no sticky action bar and no phone spacer under the grid", () => {
