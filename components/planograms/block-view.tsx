@@ -7,14 +7,16 @@ import { ROW_UNITS, type Block } from "@/lib/planograms/set-grid";
 
 import { at } from "./grid-units";
 
-export function BlockView({ block, labelled, onEmpty }: { block: Block; labelled: boolean; onEmpty?: () => void }) {
+type Empty = Pick<React.ComponentProps<"div">, "onPointerDown" | "onPointerCancel" | "onClick">;
+
+export function BlockView({ block, labelled, empty }: { block: Block; labelled: boolean; /** What a tap on this empty surface does (use-empty-tap.ts). */ empty?: Empty }) {
   // Shelves and rails are physical, so a standing face shows its levels; a table top has none
   // (turned blocks are always lower table tops, so the rules below are never turned).
   const rules = block.side === "top" || block.turned ? 0 : block.rows - 1;
   return (
     <div
       data-block={block.faceId}
-      onClick={onEmpty}
+      {...empty}
       className="absolute rounded-sm border border-line-subtle bg-raised"
       style={{ left: at(block.x), top: at(block.y), width: at(block.width), height: at(block.height) }}
     >

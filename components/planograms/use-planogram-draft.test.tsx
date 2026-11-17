@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 
@@ -29,6 +29,71 @@ describe("usePlanogramDraft", () => {
     expect(result.current.status).toEqual({ kind: "saved" });
   });
 
+  it("note puts words on the status line beside Saved, and the next save's Saved has none", async () => {
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    await act(() => result.current.save(remove));
+    act(() => result.current.note("Placed at the nearest open spot"));
+    expect(result.current.status).toEqual({ kind: "saved", note: "Placed at the nearest open spot" });
+    await act(() => result.current.save(remove));
+    expect(result.current.status).toEqual({ kind: "saved" });
+  });
+
+  describe("the note", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("clears itself after a few seconds, back to a plain Saved", async () => {
+      actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
+      const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+      await act(() => result.current.save(remove));
+      vi.useFakeTimers();
+      act(() => result.current.note("Placed at the nearest open spot"));
+      act(() => void vi.advanceTimersByTime(3900));
+      expect(result.current.status).toEqual({ kind: "saved", note: "Placed at the nearest open spot" });
+      act(() => void vi.advanceTimersByTime(200));
+      expect(result.current.status).toEqual({ kind: "saved" });
+    });
+
+    it("does not wipe a refusal that came after it", async () => {
+      actions.saveChangeAction.mockResolvedValue({ status: "refused", message: "No room", draft: draft(5) });
+      const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+      vi.useFakeTimers();
+      act(() => result.current.note("Placed at the nearest open spot"));
+      await act(() => result.current.save(remove));
+      expect(result.current.status).toEqual({ kind: "refused", message: "No room" });
+      act(() => void vi.advanceTimersByTime(10_000));
+      expect(result.current.status).toEqual({ kind: "refused", message: "No room" });
+    });
+
+    it("a second note gets its full time, not what was left of the first", async () => {
+      const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+      vi.useFakeTimers();
+      act(() => result.current.note("one"));
+      act(() => void vi.advanceTimersByTime(3000));
+      act(() => result.current.note("two"));
+      act(() => void vi.advanceTimersByTime(3000));
+      expect(result.current.status).toEqual({ kind: "saved", note: "two" });
+    });
+  });
+
+  it("a refusal made while a save is out is not erased by that save's Saved, and the next save replaces it", async () => {
+    let finish: (reply: unknown) => void = () => {};
+    actions.saveChangeAction.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    let saving: Promise<unknown> = Promise.resolve();
+    await act(async () => void (saving = result.current.save(remove)));
+    expect(result.current.status).toEqual({ kind: "saving" });
+    act(() => result.current.refuse("That doesn't fit"));
+    await act(async () => {
+      finish({ status: "saved", draft: draft(5) });
+      await saving;
+    });
+    expect(result.current.status).toEqual({ kind: "refused", message: "That doesn't fit" });
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(6) });
+    await act(() => result.current.save(remove));
+    expect(result.current.status).toEqual({ kind: "saved" });
+  });
+
   it("returns the saved draft with a save", async () => {
     actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: draft(5) });
     const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
@@ -37,6 +102,28 @@ describe("usePlanogramDraft", () => {
       reply = await result.current.save(remove);
     });
     expect(reply).toEqual({ saved: true, draft: draft(5) });
+  });
+
+  it("returns the id the server gave an add, not one picked from the draft", async () => {
+    const theirs = { ...placed(1, 2), id: "theirs" };
+    const mine = { ...placed(1, 4), id: "mine" };
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [theirs, mine] }, id: "mine" });
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.save({ kind: "add", productId: "pant", fields: at(2) });
+    });
+    expect(reply).toMatchObject({ saved: true, id: "mine" });
+  });
+
+  it("an add whose reply names no id returns none, even when the draft holds a new placement of that product", async () => {
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [{ ...placed(1, 2), id: "theirs" }] } });
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), vi.fn()));
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.save({ kind: "add", productId: "pant", fields: at(2) });
+    });
+    expect(reply).not.toHaveProperty("id");
   });
 
   it("adopts a draft started on this page, and reloads it on focus from then on", async () => {
@@ -191,5 +278,58 @@ describe("usePlanogramDraft", () => {
     await act(() => result.current.save(remove));
     expect(onGone).toHaveBeenCalled();
     expect(result.current.status).toEqual({ kind: "idle" });
+  });
+
+  it("a draft that is gone, however it's found out, clears what the builder registered before the page reloads", async () => {
+    const order: string[] = [];
+    const onGone = vi.fn(() => order.push("reload"));
+    const { result } = renderHook(() => usePlanogramDraft("fx", draft(1), onGone));
+    result.current.onLeaveRef.current = () => order.push("clear");
+
+    actions.saveChangeAction.mockResolvedValue({ status: "refused", message: "Changed on another device", draft: null });
+    await act(() => result.current.save(remove));
+    actions.reloadDraftAction.mockResolvedValue(null);
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(order).toEqual(["clear", "reload", "clear", "reload"]));
+    // Publish and discard call it themselves.
+    act(() => result.current.leave());
+    expect(order.slice(-2)).toEqual(["clear", "reload"]);
+  });
+
+  it("tells the history of every draft it takes in: the one it held, the new one, and the placement its own change was about", async () => {
+    const onTake = vi.fn();
+    const { result } = renderHook(() => usePlanogramDraft("fx", withTile(1, placed(1)), vi.fn()));
+    result.current.onTakeRef.current = onTake;
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: withTile(2, placed(2, 4)) });
+    await act(() => result.current.save(update(1, 4)));
+    expect(onTake).toHaveBeenCalledWith(withTile(1, placed(1)), withTile(2, placed(2, 4)), ID);
+    // A reload on coming back to the tab is another device's edits arriving: no placement of its own.
+    actions.reloadDraftAction.mockResolvedValue(withTile(3, placed(3, 6)));
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(onTake).toHaveBeenLastCalledWith(withTile(2, placed(2, 4)), withTile(3, placed(3, 6)), undefined));
+  });
+
+  it("an add's reply tells the history the id the server gave it; a reply older than the draft held is not taken in", async () => {
+    const onTake = vi.fn();
+    const { result } = renderHook(() => usePlanogramDraft("fx", withTile(5, placed(5)), vi.fn()));
+    result.current.onTakeRef.current = onTake;
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: withTile(6, placed(6)), id: ID });
+    await act(() => result.current.save({ kind: "add", productId: "pant", fields: at(0) }));
+    expect(onTake).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), ID);
+    onTake.mockClear();
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: withTile(2, placed(2)) });
+    await act(() => result.current.save(update(6, 4)));
+    expect(onTake).not.toHaveBeenCalledWith(expect.anything(), withTile(2, placed(2)), expect.anything());
+  });
+
+  it("returns where the tile sat among the tiles it overlaps, before and after, for the step it records", async () => {
+    const [front, back] = [{ ...placed(1), id: "front", depth: 0 }, { ...placed(1), id: ID, depth: 1 }];
+    const { result } = renderHook(() => usePlanogramDraft("fx", { planogramVersion: 1, placements: [front, back] }, vi.fn()));
+    actions.saveChangeAction.mockResolvedValue({ status: "saved", draft: { planogramVersion: 2, placements: [{ ...front, depth: 1 }, { ...back, depth: 0 }] } });
+    let reply: unknown;
+    await act(async () => {
+      reply = await result.current.save(update(1, 0));
+    });
+    expect(reply).toMatchObject({ saved: true, ahead: { before: { front: ["front"], back: [], prev: "front" }, after: { front: [], back: ["front"], prev: null } } });
   });
 });

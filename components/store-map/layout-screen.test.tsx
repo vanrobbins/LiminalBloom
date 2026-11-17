@@ -28,7 +28,7 @@ describe("LayoutScreen", () => {
   it("Edit switches to editing without the panel", async () => {
     render(<LayoutScreen member={EVERYTHING} {...props} />);
     await userEvent.setup().click(screen.getByRole("button", { name: "Edit" }));
-    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save and leave" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Add to the map" })).toBeNull();
   });
 });

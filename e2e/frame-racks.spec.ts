@@ -54,7 +54,7 @@ test("a run is one planogram: both rails on one grid, hung only", async ({ page 
   await page.getByRole("link", { name: /Frame A1/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Frame A1" })).toBeVisible();
   await hydrated(page);
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.locator("[data-block]")).toHaveCount(2);
 
   await page.getByRole("button", { name: "Add product" }).click();
@@ -65,8 +65,8 @@ test("a run is one planogram: both rails on one grid, hung only", async ({ page 
   await expect(tile).toBeVisible();
   await expect(tile.locator("svg[data-view]")).toHaveAttribute("data-view", "hung");
 
-  // Add leaves the new tile selected, with its toolbar open.
-  await page.getByRole("button", { name: "Edit numbers" }).click();
+  // Add leaves the new tile selected, with its corner discs on: the pencil opens its panel.
+  await page.getByRole("button", { name: "Edit E2E High-Rise Pant" }).click();
   await expect(page.getByRole("radio", { name: "Folded" })).toBeDisabled();
   await expect(page.getByText("Frame racks hold hung product only, on their one rail.")).toBeVisible();
 });
@@ -110,7 +110,7 @@ test("Link merges two runs, and the right-hand run's planogram moves to the new 
   // The right-hand run has the planogram, holding one product.
   await page.goto(`/planograms/${right.anchorId}`);
   await hydrated(page);
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await page.getByRole("button", { name: "Add product" }).click();
   await page.getByLabel("Find a product").fill("E2E High");
   await page.getByRole("button", { name: /E2E High-Rise Pant/ }).click();

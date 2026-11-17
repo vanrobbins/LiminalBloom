@@ -12,11 +12,19 @@ export const MAX_PIECES = 99;
 export const EARLIEST_DUE_DATE = "2000-01-01";
 
 /**
- * `depth` orders hung products sharing rail space, 0 = front (layers.ts). In a
- * change it asks for a place in its layer group; left out, the server keeps the
- * placement's own, or puts it at the back when it joins others.
+ * `depth` orders hung products sharing rail space, lower = nearer the front;
+ * gaps are fine (layers.ts). In a change it asks for that depth; left out, the
+ * server keeps the placement's own, or puts it at the back when it joins others.
  */
 export type PlacementFields = Cells & { faceId: string; presentation: Presentation; pieceCount: number; depth?: number };
+
+/**
+ * Undo and Redo's ask for a layer: right behind `after` (null: first on the face), behind every `front` tile and in front of
+ * every `back` one that is still there. It beats `depth`, and is only read to place the row.
+ */
+export type Place = { after: string | null; front: string[]; back: string[] };
+/** What a change sends. */
+export type ChangeFields = PlacementFields & { place?: Place };
 
 /** A draft row. */
 export type Placement = PlacementFields & { id: string; productId: string; version: number; depth: number };
@@ -72,8 +80,8 @@ export type SnapshotEntry = PlacementFields & {
 export type DraftState = { planogramVersion: number; placements: PlacementView[] };
 
 export type Change =
-  | { kind: "add"; productId: string; fields: PlacementFields }
-  | { kind: "update"; id: string; version: number; fields: PlacementFields }
+  | { kind: "add"; productId: string; fields: ChangeFields }
+  | { kind: "update"; id: string; version: number; fields: ChangeFields }
   | { kind: "remove"; id: string; version: number };
 
 /** A product as the add form needs it: both footprints, so switching presentation re-fills the span. */

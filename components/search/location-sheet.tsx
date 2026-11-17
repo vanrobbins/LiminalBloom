@@ -27,10 +27,9 @@ type LocationSheetProps = {
 /** To the product's own page, from the sheet's header (Week 6.5 spec §2.2). */
 function EditLink({ productId }: { productId: string }) {
   return (
-    <Button asChild variant="secondary" className="shrink-0">
-      <Link href={`/products/${productId}`}>
-        <Pencil aria-hidden="true" strokeWidth={1.75} className="size-4" />
-        Edit product
+    <Button asChild icon variant="secondary" className="shrink-0">
+      <Link href={`/products/${productId}`} aria-label="Edit product">
+        <Pencil aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Link>
     </Button>
   );

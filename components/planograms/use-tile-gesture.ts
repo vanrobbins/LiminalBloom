@@ -9,13 +9,14 @@
 
 import { useRef } from "react";
 
+import { TAP_THRESHOLD_PX } from "@/components/ui/use-long-press";
 import type { Edge } from "@/lib/planograms/builder/resize";
 
 export type GestureMode = "move" | Edge;
 export type Gesture = { mode: GestureMode; dx: number; dy: number };
 
 /** A press that travels less than this is a tap. */
-export const DRAG_START_PX = 4;
+export const DRAG_START_PX = TAP_THRESHOLD_PX;
 const EDGE_PX = 32;
 const SCROLL_STEP_PX = 12;
 

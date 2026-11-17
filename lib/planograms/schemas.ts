@@ -21,8 +21,10 @@ export const placementFields = z.object({
   colSpan,
   rowSpan,
   pieceCount: z.int().min(1).max(MAX_PIECES),
-  /** A place asked for in its layer group; the server renumbers (layers.ts). */
-  depth: z.int().min(0).max(MAX_DEPTH).optional(),
+  /** A depth asked for (layers.ts). Not always whole: Undo asks for half a number past the tile it was behind, and the server settles a whole one (past 98 it renumbers). */
+  depth: z.number().min(0).max(MAX_DEPTH + 1).optional(),
+  /** Undo's ask for a layer (types.ts `Place`): only read to place the row, never stored. */
+  place: z.object({ after: z.uuid().nullable(), front: z.array(z.uuid()).max(200), back: z.array(z.uuid()).max(200) }).optional(),
 });
 
 export const versionInput = z.int().min(1);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { behindWords, inFrontOf, layerGroups, layerNumber, layerOffset, layerWords, paintOrder, reorderTarget, settleDepths, sharesSpace, type LayerRow } from "./layers";
+import { settleDepths } from "./layer-depths";
+import { behindWords, inFrontOf, layerGroups, layerNumber, layerOffset, layerWords, paintOrder, reorderTarget, sharesSpace, type LayerRow } from "./layers";
 
 const hung = (id: string, col: number, colSpan: number, depth = 0, faceId = "f1"): LayerRow => ({ id, faceId, presentation: "hung", col, row: 0, colSpan, rowSpan: 1, depth });
 const folded = (id: string, col: number, colSpan: number): LayerRow => ({ ...hung(id, col, colSpan), presentation: "folded" });
@@ -39,12 +40,7 @@ describe("settleDepths", () => {
   it("honours the place asked for (a reorder or an undo)", () => {
     const rows = [hung("a", 0, 4, 0), hung("b", 0, 4, 1), hung("c", 0, 4, 2)];
     expect(asObject(settleDepths(rows, { id: "c", asked: 0, before: rows[2] }))).toEqual({ a: 1, b: 2, c: 0 });
-    expect(asObject(settleDepths(rows, { id: "a", asked: 9, before: rows[0] }))).toEqual({ a: 2, b: 0, c: 1 });
-  });
-
-  it("renumbers each part when a group splits", () => {
-    const rows = [hung("a", 0, 4, 0), hung("b", 10, 4, 1), hung("c", 12, 4, 2)];
-    expect(asObject(settleDepths(rows))).toEqual({ a: 0, b: 0, c: 1 });
+    expect(asObject(settleDepths(rows, { id: "a", asked: 9, before: rows[0] }))).toEqual({ a: 9, b: 1, c: 2 });
   });
 
   it("orders merged groups by depth, then left edge", () => {
@@ -52,8 +48,8 @@ describe("settleDepths", () => {
     expect(asObject(settleDepths(rows))).toEqual({ a: 0, b: 2, c: 1 });
   });
 
-  it("leaves folded product and loners at 0", () => {
-    expect(asObject(settleDepths([folded("f", 0, 4), hung("h", 10, 2, 3)]))).toEqual({ f: 0, h: 0 });
+  it("leaves folded product at 0 and keeps a loner's number (it may be a part of a group that split)", () => {
+    expect(asObject(settleDepths([folded("f", 0, 4), hung("h", 10, 2, 3)]))).toEqual({ f: 0, h: 3 });
   });
 });
 

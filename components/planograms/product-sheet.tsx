@@ -1,6 +1,7 @@
 // One product on the planogram (spec §4.2): a bottom sheet on phones, a panel
-// beside the grid on larger screens. While editing, it also holds the
-// placement editor (move, resize, pieces, remove).
+// beside the grid on larger screens, one panel in every mode (0.7.0.5). While
+// editing, it also holds the placement editor (numbers that auto-save, the face
+// picker) and the layers with Forward / Back.
 //
 // The panel is not a dialog, so nothing hands focus back when it closes: it
 // does that itself, to whatever opened it (the tile or card), when focus
@@ -70,10 +71,9 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
               <dd className="font-mono text-ink">{item.pieceCount}</dd>
             </dl>
           </div>
-          <Button asChild variant="secondary" className="self-start">
-            <Link href={`/products?q=${encodeURIComponent(item.styleNumber)}`}>
-              <Search aria-hidden="true" strokeWidth={1.75} className="size-4" />
-              Find in Products
+          <Button asChild icon variant="secondary" className="self-start">
+            <Link href={`/products?q=${encodeURIComponent(item.styleNumber)}`} aria-label="Find in Products">
+              <Search aria-hidden="true" strokeWidth={1.75} className="size-5" />
             </Link>
           </Button>
         </>

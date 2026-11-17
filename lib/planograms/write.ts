@@ -17,7 +17,7 @@ import { withStore } from "@/lib/db/with-store";
 import { guarded } from "@/lib/products/write";
 
 import { floorLocations, productFits } from "./draft-sources";
-import { layersAfter, type Layers } from "./layers";
+import { layersAfter, type Layers } from "./layer-depths";
 import { loadPlanogram, type PlanogramRow } from "./queries";
 import { restoreRows } from "./restore";
 import { checkPlacement } from "./rules";
@@ -97,9 +97,9 @@ const NO_LAYERS: Layers = { depth: 0, others: [] };
 /**
  * Exported so a test can build it from a stale read and prove the guard (as lib/layout/save.test.ts does).
  * `layers` renumbers the rows sharing rail space with it (layers.ts); the planogram's version guard
- * covers them, so their own versions don't move.
+ * covers them, so their own versions don't move. `newId` is what an add is written under (the caller tells the screen).
  */
-export function changeStatements(storeId: string, row: PlanogramRow, change: Change, productId: string, layers: Layers = NO_LAYERS): Statements {
+export function changeStatements(storeId: string, row: PlanogramRow, change: Change, productId: string, layers: Layers = NO_LAYERS, newId: string = randomUUID()): Statements {
   const head = guarded(
     db
       .update(planograms)
@@ -115,7 +115,7 @@ export function changeStatements(storeId: string, row: PlanogramRow, change: Cha
       .where(and(eq(planogramPlacements.storeId, storeId), eq(planogramPlacements.planogramId, row.id), eq(planogramPlacements.id, id))),
   );
   if (change.kind === "add") {
-    return [head, db.insert(planogramPlacements).values({ ...fieldValues(change.fields), depth: layers.depth, id: randomUUID(), storeId, planogramId: row.id, productId }), ...renumbered];
+    return [head, db.insert(planogramPlacements).values({ ...fieldValues(change.fields), depth: layers.depth, id: newId, storeId, planogramId: row.id, productId }), ...renumbered];
   }
   const where = placementWhere(storeId, row, change.id, change.version);
   const write =
@@ -148,7 +148,9 @@ export function saveChange(storeId: string, fixtureId: string, change: Change): 
       const refusal = checkPlacement({ ...saved.fields, id: target?.id ?? null }, draft.placements, scope.faces);
       if (refusal) return { status: "invalid", message: refusal.message };
     }
-    await withStore(storeId, changeStatements(storeId, row, saved, productId, layersAfter(draft.placements, saved)));
+    const id = randomUUID();
+    await withStore(storeId, changeStatements(storeId, row, saved, productId, layersAfter(draft.placements, saved), id));
+    if (change.kind === "add") return { status: "saved", id };
     return saved === change ? SAVED : { status: "saved", switchedToHung: true };
   });
 }

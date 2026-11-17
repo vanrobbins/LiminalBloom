@@ -1,5 +1,5 @@
 // Keeping the map editor in step with the browser (spec §9): the session's
-// messages become toasts, closing the tab with unsaved changes asks first, and
+// messages go to the save status (0.7.0.5 spec 3.1), closing the tab with unsaved changes asks first, and
 // coming back to the tab picks up other devices' edits.
 
 "use client";
@@ -10,11 +10,12 @@ import type { FetchReply } from "@/lib/layout/replies";
 import { createQueue, hasPending, type Queue } from "@/lib/layout/save-queue";
 import type { SessionAction } from "@/lib/layout/session";
 import type { Layout } from "@/lib/layout/types";
-import { toast } from "@/lib/toast";
 
 type Options = {
   storeId: string;
   notice: string | null;
+  /** Where a session message is shown: the editor's save status. */
+  onNotice: (message: string) => void;
   dispatch: Dispatch<SessionAction>;
   fetchLatest: (storeId: string) => Promise<FetchReply>;
   queueRef: RefObject<Queue>;
@@ -23,14 +24,14 @@ type Options = {
   stopped: RefObject<boolean>;
 };
 
-export function useEditorSync({ storeId, notice, dispatch, fetchLatest, queueRef, setQueue, latest, stopped }: Options) {
-  // Messages from the session (a blocked drop, a conflict) become toasts.
+export function useEditorSync({ storeId, notice, onNotice, dispatch, fetchLatest, queueRef, setQueue, latest, stopped }: Options) {
+  // Messages from the session (a blocked drop, a conflict) show on the save status.
   useEffect(() => {
     if (!notice) return;
-    toast({ tone: "error", title: notice });
+    onNotice(notice);
     const clear = window.setTimeout(() => dispatch({ type: "noticeShown" }), 0);
     return () => window.clearTimeout(clear);
-  }, [notice, dispatch]);
+  }, [notice, onNotice, dispatch]);
 
   // Closing the tab with unsaved changes asks first.
   useEffect(() => {

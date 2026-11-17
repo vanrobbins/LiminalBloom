@@ -1,10 +1,14 @@
 // A name tooltip (Week 6.5 spec §5.1): shows a control's name on hover and on
-// keyboard focus, never on touch (Radix's default). Icon-only buttons get one
+// keyboard focus, and on touch after a ~500 ms still press (use-long-press; the
+// name then stays until the next outside tap or Escape). Icon-only buttons get one
 // automatically from their aria-label (see Button), so the two never drift.
 
 "use client";
 
 import { Tooltip as Primitive } from "radix-ui";
+import { useState } from "react";
+
+import { useLongPress } from "./use-long-press";
 
 type TooltipProps = { label: string; children: React.ReactElement; side?: "top" | "right" | "bottom" | "left" };
 
@@ -14,10 +18,13 @@ type TooltipProps = { label: string; children: React.ReactElement; side?: "top" 
  * moving between two buttons waits the 400 ms again (DECISIONS 11-04).
  */
 export function Tooltip({ label, children, side = "top" }: TooltipProps) {
+  // Controlled so a long press can open it; Radix still drives hover, focus and dismissal.
+  const [open, setOpen] = useState(false);
+  const press = useLongPress(() => setOpen(true));
   return (
     <Primitive.Provider delayDuration={400} skipDelayDuration={300}>
-      <Primitive.Root>
-        <Primitive.Trigger asChild>{children}</Primitive.Trigger>
+      <Primitive.Root open={open} onOpenChange={setOpen}>
+        <Primitive.Trigger asChild {...press}>{children}</Primitive.Trigger>
         <Primitive.Portal>
           <Primitive.Content
             side={side}

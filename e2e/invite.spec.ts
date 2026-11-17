@@ -3,7 +3,7 @@
 // invitation page's messages and /welcome. The test account is its home store's Store Manager;
 // joiners are real @example.test sign-ups (clearPeople removes them).
 
-import { expect, hydrated, sizeOf, test } from "./fixtures";
+import { expect, hydrated, test } from "./fixtures";
 import { invite, inviteButton, openPeople, roleField, signUp, visitor } from "./invite-page";
 import { clearPeople, emailOf, inviteeEmail, loggedEvents, seedInvitation, seedTeam, setInvitationStatus } from "./people-store";
 import { HOME_STORE, TEST_ACCOUNT } from "./test-account";
@@ -50,17 +50,12 @@ test("invite, sign up from the link, accept: lands in the store with that role a
   expect((await loggedEvents()).slice(0, 2)).toEqual(["invitation_accepted", "invitation_created"]);
 });
 
-test("the Invite button is an icon on a phone and labelled from tablet width, and the dialog lists only lower roles", async ({ page }, testInfo) => {
+test("the Invite button is a 44 px icon at every size, and the dialog lists only lower roles", async ({ page }) => {
   await openPeople(page);
-  if (sizeOf(testInfo) === "phone") {
-    const icon = page.getByRole("button", { name: "Invite someone" });
-    await expect(icon).toBeVisible();
-    expect((await icon.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
-    await expect(page.getByRole("button", { name: "Invite", exact: true })).toHaveCount(0);
-  } else {
-    await expect(page.getByRole("button", { name: "Invite", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Invite someone" })).toHaveCount(0);
-  }
+  const icon = page.getByRole("button", { name: "Invite someone" });
+  await expect(icon).toBeVisible();
+  expect((await icon.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
+  await expect(page.getByRole("button", { name: "Invite", exact: true })).toHaveCount(0);
   await inviteButton(page).click();
   await expect(page.getByRole("dialog", { name: "Invite someone" })).toBeVisible();
   const options = await roleField(page).locator("option").allTextContents();

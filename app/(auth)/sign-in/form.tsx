@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth-client";
-import { markSignedIn } from "@/components/shell/opened-store-toast";
 import { CONNECTION_ERROR } from "@/lib/connection-error";
 import { authHref, safeReturnPath } from "@/lib/return-path";
 
@@ -53,7 +52,6 @@ export function SignInForm({ next }: { next: string | null }) {
 
     // Still "Signing in…" until /products replaces this page. Clearing it
     // here left an idle button for the second the server took to render.
-    markSignedIn();
     router.push(safeReturnPath(next) ?? "/products");
     router.refresh();
   }

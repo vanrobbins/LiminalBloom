@@ -2,6 +2,8 @@
 
 "use client";
 
+import { Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { formatLength } from "@/lib/layout/format";
 import { bounds } from "@/lib/layout/geometry";
@@ -19,8 +21,8 @@ export function OutlineProperties({ outline, cornerSelected, dispatch }: Outline
         {formatLength(box.maxX - box.minX)} × {formatLength(box.maxY - box.minY)} · {outline.points.length} corners
       </p>
       {cornerSelected ? (
-        <Button variant="secondary" onClick={() => dispatch({ type: "delete" })}>
-          Remove corner
+        <Button icon variant="secondary" onClick={() => dispatch({ type: "delete" })} aria-label="Remove corner">
+          <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
       ) : (
         <p className="text-sm text-ink-muted">Drag a corner to reshape, or tap + on a wall to add a corner.</p>

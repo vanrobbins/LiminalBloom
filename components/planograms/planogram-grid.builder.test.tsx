@@ -31,6 +31,32 @@ describe("PlanogramGrid as the builder's surface", () => {
     expect(container.querySelector("[data-guides]")).toBeNull();
   });
 
+  it("while a draft is edited the guides and ruler show faint at rest, and at full strength while dragging", () => {
+    sized();
+    const builder = builderWith();
+    const { container } = render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builder} editing />);
+    const guides = () => container.querySelector<HTMLElement>("[data-guides]");
+    expect(guides()).not.toBeNull();
+    expect(guides()?.style.backgroundImage).toContain("--color-line-subtle");
+    expect(guides()).toHaveTextContent("0");
+    const tile = screen.getByRole("button", { name: /High-Rise Pant/ });
+    fireEvent.pointerDown(tile, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    expect(guides()?.style.backgroundImage).not.toContain("--color-line-subtle");
+    expect(guides()?.style.backgroundImage).toContain("--color-line");
+    fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    // Back to faint, not gone.
+    expect(guides()?.style.backgroundImage).toContain("--color-line-subtle");
+  });
+
+  it("a grid nobody can move (the read-only published view, a past version) draws no guides; one with a builder that can move does, draft or not", () => {
+    const grid = (props: Partial<React.ComponentProps<typeof PlanogramGrid>>) =>
+      render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} {...props} />).container;
+    expect(grid({}).querySelector("[data-guides]")).toBeNull();
+    expect(grid({ builder: builderWith({ canMove: false }) }).querySelector("[data-guides]")).toBeNull();
+    expect(grid({ builder: builderWith() }).querySelector("[data-guides]")).not.toBeNull();
+  });
+
   it("draws each table of a set as its own labelled block", () => {
     const { container } = render(<PlanogramGrid layout={setBlocks([face("u", null, 3), face("f", "front", 2)])} items={[pant]} label="Set" onSelect={vi.fn()} />);
     expect(container.querySelector('[data-block="u"]')).toHaveTextContent("Upper");
@@ -57,7 +83,8 @@ describe("PlanogramGrid as the builder's surface", () => {
     expect(container.querySelector("[data-drop-ghost]")).not.toBeNull();
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
     expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ ...fieldsOf(pant), col: 3 }), "Moved", expect.any(Function));
-    expect(container.querySelector("[data-guides]")).toBeNull();
+    // Back to the faint guides a movable grid always shows.
+    expect(container.querySelector<HTMLElement>("[data-guides]")?.style.backgroundImage).toContain("--color-line-subtle");
   });
 
   it("an invalid drop says why and commits nothing", () => {

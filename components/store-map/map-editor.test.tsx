@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { fixture, store } from "@/lib/layout/test-layouts";
+import { fixture, store, zone } from "@/lib/layout/test-layouts";
 import { EMPTY_LAYOUT } from "@/lib/layout/types";
 
 import { MapEditor } from "./map-editor";
@@ -14,7 +15,7 @@ describe("MapEditor", () => {
   it("shows the map, Done, undo and redo", () => {
     render(<MapEditor storeId="s" initialLayout={{ ...store(), fixtures: [fixture()] }} {...actions} />);
     expect(screen.getByRole("img", { name: /Store layout: 0 zones, 1 fixture/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save and leave" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
   });
 
@@ -33,5 +34,15 @@ describe("MapEditor", () => {
     expect(screen.getAllByRole("button", { name: "Add" })).toHaveLength(1);
     expect(screen.getByRole("banner")).toContainElement(screen.getByRole("button", { name: "Add" }));
     expect(screen.queryByRole("region", { name: "Add to the map" })).toBeNull();
+  });
+
+  it("the X inside a zone goes back to the whole store", async () => {
+    const layout = { ...store(), zones: [zone()], fixtures: [fixture({ id: "in", name: "Table 1", x: 100, y: 100, zoneId: "zone-a" })] };
+    render(<MapEditor storeId="s" initialLayout={layout} {...actions} />);
+    expect(screen.queryByRole("button", { name: "Back to the whole store" })).toBeNull();
+    await userEvent.click(screen.getAllByRole("button", { name: /Show Front tables/ })[0]);
+    await userEvent.click(screen.getAllByRole("button", { name: /Table 1/ })[0]);
+    await userEvent.click(screen.getByRole("button", { name: "Back to the whole store" }));
+    expect(screen.queryByRole("button", { name: "Back to the whole store" })).toBeNull();
   });
 });

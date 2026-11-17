@@ -28,8 +28,10 @@ test("renaming the store shows the new name in the header", async ({ page }, tes
   await hydrated(page);
   await expect(page.getByLabel("Store name")).toHaveValue("Rename Me");
   await page.getByLabel("Store name").fill("Riverside Flagship");
-  await page.getByRole("button", { name: "Save store name" }).click();
-  await expect(page.getByText("Store name saved", { exact: true })).toBeVisible();
+  // Saved on Enter (no Save button, no toast): the indicator beside the field says so.
+  await page.getByLabel("Store name").press("Enter");
+  // Store name's indicator is the first on the page (the time zone's is the second).
+  await expect(page.locator("[data-panel-status]").first()).toHaveText("Saved");
 
   if (headerNamesStore) await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", "Riverside Flagship");
   await page.goto("/account");
@@ -69,17 +71,21 @@ test("changing the password signs out the other devices, keeps this one, and the
   await page.goto("/account");
   await hydrated(page);
   // A wrong current password says so beside the field, and changes nothing.
+  await page.getByRole("button", { name: "Change password" }).click();
   await page.getByLabel("Current password").fill("not-my-password");
   await page.getByLabel("New password", { exact: true }).fill(NEW);
   await page.getByLabel("Confirm new password").fill(NEW);
-  await page.getByRole("button", { name: "Change password" }).click();
+  await page.getByRole("button", { name: "Save new password" }).click();
   await expect(page.getByText("That isn't your current password.")).toBeVisible();
   await other.page.goto("/account");
   await expect(other.page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
 
   await page.getByLabel("Current password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Change password" }).click();
+  await page.getByRole("button", { name: "Save new password" }).click();
   await expect(page.getByText("Password changed. Your other sessions were signed out.", { exact: true })).toBeVisible();
+  // The form folds shut and focus is back on the button that opened it.
+  await expect(page.getByRole("button", { name: "Change password" })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: "Change password" })).toBeFocused();
 
   // This device is still signed in, and still is after a reload (its session cookie was replaced).
   await page.reload();

@@ -1,7 +1,7 @@
 // Turning a version back into a draft (spec §4.6). Whatever no longer fits the
 // floor as it is now is skipped and counted, never forced in.
 
-import { settleDepths } from "./layers";
+import { settleDepths } from "./layer-depths";
 import { checkPlacement, type Neighbour } from "./rules";
 import type { PlacementFields, PlanogramFace, ProductFit, SnapshotEntry } from "./types";
 
@@ -36,7 +36,7 @@ export function restoreRows(
     rows.push({ productId: e.productId, ...fields });
     placed.push({ ...fields, id: `restored-${i}`, productName: product.name });
   });
-  // Anything skipped leaves a gap in its layer group: renumber, keeping the order.
+  // A version from before depths were stable may tie where a merge left no room: the ties are broken, nothing else moves.
   const depths = settleDepths(rows.map((r, i) => ({ ...r, id: String(i) })));
   return { rows: rows.map((r, i) => ({ ...r, depth: depths.get(String(i)) ?? 0 })), skipped };
 }

@@ -56,7 +56,8 @@ test("stages a change: tinted and marked Unsaved, menus off, Discard restores; R
   await expect(page.getByText("1 role changed").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Add role" })).toBeDisabled();
   if (!narrow(page)) await expect(page.getByRole("button", { name: "More for Sales Associate" })).toBeDisabled();
-  await page.getByRole("button", { name: "Discard" }).click();
+  await page.getByRole("button", { name: "Discard changes" }).click();
+  await page.getByRole("dialog", { name: "Discard your changes?" }).getByRole("button", { name: "Discard changes" }).click();
   await expect(stock).toBeChecked();
   await expect(stock).toBeFocused();
   await expect(page.getByRole("button", { name: "Review and save" })).toHaveCount(0);

@@ -32,6 +32,19 @@ describe("diffPlacements", () => {
     expect(diffPlacements([c(hung)], [c({ ...hung, depth: 0 })])).toEqual([]);
   });
 
+  it("a shared rail where the front tile went reports only that tile: the others keep their stable depths, gaps and all", () => {
+    const hung = { presentation: "hung" as const, colSpan: 3, rowSpan: 1 };
+    const rail = (front: boolean) => [
+      ...(front ? [c({ ...hung, productId: "a", depth: 0 })] : []),
+      c({ ...hung, productId: "b", col: 0, depth: 2 }),
+      c({ ...hung, productId: "d", col: 1, depth: 5 }),
+    ];
+    const changes = diffPlacements(rail(true), rail(false));
+    expect(changes.map((f) => [f.added.length, f.removed.length, f.moved.length, f.recounted.length])).toEqual([[0, 1, 0, 0]]);
+    // Trash it and Undo it: every number is where it was, so nothing at all is reported.
+    expect(diffPlacements(rail(true), rail(true))).toEqual([]);
+  });
+
   it("says when nothing changed", () => {
     expect(diffPlacements([c({})], [c({})])).toEqual([]);
     expect(summarizeChanges([])).toBe("No changes");

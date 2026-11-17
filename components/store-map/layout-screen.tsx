@@ -69,9 +69,8 @@ export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLa
         title="Store layout"
         actions={
           can(member, "layout.edit") ? (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              <Pencil aria-hidden="true" strokeWidth={1.75} className="size-4" />
-              Edit
+            <Button icon variant="secondary" onClick={() => setEditing(true)} aria-label="Edit">
+              <Pencil aria-hidden="true" strokeWidth={1.75} className="size-5" />
             </Button>
           ) : null
         }

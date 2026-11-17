@@ -1,9 +1,10 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PlanogramFace } from "@/lib/planograms/types";
+import type { PlacementFields, PlanogramFace } from "@/lib/planograms/types";
 
+import type { CommitResult } from "./use-builder";
 import { PlacementForm } from "./placement-form";
 
 // A 6 ft rack face (12 half-foot columns) with 4 levels.
@@ -11,102 +12,234 @@ const front: PlanogramFace = { faceId: "00000000-0000-4000-8000-000000000001", f
 const top: PlanogramFace = { ...front, faceId: "00000000-0000-4000-8000-000000000002", fixtureType: "table", side: "top", label: "Top", rows: 3 };
 const pant = { id: "p", faceId: front.faceId, productName: "High-Rise Pant", col: 0, row: 0, colSpan: 4, rowSpan: 2 };
 const initial = { faceId: front.faceId, presentation: "folded" as const, col: 4, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 1 };
+const saved: CommitResult = { ok: true, id: "p" };
 
-function renderForm({ onSubmit = vi.fn().mockResolvedValue(null), faces = [front] } = {}) {
-  render(<PlacementForm faces={faces} initial={initial} others={[pant]} excludeId={null} submitLabel="Add" busy={false} onSubmit={onSubmit} />);
-  return onSubmit;
+const wait = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+
+function renderForm({ onSubmit = vi.fn().mockResolvedValue(saved), faces = [front], start = initial }: { onSubmit?: (fields: PlacementFields) => Promise<CommitResult>; faces?: PlanogramFace[]; start?: PlacementFields } = {}) {
+  const view = render(<PlacementForm faces={faces} initial={start} others={[pant]} excludeId={null} onSubmit={onSubmit} />);
+  return { onSubmit, ...view };
 }
 
-async function type(label: string, text: string) {
-  await userEvent.clear(screen.getByLabelText(label));
-  await userEvent.type(screen.getByLabelText(label), text);
+// fireEvent, not userEvent: user-event waits on a real timer, which fake timers never fire.
+function type(label: string, text: string) {
+  fireEvent.change(screen.getByLabelText(label), { target: { value: text } });
+}
+const blur = (label: string) => fireEvent.blur(screen.getByLabelText(label));
+
+/** Types, then lets the pause pass so the edit is checked and sent. */
+async function typeAndPause(label: string, text: string) {
+  type(label, text);
+  await wait(600);
 }
 
 describe("PlacementForm", () => {
-  it("starts from the placement in feet and levels", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("starts from the placement in feet and levels, with no Save button and no face select", () => {
     renderForm();
     expect(screen.getByLabelText("From left (ft)")).toHaveValue("2");
     expect(screen.getByLabelText("Width (ft)")).toHaveValue("2");
     expect(screen.getByLabelText("Top level")).toHaveValue("1");
     expect(screen.getByLabelText("Levels tall")).toHaveValue("2");
+    expect(screen.queryByRole("button", { name: /save|remove/i })).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
-  it("submits feet in half steps and levels as fields", async () => {
-    const onSubmit = renderForm();
-    await type("From left (ft)", "3½");
-    await type("Width (ft)", "1.5");
-    await type("Top level", "3");
-    await type("Levels tall", "1");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  it("sends nothing while typing, then one save of feet in half steps and levels 600 ms after the last key", async () => {
+    const { onSubmit } = renderForm();
+    type("From left (ft)", "3½");
+    type("Width (ft)", "1.5");
+    type("Top level", "3");
+    type("Levels tall", "1");
+    await wait(599);
+    expect(onSubmit).not.toHaveBeenCalled();
+    await wait(1);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith({ ...initial, col: 7, colSpan: 3, row: 2, rowSpan: 1 });
+    await wait(5000);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves on blur at once, and the pause that was running sends nothing more", async () => {
+    const { onSubmit } = renderForm();
+    type("Pieces", "5");
+    blur("Pieces");
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith({ ...initial, pieceCount: 5 });
+    await wait(5000);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves a presentation choice on change, with whatever else is waiting", async () => {
+    const { onSubmit } = renderForm();
+    type("Pieces", "6");
+    fireEvent.click(screen.getByRole("radio", { name: "Hung" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith({ ...initial, presentation: "hung", pieceCount: 6 });
+    await wait(5000);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("a blur or a pause with nothing changed sends nothing", async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.focus(screen.getByLabelText("Pieces"));
+    blur("Pieces");
+    // Different text, the same numbers: still nothing to save.
+    type("Pieces", "01");
+    await wait(600);
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("counts a back lower table's numbers from its outer edge and saves them as stored", async () => {
     const back: PlanogramFace = { ...top, setSide: "back", label: "Back table", rows: 2 };
-    const onSubmit = vi.fn().mockResolvedValue(null);
     const stored = { ...initial, faceId: back.faceId, col: 0, row: 0, colSpan: 4, rowSpan: 1 };
-    render(<PlacementForm faces={[back]} initial={stored} others={[]} excludeId={null} submitLabel="Add" busy={false} onSubmit={onSubmit} />);
+    const { onSubmit } = renderForm({ faces: [back], start: stored });
     expect(screen.getByLabelText("From left (ft)")).toHaveValue("4");
     expect(screen.getByLabelText("From back (ft)")).toHaveValue("1");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(onSubmit).toHaveBeenCalledWith(stored);
+    await typeAndPause("Pieces", "5");
+    expect(onSubmit).toHaveBeenCalledWith({ ...stored, pieceCount: 5 });
   });
 
   it("asks a table top for feet from the back and depth", async () => {
-    const onSubmit = renderForm({ faces: [top, front] });
-    await userEvent.selectOptions(screen.getByLabelText("Side"), "Top");
-    await type("From back (ft)", "1");
-    await type("Depth (ft)", "2");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(onSubmit).toHaveBeenCalledWith({ ...initial, faceId: top.faceId, row: 1, rowSpan: 2 });
+    const onTop = { ...initial, faceId: top.faceId };
+    const { onSubmit } = renderForm({ faces: [top, front], start: onTop });
+    type("From back (ft)", "1");
+    type("Depth (ft)", "2");
+    await wait(600);
+    expect(onSubmit).toHaveBeenCalledWith({ ...onTop, row: 1, rowSpan: 2 });
   });
 
   it("names From back when a table top's whole-foot fields are bad", async () => {
-    const onSubmit = renderForm({ faces: [top, front] });
-    await userEvent.selectOptions(screen.getByLabelText("Side"), "Top");
-    await type("From back (ft)", "1.5");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    const { onSubmit } = renderForm({ faces: [top, front], start: { ...initial, faceId: top.faceId } });
+    await typeAndPause("From back (ft)", "1.5");
     expect(screen.getByText("Use whole feet for from back and depth, and whole numbers for pieces.")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("names the rule a placement breaks, and doesn't submit", async () => {
-    const onSubmit = renderForm();
-    await type("From left (ft)", "1");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(screen.getByText("Blocked by High-Rise Pant")).toBeInTheDocument();
-    await type("From left (ft)", "2");
-    await type("Pieces", "100");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  it("names the rule a placement breaks, keeps the value in the field, and sends nothing", async () => {
+    const { onSubmit } = renderForm();
+    await typeAndPause("From left (ft)", "1");
+    expect(screen.getByRole("alert")).toHaveTextContent("Blocked by High-Rise Pant");
+    expect(screen.getByLabelText("From left (ft)")).toHaveValue("1");
+    await typeAndPause("From left (ft)", "2");
+    await typeAndPause("Pieces", "100");
     expect(screen.getByText("At most 99 pieces")).toBeInTheDocument();
-    await type("From left (ft)", "2.25");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await typeAndPause("Pieces", "1");
+    await typeAndPause("From left (ft)", "2.25");
     expect(screen.getByText("Use feet in half steps, like 4 or 4½.")).toBeInTheDocument();
-    await type("From left (ft)", "2");
-    await type("Top level", "0");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await typeAndPause("From left (ft)", "2");
+    await typeAndPause("Top level", "0");
     expect(screen.getByText("Use whole numbers from 1 for levels and pieces.")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("refuses a zero width and a placement past the end of the face", async () => {
-    const onSubmit = renderForm();
-    await type("Width (ft)", "0");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    const { onSubmit } = renderForm();
+    await typeAndPause("Width (ft)", "0");
     expect(screen.getByText("Width must be at least ½ ft.")).toBeInTheDocument();
-    await type("Width (ft)", "2");
-    await type("From left (ft)", "5");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await typeAndPause("Width (ft)", "2");
+    await typeAndPause("From left (ft)", "5");
     expect(screen.getByText("Off the edge of the face")).toBeInTheDocument();
-    await type("From left (ft)", "99");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await typeAndPause("From left (ft)", "99");
     expect(screen.getByText("Off the edge of the face")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("shows the server's refusal beside the fields", async () => {
-    renderForm({ onSubmit: vi.fn().mockResolvedValue("Blocked by Crew Sock") });
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Blocked by Crew Sock");
+  it("fixing an invalid value clears the message and sends it", async () => {
+    const { onSubmit } = renderForm();
+    await typeAndPause("From left (ft)", "1");
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    await typeAndPause("From left (ft)", "3");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(onSubmit).toHaveBeenCalledWith({ ...initial, col: 6 });
+  });
+
+  it("shows the server's refusal beside the fields, says it couldn't save, and sends the same edit again when asked", async () => {
+    const onSubmit = vi.fn().mockResolvedValueOnce({ ok: false, message: "Blocked by Crew Sock" }).mockResolvedValue(saved);
+    renderForm({ onSubmit });
+    await typeAndPause("Pieces", "5");
+    // Shown beside the fields, but not announced a second time: the draft's status line says a server refusal.
+    expect(screen.getByText("Blocked by Crew Sock")).not.toHaveAttribute("role");
+    await wait(300);
+    expect(screen.getByText("Couldn't save")).toBeInTheDocument();
+    await typeAndPause("Pieces", "6");
+    await typeAndPause("Pieces", "5");
+    expect(onSubmit).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("a lost connection says so beside the fields, and keeps the value to send again", async () => {
+    const onSubmit = vi.fn().mockResolvedValueOnce({ ok: false, message: null }).mockResolvedValue(saved);
+    renderForm({ onSubmit });
+    await typeAndPause("Pieces", "5");
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't save. Check the connection and try again.");
+    expect(screen.getByLabelText("Pieces")).toHaveValue("5");
+    await typeAndPause("Pieces", "05");
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("says Saving… once a save takes a moment, then Saved", async () => {
+    let finish: (r: CommitResult) => void = () => {};
+    const onSubmit = vi.fn(() => new Promise<CommitResult>((resolve) => (finish = resolve)));
+    renderForm({ onSubmit });
+    await typeAndPause("Pieces", "5");
+    expect(screen.queryByText("Saving…")).toBeNull();
+    await wait(300);
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+    await act(async () => finish(saved));
+    await wait(500);
+    expect(screen.getByText("Saved")).toBeInTheDocument();
+  });
+
+  it("sends what is waiting when the panel closes, through the callback of its last render", async () => {
+    const forA = vi.fn().mockResolvedValue(saved);
+    const forB = vi.fn().mockResolvedValue(saved);
+    const { rerender, unmount } = renderForm({ onSubmit: forA });
+    type("Pieces", "5");
+    rerender(<PlacementForm faces={[front]} initial={initial} others={[pant]} excludeId={null} onSubmit={forB} />);
+    unmount();
+    expect(forA).not.toHaveBeenCalled();
+    expect(forB).toHaveBeenCalledWith({ ...initial, pieceCount: 5 });
+  });
+
+  it("does not overwrite what is being typed when its own save comes back", async () => {
+    let finish: (r: CommitResult) => void = () => {};
+    const onSubmit = vi.fn(() => new Promise<CommitResult>((resolve) => (finish = resolve)));
+    function Parent() {
+      const [placement, setPlacement] = useState<PlacementFields>(initial);
+      async function submit(fields: PlacementFields) {
+        const result = await onSubmit();
+        if (result.ok) setPlacement(fields);
+        return result;
+      }
+      return <PlacementForm faces={[front]} initial={placement} others={[pant]} excludeId={null} onSubmit={submit} />;
+    }
+    render(<Parent />);
+    await typeAndPause("Pieces", "5");
+    // Still saving: the next field is typed into.
+    type("Width (ft)", "1.5");
+    await act(async () => finish(saved));
+    expect(screen.getByLabelText("Pieces")).toHaveValue("5");
+    expect(screen.getByLabelText("Width (ft)")).toHaveValue("1.5");
+  });
+
+  it("shows a change back to what it had before (an Undo) once its own save has come back", async () => {
+    const { rerender } = renderForm();
+    await typeAndPause("Pieces", "5");
+    const form = (placement: PlacementFields) => <PlacementForm faces={[front]} initial={placement} others={[pant]} excludeId={null} onSubmit={vi.fn()} />;
+    // Its own save comes back, then Undo puts the first numbers back.
+    rerender(form({ ...initial, pieceCount: 5 }));
+    expect(screen.getByLabelText("Pieces")).toHaveValue("5");
+    rerender(form(initial));
+    expect(screen.getByLabelText("Pieces")).toHaveValue("1");
+  });
+
+  it("re-fills the fields when the placement was changed by another device", () => {
+    const { rerender } = renderForm();
+    rerender(<PlacementForm faces={[front]} initial={{ ...initial, col: 8, pieceCount: 9 }} others={[pant]} excludeId={null} onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText("From left (ft)")).toHaveValue("4");
+    expect(screen.getByLabelText("Pieces")).toHaveValue("9");
   });
 });

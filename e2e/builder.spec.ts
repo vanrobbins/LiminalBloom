@@ -24,7 +24,9 @@ test.beforeEach(async () => {
 const tile = (page: Page, product: string) => page.getByRole("button", { name: new RegExp(`^${product}, `) }).filter({ visible: true });
 const card = (page: Page, product: string) => page.locator("[data-card]").filter({ hasText: product });
 const saved = (page: Page) => expect(page.locator("[data-draft-status]")).toHaveText("Saved");
-const selectedBar = (page: Page, product: string) => page.getByRole("toolbar", { name: `${product} selected` });
+/** The selected tile's trash disc: there while the tile is selected, gone when it isn't. */
+const trashDisc = (page: Page, product: string) => page.getByRole("button", { name: `Remove ${product}` });
+const pencilDisc = (page: Page, product: string) => page.getByRole("button", { name: `Edit ${product}` });
 
 async function openTable(page: Page) {
   await page.goto("/planograms");
@@ -33,7 +35,7 @@ async function openTable(page: Page) {
 }
 
 async function startDraft(page: Page) {
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 }
 
@@ -43,7 +45,7 @@ async function addTee(page: Page) {
   await page.getByLabel("Find a product").fill("E2E Pocket");
   await page.getByRole("button", { name: /E2E Pocket Tee/ }).click();
   await saved(page);
-  await expect(selectedBar(page, "E2E Pocket Tee")).toBeVisible();
+  await expect(trashDisc(page, "E2E Pocket Tee")).toBeVisible();
 }
 
 /** A real touch stroke through the browser's input pipeline, so scrolling and pointer capture behave as on a phone. */
@@ -80,7 +82,7 @@ test("a selected tile drags two feet, then Undo and Redo move it back and forth"
   await openTable(page);
   await startDraft(page);
   await tile(page, "E2E High-Rise Pant").click();
-  await expect(selectedBar(page, "E2E High-Rise Pant")).toBeVisible();
+  await expect(trashDisc(page, "E2E High-Rise Pant")).toBeVisible();
   const unit = await halfFoot(page);
   const canScroll = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight > 20);
   if (canScroll) await page.evaluate(() => window.scrollTo(0, 20));
@@ -123,7 +125,7 @@ test("the right handle widens a tile half a foot at a time", async ({ page }, in
   const unit = await halfFoot(page);
   await dragBy(page, page.locator('[data-handle="right"]'), unit * 2, 0, info);
   await saved(page);
-  await page.getByRole("button", { name: "Details" }).click();
+  await pencilDisc(page, "E2E High-Rise Pant").click();
   await expect(page.getByText("0–3 ft from left · 0–2 ft from back").filter({ visible: true })).toBeVisible();
 });
 
@@ -132,13 +134,18 @@ test("an invalid drop snaps back and says why", async ({ page }, info) => {
   await startDraft(page);
   await addTee(page);
   const unit = await halfFoot(page);
-  const before = await tile(page, "E2E Pocket Tee").boundingBox();
+  // Measured from the grid, which the refusal's status line (it takes a line when it appears) moves down.
+  const spot = async () => {
+    const [box, grid] = await Promise.all([tile(page, "E2E Pocket Tee").boundingBox(), page.locator("[data-planogram-grid]").boundingBox()]);
+    return box && grid ? { x: box.x - grid.x, y: box.y - grid.y } : null;
+  };
+  const before = await spot();
   await dragBy(page, tile(page, "E2E Pocket Tee"), -unit * 2, 0, info);
   await expect(page.getByText("Blocked by E2E High-Rise Pant").filter({ visible: true }).first()).toBeVisible();
   await expect(card(page, "E2E Pocket Tee")).toContainText("Center · Middle");
   // The tile itself is back where it started, not left mid-drag.
   await expect(async () => {
-    const after = await tile(page, "E2E Pocket Tee").boundingBox();
+    const after = await spot();
     expect(after && before && Math.abs(after.x - before.x) < 2 && Math.abs(after.y - before.y) < 2).toBe(true);
   }).toPass();
 });
@@ -146,10 +153,12 @@ test("an invalid drop snaps back and says why", async ({ page }, info) => {
 test("the first drag on a published planogram starts a draft", async ({ page }, info) => {
   await openTable(page);
   await startDraft(page);
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start draft" })).toBeVisible();
+  // Nothing to start: with the published version showing, + is there and Undo, Publish and ⋯ wait for a draft.
+  await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
 
   await tile(page, "E2E High-Rise Pant").click();
   // A published tile opens its sheet. On a phone it is a modal dialog: wait for it, then close it (the tile stays selected).
@@ -164,7 +173,6 @@ test("the first drag on a published planogram starts a draft", async ({ page }, 
   }
   const unit = await halfFoot(page);
   await dragBy(page, tile(page, "E2E High-Rise Pant"), unit * 4, 0, info);
-  await expect(page.getByText("Draft started", { exact: true })).toBeVisible();
   await saved(page);
   await expect(page.getByRole("group", { name: "Show" })).toBeVisible();
   await expect(card(page, "E2E High-Rise Pant")).toContainText("Center · Middle");
@@ -197,41 +205,37 @@ test("by touch, the selected tile drags without scrolling or swiping; a swipe el
   if (canScroll) expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
 
   // A swipe on empty grid (the bottom row, right side) changes face. Bring the grid on screen
-  // and make sure the start point is in the viewport and not under the phone's selection bar.
+  // and make sure the start point is in the viewport.
   await front.scrollIntoViewIfNeeded();
   const grid = await front.boundingBox();
   if (!grid) throw new Error("no grid");
   const startY = grid.y + grid.height - 16;
-  const bar = await selectedBar(page, "E2E Pocket Tee").boundingBox();
-  expect(startY).toBeLessThan(Math.min(page.viewportSize()?.height ?? Infinity, bar ? bar.y : Infinity));
+  expect(startY).toBeLessThan(page.viewportSize()?.height ?? Infinity);
   await touchDrag(page, grid.x + grid.width - 24, startY, -160, 0);
   await expect(page.getByRole("region", { name: /Rack 1, Back/ })).toBeVisible();
 });
 
-test("on a phone, the selection bar sits above the tabs and clears the grid and the last card", async ({ page }, info) => {
+test("on a phone, the selected tile's corner discs are there, no bar takes the screen, and the last card clears the tabs", async ({ page }, info) => {
   test.skip(sizeOf(info) !== "phone", "phone only");
   await openTable(page);
   await startDraft(page);
   await tile(page, "E2E High-Rise Pant").click();
-  const bar = selectedBar(page, "E2E High-Rise Pant");
-  await expect(bar).toBeVisible();
-  const tabs = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
-  const barBox = await bar.boundingBox();
-  const tabsBox = await tabs.boundingBox();
-  if (!barBox || !tabsBox) throw new Error("no bar or tabs");
-  expect(barBox.y + barBox.height).toBeLessThanOrEqual(tabsBox.y + 1);
-  // The draft bar yields to it.
-  await expect(page.getByRole("button", { name: "Add product" })).toBeHidden();
-
-  await page.locator("[data-planogram-grid]").evaluate((el) => el.scrollIntoView({ block: "start" }));
-  const grid = await page.locator("[data-planogram-grid]").boundingBox();
-  if (!grid) throw new Error("no grid");
-  expect(grid.y + grid.height).toBeLessThanOrEqual(barBox.y);
+  const trash = trashDisc(page, "E2E High-Rise Pant");
+  const pencil = pencilDisc(page, "E2E High-Rise Pant");
+  await expect(trash).toBeVisible();
+  for (const disc of [trash, pencil]) {
+    const box = await disc.boundingBox();
+    // 44 px, or smaller only where a resize handle's target would touch it (never under 24 px).
+    expect(box && Math.min(box.width, box.height)).toBeGreaterThanOrEqual(24);
+  }
+  await expect(page.locator("[data-action-bar]")).toHaveCount(0);
+  // The corner bar stays where it is.
+  await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const tabs = await page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).boundingBox();
   const last = await page.locator("[data-card]").last().boundingBox();
-  const barNow = await bar.boundingBox();
-  expect(last && barNow && last.y + last.height <= barNow.y).toBe(true);
+  expect(last && tabs && last.y + last.height <= tabs.y + 1).toBe(true);
 });
 
 test("arrow keys move the selected tile and say where it went; Ctrl+Z undoes", async ({ page }, info) => {

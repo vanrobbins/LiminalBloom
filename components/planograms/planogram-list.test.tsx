@@ -14,6 +14,19 @@ const groups = [
 describe("PlanogramList", () => {
   beforeEach(() => window.localStorage.clear());
 
+  it("shows one state per row: the version, else Draft, else plain Not published, never both", async () => {
+    const drafted = { ...rack, fixtureId: "d", name: "Table 2", typeLabel: "Table", hasDraft: true, dueDate: null };
+    render(<PlanogramList groups={[{ zoneId: "z", zoneName: "Zone", items: [bay, drafted, { ...rack, fixtureId: "n", name: "Table 3", typeLabel: "Table", dueDate: null }] }]} today="2026-10-08" storeKey="s" />);
+    const row = (name: RegExp) => screen.getByRole("link", { name });
+    expect(row(/Denim Wall/)).toHaveTextContent("Version 4 · Oct 8");
+    expect(row(/Denim Wall/)).not.toHaveTextContent("Draft");
+    expect(row(/Table 2/)).toHaveTextContent("Draft");
+    expect(row(/Table 2/)).not.toHaveTextContent("Not published");
+    const plain = within(row(/Table 3/)).getByText("Not published");
+    expect(plain).toHaveClass("text-ink-muted");
+    expect(plain).not.toHaveClass("border-dashed");
+  });
+
   it("shows version, draft and due state in words once a zone is opened", async () => {
     render(<PlanogramList groups={groups} today="2026-10-08" storeKey="s" />);
     const denim = screen.getByRole("region", { name: "Denim" });
@@ -22,7 +35,6 @@ describe("PlanogramList", () => {
     const bayLink = within(denim).getByRole("link", { name: /Denim Wall · Bay 3/ });
     expect(bayLink).toHaveAttribute("href", "/planograms/bay");
     expect(bayLink).toHaveTextContent("Version 4 · Oct 8");
-    expect(bayLink).toHaveTextContent("Draft");
     expect(bayLink).toHaveTextContent("Overdue · Oct 1");
     const rackLink = within(denim).getByRole("link", { name: /4-way Rack 2/ });
     expect(rackLink).toHaveTextContent("Not published");
@@ -36,9 +48,14 @@ describe("PlanogramList", () => {
     expect(screen.getByRole("link", { name: /Denim Wall/ })).toHaveTextContent("Wall bay");
   });
 
-  it("sums up each zone, folded", () => {
+  it("sums up what needs doing (drafts, overdue) for a folded zone, and drops the summary once it opens", async () => {
     render(<PlanogramList groups={groups} today="2026-10-08" storeKey="s" />);
-    expect(within(screen.getByRole("region", { name: "Denim" })).getByText("1 draft · 1 overdue · 1 not published")).toBeInTheDocument();
-    expect(zoneSummary([{ ...bay, hasDraft: false, dueDate: null }], "2026-10-08")).toBe("All published");
+    const denim = screen.getByRole("region", { name: "Denim" });
+    expect(within(denim).getByText("1 draft · 1 overdue")).toBeInTheDocument();
+    await userEvent.setup().click(within(denim).getByRole("button", { name: /Denim/ }));
+    expect(within(denim).queryByText("1 draft · 1 overdue")).toBeNull();
+    // Not published is a state of the row, not a chore for the summary; nothing to do says nothing.
+    expect(zoneSummary([rack], "2026-10-08")).toBe("");
+    expect(zoneSummary([{ ...bay, hasDraft: false, dueDate: null }], "2026-10-08")).toBe("");
   });
 });

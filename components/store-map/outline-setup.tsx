@@ -3,6 +3,7 @@
 
 "use client";
 
+import { PenLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -49,7 +50,8 @@ export function OutlineSetup({ dispatch }: { dispatch: (action: SessionAction) =
         <h3 className="font-medium text-ink">Custom</h3>
         <p className="text-sm text-ink-muted">For any other shape: tap each corner on the map.</p>
         <Button variant="secondary" onClick={() => dispatch({ type: "startDrawing" })}>
-          Draw it corner by corner
+          <PenLine aria-hidden="true" strokeWidth={1.75} className="size-5" />
+          Store outline
         </Button>
       </section>
     </Dialog>

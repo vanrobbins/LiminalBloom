@@ -8,7 +8,6 @@
 import type { Member } from "@/lib/current-member";
 
 import { NavLinks } from "./nav-links";
-import { OpenedStoreToast } from "./opened-store-toast";
 import { ShellProvider } from "./shell-context";
 import { StoreMenu } from "./store-menu";
 import { UserMenu } from "./user-menu";
@@ -18,7 +17,6 @@ export function AppShell({ member, children }: { member: Member; children: React
 
   return (
     <ShellProvider value={{ stores, activeStoreId, user: { name: user.name, email: user.email } }}>
-      <OpenedStoreToast />
       <div className="flex flex-1 flex-col bg-surface md:flex-row">
         <a
           href="#content"

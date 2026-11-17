@@ -39,7 +39,6 @@ export function useSignOut() {
       return;
     }
 
-    toast({ tone: "success", title: "Signed out." });
     // Replace, so Back cannot return to the signed-in page; refresh, so the
     // router cache holds nothing of the person who just left (Next restores
     // back/forward from it). Store devices are shared.

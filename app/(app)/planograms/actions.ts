@@ -19,7 +19,7 @@ import { searchInput } from "@/lib/products/schemas";
 // "forbidden" is the role's own answer (the switch is missing), told apart from a "refused" change so the screen never
 // mistakes it for a draft that went away. Its words are plain, ready to show.
 export type DraftReply =
-  | { status: "saved"; draft: DraftState; notice?: string }
+  | { status: "saved"; draft: DraftState; notice?: string; id?: string }
   | { status: "refused"; message: string; draft: DraftState | null }
   | { status: "forbidden"; message: string; draft: null };
 export type DoneReply = { status: "saved"; message: string } | { status: "refused"; message: string } | { status: "forbidden"; message: string };
@@ -38,7 +38,7 @@ export async function startDraftAction(fixtureId: string, expectedVersion: numbe
   const { activeStoreId } = check.member;
   if (!isId(fixtureId) || !optionalVersion.safeParse(expectedVersion).success) return { status: "refused", message: RELOAD };
   const result = await startDraft(activeStoreId, fixtureId, expectedVersion);
-  return result.status === "saved" ? { status: "saved", message: "Draft started" } : { status: "refused", message: CONFLICT };
+  return result.status === "saved" ? { status: "saved", message: "Draft ready" } : { status: "refused", message: CONFLICT };
 }
 
 /**
@@ -65,7 +65,7 @@ export async function saveChangeAction(fixtureId: string, raw: unknown): Promise
   if (!isId(fixtureId) || !parsed.success) return { status: "refused", message: RELOAD, draft: null };
   const result = await saveChange(activeStoreId, fixtureId, parsed.data);
   const draft = await draftState(activeStoreId, fixtureId);
-  if (result.status === "saved" && draft) return { status: "saved", draft, ...(result.switchedToHung ? { notice: "Switched to hung" } : {}) };
+  if (result.status === "saved" && draft) return { status: "saved", draft, ...(result.switchedToHung ? { notice: "Switched to hung" } : {}), ...(result.id ? { id: result.id } : {}) };
   return { status: "refused", message: result.status === "invalid" ? result.message : CONFLICT, draft };
 }
 

@@ -1,9 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mediaQuery = vi.hoisted(() => ({ PHONE_QUERY: "(max-width: 767px)", useMediaQuery: vi.fn(() => false) }));
-vi.mock("@/components/store-map/use-media-query", () => mediaQuery);
+import { describe, expect, it, vi } from "vitest";
 
 import { MAX_FILTER_CHOICES, searchInput } from "@/lib/products/schemas";
 
@@ -16,23 +13,23 @@ const categories = [
   { id: "550e8400-e29b-41d4-a716-446655440003", name: "Hats" },
 ];
 
-beforeEach(() => mediaQuery.useMediaQuery.mockReturnValue(false));
+const field = <input aria-label="Search products" />;
 
 describe("SearchFilters", () => {
   describe("sort", () => {
     it("offers Best match only with text, and marks the sort in use", () => {
-      const { unmount } = render(<SearchFilters input={searchInput.parse({})} categories={[]} colors={[]} onChange={() => {}} />);
+      const { unmount } = render(<SearchFilters input={searchInput.parse({})} categories={[]} colors={[]} onChange={() => {}}>{field}</SearchFilters>);
       expect(screen.queryByRole("radio", { name: "Best match" })).toBeNull();
       expect(screen.getByRole("radio", { name: "Name A–Z" })).toBeChecked();
       unmount();
-      render(<SearchFilters input={searchInput.parse({ q: "pant" })} categories={[]} colors={[]} onChange={() => {}} />);
+      render(<SearchFilters input={searchInput.parse({ q: "pant" })} categories={[]} colors={[]} onChange={() => {}}>{field}</SearchFilters>);
       expect(screen.getByRole("radio", { name: "Best match" })).toBeChecked();
     });
 
     it("changes the sort", async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(<SearchFilters input={searchInput.parse({})} categories={[]} colors={[]} onChange={onChange} />);
+      render(<SearchFilters input={searchInput.parse({})} categories={[]} colors={[]} onChange={onChange}>{field}</SearchFilters>);
       await user.click(screen.getByRole("radio", { name: "Recently updated" }));
       expect(onChange).toHaveBeenCalledWith({ sort: "updated" });
     });
@@ -43,7 +40,7 @@ describe("SearchFilters", () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
       const input = searchInput.parse({ colors: colors.slice(0, MAX_FILTER_CHOICES) });
-      render(<SearchFilters input={input} categories={[]} colors={colors} onChange={onChange} />);
+      render(<SearchFilters input={input} categories={[]} colors={colors} onChange={onChange}>{field}</SearchFilters>);
 
       const extra = screen.getByRole("checkbox", { name: `Color ${MAX_FILTER_CHOICES + 1}` });
       expect(extra).toBeDisabled();
@@ -55,7 +52,7 @@ describe("SearchFilters", () => {
     });
 
     it("says nothing about a limit below the max", () => {
-      render(<SearchFilters input={searchInput.parse({ colors: ["Color 1"] })} categories={[]} colors={colors} onChange={() => {}} />);
+      render(<SearchFilters input={searchInput.parse({ colors: ["Color 1"] })} categories={[]} colors={colors} onChange={() => {}}>{field}</SearchFilters>);
       expect(screen.getByRole("checkbox", { name: `Color ${MAX_FILTER_CHOICES + 1}` })).toBeEnabled();
       expect(screen.queryByText(/^Up to/)).not.toBeInTheDocument();
     });
@@ -65,7 +62,7 @@ describe("SearchFilters", () => {
     it("reports a choice from every group", async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(<SearchFilters input={searchInput.parse({})} categories={categories} colors={["Black", "White", "Red"]} onChange={onChange} />);
+      render(<SearchFilters input={searchInput.parse({})} categories={categories} colors={["Black", "White", "Red"]} onChange={onChange}>{field}</SearchFilters>);
 
       await user.click(screen.getByRole("checkbox", { name: "In stock" }));
       expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ["in_stock"] }));
@@ -81,7 +78,7 @@ describe("SearchFilters", () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
       const input = searchInput.parse({ colors: ["Black"] });
-      render(<SearchFilters input={input} categories={[]} colors={["Black", "White"]} onChange={onChange} />);
+      render(<SearchFilters input={input} categories={[]} colors={["Black", "White"]} onChange={onChange}>{field}</SearchFilters>);
 
       await user.click(screen.getByRole("checkbox", { name: "Black" }));
       expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ colors: [] }));
@@ -89,7 +86,7 @@ describe("SearchFilters", () => {
 
     it("reflects current filter state in checkboxes", () => {
       const input = searchInput.parse({ colors: ["Black", "White"], categoryIds: ["550e8400-e29b-41d4-a716-446655440001"], statuses: ["in_stock"], places: ["floor"] });
-      render(<SearchFilters input={input} categories={categories} colors={["Black", "White", "Red"]} onChange={() => {}} />);
+      render(<SearchFilters input={input} categories={categories} colors={["Black", "White", "Red"]} onChange={() => {}}>{field}</SearchFilters>);
 
       expect(screen.getByRole("checkbox", { name: "Black" })).toBeChecked();
       expect(screen.getByRole("checkbox", { name: "White" })).toBeChecked();
@@ -101,91 +98,56 @@ describe("SearchFilters", () => {
     });
   });
 
-  describe("multi-filter combinations", () => {
-    it("counts active filters and displays in header (desktop)", () => {
-      const input = searchInput.parse({ colors: ["Black"], categoryIds: ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"], statuses: ["in_stock"], places: [] });
-      render(<SearchFilters input={input} categories={categories} colors={["Black"]} onChange={() => {}} />);
+  describe("the Filters button and its menu", () => {
+    const none = () => searchInput.parse({});
+    const button = () => screen.getByRole("button", { name: "Filters" });
 
-      expect(screen.getByText("Filters (4)")).toBeInTheDocument();
+    // One component for every size: nothing here asks how wide the screen is.
+    it("is one icon button beside the search field", () => {
+      const { container } = render(<SearchFilters input={none()} categories={[]} colors={[]} onChange={() => {}}>{field}</SearchFilters>);
+      expect(button()).toHaveTextContent("");
+      expect(button().querySelector("svg")).not.toBeNull();
+      expect(button().previousElementSibling).toContainElement(screen.getByLabelText("Search products"));
+      expect(container.querySelector("details")).toBeNull();
     });
 
-    it("counts zero when no filters active", () => {
-      const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
-      render(<SearchFilters input={input} categories={categories} colors={["Black"]} onChange={() => {}} />);
-
-      expect(screen.getByText("Filters")).not.toHaveTextContent("Filters (");
-    });
-  });
-
-  describe("desktop layout (details element)", () => {
-    beforeEach(() => mediaQuery.useMediaQuery.mockReturnValue(false));
-
-    it("starts open on desktop when filters are active", () => {
-      const input = searchInput.parse({ colors: ["Black"], categoryIds: [], statuses: [], places: [] });
-      const { container } = render(<SearchFilters input={input} categories={[]} colors={["Black"]} onChange={() => {}} />);
-
-      const details = container.querySelector("details");
-      expect(details).toHaveAttribute("open");
-    });
-
-    it("starts closed on desktop when no filters", () => {
-      const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
-      const { container } = render(<SearchFilters input={input} categories={[]} colors={[]} onChange={() => {}} />);
-
-      const details = container.querySelector("details");
-      expect(details).not.toHaveAttribute("open");
-    });
-
-    it("toggles details open/close on summary click", async () => {
+    it("starts folded and opens in place: aria-expanded, aria-controls, no dialog", async () => {
       const user = userEvent.setup();
-      const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
-      const { container } = render(<SearchFilters input={input} categories={categories} colors={["Black", "White"]} onChange={() => {}} />);
-
-      const details = container.querySelector("details");
-      const summary = details?.querySelector("summary");
-      if (!summary) throw new Error("Summary not found");
-
-      expect(details).not.toHaveAttribute("open");
-      await user.click(summary);
-      expect(details).toHaveAttribute("open");
-      await user.click(summary);
-      expect(details).not.toHaveAttribute("open");
-    });
-  });
-
-  describe("phone layout (bottom sheet)", () => {
-    beforeEach(() => mediaQuery.useMediaQuery.mockReturnValue(true));
-
-    it("opens bottom sheet when button is clicked on phone", async () => {
-      const user = userEvent.setup();
-      const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
-      render(<SearchFilters input={input} categories={[]} colors={["Black"]} onChange={() => {}} />);
-
-      const btn = screen.getByRole("button", { name: /Filters/ });
-      await user.click(btn);
-
-      expect(btn).toHaveAttribute("aria-expanded", "true");
-      expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
+      render(<SearchFilters input={none()} categories={[]} colors={["Black"]} onChange={() => {}}>{field}</SearchFilters>);
+      const menu = document.getElementById(button().getAttribute("aria-controls") ?? "");
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+      expect(menu).toContainElement(screen.getByRole("checkbox", { name: "Black" }));
+      expect(menu).toHaveAttribute("inert");
+      expect(menu).toHaveClass("grid-rows-[0fr]");
+      await user.click(button());
+      expect(button()).toHaveAttribute("aria-expanded", "true");
+      expect(menu).not.toHaveAttribute("inert");
+      expect(menu).toHaveClass("grid-rows-[1fr]");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      await user.click(button());
+      expect(button()).toHaveAttribute("aria-expanded", "false");
+      expect(menu).toHaveAttribute("inert");
     });
 
-    it("keeps the sheet open after a filter is chosen", async () => {
+    it("starts open when filters are already on, and stays open as a chip is unticked", async () => {
       const user = userEvent.setup();
-      const onChange = vi.fn();
-      const input = searchInput.parse({ colors: [], categoryIds: [], statuses: [], places: [] });
-      render(<SearchFilters input={input} categories={[]} colors={["Black"]} onChange={onChange} />);
-
-      await user.click(screen.getByRole("button", { name: /Filters/ }));
+      render(<SearchFilters input={searchInput.parse({ colors: ["Black"] })} categories={[]} colors={["Black"]} onChange={() => {}}>{field}</SearchFilters>);
+      expect(button()).toHaveAttribute("aria-expanded", "true");
       await user.click(screen.getByRole("checkbox", { name: "Black" }));
-
-      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ colors: ["Black"] }));
-      expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
+      expect(button()).toHaveAttribute("aria-expanded", "true");
     });
 
-    it("shows filter count badge on phone button", () => {
-      const input = searchInput.parse({ colors: ["Black"], categoryIds: ["550e8400-e29b-41d4-a716-446655440001"], statuses: [], places: [] });
-      render(<SearchFilters input={input} categories={categories} colors={["Black"]} onChange={() => {}} />);
+    it("shows how many filters are on as a badge, and says so to a screen reader", () => {
+      const input = searchInput.parse({ colors: ["Black"], categoryIds: ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"], statuses: ["in_stock"], places: [] });
+      render(<SearchFilters input={input} categories={categories} colors={["Black"]} onChange={() => {}}>{field}</SearchFilters>);
+      expect(button()).toHaveTextContent("4");
+      expect(button()).toHaveAccessibleDescription("4 filters on");
+    });
 
-      expect(screen.getByRole("button", { name: "Filters (2)" })).toBeInTheDocument();
+    it("has no badge when no filter is on", () => {
+      render(<SearchFilters input={none()} categories={categories} colors={["Black"]} onChange={() => {}}>{field}</SearchFilters>);
+      expect(button()).toHaveTextContent("");
+      expect(button()).not.toHaveAttribute("aria-describedby");
     });
   });
 });

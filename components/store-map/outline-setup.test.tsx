@@ -41,7 +41,7 @@ describe("OutlineSetup", () => {
   it("starts drawing for a custom shape", async () => {
     const dispatch = vi.fn();
     render(<OutlineSetup dispatch={dispatch} />);
-    await userEvent.click(screen.getByRole("button", { name: "Draw it corner by corner" }));
+    await userEvent.click(screen.getByRole("button", { name: "Store outline" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "startDrawing" });
   });
 });

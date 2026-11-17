@@ -1,6 +1,7 @@
 // The planogram list (spec §5.1): fixtures by zone, each zone folded behind an
-// arrow with a one-line summary of what needs doing (A1, UX audit U18); each
-// fixture with its published version, a Draft chip and its due date. The type
+// arrow with a one-line summary of what needs doing, shown only while folded
+// (A1, UX audit U18); each fixture with one state (its published version, else
+// a Draft chip, else "Not published") and its due date. The type
 // shows only when the name doesn't already say it (U10).
 
 "use client";
@@ -18,17 +19,12 @@ import { DueBadge } from "./due-badge";
 
 const NO_ZONE = "none";
 
-/** "2 drafts · 1 overdue · 3 not published", or "All published". */
+/** "2 drafts · 1 overdue": what needs doing, or "" when nothing does. */
 export function zoneSummary(items: readonly ListItem[], today: string): string {
   const drafts = items.filter((i) => i.hasDraft).length;
   const overdue = items.filter((i) => i.dueDate && dueLabel(i.dueDate, today).overdue).length;
-  const unpublished = items.filter((i) => !i.publishedVersion).length;
-  const parts = [
-    drafts ? `${drafts} ${drafts === 1 ? "draft" : "drafts"}` : null,
-    overdue ? `${overdue} overdue` : null,
-    unpublished ? `${unpublished} not published` : null,
-  ].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "All published";
+  const parts = [drafts ? `${drafts} ${drafts === 1 ? "draft" : "drafts"}` : null, overdue ? `${overdue} overdue` : null].filter(Boolean);
+  return parts.join(" · ");
 }
 
 export function PlanogramList({ groups, today, storeKey }: { groups: ListGroup[]; today: string; storeKey: string }) {
@@ -42,7 +38,7 @@ export function PlanogramList({ groups, today, storeKey }: { groups: ListGroup[]
             key={id}
             title={group.zoneName}
             count={group.items.length}
-            summary={zoneSummary(group.items, today)}
+            summary={isOpen(id) ? undefined : zoneSummary(group.items, today) || undefined}
             open={isOpen(id)}
             canFold={canFold}
             onToggle={() => toggle(id)}
@@ -62,10 +58,11 @@ export function PlanogramList({ groups, today, storeKey }: { groups: ListGroup[]
                           <span className="text-ink-muted">
                             Version {item.publishedVersion} · <LocalTime at={item.publishedAt} />
                           </span>
+                        ) : item.hasDraft ? (
+                          <span className="rounded border border-line px-2 text-ink">Draft</span>
                         ) : (
-                          <span className="rounded border border-dashed border-line px-2 text-ink-muted">Not published</span>
+                          <span className="text-ink-muted">Not published</span>
                         )}
-                        {item.hasDraft ? <span className="rounded border border-line px-2 text-ink">Draft</span> : null}
                         {item.dueDate ? <DueBadge dueDate={item.dueDate} today={today} /> : null}
                       </span>
                     </Link>

@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen } from "@testing-library/react";
+import { act, render, renderHook, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -55,5 +55,47 @@ describe("ZoneFold and useOpenGroups", () => {
     expect(result.current.canFold).toBe(false);
     act(() => result.current.toggle("only"));
     expect(result.current.isOpen("only")).toBe(true);
+  });
+
+  it("a lone top-level group stays open while a group nested in it still folds", () => {
+    const { result } = renderHook(() => useOpenGroups({ storeKey: "s1", groupIds: ["only"], selectedGroupId: ["only", "run"] }));
+    expect(result.current.isOpen("only")).toBe(true);
+    expect(result.current.isOpen("run")).toBe(true);
+    act(() => result.current.toggle("run"));
+    expect(result.current.isOpen("run")).toBe(false);
+    act(() => result.current.toggle("only"));
+    expect(result.current.isOpen("only")).toBe(true);
+  });
+
+  it("a selected row highlights as one: the chevron and the heading sit inside the selected row", () => {
+    render(
+      <ZoneFold title="Zone a" count={1} open={false} onToggle={() => {}} onSelect={() => {}} selected>
+        <p>x</p>
+      </ZoneFold>,
+    );
+    const chevron = screen.getByRole("button", { name: "Show Zone a" });
+    const row = chevron.closest("[data-selected]");
+    expect(row).toHaveAttribute("data-selected", "true");
+    expect(row).toContainElement(screen.getByRole("heading", { name: /^Zone a/ }));
+  });
+
+  it("the heading holds only the select button; the chevron keeps one name and aria-expanded carries the state", async () => {
+    const { rerender } = render(
+      <ZoneFold title="Zone c" count={2} open={false} onToggle={() => {}} onSelect={() => {}} as="h3">
+        <p>x</p>
+      </ZoneFold>,
+    );
+    const heading = screen.getByRole("heading", { level: 3, name: /^Zone c/ });
+    expect(within(heading).getAllByRole("button")).toHaveLength(1);
+    expect(within(heading).getByRole("button")).toHaveAttribute("aria-pressed");
+    const chevron = screen.getByRole("button", { name: "Show Zone c" });
+    expect(heading).not.toContainElement(chevron);
+    expect(chevron).toHaveAttribute("aria-expanded", "false");
+    rerender(
+      <ZoneFold title="Zone c" count={2} open onToggle={() => {}} onSelect={() => {}} as="h3">
+        <p>x</p>
+      </ZoneFold>,
+    );
+    expect(screen.getByRole("button", { name: "Show Zone c" })).toHaveAttribute("aria-expanded", "true");
   });
 });

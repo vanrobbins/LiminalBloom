@@ -4,6 +4,7 @@
 
 "use client";
 
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { PlanogramPreview } from "@/components/planograms/planogram-preview";
@@ -38,8 +39,10 @@ export function FixturePanel({ layout, fixtureId, planograms, looks }: FixturePa
             </p>
           ) : null}
           {floor?.latest ? <PlanogramPreview key={owner.id} scope={scope} entries={floor.latest.placements} looks={looks} /> : <p className="text-ink">No planogram yet</p>}
-          <Button asChild className="self-start">
-            <Link href={`/planograms/${owner.id}`}>Edit planogram</Link>
+          <Button asChild icon className="self-start">
+            <Link href={`/planograms/${owner.id}`} aria-label="Edit planogram">
+              <Pencil aria-hidden="true" strokeWidth={1.75} className="size-5" />
+            </Link>
           </Button>
         </>
       ) : null}

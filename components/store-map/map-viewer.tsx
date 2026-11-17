@@ -3,11 +3,13 @@
 // read-only mode, so both behave alike and nothing here can change the layout.
 // Everything on the map is listed beside it on desktop and in a sheet below
 // that (UX audit U7); on a phone the map runs edge to edge (U8). Edit and
-// + Add sit in the page's title row (LayoutScreen).
+// + Add sit in the page's title row (LayoutScreen). There is no hint row: a
+// zone's name shares one row with Whole store (and List, when narrow); with no
+// zone open, List floats over the map's corner so the map gets the height.
 
 "use client";
 
-import { List } from "lucide-react";
+import { ArrowLeft, List } from "lucide-react";
 import { useCallback, useMemo, useReducer, useState } from "react";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -36,7 +38,6 @@ type MapViewerProps = {
 };
 
 const WIDE_QUERY = "(min-width: 1024px)";
-const MOUSE_QUERY = "(pointer: fine)";
 
 export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProps) {
   // The viewer never makes new items, so its ids are never used.
@@ -44,7 +45,6 @@ export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProp
   const [session, dispatch] = useReducer(reduce, layout, (initial) => createSession(initial, true));
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
-  const hasMouse = useMediaQuery(MOUSE_QUERY);
   const [listOpen, setListOpen] = useState(false);
   const onSize = useCallback((viewport: { width: number; height: number }) => dispatch({ type: "viewport", viewport }), []);
   const container = useElementSize<HTMLDivElement>(onSize);
@@ -75,29 +75,33 @@ export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProp
     />
   );
 
+  const listButton = (
+    <Button icon variant="secondary" className="shrink-0" onClick={() => setListOpen(true)} aria-label="List">
+      <List aria-hidden="true" strokeWidth={1.75} className="size-5" />
+    </Button>
+  );
+  const empty = session.layout.zones.length === 0 && session.layout.fixtures.length === 0;
+  // The map and list fill the screen under the page title; the zone row, when there is one, is 44 px plus its gap (3.5rem).
+  const height = focusedZone ? "h-[calc(100dvh-13rem)] md:h-[calc(100dvh-14rem)]" : "h-[calc(100dvh-9.5rem)] md:h-[calc(100dvh-10.5rem)]";
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex min-h-11 items-center justify-between gap-2">
-        {focusedZone ? (
-          <Button variant="secondary" onClick={() => dispatch({ type: "focus", focus: OVERVIEW })}>
-            ← Whole store
-          </Button>
-        ) : (
-          <p className="min-w-0 flex-1 text-sm text-ink-muted">{hasMouse ? "Select" : "Tap"} a zone to look inside it, or a fixture for its planogram.</p>
-        )}
-        {isWide ? null : (
-          <Button variant="secondary" className="shrink-0" onClick={() => setListOpen(true)}>
-            <List aria-hidden="true" strokeWidth={1.75} className="size-5" />
-            List
-          </Button>
-        )}
-      </div>
-      {focusedZone ? <h2 className="text-lg font-semibold text-ink">{focusedZone.name}</h2> : null}
+      {focusedZone ? (
+        <div className="flex min-h-11 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Button icon variant="secondary" className="shrink-0" onClick={() => dispatch({ type: "focus", focus: OVERVIEW })} aria-label="Whole store">
+              <ArrowLeft aria-hidden="true" strokeWidth={1.75} className="size-5" />
+            </Button>
+            <h2 className="min-w-0 truncate text-lg font-semibold text-ink">{focusedZone.name}</h2>
+          </div>
+          {isWide ? null : listButton}
+        </div>
+      ) : null}
       <div className="flex gap-4">
-        {isWide ? <aside className="h-[calc(100dvh-14rem)] w-64 shrink-0 overflow-y-auto rounded-lg border border-line-subtle bg-raised">{list}</aside> : null}
+        {isWide ? <aside className={`${height} w-64 shrink-0 overflow-y-auto border-r border-line-subtle`}>{list}</aside> : null}
         <div
           ref={container}
-          className="relative h-[calc(100dvh-13rem)] min-w-0 flex-1 overflow-hidden bg-surface max-md:-mx-4 md:h-[calc(100dvh-14rem)] md:rounded-lg md:border md:border-line-subtle"
+          className={`relative ${height} min-w-0 flex-1 overflow-hidden bg-surface max-md:-mx-4 md:rounded-lg md:border md:border-line-subtle`}
         >
           <StoreMap
             layout={session.layout}
@@ -114,6 +118,8 @@ export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProp
             marquee={null}
             svgProps={pointer.handlers}
           />
+          {empty ? <p className="pointer-events-none absolute inset-x-0 top-16 z-10 px-4 text-center text-sm text-ink-muted">Nothing on the map yet.</p> : null}
+          {!isWide && !focusedZone ? <div className="absolute top-3 left-4 z-10 md:left-3">{listButton}</div> : null}
           <ZoomControls onZoom={(factor) => dispatch({ type: "zoom", factor })} onFit={() => dispatch({ type: "fit" })} />
           {selectedFixture && !isPhone ? (
             <Card compact className="absolute top-3 right-3 flex max-h-[calc(100%-1.5rem)] w-96 flex-col overflow-y-auto md:right-16 lg:right-3">

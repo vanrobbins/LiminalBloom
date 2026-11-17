@@ -27,7 +27,8 @@ test("moves a custom role past its neighbour, never a built-in, and says which r
   await openRoles(page);
   expect(await actionsOf(page, "Sales Associate")).toEqual(["Rename"]);
   await act(page, "Educator", "Move up");
-  await expect(page.getByText("Moved Educator above Sales Associate").first()).toBeVisible();
+  // No toast: the row just moves, and a screen reader hears it.
+  await expect(page.getByRole("status").filter({ hasText: "Moved Educator above Sales Associate" })).toBeAttached();
   await expect.poll(() => roleOrder(page)).toEqual(["Store Manager", "Assistant Manager", "Visual Merchandising Manager", "Visual Merchandising Worker", "Educator", "Sales Associate", "Planner"]);
   expect((await loggedEvents())[0]).toBe("role_reordered");
 

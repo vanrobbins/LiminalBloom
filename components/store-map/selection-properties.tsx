@@ -4,6 +4,8 @@
 
 "use client";
 
+import { Copy, Link2, Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { MAX_RUN_RACKS, MIN_RUN_RACKS, isRunType } from "@/lib/layout/runs";
 import type { SessionAction } from "@/lib/layout/session";
@@ -25,19 +27,21 @@ export function SelectionProperties({ layout, ids, dispatch }: SelectionProperti
       <div className="flex flex-wrap gap-2">
         {canLink ? (
           <Button
+            icon
+            aria-label="Link into run"
             onClick={() => {
               dispatch({ type: "command", command: { type: "linkRun", ids: [...ids] } });
               dispatch({ type: "selectMore", on: false });
             }}
           >
-            Link into run
+            <Link2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         ) : null}
-        <Button variant="secondary" onClick={() => dispatch({ type: "duplicate" })}>
-          Duplicate
+        <Button icon variant="secondary" onClick={() => dispatch({ type: "duplicate" })} aria-label="Duplicate">
+          <Copy aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
-        <Button variant="danger" onClick={() => dispatch({ type: "delete" })}>
-          Delete
+        <Button icon variant="danger" onClick={() => dispatch({ type: "delete" })} aria-label="Delete">
+          <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
       </div>
     </div>

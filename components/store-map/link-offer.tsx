@@ -3,6 +3,7 @@
 
 "use client";
 
+import { Link2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -37,12 +38,14 @@ export function LinkOffer({ offer, join, camera, viewport, dispatch }: LinkOffer
   return (
     <div ref={self} role="status" className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: clamp(at.x, viewport.width), top: clamp(at.y - EDGE, clearHeight) }}>
       <Button
+        icon
+        aria-label="Link"
         onClick={() => {
           dispatch({ type: "command", command: { type: "joinRun", rackId: join.rackId, targetId: join.targetId, side: join.side } });
           dispatch({ type: "dropLinkOffer" });
         }}
       >
-        Link
+        <Link2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
     </div>
   );

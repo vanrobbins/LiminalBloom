@@ -29,7 +29,7 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
   await page.goto("/planograms");
   await page.getByRole("link", { name: /Frame A1/ }).click();
   await hydrated(page);
-  await page.getByRole("button", { name: "Start draft" }).click();
+  await page.getByRole("button", { name: "Start planogram" }).click();
   await add(page, "E2E High", /E2E High-Rise Pant/);
   await add(page, "E2E Pocket", /E2E Pocket Tee/);
 
@@ -47,8 +47,10 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
   await expect(page.getByText(/behind E2E High-Rise Pant/)).toBeVisible();
   await page.mouse.up();
   await saved(page);
-  await expect(tee).toHaveAttribute("data-depth", "1");
-  await expect(pant).toHaveAttribute("data-depth", "0");
+  // The drop is held where it landed until its save is back; a key pressed before then would work from the old spot.
+  await expect(tee).not.toHaveAttribute("data-held", "");
+  await expect(tee).toHaveAttribute("data-rank", "1");
+  await expect(pant).toHaveAttribute("data-rank", "0");
 
   // Select the pant from its card (the selected tee lies over it), then the tee by its badge, which shows in the offset strip.
   await page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" }).click();
@@ -58,14 +60,15 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
 
   await page.keyboard.press("Alt+ArrowUp");
   await saved(page);
-  await expect(tee).toHaveAttribute("data-depth", "0");
-  await expect(pant).toHaveAttribute("data-depth", "1");
-  // At the front now: the selection bar's Move forward is spent, Move back isn't.
+  await expect(tee).toHaveAttribute("data-rank", "0");
+  await expect(pant).toHaveAttribute("data-rank", "1");
+  // At the front now: the pencil opens its panel, where Move forward is spent and Move back isn't.
+  await page.getByRole("button", { name: "Edit E2E Pocket Tee" }).click();
   await expect(page.getByRole("button", { name: "Move forward" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Move back" })).toBeEnabled();
   await expect(page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" }).locator("[data-layer-words]")).toHaveText("2nd from front");
 
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
 

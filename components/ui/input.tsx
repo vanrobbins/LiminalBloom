@@ -39,8 +39,9 @@ export function Input({
   const fieldProps = {
     ...props,
     id,
-    "aria-invalid": error ? true : undefined,
-    "aria-describedby": [hintId, errorId].filter(Boolean).join(" ") || undefined,
+    // A caller whose message lives outside this field (a form's one alert) ties it with its own props.
+    "aria-invalid": error ? true : props["aria-invalid"],
+    "aria-describedby": [hintId, errorId, props["aria-describedby"]].filter(Boolean).join(" ") || undefined,
   };
 
   return (

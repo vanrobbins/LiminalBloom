@@ -1,30 +1,28 @@
 // The builder's state beside the draft (Part 2 spec §4): one way to save a
-// move, resize or typed edit, the session undo stack, and what a screen reader
-// hears. The first change with no draft starts one (beginDraftAction); if
-// another device got there first, its draft is adopted and the tile found in
-// it, or the change is refused (Review Focus 3). A refusal drops that
-// placement's undo steps (Review Focus 2). Undo is ignored while a drag is
-// held (store-map rule, DECISIONS 10-01). Undo and Redo pressed while a save is
-// out pick their step when their turn comes (DECISIONS 11-09).
+// move, resize or typed edit, and to add or remove a placement, each on the
+// undo stack (use-history.ts), and what a screen reader hears. The first
+// change with no draft starts one (beginDraftAction); if another device got
+// there first, its draft is adopted and the tile found in it, or the change is
+// refused (Review Focus 3). A refusal drops that placement's undo steps
+// (Review Focus 2).
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
-import { beginDraftAction } from "@/app/(app)/planograms/actions";
-import { fieldsOf, isReorder, type Verb } from "@/lib/planograms/builder/fields";
-import { matchPlacement } from "@/lib/planograms/builder/match";
-import { EMPTY_HISTORY, forget, prune, record, redo as redoStep, sitsAt, undo as undoStep, type History, type Travel } from "@/lib/planograms/builder/undo";
+import { useAnnouncement } from "@/components/ui/use-announcement";
+import { fieldsOf, isReorder, keepUnchanged, type Verb } from "@/lib/planograms/builder/fields";
 import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
-import { dismissToast, toast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 import type { GridItem } from "./grid-items";
-import type { Pending, SaveResult } from "./use-planogram-draft";
+import type { OnTake, Pending, SaveResult } from "./use-planogram-draft";
+import { flushPendingEdits } from "./use-auto-save";
+import { useDraftToUse } from "./use-draft-to-use";
+import { useHistory } from "./use-history";
 import { useUndoKeys } from "./use-undo-keys";
 
-export type CommitResult = { ok: true; id: string } | { ok: false; message: string | null };
-
-const CONFLICT = "Changed on another device";
+export type CommitResult = { ok: true; id: string; draft?: DraftState } | { ok: false; message: string | null; gone?: true };
 
 type Options = {
   fixtureId: string;
@@ -32,6 +30,12 @@ type Options = {
   expectedVersion: number | null;
   save: (pending: Pending) => Promise<SaveResult>;
   adopt: (draft: DraftState) => void;
+  /** Says why on the draft's status line a refusal the server never saw (the draft hook's `refuse`). */
+  refuse: (message: string) => void;
+  /** The draft hook's `onLeaveRef`: set to clear the history when the draft goes. */
+  onLeaveRef?: RefObject<() => void>;
+  /** The draft hook's `onTakeRef`: set to map the history's depths through each draft taken in. */
+  onTakeRef?: RefObject<OnTake>;
   onStarted: () => void;
   /** The first change was refused with no draft to work in: this screen is out of date, so reload it. */
   onStale: () => void;
@@ -40,73 +44,35 @@ type Options = {
   enabled?: boolean;
   /** Undo or Redo landed: shows the face it landed on and names it, if that wasn't the one showing. */
   reveal?: (fields: PlacementFields) => string | null;
+  /** Undo or Redo took this placement away (an add undone, a remove redone): the screen drops the selection if it was on it. */
+  onGone?: (id: string) => void;
 };
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onStarted, onStale, describe, enabled = true, reveal }: Options) {
-  const [history, setHistoryState] = useState<History>(EMPTY_HISTORY);
-  // Read by a queued Undo on its turn, before React has rendered the step a save just recorded.
-  const historyRef = useRef(history);
-  const setHistory = (next: History | ((h: History) => History)) => {
-    historyRef.current = typeof next === "function" ? next(historyRef.current) : next;
-    setHistoryState(historyRef.current);
-  };
-  const [announcement, setAnnouncement] = useState("");
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal, onGone }: Options) {
+  const [announcement, say] = useAnnouncement();
   const dragging = useRef(false);
-  // Only the latest change offers Undo: an older toast's Undo would undo the newest step.
-  const undoToast = useRef<number | null>(null);
-  // One start at a time: a second change before it's back waits for the same reply.
-  const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
   // Toast actions and the key listener outlive the render that made them.
-  const latest = useRef({ draft, enabled, reveal });
+  const latest = useRef({ draft, enabled, reveal, onGone });
   useEffect(() => {
-    latest.current = { draft, enabled, reveal };
+    latest.current = { draft, enabled, reveal, onGone };
   });
 
-  async function placementFor(item: GridItem): Promise<{ placement: PlacementView } | { message: string | null }> {
-    const held = latest.current.draft;
-    if (held) {
-      const placement = held.placements.find((p) => p.id === item.id);
-      return placement ? { placement } : { message: CONFLICT };
-    }
-    let pending = starting.current;
-    if (!pending) {
-      pending = beginDraftAction(fixtureId, expectedVersion).then((reply) => {
-        if (reply.draft) {
-          adopt(reply.draft);
-          latest.current = { ...latest.current, draft: reply.draft };
-          onStarted();
-          toast({ tone: "success", title: "Draft started" });
-        } else if (reply.status === "refused") {
-          // Published or discarded elsewhere since this page loaded: every later change would be refused too.
-          onStale();
-        }
-        return reply;
-      });
-      starting.current = pending;
-      pending
-        .finally(() => {
-          starting.current = null;
-        })
-        .catch(() => {});
-    }
-    const reply = await pending;
-    if (!reply.draft) return { message: reply.message };
-    const placement = matchPlacement(item, reply.draft.placements);
-    return placement ? { placement } : { message: CONFLICT };
-  }
+  const { draftToUse, placementFor } = useDraftToUse({ fixtureId, expectedVersion, adopt, onStarted, onStale, latest });
 
-  // The same words twice must still change the live region, or a screen reader stays silent.
-  const say = (text: string) => setAnnouncement((current) => (current === text ? `${text}\u200B` : text));
+  const history = useHistory({ save, latest, dragging, say, refuse, describe });
+  useEffect(() => {
+    if (onLeaveRef) onLeaveRef.current = history.clear;
+    if (onTakeRef) onTakeRef.current = history.take;
+  });
 
   /** `onFound` hears which tile the change is saved to as soon as it's known: a started draft gives it a new id. */
   async function commit(item: GridItem, next: PlacementFields, verb: Verb, onFound?: (id: string) => void): Promise<CommitResult> {
     // A move or a resize leaves the depth to the server (kept, or the back when it joins others);
     // a reorder asks for its place.
     const fields = fieldsOf(next, isReorder(verb));
-    // A typed edit shows its refusal in its own form; the others say it in a toast.
-    const tell = (message: string) => {
-      if (verb !== "Changed") toast({ tone: "error", title: message });
-    };
+    // The panel's numbers still waiting (a pause not over, a tap that never blurred) go first, so a move queues behind them.
+    const waiting = verb === "Changed" ? null : flushPendingEdits();
+    if (waiting) await waiting;
     let found: Awaited<ReturnType<typeof placementFor>>;
     try {
       found = await placementFor(item);
@@ -115,80 +81,79 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, onS
       return { ok: false, message: null };
     }
     if (!("placement" in found)) {
-      if (found.message) tell(found.message);
+      // The status line says it, for a typed edit too: the form is told it was heard (a server refusal is said by the save).
+      if (found.message) refuse(found.message);
       return { ok: false, message: found.message };
     }
     const target = found.placement;
     onFound?.(target.id);
-    const result = await save({ kind: "update", id: target.id, version: target.version, fields });
+    // A move, resize or reorder is built from the tile as rendered, which can be older than the panel's last typed edit
+    // (sent, not yet rendered): what the gesture did not change is taken from the draft as it is when it goes.
+    const result = await save(
+      verb === "Changed" ? { kind: "update", id: target.id, version: target.version, fields } : (held) => ({ kind: "update", id: target.id, version: target.version, fields: keepUnchanged(fields, item, held?.placements.find((p) => p.id === target.id)) }),
+    );
     if (!result.saved) {
-      if (result.message) {
-        setHistory((h) => forget(h, target.id));
-        tell(result.message);
-      }
-      return { ok: false, message: result.message };
+      // The status line already says why: the save that was refused set it.
+      if (result.message) history.forget(target.id);
+      return { ok: false, message: result.message, gone: result.gone };
     }
     // What the server kept, which isn't what was sent when folded product hangs on a rail;
     // and where it sat when this change went, which a change queued behind another moved.
     const kept = result.draft.placements.find((p) => p.id === target.id);
     // Undo and Redo ask for the depth it had, so a step puts it back in its place front to back.
     const after = kept ? fieldsOf(kept, true) : fields;
-    setHistory((h) => record(h, { id: target.id, before: fieldsOf(result.before ?? target, true), after }));
-    say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
-    if (undoToast.current !== null) dismissToast(undoToast.current);
-    undoToast.current = toast({ tone: "success", title: result.notice ?? verb, action: { label: "Undo", onSelect: () => void travel("undo") } });
-    return { ok: true, id: target.id };
+    history.record({ kind: "update", id: target.id, before: fieldsOf(result.before ?? target, true), after, aheadBefore: result.ahead?.before, aheadAfter: result.ahead?.after });
+    // The panel's own typed edit says Saved on its own line: "Changed to …" would be a second voice (a notice is still said).
+    if (verb !== "Changed" || result.notice) say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
+    return { ok: true, id: target.id, draft: result.draft };
   }
 
-  async function travel(direction: "undo" | "redo") {
-    if (!latest.current.enabled || dragging.current) return;
-    // Picked on its turn: a change still saving is on the stack by then.
-    const picked: { travel: Travel | null; pruned: History | null; moved: string | null } = { travel: null, pruned: null, moved: null };
-    const result = await save((current) => {
-      if (!current) return null;
-      const pruned = prune(historyRef.current, current.placements);
-      picked.pruned = pruned;
-      const step = direction === "undo" ? undoStep(pruned, current.placements) : redoStep(pruned, current.placements);
-      if (!step) return null;
-      // Moved since by another device, though the draft now holds its fresh version.
-      const placement = current.placements.find((p) => p.id === step.step.id);
-      if (placement && !sitsAt(placement, direction === "undo" ? step.step.after : step.step.before)) {
-        picked.moved = step.step.id;
-        return null;
-      }
-      picked.travel = step;
-      return step.change;
-    });
-    const { travel: step, pruned, moved } = picked;
-    if (!pruned) return;
-    if (moved) {
-      setHistory(forget(pruned, moved));
-      toast({ tone: "error", title: CONFLICT });
-      return;
+  /**
+   * An add, on the undo stack under the id the server gave it. `pick` chooses the fields among the placements it will be
+   * saved beside, or says why there's no room: with no draft yet it's asked again once one has started, because that
+   * draft (another device's, say) may differ from the version the screen showed.
+   */
+  async function add(productId: string, pick: (others: readonly PlacementView[]) => PlacementFields | string): Promise<SaveResult> {
+    let started: Awaited<ReturnType<typeof draftToUse>>;
+    try {
+      started = await draftToUse();
+    } catch {
+      return { saved: false, message: "Couldn't start the draft. Check the connection and try again." };
     }
-    if (!step) return setHistory(pruned);
-    if (result.saved) {
-      setHistory(step.history);
-      const done = direction === "undo" ? "Undone" : "Redone";
-      const faceName = latest.current.reveal?.(step.change.fields);
-      say(`${done}: ${describe(step.change.fields)}${faceName ? `, on ${faceName}` : ""}`);
-      // A phone has no Ctrl+Shift+Z: the way back is in the toast.
-      const back = direction === "undo" ? "redo" : "undo";
-      if (undoToast.current !== null) dismissToast(undoToast.current);
-      undoToast.current = toast({ tone: "success", title: done, action: { label: back === "redo" ? "Redo" : "Undo", onSelect: () => void travel(back) } });
-      return;
-    }
-    setHistory(result.message ? forget(pruned, step.step.id) : pruned);
-    if (result.message) toast({ tone: "error", title: result.message });
+    if (!("draft" in started)) return { saved: false, message: started.message };
+    const fields = pick(started.draft.placements);
+    if (typeof fields === "string") return { saved: false, message: fields };
+    const result = await save({ kind: "add", productId, fields });
+    const placed = result.saved ? result.draft.placements.find((p) => p.id === result.id) : undefined;
+    if (placed) history.record({ kind: "add", id: placed.id, productId, fields: fieldsOf(placed, true), ahead: result.saved ? result.ahead?.after : undefined });
+    return result;
   }
 
-  useUndoKeys(enabled, (direction) => void travel(direction));
+  /** A remove, on the undo stack with everything it needs to come back. */
+  async function remove(p: PlacementView): Promise<SaveResult> {
+    const result = await save({ kind: "remove", id: p.id, version: p.version });
+    if (result.saved) history.record({ kind: "remove", id: p.id, productId: p.productId, fields: fieldsOf(result.before ?? p, true), ahead: result.ahead?.before });
+    else if (result.message) history.forget(p.id);
+    return result;
+  }
+
+  // An edit still waiting in the panel goes first, so Undo takes back that edit, not the one before it.
+  const afterPending = (travel: () => Promise<void>) => flushPendingEdits()?.then(travel) ?? travel();
+  const undo = () => afterPending(history.undo);
+  const redo = () => afterPending(history.redo);
+  useUndoKeys(enabled, (direction) => void (direction === "undo" ? undo() : redo()));
 
   return {
     commit,
-    undo: () => travel("undo"),
-    redo: () => travel("redo"),
+    add,
+    remove,
+    undo,
+    redo,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+    clearHistory: history.clear,
     say,
+    refuse,
     announcement,
     setDragging: (isDragging: boolean) => {
       dragging.current = isDragging;

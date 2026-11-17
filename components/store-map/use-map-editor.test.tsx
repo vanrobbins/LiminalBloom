@@ -84,6 +84,44 @@ describe("useMapEditor", () => {
 
     expect(save).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith("/sign-in");
+    expect(result.current.refusal).toBe("You were signed out. Your last change was not saved. Sign in to keep editing.");
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("a role that can't change the map is told on the save status, and nothing more is saved", async () => {
+    const save = vi.fn(async (): Promise<SaveReply> => ({ status: "forbidden" }));
+    const { result } = renderHook(() => useMapEditor({ storeId: "s", initial, save, fetchLatest: vi.fn() }));
+
+    act(() => result.current.dispatch(move(12)));
+    await act(() => vi.advanceTimersByTimeAsync(600));
+    act(() => result.current.dispatch(move(12)));
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(result.current.refusal).toBe("Your role can't change the map. Your last change was not saved.");
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("a refusal stays until a later save lands, then goes", async () => {
+    const issue = { itemId: "fixture-a", kind: "outside-store" as const, message: "Table 1 must be inside the store." };
+    const save = vi.fn(async (_s: string, changes: ChangeSet): Promise<SaveReply> => {
+      if (save.mock.calls.length === 1) return { status: "invalid", issues: [issue], layout: two };
+      return { status: "saved", layout: applyChanges(two, changes) };
+    });
+    const { result } = renderHook(() => useMapEditor({ storeId: "s", initial: two, save, fetchLatest: vi.fn() }));
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    act(() => result.current.dispatch(move(12)));
+    await act(() => vi.advanceTimersByTimeAsync(600));
+    expect(result.current.refusal).toBe(issue.message);
+    await act(() => vi.advanceTimersByTimeAsync(3000));
+    expect(result.current.refusal).toBe(issue.message);
+
+    act(() => result.current.dispatch(moveB));
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(result.current.refusal).toBeNull();
+    errorLog.mockRestore();
   });
 
   it("shows offline and retries after a network failure", async () => {
@@ -169,6 +207,8 @@ describe("useMapEditor", () => {
     await act(() => vi.advanceTimersByTimeAsync(700)); // short of the 1.5 s reload
 
     expect(save).toHaveBeenCalledTimes(1);
+    expect(result.current.refusal).toBe("You switched stores in another tab. Reloading, so nothing lands in the wrong store.");
+    expect(toast).not.toHaveBeenCalled();
     const leave = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(leave);
     expect(leave.defaultPrevented).toBe(false);
@@ -194,7 +234,9 @@ describe("useMapEditor", () => {
     const b = result.current.session.layout.fixtures.find((f) => f.id === "fixture-b")!;
     expect(b).toMatchObject({ name: "Their table", x: 400 });
     expect(result.current.session.layout.fixtures[0].x).toBe(312);
-    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Table 2 was changed on another device." }));
+    // On the save status, not in a toast.
+    expect(result.current.refusal).toBe("Table 2 was changed on another device.");
+    expect(toast).not.toHaveBeenCalled();
     expect(save).toHaveBeenCalledTimes(1);
   });
 
@@ -214,7 +256,8 @@ describe("useMapEditor", () => {
     const layout = result.current.session.layout;
     expect(layout.fixtures.find((f) => f.id === "fixture-a")!.x).toBe(300);
     expect(layout.fixtures.find((f) => f.id === "fixture-b")!.x).toBe(412);
-    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: issue.message }));
+    expect(result.current.refusal).toBe(issue.message);
+    expect(toast).not.toHaveBeenCalled();
 
     act(() => result.current.dispatch({ type: "undo" }));
     expect(result.current.session.layout.fixtures.find((f) => f.id === "fixture-b")!.x).toBe(400);
@@ -232,7 +275,8 @@ describe("useMapEditor", () => {
 
     expect(save.mock.calls.length).toBeLessThanOrEqual(2);
     expect(result.current.session.layout).toEqual(two);
-    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Couldn't save that change. The layout was reloaded." }));
+    expect(result.current.refusal).toBe("Couldn't save that change. The layout was reloaded.");
+    expect(toast).not.toHaveBeenCalled();
     expect(result.current.status).toBe("saved");
     errorLog.mockRestore();
   });
@@ -251,7 +295,8 @@ describe("useMapEditor", () => {
 
     expect(save).toHaveBeenCalledTimes(2);
     expect(result.current.session.layout).toEqual(two);
-    expect(toast).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Couldn't save that change. The layout was reloaded." }));
+    expect(result.current.refusal).toBe("Couldn't save that change. The layout was reloaded.");
+    expect(toast).not.toHaveBeenCalled();
     errorLog.mockRestore();
   });
 

@@ -2,8 +2,8 @@
 // combined view. HTML, not SVG: every placement is a real button. One unit is
 // half a foot on both axes (set-grid.ts), never under 20 px, filling the width;
 // a face too wide scrolls sideways with a fade on the clipped edge. No cell
-// lines at rest; half-foot guides and a feet ruler appear only while a tile is
-// dragged. With a builder, the selected tile drags and resizes: every frame is
+// lines; half-foot guides and a feet ruler show faint wherever tiles can be moved (a draft, or the latest version)
+// and at full strength while a tile is dragged. With a builder, the selected tile drags and resizes: every frame is
 // rebuilt from the press's start (lib/planograms/builder), and whether it may
 // land is the builder's `check` (rules.ts).
 
@@ -12,7 +12,7 @@
 import { useRef, useState } from "react";
 
 import { dragTarget } from "@/lib/planograms/builder/drag";
-import { layerGroups, layerOffset, sharesSpace } from "@/lib/planograms/layers";
+import { layerGroups, layerOffset, layerRanks, sharesSpace } from "@/lib/planograms/layers";
 import { resizeTarget } from "@/lib/planograms/builder/resize";
 import { spanRect, spotOf, type GridLayout } from "@/lib/planograms/set-grid";
 import type { PlacementFields } from "@/lib/planograms/types";
@@ -20,35 +20,23 @@ import { shortSpot, spotSummary } from "@/lib/products/location-words";
 
 import { DragChip, DragGuides, DropGhost } from "./drag-guides";
 import { BlockView } from "./block-view";
+import type { GridBuilder } from "./grid-builder";
 import { GridTile } from "./grid-tile";
 import { at } from "./grid-units";
 import type { GridItem } from "./grid-items";
 import { edgeFade, useFaceSwipe } from "./use-face-swipe";
+import { useCellPx } from "./use-cell-px";
 import { usePendingLanding } from "./use-pending-landing";
+import { useEmptyTap } from "./use-empty-tap";
 import { useScrollEdges, type Edges } from "./use-scroll-edges";
 import { useTileGesture, type Gesture } from "./use-tile-gesture";
+import { useTileRemoval } from "./use-tile-removal";
 
 /** Room above the grid for a table set's labels, the ruler and the drag chip. */
 const GUTTER = "1.5rem";
 const OFF_FACE = "Off the edge of the face";
 
-export type GridBuilder = {
-  /** The selected tile may be dragged, resized and moved with the arrow keys. */
-  canMove: boolean;
-  /** Why a tile can't go there (rules.ts words), or null. */
-  check: (item: GridItem, fields: PlacementFields) => string | null;
-  /** Saves a drop; the tile stays where it landed until this settles. `onFound` names the tile it was saved to (a started draft renames it). */
-  onCommit: (item: GridItem, fields: PlacementFields, verb: "Moved" | "Resized", onFound: (id: string) => void) => Promise<unknown>;
-  /** An invalid drop: it has already snapped back; say why. */
-  onRefused: (message: string) => void;
-  /** An arrow key on the selected tile: where it goes, or null (it can't; the builder has said why). Held and saved like a drop. */
-  onKey: (item: GridItem, key: string, shift: boolean) => { fields: PlacementFields; verb: "Moved" | "Resized" } | null;
-  /** Alt+Up / Alt+Down on the selected tile: Move forward / Move back on a shared rail. */
-  onReorder: (item: GridItem, direction: "forward" | "back") => void;
-  /** Tap on empty space, or Escape on the selected tile. */
-  onEmpty: () => void;
-  onDragging: (isDragging: boolean) => void;
-};
+export type { GridBuilder };
 
 type PlanogramGridProps = {
   layout: GridLayout;
@@ -61,20 +49,27 @@ type PlanogramGridProps = {
   slideFrom?: "left" | "right" | null;
   onSwipe?: (gesture: { dx: number; dy: number; edges: Edges }) => void;
   builder?: GridBuilder;
+  /** A draft is being edited: the guides show (they also show whenever `builder.canMove`). */
+  editing?: boolean;
 };
 
 const sameSpot = (a: PlacementFields, b: PlacementFields) =>
   a.faceId === b.faceId && a.col === b.col && a.row === b.row && a.colSpan === b.colSpan && a.rowSpan === b.rowSpan;
 
-export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, slideFrom = null, onSwipe, builder }: PlanogramGridProps) {
+export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, slideFrom = null, onSwipe, builder, editing = false }: PlanogramGridProps) {
   const faceKey = layout.blocks.map((b) => b.faceId).join();
   const { ref, edges } = useScrollEdges<HTMLDivElement>(faceKey);
   const space = useRef<HTMLDivElement>(null);
   const swipe = useFaceSwipe(edges, onSwipe);
   const [drag, setDrag] = useState<Gesture | null>(null);
   const landed = usePendingLanding();
+  const cellPx = useCellPx(space, layout.width, faceKey);
+  const removal = useTileRemoval(builder?.onRemove, items);
+  // A keyboard selection shows the corner discs with no animation.
+  const [byKeyboard, setByKeyboard] = useState(false);
   // Each layer group front to back, so Tab meets the front one first; z-index paints them back to front.
   const drawn = layerGroups(landed.draw(items).filter((item) => layout.blocks.some((b) => b.faceId === item.faceId))).flat();
+  const ranks = layerRanks(drawn);
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
   const mask = edgeFade(edges);
 
@@ -91,6 +86,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const joining = drag && moving && target && !refusal ? drawn.filter((o) => sharesSpace({ ...target, id: moving.id }, o) && !sharesSpace(moving, o)) : [];
   const behind = joining.length === 0 ? "" : ` · behind ${joining.length === 1 ? joining[0].productName : `${joining.length} others`}`;
 
+  const empty = useEmptyTap({ builder, selected: selectedId != null, layout, space: () => space.current, scroller: () => ref.current });
   const gestures = useTileGesture({
     unitPx: () => (space.current?.getBoundingClientRect().width ?? 0) / layout.width,
     scroller: () => ref.current,
@@ -117,8 +113,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
     <section
       aria-label={`${label}: ${count}`}
       data-planogram-grid
-      // Focus lands here when the tile that had it is removed.
-      tabIndex={-1}
+      // Focus lands here when the tile that had it is removed; a tab stop while Enter can add (use-empty-tap.ts).
+      {...empty.section}
       className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <div
@@ -142,9 +138,9 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
         >
           <div ref={space} className="absolute inset-x-0 bottom-0" style={{ top: GUTTER }}>
             {layout.blocks.map((block) => (
-              <BlockView key={block.faceId} block={block} labelled={layout.blocks.length > 1} onEmpty={builder?.onEmpty} />
+              <BlockView key={block.faceId} block={block} labelled={layout.blocks.length > 1} empty={empty.block} />
             ))}
-            {drag ? <DragGuides layout={layout} /> : null}
+            {editing || builder?.canMove || drag ? <DragGuides layout={layout} dragging={drag !== null} /> : null}
             {drag?.mode === "move" && target && targetBlock ? <DropGhost rect={spanRect(targetBlock, target)} invalid={refusal !== null} /> : null}
             {drawn.map((item) => {
               const block = layout.blocks.find((b) => b.faceId === item.faceId);
@@ -156,7 +152,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                 <GridTile
                   key={item.id}
                   item={item}
-                  layer={shared ? { depth: item.depth ?? 0, offsetPx: layerOffset(item, drawn) } : null}
+                  layer={shared ? { rank: ranks.get(item.id) ?? 0, offsetPx: layerOffset(item, drawn) } : null}
                   block={block}
                   rect={spanRect(block, resized ?? item)}
                   words={spotSummary(spotOf(block, item))}
@@ -169,7 +165,16 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   invalid={isMoving && refusal !== null}
                   bounds={layout}
                   gestures={gestures}
-                  onSelect={onSelect}
+                  onSelect={(id, keyboard) => {
+                    setByKeyboard(keyboard);
+                    onSelect(id);
+                  }}
+                  leaving={removal.leaving === item.id}
+                  corners={
+                    builder?.onRemove && builder.onEdit
+                      ? { cellPx, instant: byKeyboard, hidden: drag !== null || removal.leaving === item.id, onRemove: () => removal.remove(item), onEdit: () => builder.onEdit?.(item) }
+                      : undefined
+                  }
                   onKey={
                     builder && isMoving
                       ? (key, shift) => {

@@ -9,7 +9,6 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { moveRoleAction } from "@/app/(app)/roles/actions";
 import { PageHeader } from "@/components/shell/page-header";
 import { InfoPopover } from "@/components/ui/info-popover";
 import { nestingText } from "@/lib/access/nesting";
@@ -21,7 +20,7 @@ import { ActivityCard } from "./activity-card";
 import { AddRoleButton } from "./add-role-button";
 import { AddRoleDialog } from "./add-role-dialog";
 import { DeleteDialog } from "./delete-dialog";
-import { NETWORK_TEXT, refusalText } from "./refusal-text";
+import { DiscardDialog } from "./discard-dialog";
 import { RenameDialog } from "./rename-dialog";
 import { ResetDialog } from "./reset-dialog";
 import { ReviewDialog } from "./review-dialog";
@@ -30,8 +29,9 @@ import { RoleTable } from "./role-table";
 import { changedRows, stagedProblem, toggled, type Staged } from "./staged";
 import { StagedBar } from "./staged-bar";
 import { useFocusAfter } from "./use-focus-after";
+import { useMoveRole } from "./use-move-role";
 
-type Open = { kind: "review" } | { kind: "add" } | { kind: "rename" | "reset" | "delete"; row: RoleRow } | null;
+type Open = { kind: "review" } | { kind: "discard" } | { kind: "add" } | { kind: "rename" | "reset" | "delete"; row: RoleRow } | null;
 
 export function RolesScreen({ view }: { view: RolesView }) {
   const router = useRouter();
@@ -42,6 +42,8 @@ export function RolesScreen({ view }: { view: RolesView }) {
   const [added, setAdded] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const { focusAfter, armTitle, takeTitle } = useFocusAfter();
+  const { move, said } = useMoveRole({ refresh: () => router.refresh(), focusAfter });
+  const refusal = said?.refused ? said : null;
 
   const count = Object.keys(staged).length;
   const problem = stagedProblem(view.roles, staged);
@@ -63,25 +65,6 @@ export function RolesScreen({ view }: { view: RolesView }) {
   function onAction(row: RoleRow, action: RoleAction, trigger: HTMLElement) {
     if (action === "up" || action === "down") return void move(row, action);
     openFrom(trigger, { kind: action, row });
-  }
-
-  async function move(row: RoleRow, direction: "up" | "down") {
-    const neighbourId = direction === "up" ? row.upId : row.downId;
-    if (!neighbourId) return;
-    try {
-      const result = await moveRoleAction(row.id, direction, neighbourId);
-      if (result.status === "moved") {
-        toast({ tone: "success", title: `Moved ${result.name} ${direction === "up" ? "above" : "below"} ${result.past}` });
-        focusAfter(`[data-role-menu="${row.id}"], [data-role-fold="${row.name}"] h3 button`);
-      } else if (result.status === "nesting") {
-        toast({ tone: "error", title: `Can't move ${row.name} there`, description: nestingText(result.problem) });
-      } else {
-        toast({ tone: "error", title: refusalText(result, { role: row.name }).message });
-      }
-      router.refresh();
-    } catch {
-      toast({ tone: "error", title: NETWORK_TEXT });
-    }
   }
 
   function backToOpener(event: Event) {
@@ -114,8 +97,11 @@ export function RolesScreen({ view }: { view: RolesView }) {
       <p aria-live="polite" className="sr-only">
         {count === 0 ? "" : count === 1 ? "1 role changed" : `${count} roles changed`}
       </p>
+      <p role="status" aria-live="polite" className="sr-only">
+        {said?.text ?? ""}
+      </p>
       <div className="hidden md:block">
-        <RoleTable view={view} staged={staged} onToggle={toggle} onAction={onAction} />
+        <RoleTable view={view} staged={staged} refusal={refusal} onToggle={toggle} onAction={onAction} />
       </div>
       <div className="flex flex-col md:hidden">
         {view.roles.map((row) => (
@@ -124,6 +110,7 @@ export function RolesScreen({ view }: { view: RolesView }) {
             view={view}
             row={row}
             staged={staged}
+            refusal={refusal}
             open={openFolds.has(row.id) || row.name === added}
             onOpen={() => {
               setAdded(null);
@@ -138,10 +125,7 @@ export function RolesScreen({ view }: { view: RolesView }) {
         <StagedBar
           count={count}
           problem={problem ? nestingText(problem) : null}
-          onDiscard={() => {
-            focusAfter(firstChanged());
-            setStaged({});
-          }}
+          onDiscard={(trigger) => openFrom(trigger, { kind: "discard" })}
           onReview={(trigger) => openFrom(trigger, { kind: "review" })}
         />
       ) : null}
@@ -158,6 +142,20 @@ export function RolesScreen({ view }: { view: RolesView }) {
             }
             finish(`Saved changes to ${saved === 1 ? "1 role" : `${saved} roles`}`, () => focusAfter(firstChanged()));
             setStaged({});
+          }}
+        />
+      ) : null}
+      {open?.kind === "discard" ? (
+        <DiscardDialog
+          count={count}
+          onCloseAutoFocus={backToOpener}
+          onClose={(discarded) => {
+            // After a discard focus goes to the first checkbox that was changed; after Cancel it stays on Discard.
+            if (discarded) {
+              focusAfter(firstChanged());
+              setStaged({});
+            }
+            setOpen(null);
           }}
         />
       ) : null}

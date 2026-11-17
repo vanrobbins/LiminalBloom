@@ -49,6 +49,8 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
 
   const [offline, setOffline] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  // Why the last change was refused, shown on the save status until a later save lands (0.7.0.5 spec 3.1).
+  const [refusal, setRefusal] = useState<string | null>(null);
   const latest = useRef(session.layout);
   const stopped = useRef(false);
   const retry = useRef<number | undefined>(undefined);
@@ -64,7 +66,7 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
   const stop = useCallback((title: string, description: string) => {
     stopped.current = true;
     setQueue({ ...queueRef.current, inFlight: null });
-    toast({ tone: "error", title, description });
+    setRefusal(`${title} ${description}`);
   }, [setQueue]);
 
   const handleReply = useCallback(
@@ -73,6 +75,7 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
       switch (reply.status) {
         case "saved":
           invalidInARow.current = 0;
+          setRefusal(null);
           dispatch({
             type: "rebase",
             base: applyChanges(confirmed, request),
@@ -181,7 +184,7 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
     else router.push("/layout");
   }, [leaving, pending, router, onLeft]);
 
-  useEditorSync({ storeId, notice: session.notice, dispatch, fetchLatest, queueRef, setQueue, latest, stopped });
+  useEditorSync({ storeId, notice: session.notice, onNotice: setRefusal, dispatch, fetchLatest, queueRef, setQueue, latest, stopped });
 
   useEffect(
     () => () => {
@@ -193,5 +196,5 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
 
   const status: SaveStatus = offline ? "offline" : pending ? "saving" : "saved";
   const done = useCallback(() => setLeaving(true), []);
-  return { session, dispatch, status, leaving, done };
+  return { session, dispatch, status, refusal, leaving, done };
 }

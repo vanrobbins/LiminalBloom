@@ -136,10 +136,15 @@ export function resizeCurved(f: Curved, pointer: Point): number {
   return clampSize(2 * radius * Math.asin(Math.min(1, chord / radius)));
 }
 
+/** SVG numbers to 0.001, so the server and the browser print the same string (their trig differs in the last digits); paths here and the fixture label transform use it. */
+export function n(v: number): string {
+  return String(Math.round(v * 1000) / 1000 + 0);
+}
+
 function arcTo(arc: Arc, radius: number, to: Point, forward: boolean): string {
   // Left to right is anticlockwise on screen when the middle bends toward the front.
   const sweep = arc.sign > 0 === forward ? 0 : 1;
-  return `A ${radius} ${radius} 0 0 ${sweep} ${to.x} ${to.y}`;
+  return `A ${n(radius)} ${n(radius)} 0 0 ${sweep} ${n(to.x)} ${n(to.y)}`;
 }
 
 /** One edge of the band as an SVG path in the fixture's frame, `inset` inches short of each end. */
@@ -148,7 +153,7 @@ export function edgePath(f: Pick<Curved, "width" | "curve">, offset: number, ins
   if (!arc) return "";
   const angle = Math.max(0, arc.half - inset / arc.radius);
   const start = pointOn(arc, -angle, offset);
-  return `M ${start.x} ${start.y} ${arcTo(arc, arc.radius + arc.sign * offset, pointOn(arc, angle, offset), true)}`;
+  return `M ${n(start.x)} ${n(start.y)} ${arcTo(arc, arc.radius + arc.sign * offset, pointOn(arc, angle, offset), true)}`;
 }
 
 /** The whole band as an SVG path in the fixture's frame. */
@@ -159,5 +164,5 @@ export function bandPath(f: Pick<Curved, "width" | "depth" | "curve">): string {
   const front = f.depth / 2;
   const frontRight = pointOn(arc, arc.half, front);
   const frontLeft = pointOn(arc, -arc.half, front);
-  return `${edgePath(f, back)} L ${frontRight.x} ${frontRight.y} ${arcTo(arc, arc.radius + arc.sign * front, frontLeft, false)} Z`;
+  return `${edgePath(f, back)} L ${n(frontRight.x)} ${n(frontRight.y)} ${arcTo(arc, arc.radius + arc.sign * front, frontLeft, false)} Z`;
 }

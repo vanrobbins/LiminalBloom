@@ -4,6 +4,8 @@
 
 "use client";
 
+import { ArrowDown, ArrowUp, Pencil, RotateCcw, Trash2, type LucideIcon } from "lucide-react";
+
 import { Fold } from "@/components/ui/fold";
 import { Button } from "@/components/ui/button";
 import { cellEnabled, EDITABLE_SWITCHES, permissionCount, roleActions, type RoleAction, type RoleRow, type RolesView } from "@/lib/access/roles-view";
@@ -11,18 +13,23 @@ import { summaryLines } from "@/lib/access/switches";
 
 import { PermissionRow } from "./permission-row";
 import { cellNote, switchesOf, type Staged } from "./staged";
+import type { MoveSaid } from "./use-move-role";
+
+const ACTION_ICON: Record<RoleAction, LucideIcon> = { rename: Pencil, up: ArrowUp, down: ArrowDown, reset: RotateCcw, delete: Trash2 };
 
 type RoleFoldProps = {
   view: RolesView;
   row: RoleRow;
   staged: Staged;
+  /** Why the last move was refused, shown under that role's title. */
+  refusal: MoveSaid;
   open: boolean;
   onOpen: () => void;
   onToggle: (row: RoleRow, permission: (typeof EDITABLE_SWITCHES)[number]) => void;
   onAction: (row: RoleRow, action: RoleAction, opener: HTMLElement) => void;
 };
 
-export function RoleFold({ view, row, staged, open, onOpen, onToggle, onAction }: RoleFoldProps) {
+export function RoleFold({ view, row, staged, refusal, open, onOpen, onToggle, onAction }: RoleFoldProps) {
   const mine = switchesOf(row, staged);
   const anyStaged = Object.keys(staged).length > 0;
   const summary = row.relation === "you" ? "Your role" : row.relation === "above" ? "Above you" : permissionCount(mine);
@@ -56,15 +63,23 @@ export function RoleFold({ view, row, staged, open, onOpen, onToggle, onAction }
         </div>
         {roleActions(row).length > 0 ? (
           <div className="flex flex-wrap gap-2 px-2">
-            {roleActions(row).map((a) => (
-              <Button key={a.key} variant={a.key === "delete" ? "quiet-danger" : "secondary"} disabled={anyStaged} onClick={(event) => onAction(row, a.key, event.currentTarget)} aria-label={`${a.label} ${row.name}`}>
-                {a.label}
-              </Button>
-            ))}
+            {roleActions(row).map((a) => {
+              const Icon = ACTION_ICON[a.key];
+              return (
+                <Button key={a.key} icon variant={a.key === "delete" ? "quiet-danger" : "secondary"} disabled={anyStaged} onClick={(event) => onAction(row, a.key, event.currentTarget)} aria-label={`${a.label} ${row.name}`}>
+                  <Icon aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                </Button>
+              );
+            })}
             {anyStaged ? <p className="w-full text-sm text-ink-muted">Save or discard your changes first.</p> : null}
           </div>
         ) : null}
       </Fold>
+      {refusal?.id === row.id ? (
+        <p aria-hidden="true" className="px-2 pb-2 text-sm text-danger">
+          {refusal.text}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -62,12 +62,15 @@ describe("saveChange", () => {
   it("adds, then refuses overlap, the edge, more than 99 pieces and another fixture's face", async () => {
     const { store, f, tee } = await setUp("pg-save");
     await startDraft(store, f.fixtureId, null);
-    expect(await saveChange(store, f.fixtureId, { kind: "add", productId: tee, fields: fields(f.faceId) })).toEqual({ status: "saved" });
+    const first = await saveChange(store, f.fixtureId, { kind: "add", productId: tee, fields: fields(f.faceId) });
+    expect(first).toEqual({ status: "saved", id: expect.any(String) });
+    // The id it returns is the placement it wrote, so the screen need not guess it from the draft.
+    expect((await draftState(store, f.fixtureId))?.placements.map((p) => p.id)).toContain(first.status === "saved" ? first.id : "");
     const add = (over: object) => saveChange(store, f.fixtureId, { kind: "add", productId: tee, fields: fields(f.faceId, over) });
     expect(await add({ col: 1 })).toEqual({ status: "invalid", message: "Blocked by High-Rise Pant" });
     expect(await add({ col: 5 })).toEqual({ status: "invalid", message: "Off the edge of the face" });
     expect(await add({ row: 2, rowSpan: 1, col: 0, pieceCount: 100 })).toEqual({ status: "invalid", message: "At most 99 pieces" });
-    expect(await add({ row: 2, rowSpan: 1, col: 0, colSpan: 1, presentation: "hung", pieceCount: 20 })).toEqual({ status: "saved" });
+    expect(await add({ row: 2, rowSpan: 1, col: 0, colSpan: 1, presentation: "hung", pieceCount: 20 })).toEqual({ status: "saved", id: expect.any(String) });
     const rack = await addFixture(store);
     expect(await add({ faceId: rack.faceIds.front, col: 0 })).toEqual({ status: "invalid", message: "No longer in this set" });
     expect((await draftState(store, f.fixtureId))?.placements).toHaveLength(3);

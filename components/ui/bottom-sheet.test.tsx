@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Undo2 } from "lucide-react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -209,7 +210,7 @@ describe("BottomSheet", () => {
     );
     let id = 0;
     act(() => {
-      id = toast({ tone: "success", title: "Moved", action: { label: "Undo", onSelect: () => {} } });
+      id = toast({ tone: "success", title: "Moved", action: { label: "Undo", icon: Undo2, onSelect: () => {} } });
     });
     await userEvent.keyboard("{Escape}");
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -227,7 +228,7 @@ describe("BottomSheet", () => {
       </>,
     );
     act(() => {
-      toast({ tone: "success", title: "Marked sold out", action: { label: "Undo", onSelect: () => {} } });
+      toast({ tone: "success", title: "Marked sold out", action: { label: "Undo", icon: Undo2, onSelect: () => {} } });
     });
     const viewport = document.querySelector("[data-toast-viewport]") as HTMLElement;
     // The sheet is modal, but its toasts are not hidden from assistive tech or the pointer.

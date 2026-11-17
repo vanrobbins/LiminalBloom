@@ -98,13 +98,9 @@ describe("StoreMenu", () => {
     await user.click(screen.getByRole("menuitemradio", { name: "Washington Square" }));
 
     expect(mocks.setActive).toHaveBeenCalledWith({ organizationId: "store-b" });
-    await waitFor(() =>
-      expect(mocks.toast).toHaveBeenCalledWith({
-        tone: "success",
-        title: "Now working in Washington Square.",
-      }),
-    );
-    expect(mocks.refresh).toHaveBeenCalled();
+    // The header's store name is the feedback: no "Now working in" toast.
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it("on a phone, opens a sheet of stores that closes once the switch goes through", async () => {

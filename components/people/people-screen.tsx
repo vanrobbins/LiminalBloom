@@ -9,8 +9,10 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { InfoPopover } from "@/components/ui/info-popover";
+import { focusNearRow } from "@/components/ui/focus-near-row";
+import { useAnnouncement } from "@/components/ui/use-announcement";
+import { useCollapseOut } from "@/components/ui/use-collapse-out";
 import type { PeopleView, PersonRow } from "@/lib/access/people-view";
-import { toast } from "@/lib/toast";
 
 import { ChangeRoleDialog } from "./change-role-dialog";
 import { InvitationsCard } from "./invitations-card";
@@ -25,6 +27,11 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
   // After a change the row may move to another group once the list reloads; focus follows it.
   const focusAfter = useRef<string | null>(null);
   const removedRow = useRef(false);
+  // No toast for a role change or a removal (0.7.0.5 spec 3.1): the row moves to its new group or folds shut,
+  // and this line says it again to a screen reader.
+  const [said, setSaid] = useAnnouncement();
+  // A removal whose reload failed: the row opens again with this on it.
+  const { isLeaving, collapse } = useCollapseOut();
   // Radix returns focus to a Trigger, and these dialogs have none (they open from state), so the screen does it.
   const opener = useRef<HTMLElement | null>(null);
 
@@ -47,18 +54,20 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
     opener.current?.focus();
   }
 
-  // The removed row is gone, so focus goes to the page title; it takes focus only by script.
-  function focusTitle(event: Event) {
+  // The removed row is folding away, so focus goes to its neighbour, else the group's heading or the page title.
+  function focusNeighbour(event: Event) {
     if (!removedRow.current) return backToOpener(event);
     removedRow.current = false;
     event.preventDefault();
-    const title = document.querySelector<HTMLElement>("h1");
-    title?.setAttribute("tabindex", "-1");
-    title?.focus();
+    const row = opener.current?.closest("li") ?? null;
+    focusNearRow(row, row?.closest("section")?.querySelector<HTMLElement>("h2") ?? null);
   }
 
   return (
     <>
+      <p role="status" aria-live="polite" className="sr-only">
+        {said}
+      </p>
       {view.canManage ? null : (
         <p className="mb-6 inline-flex items-center gap-1 text-ink-muted">
           Everyone in the store can see who&apos;s here. Your role can&apos;t change it.
@@ -73,7 +82,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           </h2>
           <ul className="flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
             {group.people.map((p) => (
-              <PersonListItem key={p.memberId} person={p} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
+              <PersonListItem key={p.memberId} person={p} leaving={isLeaving(p.memberId)} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
             ))}
           </ul>
           {view.isSoleManager && group.people.some((p) => p.isYou) ? (
@@ -101,7 +110,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           }}
           onClose={(changed) => {
             if (changed) {
-              toast({ tone: "success", title: `Changed ${changed.name} to ${changed.roleName}` });
+              setSaid(`Changed ${changed.name} to ${changed.roleName}`);
               focusAfter.current = open.person.memberId;
               router.refresh();
             }
@@ -114,12 +123,13 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           key={open.person.memberId}
           person={open.person}
           storeName={storeName}
-          onCloseAutoFocus={focusTitle}
+          onCloseAutoFocus={focusNeighbour}
           onClose={(removedName) => {
             if (removedName) {
               removedRow.current = true;
-              toast({ tone: "success", title: `Removed ${removedName}` });
-              router.refresh();
+              setSaid(`Removed ${removedName}`);
+              const id = open.person.memberId;
+              collapse(id, () => router.refresh());
             }
             setOpen(null);
           }}

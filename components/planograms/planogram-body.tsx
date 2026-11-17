@@ -15,9 +15,8 @@ import { PlacementList } from "./placement-list";
 import { PlacementEditor } from "./placement-panel";
 import { PlanogramGrid, type GridBuilder } from "./planogram-grid";
 import { ProductSheet } from "./product-sheet";
+import type { CommitResult } from "./use-builder";
 import type { Edges } from "./use-scroll-edges";
-
-export type SheetMode = "details" | "edit";
 
 type PlanogramBodyProps = {
   scope: PlanogramScope;
@@ -30,8 +29,7 @@ type PlanogramBodyProps = {
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
   sheetId: string | null;
-  sheetMode: SheetMode;
-  openSheet: (id: string | null, mode?: SheetMode) => void;
+  openSheet: (id: string | null) => void;
   highlightProductId: string | null;
   placements: readonly PlacementView[];
   busy: boolean;
@@ -41,9 +39,13 @@ type PlanogramBodyProps = {
   onTile: (id: string) => void;
   onSwipe?: (gesture: { dx: number; dy: number; edges: Edges }) => void;
   onFace: (faceId: string) => void;
-  /** "Edit numbers": resolves to the refusal to show in the form, or null. */
-  onEdit: (placement: PlacementView, fields: PlacementFields) => Promise<string | null>;
+  /** The panel's numbers, saved as they change: whether they were, and why not. */
+  onEdit: (placement: PlacementView, fields: PlacementFields) => Promise<CommitResult>;
   onRemove: (placement: PlacementView) => void;
+  /** The panel's face picker: resolves to the refusal to show there, or null. */
+  onMoveToFace: (placement: PlacementView, faceId: string) => Promise<string | null>;
+  /** The panel closed holding a value that is not valid: said on the status line. */
+  onInvalid?: (message: string) => void;
   /** Move forward / Move back on a shared rail; absent where nothing may move. */
   onReorder?: (item: GridItem, direction: "forward" | "back") => void;
 };
@@ -59,7 +61,6 @@ export function PlanogramBody({
   selectedId,
   setSelectedId,
   sheetId,
-  sheetMode,
   openSheet,
   highlightProductId,
   placements,
@@ -71,6 +72,8 @@ export function PlanogramBody({
   onFace,
   onEdit,
   onRemove,
+  onMoveToFace,
+  onInvalid,
   onReorder,
 }: PlanogramBodyProps) {
   const orphans = isEditing ? items.filter((i) => !scope.faces.some((f) => f.faceId === i.faceId)) : [];
@@ -78,7 +81,7 @@ export function PlanogramBody({
   // A card marks its tile and brings it into view; an orphan has no tile, so its card opens the sheet to remove it.
   function fromCard(id: string) {
     setSelectedId(id);
-    if (orphans.some((o) => o.id === id)) return openSheet(id, "edit");
+    if (orphans.some((o) => o.id === id)) return openSheet(id);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     requestAnimationFrame(() =>
       document.querySelector(`[data-placement="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest", inline: "center", behavior: reduce ? "auto" : "smooth" }),
@@ -103,10 +106,11 @@ export function PlanogramBody({
           slideFrom={slideFrom}
           onSwipe={onSwipe}
           builder={builder}
+          editing={isEditing}
         />
         <div className="flex flex-col gap-4">
-          <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => (sheetMode === "edit" ? setSelectedId(null) : openSheet(null))}>
-            {isEditing && sheetId !== null && sheetMode === "edit" ? (
+          <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => (isEditing ? setSelectedId(null) : openSheet(null))}>
+            {isEditing && sheetId !== null ? (
               <div data-placement-editor>
                 <PlacementEditor
                   placement={sheetPlacement}
@@ -118,6 +122,8 @@ export function PlanogramBody({
                   onClose={() => setSelectedId(null)}
                   onSave={onEdit}
                   onRemove={onRemove}
+                  onMoveToFace={onMoveToFace}
+                  onInvalid={onInvalid}
                 />
               </div>
             ) : null}

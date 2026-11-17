@@ -4,6 +4,7 @@
 // client component can call toast() without a provider or context. The
 // Toaster in the root layout renders whatever is here.
 
+import type { LucideIcon } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 export type ToastTone = "success" | "error";
@@ -13,8 +14,8 @@ export type Toast = {
   tone: ToastTone;
   title: string;
   description?: string;
-  /** One follow-up, such as Undo. Choosing it also closes the toast. */
-  action?: { label: string; onSelect: () => void };
+  /** One follow-up, such as Undo, shown as its icon; the label is its name and tooltip. Choosing it also closes the toast. */
+  action?: { label: string; icon: LucideIcon; onSelect: () => void };
 };
 
 /** More than this at once is noise; the oldest make way. */

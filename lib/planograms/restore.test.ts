@@ -35,14 +35,14 @@ describe("restoreRows", () => {
     expect(rows[0].pieceCount).toBe(20);
   });
 
-  it("brings hung layers back in their order, renumbered around anything skipped", () => {
+  it("brings hung layers back in their order, with their own numbers around anything skipped", () => {
     const hung = { presentation: "hung" as const, colSpan: 2, rowSpan: 1 };
     const { rows } = restoreRows(
       [entry({ ...hung, depth: 0, productId: "gone" }), entry({ ...hung, depth: 2, productId: "tee" }), entry({ ...hung, depth: 1, col: 1 })],
       [front],
       new Map([["pant", fit("pant")], ["tee", fit("tee")]]),
     );
-    expect(rows.map((r) => [r.productId, r.depth])).toEqual([["tee", 1], ["pant", 0]]);
+    expect(rows.map((r) => [r.productId, r.depth])).toEqual([["tee", 2], ["pant", 1]]);
   });
 
   it("reads a version from before hung layers as front", () => {

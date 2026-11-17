@@ -68,11 +68,11 @@ test.describe("Store Manager", () => {
   });
 
   test("changes a product's status every way, sold out and on sale", async ({ page }, testInfo) => {
-    const name = await openMyProduct(page, testInfo);
+    await openMyProduct(page, testInfo);
     for (const status of ["Sold out", "On sale"]) {
       await page.getByRole("radio", { name: status }).click();
-      await expect(page.getByText(`${name}: ${status}`, { exact: true })).toBeVisible();
       await expect(page.getByRole("radio", { name: status })).toHaveAttribute("aria-checked", "true");
+      await expect(page.getByRole("radio", { name: status }).locator("[data-check]")).toHaveClass(/opacity-100/);
     }
   });
 });

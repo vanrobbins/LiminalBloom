@@ -67,9 +67,26 @@ describe("RolesScreen, staging and saving", () => {
     expect(screen.getAllByText("1 role changed").length).toBeGreaterThan(0);
     expect(table().getByRole("button", { name: "More for Sales Associate" })).toBeDisabled();
     for (const button of screen.getAllByRole("button", { name: "Add role" })) expect(button).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Discard" }));
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Discard your changes?" })).getByRole("button", { name: "Discard changes" }));
     expect(cell("Mark sold out", "Sales Associate")).toBeChecked();
     expect(screen.queryByRole("button", { name: "Review and save" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks before Discard, and Cancel keeps the changes and gives focus back to Discard", async () => {
+    const user = userEvent.setup();
+    render_(storeManagerView());
+    await user.click(cell("Mark sold out", "Sales Associate"));
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    const dialog = screen.getByRole("dialog", { name: "Discard your changes?" });
+    expect(dialog).toHaveTextContent("1 role goes back to what is saved.");
+    // Nothing is thrown away until the worded confirm.
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(cell("Mark sold out", "Sales Associate")).not.toBeChecked();
+    expect(screen.getAllByText("1 role changed").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Discard changes" })).toHaveFocus();
   });
 
   it("shows what changed in the review, saves the whole batch with the versions seen, and refreshes", async () => {

@@ -2,6 +2,8 @@
 
 "use client";
 
+import { Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { FeetInchesInput } from "@/components/ui/feet-inches-input";
 import { MAX_ENTRANCE_WIDTH, MIN_ENTRANCE_WIDTH } from "@/lib/layout/limits";
@@ -23,8 +25,8 @@ export function EntranceProperties({ entrance, label, dispatch }: EntranceProper
         onCommit={(width) => dispatch({ type: "command", command: { type: "updateEntrance", id: entrance.id, changes: { width } } })}
       />
       <p className="text-sm text-ink-muted">Drag it along a wall, or drag its ends to resize.</p>
-      <Button variant="danger" onClick={() => dispatch({ type: "command", command: { type: "delete", ids: [entrance.id] } })}>
-        Remove entrance
+      <Button icon variant="danger" onClick={() => dispatch({ type: "command", command: { type: "delete", ids: [entrance.id] } })} aria-label="Remove entrance">
+        <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
     </div>
   );

@@ -1,37 +1,35 @@
-// The due date's form (spec §4.6): saved by its Save button only. Saving on
-// blur or Enter double-saved and could swallow a Clear (Week 5 polish).
+// The due date's form (spec §4.6): saves the moment a date is picked or Clear is pressed,
+// with no Save button (R3, 0.7.0.5). The chip behind it shows the result, so the form
+// closes on success; a refusal stays here, under the field. A half-typed year is not a
+// date yet, so nothing is sent until the field holds one, and it says so on leaving.
 
 "use client";
 
-import { useRouter } from "next/navigation";
+import { CalendarX } from "lucide-react";
 import { useState } from "react";
 
 import { setDueDateAction } from "@/app/(app)/planograms/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useInlineSave } from "@/components/ui/use-inline-save";
 import { EARLIEST_DUE_DATE } from "@/lib/planograms/types";
-import { toast } from "@/lib/toast";
+
+import { PanelSaveLine } from "./panel-save-line";
 
 type DueDateFormProps = { fixtureId: string; dueDate: string | null; onDone: () => void };
 
 export function DueDateForm({ fixtureId, dueDate, onDone }: DueDateFormProps) {
-  const router = useRouter();
+  const { status, save, busy } = useInlineSave("Couldn't save the due date");
   const [value, setValue] = useState(dueDate ?? "");
-  const [busy, setBusy] = useState<"save" | "clear" | null>(null);
   const [error, setError] = useState<string | undefined>(undefined);
 
-  async function send(next: string | null, kind: "save" | "clear") {
-    setBusy(kind);
-    try {
-      const reply = await setDueDateAction(fixtureId, next);
-      toast({ tone: reply.status === "saved" ? "success" : "error", title: reply.message });
-      if (reply.status === "saved") onDone();
-      router.refresh();
-    } catch {
-      toast({ tone: "error", title: "Couldn't save the due date", description: "Check the connection and try again." });
-    } finally {
-      setBusy(null);
-    }
+  async function send(next: string | null) {
+    // Read-only and aria-disabled while it saves, not disabled: a disabled control drops focus.
+    if (busy) return;
+    setError(undefined);
+    const reply = await save(() => setDueDateAction(fixtureId, next));
+    if (reply?.status === "saved") onDone();
+    else if (reply) setError(reply.message);
   }
 
   return (
@@ -39,24 +37,35 @@ export function DueDateForm({ fixtureId, dueDate, onDone }: DueDateFormProps) {
       // Our own messages, not the browser's bubble for `min`.
       noValidate
       className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!value) return setError("Choose a date, or Clear.");
-        if (value < EARLIEST_DUE_DATE) return setError("Choose a date from 2000 on.");
-        setError(undefined);
-        void send(value, "save");
-      }}
+      onSubmit={(e) => e.preventDefault()}
     >
-      <Input label="Due date" info="dueDate" type="date" min={EARLIEST_DUE_DATE} value={value} onChange={(e) => setValue(e.target.value)} error={error} />
-      <div className="flex gap-3">
-        <Button type="submit" loading={busy === "save"} loadingText="Saving…" disabled={busy !== null}>
-          Save
-        </Button>
+      <Input
+        label="Due date"
+        info="dueDate"
+        type="date"
+        min={EARLIEST_DUE_DATE}
+        value={value}
+        readOnly={busy}
+        onChange={(e) => {
+          if (busy) return;
+          const next = e.target.value;
+          setValue(next);
+          setError(undefined);
+          if (next >= EARLIEST_DUE_DATE && next !== dueDate) void send(next);
+        }}
+        onBlur={() => {
+          if (!value) setError(dueDate ? "Choose a date, or Clear." : undefined);
+          else if (value < EARLIEST_DUE_DATE) setError("Choose a date from 2000 on.");
+        }}
+        error={error}
+      />
+      <div className="flex items-center gap-3">
         {dueDate ? (
-          <Button variant="secondary" onClick={() => send(null, "clear")} loading={busy === "clear"} loadingText="Clearing…" disabled={busy !== null}>
-            Clear
+          <Button icon variant="secondary" onClick={() => send(null)} aria-label="Clear due date" aria-disabled={busy || undefined} className="aria-disabled:opacity-60">
+            <CalendarX aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         ) : null}
+        <PanelSaveLine status={status} />
       </div>
     </form>
   );

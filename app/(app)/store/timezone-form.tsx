@@ -1,40 +1,63 @@
-// The time zone's form on Store settings: the picker and Save. The page
-// reloads after a save so every "today" on it follows the new zone.
+// The time zone's form on Store settings: the picker saves the moment a zone is picked,
+// with the save indicator beside it and no Save button (R3, 0.7.0.5). The page reloads
+// after a save so every "today" on it follows the new zone.
 
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { PanelSaveLine } from "@/components/planograms/panel-save-line";
 import { TimezonePicker } from "@/components/time/timezone-picker";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/lib/toast";
+import { useInlineSave } from "@/components/ui/use-inline-save";
 
 import { saveTimezoneAction } from "./actions";
 
 export function TimezoneForm({ zone, version }: { zone: string; version: number }) {
-  const router = useRouter();
-  const [isSaving, setIsSaving] = useState(false);
+  const { status, save, busy } = useInlineSave();
+  const [problem, setProblem] = useState<string | undefined>(undefined);
+  // The picker follows the stored zone: put back after a refusal, and again when the reload brings the server's current one.
+  const [chosen, setChosen] = useState(zone);
+  const [known, setKnown] = useState(zone);
+  if (known !== zone) {
+    setKnown(zone);
+    setChosen(zone);
+  }
 
-  async function save(formData: FormData) {
-    setIsSaving(true);
-    try {
-      const reply = await saveTimezoneAction(formData.get("timezone"), version);
-      toast({ tone: reply.status === "saved" ? "success" : "error", title: reply.message });
-      router.refresh();
-    } catch {
-      toast({ tone: "error", title: "Couldn't save", description: "Check the connection and try again." });
-    } finally {
-      setIsSaving(false);
+  async function send(next: string) {
+    setChosen(next);
+    setProblem(undefined);
+    const reply = await save(() => saveTimezoneAction(next, version));
+    if (reply && reply.status !== "saved") {
+      setProblem(reply.message);
+      setChosen(zone);
     }
   }
 
+  // A pick made while a save is out waits here (the latest one wins) and goes once the reload has brought the version it needs.
+  const queued = useRef<string | null>(null);
+  useEffect(() => {
+    if (busy || queued.current === null) return;
+    const next = queued.current;
+    queued.current = null;
+    void send(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when a save and its reload finish
+  }, [busy]);
+
+  function choose(next: string) {
+    if (busy) {
+      queued.current = next;
+      setChosen(next);
+      return;
+    }
+    void send(next);
+  }
+
   return (
-    <form action={save} className="flex flex-col gap-4">
-      <TimezonePicker key={`${zone}:${version}`} name="timezone" defaultZone={zone} />
-      <Button type="submit" className="self-start" loading={isSaving} loadingText="Saving…">
-        Save time zone
-      </Button>
+    // The picker calls onChange once per pick; moving through its list and searching save nothing.
+    <form aria-busy={busy || undefined} className="flex flex-col gap-1" onSubmit={(event) => event.preventDefault()}>
+      <TimezonePicker name="timezone" defaultZone={zone} value={chosen} onChange={choose} />
+      {problem ? <p className="text-sm text-danger">{problem}</p> : null}
+      <PanelSaveLine status={status} />
     </form>
   );
 }

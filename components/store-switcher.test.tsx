@@ -57,20 +57,16 @@ describe("StoreSwitcher", () => {
     expect(store("Washington Square")).toHaveFocus();
   });
 
-  it("switches, confirms with a toast, and re-renders the page", async () => {
+  it("switches and re-renders the page, with no toast", async () => {
     const user = userEvent.setup();
     render(<StoreSwitcher stores={STORES} activeStoreId="store-a" />);
 
     await user.click(store("Washington Square"));
 
     expect(mocks.setActive).toHaveBeenCalledWith({ organizationId: "store-b" });
-    await waitFor(() =>
-      expect(mocks.toast).toHaveBeenCalledWith({
-        tone: "success",
-        title: "Now working in Washington Square.",
-      }),
-    );
-    expect(mocks.refresh).toHaveBeenCalled();
+    // The header's store name is the feedback: no "Now working in" toast.
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it("says what to do when a switch fails, and stays put", async () => {
@@ -128,7 +124,7 @@ describe("StoreSwitcher", () => {
     await user.click(store("Washington Square"));
     await user.click(store("Lloyd Center"));
     expect(mocks.setActive).toHaveBeenCalledTimes(1);
-    expect(mocks.toast).toHaveBeenCalledTimes(1);
+    expect(mocks.toast).not.toHaveBeenCalled();
     expect(store("Washington Square")).toHaveTextContent("Switching…");
 
     // The refreshed page arrives with the new store active.

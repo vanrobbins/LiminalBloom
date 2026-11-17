@@ -2,6 +2,7 @@
 
 "use client";
 
+import { Eye } from "lucide-react";
 import Link from "next/link";
 
 import { LocalTime } from "@/components/time/local-time";
@@ -35,9 +36,9 @@ export function HistoryList({ fixtureId, expectedVersion, entries, member }: { f
               <p key={g.label} className="text-sm text-ink-muted">{`${g.label} is no longer on this fixture (${g.count} ${g.count === 1 ? "product" : "products"}).`}</p>
             ))}
             <div className="flex flex-wrap gap-3">
-              <Button asChild variant="secondary">
+              <Button asChild icon variant="secondary">
                 <Link href={`/planograms/${fixtureId}?version=${e.number}`} aria-label={`View version ${e.number}`}>
-                  View
+                  <Eye aria-hidden="true" strokeWidth={1.75} className="size-5" />
                 </Link>
               </Button>
               {can(member, "planograms.publish") ? <RestoreButton fixtureId={fixtureId} expectedVersion={expectedVersion} number={e.number} /> : null}

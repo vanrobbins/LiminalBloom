@@ -5,6 +5,8 @@
 
 "use client";
 
+import { RotateCcw } from "lucide-react";
+
 import { Fold } from "@/components/ui/fold";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Button } from "@/components/ui/button";
@@ -92,8 +94,13 @@ export function FaceSettings({ fixture, faces, dispatch }: FaceSettingsProps) {
               />
             )}
             {isAutoGrid(fixture, face) ? null : (
-              <Button variant="secondary" onClick={() => run({ type: "setFaceGrid", faceId: face.id, ...autoGrid(fixture, face.side) })}>
-                Fit to fixture ({feetText(autoGrid(fixture, face.side).columns)} ft × {autoGrid(fixture, face.side).rows})
+              <Button
+                icon
+                variant="secondary"
+                onClick={() => run({ type: "setFaceGrid", faceId: face.id, ...autoGrid(fixture, face.side) })}
+                aria-label={`Match the ${rule.label.toLowerCase()} (${feetText(autoGrid(fixture, face.side).columns)} ft × ${autoGrid(fixture, face.side).rows})`}
+              >
+                <RotateCcw aria-hidden="true" strokeWidth={1.75} className="size-5" />
               </Button>
             )}
           </fieldset>

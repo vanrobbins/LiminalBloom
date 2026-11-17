@@ -1,25 +1,24 @@
 // What Planogram Detail does to a placement (Part 2 spec §4): the grid's
-// builder (check, drop, arrow keys), Remove, Move to face… and Add product.
+// builder (check, drop, arrow keys, trash, pencil), Remove, Move to face and Add product.
 // The screen holds the state; this is its wiring, with no JSX.
 
 "use client";
 
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import type { Verb } from "@/lib/planograms/builder/fields";
 import { keyTarget } from "@/lib/planograms/builder/keys";
-import { firstOpenSpot, placeNew } from "@/lib/planograms/builder/place";
-import { reorderTarget, sharesSpace } from "@/lib/planograms/layers";
+import { reorderTarget } from "@/lib/planograms/layers";
 import { checkPlacement } from "@/lib/planograms/rules";
 import { spotOf, type GridLayout } from "@/lib/planograms/set-grid";
-import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope, type ProductFit } from "@/lib/planograms/types";
+import { type PlacementFields, type PlacementView, type PlanogramFace, type PlanogramScope } from "@/lib/planograms/types";
 import { shortSpot } from "@/lib/products/location-words";
-import { toast } from "@/lib/toast";
 
+import type { Cell } from "./grid-builder";
 import type { GridItem } from "./grid-items";
 import type { GridBuilder } from "./planogram-grid";
 import type { useBuilder } from "./use-builder";
-import type { Pending, SaveResult } from "./use-planogram-draft";
+import { usePanelEdits } from "./use-panel-edits";
 
 /** Where a placement sits, for a screen reader: "4–6 ft, Top shelf". */
 export function spotWords(faces: readonly PlanogramFace[], fields: PlacementFields): string {
@@ -35,18 +34,26 @@ type Options = {
   items: readonly GridItem[];
   isEditing: boolean;
   canMove: boolean;
-  selectedPlacement: PlacementView | null;
+  /** The selected id, kept even once its placement is gone. */
+  selectedId: string | null;
   builder: ReturnType<typeof useBuilder>;
-  save: (pending: Pending) => Promise<SaveResult>;
   setSelectedId: (id: string | null) => void;
   /** Selects and keeps the open panel on the selection; null also closes it. */
   select: (id: string | null) => void;
   showFace: (faceId: string) => void;
+  /** Opens the product panel on its numbers, with focus in the form. */
+  editNumbers: (id: string) => void;
+  /** Opens Add product, at the cell tapped or (none) the first open spot. */
+  onAdd: (cell?: Cell) => void;
 };
 
-export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedPlacement, builder, save, setSelectedId, select, showFace }: Options) {
-  // The tile an Add just placed: focus goes to it when the dialog closes.
-  const added = useRef<string | null>(null);
+export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers, onAdd }: Options) {
+  // What is selected now, for a removal that lands after the person has moved on.
+  const current = useRef(selectedId);
+  // A layout effect, so it is current before any later task (a save landing) can read it.
+  useLayoutEffect(() => {
+    current.current = selectedId;
+  });
 
   function check(item: GridItem, fields: PlacementFields): string | null {
     // In the draft, its rows; on the published version, its tiles.
@@ -86,20 +93,12 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     void change(item, { ...item, depth: at }, direction === "forward" ? "Moved forward" : "Moved back");
   }
 
-  /** The selection bar's Move forward / Move back, while it shares rail space and may move. */
-  function layersFor(item: GridItem) {
-    const rows = isEditing ? placements : items;
-    if (!canMove || !rows.some((o) => sharesSpace(item, o))) return undefined;
-    const step = (direction: "forward" | "back") => (reorderTarget(item, rows, direction) === null ? null : () => reorder(item, direction));
-    return { onForward: step("forward"), onBack: step("back") };
-  }
-
   const gridBuilder: GridBuilder | undefined = canMove
     ? {
         canMove: true,
         check,
         onCommit: (item, fields, verb, onFound) => change(item, fields, verb, onFound),
-        onRefused: (message) => toast({ tone: "error", title: message }),
+        onRefused: builder.refuse,
         // The grid holds the nudge where it lands, so a press while it saves starts from there (DECISIONS 11-09).
         onKey: (item, key, shift) => {
           const next = keyTarget(layout, item, key, shift);
@@ -113,59 +112,55 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
         },
         onReorder: reorder,
         onEmpty: () => select(null),
+        onAdd,
         onDragging: builder.setDragging,
+        // The corner discs: only on a draft's tiles, which have rows to remove and edit.
+        ...(isEditing ? { onRemove: trash, onEdit: (item: GridItem) => editNumbers(item.id) } : {}),
       }
     : undefined;
 
-  function remove(p: PlacementView) {
-    select(null);
-    // The button pressed goes with the selection: focus the tile if it's still there (refused),
-    // else the grid, else the page's main area, never the page top (B8).
-    void save({ kind: "remove", id: p.id, version: p.version }).then((result) =>
-      requestAnimationFrame(() =>
-        (
-          (result.saved ? null : document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(p.id)}"]`)) ??
-          document.querySelector<HTMLElement>("[data-planogram-grid]") ??
-          document.getElementById("content")
-        )?.focus(),
-      ),
+  /** After a removal settles. The control pressed goes with the selection: focus the tile if it's still there (refused),
+   * else the grid, else the page's main area, never the page top (B8). */
+  function settled(id: string, saved: boolean) {
+    requestAnimationFrame(() =>
+      (
+        (saved ? null : document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(id)}"]`)) ??
+        document.querySelector<HTMLElement>("[data-planogram-grid]") ??
+        document.getElementById("content")
+      )?.focus(),
     );
   }
 
-  function moveToFace(target: string) {
-    if (!selectedPlacement) return;
-    const to = scope.faces.find((f) => f.faceId === target);
-    const spot = to ? firstOpenSpot([to], placements, selectedPlacement, selectedPlacement.id) : null;
-    if (!spot) return toast({ tone: "error", title: `No open spot fits on ${to?.label ?? "that face"}` });
-    void change(selectedPlacement, { ...selectedPlacement, ...spot }, "Moved");
+  /** Undo or Redo took a placement away: a selection on it goes, and focus settles if it was lost with the tile or panel. */
+  function gone(id: string) {
+    if (current.current === id) select(null);
+    requestAnimationFrame(() => {
+      if (document.activeElement && document.activeElement !== document.body) return;
+      (document.querySelector<HTMLElement>("[data-planogram-grid]") ?? document.getElementById("content"))?.focus();
+    });
   }
 
-  async function addProduct(product: ProductFit): Promise<string | null> {
-    const fields = placeNew([face, ...scope.faces.filter((f) => f.faceId !== face.faceId)], placements, product);
-    if (!fields) return `No open spot fits ${product.name}. Make room, then add it.`;
-    const before = new Set(placements.map((p) => p.id));
-    const result = await save({ kind: "add", productId: product.id, fields });
-    if (!result.saved) return result.message ?? "Couldn't add it. Try again.";
-    const placed = result.draft.placements.find((p) => !before.has(p.id) && p.productId === product.id);
-    if (placed) {
-      added.current = placed.id;
-      select(placed.id);
-      if (!scope.isSet && placed.faceId !== face.faceId) showFace(placed.faceId);
-      builder.say(`Added ${product.name} at ${spotWords(scope.faces, placed)}`);
+  /** The panel's Remove: deselects at once. */
+  function remove(p: PlacementView) {
+    select(null);
+    void builder.remove(p).then((result) => settled(p.id, result.saved));
+  }
+
+  /** The trash disc and Delete: the grid fades the tile first; a refusal leaves it selected, with the status line saying why. */
+  async function trash(item: GridItem): Promise<boolean> {
+    const p = placements.find((o) => o.id === item.id);
+    if (!p) return false;
+    const { saved } = await builder.remove(p);
+    // The fade and the save take a moment: if another tile was picked meanwhile, its selection and focus stay.
+    // With nothing selected (Escape during the fade), focus still settles, so it doesn't drop to the page.
+    if (current.current === p.id || current.current === null) {
+      if (saved) select(null);
+      settled(p.id, saved);
     }
-    return null;
+    return saved;
   }
 
-  /** The Add dialog's close: focus the placed tile, not the opener (hidden on a phone while a tile is selected). */
-  function focusAdded(event: Event) {
-    const id = added.current;
-    added.current = null;
-    const tile = id ? document.querySelector<HTMLElement>(`[data-placement="${CSS.escape(id)}"]`) : null;
-    if (!tile) return;
-    event.preventDefault();
-    tile.focus();
-    tile.scrollIntoView?.({ block: "nearest", inline: "center" });
-  }
+  const { edit, moveToFace } = usePanelEdits({ scope, placements, builder, change });
 
-  return { gridBuilder, reorder, layersFor, remove, moveToFace, addProduct, focusAdded, edit: (p: PlacementView, fields: PlacementFields) => change(p, fields, "Changed") };
+  return { gridBuilder, reorder, remove, moveToFace, edit, gone };
 }

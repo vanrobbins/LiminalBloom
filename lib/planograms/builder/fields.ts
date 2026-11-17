@@ -18,3 +18,14 @@ export const fieldsOf = (p: PlacementFields, withDepth = false): PlacementFields
   pieceCount: p.pieceCount,
   ...(withDepth && p.depth !== undefined ? { depth: p.depth } : {}),
 });
+
+/**
+ * A gesture's fields with everything it did not change (those equal to the tile it was built on, as rendered) taken from
+ * the placement as it is when the change goes, if it still is: a typed edit sent meanwhile is kept, and only the move,
+ * resize or reorder's own fields come from the gesture.
+ */
+export const keepUnchanged = (fields: PlacementFields, built: PlacementFields, now?: PlacementFields): PlacementFields => {
+  if (!now) return fields;
+  const keep = <K extends keyof PlacementFields>(key: K): PlacementFields[K] => (fields[key] === built[key] ? now[key] : fields[key]);
+  return { ...fields, faceId: keep("faceId"), presentation: keep("presentation"), col: keep("col"), row: keep("row"), colSpan: keep("colSpan"), rowSpan: keep("rowSpan"), pieceCount: keep("pieceCount") };
+};

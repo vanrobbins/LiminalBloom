@@ -132,7 +132,7 @@ test.describe("read-only map", () => {
 		await expect(page).toHaveURL(/\/layout$/);
 		await panel.getByRole("button", { name: "Rack", exact: true }).click();
 		await saved(page);
-		await page.getByRole("button", { name: "Done" }).click();
+		await page.getByRole("button", { name: "Save and leave" }).click();
 		await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
 		await expect(page.locator('[data-fixture-name="Rack 1"]')).toHaveCount(1);
 	});
@@ -155,7 +155,7 @@ test.describe("first-time setup", () => {
 
 	test("a custom outline is drawn corner by corner", async ({ page }) => {
 		await page.goto("/layout/edit");
-		await page.getByRole("button", { name: "Draw it corner by corner" }).click();
+		await page.getByRole("button", { name: "Store outline" }).click();
 		const box = (await map(page).boundingBox())!;
 		// Kept clear of the drawing bar along the top and the zoom buttons at the bottom right.
 		const corners = [
@@ -189,7 +189,8 @@ test.describe("editing", () => {
 			await centreOf(page, '[data-fixture-name="Rack 1"]'),
 			await centreOf(page, '[data-fixture-name="Table 1"]'),
 		);
-		await expect(page.getByText("Blocked by Table 1.", { exact: true })).toBeVisible();
+		// On the editor's save status (the phone and the wide bar each hold one; one is showing).
+		await expect(page.getByText("Blocked by Table 1.", { exact: true }).filter({ visible: true })).toBeVisible();
 		await expect(fixtureShape(page, "Rack 1")).toHaveAttribute("transform", before!);
 	});
 
@@ -241,7 +242,7 @@ test.describe("editing", () => {
 
 	test("Done returns to a map nobody can drag", async ({ page }) => {
 		await page.goto("/layout/edit");
-		await page.getByRole("button", { name: "Done" }).click();
+		await page.getByRole("button", { name: "Save and leave" }).click();
 		await page.waitForURL("**/layout");
 		await hydrated(page);
 		const before = await fixtureShape(page, "Table 1").getAttribute("transform");
@@ -336,7 +337,8 @@ test.describe("saving", () => {
 			// The editor reloads on its own, so the next page load is the proof.
 			const reloaded = page.waitForEvent("load", { timeout: 10_000 });
 			await page.keyboard.press("ArrowRight");
-			await expect(page.getByText("You switched stores in another tab.", { exact: true })).toBeVisible({
+			// On the editor's save status (no toast), with what it does next after it.
+			await expect(page.getByRole("status").filter({ hasText: "You switched stores in another tab." }).filter({ visible: true })).toBeVisible({
 				timeout: 10_000,
 			});
 			await reloaded;

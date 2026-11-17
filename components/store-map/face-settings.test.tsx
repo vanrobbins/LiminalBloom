@@ -15,7 +15,7 @@ describe("FaceSettings", () => {
   it("offers Fit to fixture for a hand-set grid, and fits it", async () => {
     const dispatch = vi.fn();
     render(<FaceSettings fixture={rack} faces={[face({ side: "front", columns: 10, rows: 3 })]} dispatch={dispatch} />);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Fit to fixture (8 ft × 3)" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Match the rack (8 ft × 3)" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "command", command: { type: "setFaceGrid", faceId: "face-a", columns: 16, rows: 3 } });
   });
 

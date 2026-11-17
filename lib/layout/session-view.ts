@@ -13,7 +13,8 @@ export type ViewAction =
   | { type: "zoom"; factor: number; at?: Point }
   | { type: "fit" }
   | { type: "focus"; focus: Focus }
-  | { type: "reveal"; id: string };
+  /** `ids` selects a group (a run) while `id` is what the camera goes to. */
+  | { type: "reveal"; id: string; ids?: readonly string[] };
 
 export function fitFocus(session: Session, focus: Focus = session.focus): Camera {
   const zone = focus.kind === "zone" ? session.layout.zones.find((z) => z.id === focus.id) : undefined;
@@ -44,12 +45,12 @@ export function onView(session: Session, action: ViewAction): Session {
     case "focus":
       return focusOn(session, action.focus);
     case "reveal":
-      return reveal(session, action.id);
+      return reveal(session, action.id, action.ids);
   }
 }
 
 /** From the list: select an item, open its zone if it has one, and bring it into view. */
-function reveal(session: Session, id: string): Session {
+function reveal(session: Session, id: string, ids: readonly string[] = [id]): Session {
   const { layout } = session;
   const zone = layout.zones.find((z) => z.id === id);
   const fixture = layout.fixtures.find((f) => f.id === id);
@@ -58,5 +59,5 @@ function reveal(session: Session, id: string): Session {
   const target: Point | null = zone ? interiorPoint(zone.points) : (fixture ?? entrance ?? null);
   const focused = sameFocus(focus, session.focus) ? session : focusOn(session, focus);
   const camera = target ? centreOn(focused.camera, focused.viewport, target) : fitFocus(focused);
-  return { ...focused, selection: id === OUTLINE_ID || target ? [id] : [], vertex: null, camera };
+  return { ...focused, selection: id === OUTLINE_ID || target ? [...ids] : [], vertex: null, camera };
 }

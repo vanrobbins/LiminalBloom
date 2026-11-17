@@ -48,7 +48,7 @@ export function StoreMenu({
   variant: StoreMenuVariant;
 }) {
   const [isSheetOpen, setIsSheetOpen] = useShellSheet("stores");
-  const { switchingTo, switchTo } = useSwitchStore(stores, activeStoreId);
+  const { switchingTo, switchTo } = useSwitchStore(activeStoreId);
 
   const name = stores.find((store) => store.id === activeStoreId)?.name ?? "Your store";
   // Starts with the visible name, so speech input can say what it sees.

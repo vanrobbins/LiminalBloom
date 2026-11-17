@@ -62,7 +62,7 @@ describe("PlanogramScreen", () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove Pant" }));
     await waitFor(() => expect(screen.getByRole("region", { name: /Rack 1, Front/ })).toHaveFocus());
   });
 
@@ -71,7 +71,7 @@ describe("PlanogramScreen", () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove Pant" }));
     await waitFor(() => expect(tile()).toHaveFocus());
   });
 
@@ -79,7 +79,7 @@ describe("PlanogramScreen", () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     expect(screen.getByRole("complementary", { name: "Pant" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Published" }));
     expect(screen.queryByRole("complementary")).toBeNull();
@@ -98,36 +98,62 @@ describe("PlanogramScreen", () => {
     const user = userEvent.setup();
     const { rerender } = render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Edit numbers" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     rerender(screenWith(published, { planogramVersion: 4, placements: [] }));
     expect(screen.getByText("Removed on another device")).toBeInTheDocument();
   });
 
-  it("in a draft, a tap selects the tile without the sheet; Details opens it", async () => {
+  it("in a draft, a tap selects the tile and shows its corner discs, without the sheet; the pencil opens it", async () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    expect(screen.getByRole("toolbar", { name: "Pant selected" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove Pant" })).toBeInTheDocument();
+    expect(screen.queryByRole("toolbar")).toBeNull();
     expect(screen.queryByRole("complementary", { name: "Pant" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     expect(screen.getByRole("complementary", { name: "Pant" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("From left (ft)")).toBeNull();
+    expect(screen.getByLabelText("From left (ft)")).toBeInTheDocument();
+  });
+
+  it("another tap on the selected tile opens the same panel; the first tap only selects", async () => {
+    const user = userEvent.setup();
+    render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
+    await user.click(tile());
+    expect(screen.queryByRole("complementary", { name: "Pant" })).toBeNull();
+    await user.click(tile());
+    expect(screen.getByRole("complementary", { name: "Pant" })).toBeInTheDocument();
+    expect(screen.getByLabelText("From left (ft)")).toBeInTheDocument();
+  });
+
+  it("Enter on the selected tile opens its panel with focus in the form; Delete removes it with no dialog", async () => {
+    hook.save = vi.fn().mockResolvedValue({ saved: true, draft: { planogramVersion: 4, placements: [] } });
+    const user = userEvent.setup();
+    render(screenWith(published, { planogramVersion: 3, placements: [pant, tee] }));
+    await user.click(tile());
+    tile().focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByLabelText("From left (ft)")).toHaveFocus());
+    tile().focus();
+    await user.keyboard("{Delete}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() => expect(hook.save).toHaveBeenCalledWith({ kind: "remove", id: "d1", version: 1 }));
   });
 
   it("closing Edit numbers clears the selection, so a phone gets Publish back", async () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Edit numbers" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     await user.click(screen.getByRole("button", { name: "Close" }));
-    expect(screen.queryByRole("toolbar", { name: "Pant selected" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove Pant" })).not.toBeInTheDocument();
   });
 
   it("Edit numbers opens the form in feet", async () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Edit numbers" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     expect(screen.getByLabelText("From left (ft)")).toHaveValue("0");
   });
 
@@ -136,7 +162,7 @@ describe("PlanogramScreen", () => {
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("toolbar", { name: "Pant selected" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove Pant" })).toBeNull();
   });
 
   it("Ctrl+Z undoes a move in the draft, but not while Published is shown", async () => {
@@ -162,11 +188,10 @@ describe("PlanogramScreen", () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant, tee] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     await user.click(screen.getByRole("button", { name: /^Tee, / }));
     expect(screen.getByRole("complementary", { name: "Tee" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("From left (ft)")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Edit numbers" }));
+    expect(screen.getByLabelText("From left (ft)")).toHaveValue("1");
     await user.click(tile());
     expect(screen.getByRole("complementary", { name: "Pant" })).toBeInTheDocument();
     expect(screen.getByLabelText("From left (ft)")).toHaveValue("0");
@@ -176,12 +201,12 @@ describe("PlanogramScreen", () => {
     const user = userEvent.setup();
     const { container } = render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     tile().focus();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("complementary")).toBeNull();
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
     await user.click(container.querySelector<HTMLElement>("[data-block]")!);
     expect(screen.queryByRole("complementary")).toBeNull();
     expect(screen.queryByRole("toolbar")).toBeNull();
@@ -191,13 +216,13 @@ describe("PlanogramScreen", () => {
     const user = userEvent.setup();
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Edit numbers" }));
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Side" })).toHaveFocus());
+    await user.click(screen.getByRole("button", { name: "Edit Pant" }));
+    await waitFor(() => expect(screen.getByLabelText("From left (ft)")).toHaveFocus());
   });
 
   it("Add product places, selects and focuses the new tile, and says where", async () => {
     actions.pickerSearch = vi.fn().mockResolvedValue([teeFit]);
-    hook.save = vi.fn().mockResolvedValue({ saved: true, draft: { planogramVersion: 4, placements: [pant, tee] } });
+    hook.save = vi.fn().mockResolvedValue({ saved: true, id: "d2", draft: { planogramVersion: 4, placements: [pant, tee] } });
     const user = userEvent.setup();
     const { rerender } = render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     await user.click(screen.getByRole("button", { name: "Add product" }));
@@ -207,7 +232,7 @@ describe("PlanogramScreen", () => {
     rerender(screenWith(published, { planogramVersion: 4, placements: [pant, tee] }));
     expect(hook.save).toHaveBeenCalledWith({ kind: "add", productId: "tee", fields: expect.objectContaining({ faceId: front.faceId, col: 2, row: 0 }) });
     await waitFor(() => expect(screen.getByRole("button", { name: /^Tee, / })).toHaveFocus());
-    expect(screen.getByRole("toolbar", { name: "Tee selected" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove Tee" })).toBeInTheDocument();
     expect(screen.getByText(/^Added Tee at /)).toBeInTheDocument();
   });
 
@@ -238,22 +263,22 @@ describe("PlanogramScreen", () => {
   it("says when there is no planogram yet", () => {
     render(screenWith(null, null));
     expect(screen.getByText("No planogram yet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start planogram" })).toBeInTheDocument();
   });
 
-  it("with nothing yet, Start draft sits in the empty box, said once, and no due date is offered", () => {
+  it("with nothing yet, Start planogram sits in the empty box, said once, and no due date is offered", () => {
     render(screenWith(null, null));
     const box = screen.getByText("No planogram yet").closest("[data-empty]") as HTMLElement;
-    expect(within(box).getByRole("button", { name: "Start draft" })).toBeInTheDocument();
+    expect(within(box).getByRole("button", { name: "Start planogram" })).toBeInTheDocument();
     expect(screen.getAllByText(/what.s on the floor now/)).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "Set due date" })).toBeNull();
   });
 
-  it("puts the status, Draft | Published and Publish… on one row", () => {
+  it("puts Draft | Published (which says the version in its tooltip, not beside it) and Publish on one row", () => {
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
-    const row = screen.getByRole("button", { name: "Publish…" }).closest("[data-status-row]") as HTMLElement;
+    const row = screen.getByRole("button", { name: "Publish" }).closest("[data-status-row]") as HTMLElement;
     expect(row).not.toBeNull();
-    expect(within(row).getByText(/Version 1 · published/)).toBeInTheDocument();
+    expect(within(row).queryByText(/Version 1 · published/)).toBeNull();
     expect(within(row).getByRole("button", { name: "Published" })).toBeInTheDocument();
   });
 
@@ -273,7 +298,7 @@ describe("PlanogramScreen", () => {
     await waitFor(() => expect(hook.save).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(tile()).toHaveFocus());
     expect(tile()).toHaveAttribute("data-placement", "d1");
-    expect(screen.getByRole("toolbar", { name: "Pant selected" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove Pant" })).toBeInTheDocument();
   });
 
   it("after a draft starts, focus isn't pulled back to the tile if it moved elsewhere meanwhile (B10)", async () => {
