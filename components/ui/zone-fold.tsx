@@ -51,7 +51,7 @@ export function ZoneFold({ title, count, summary, open, canFold = true, onToggle
                 <span id={`${id}-title`} className="min-w-0 font-medium wrap-break-word">
                   {title}
                 </span>
-                <span className="shrink-0 text-sm opacity-80">{count}</span>
+                <span className="ml-auto shrink-0 pl-2 text-sm tabular-nums opacity-80">{count}</span>
               </button>
             </>
           ) : canFold ? (
@@ -66,14 +66,14 @@ export function ZoneFold({ title, count, summary, open, canFold = true, onToggle
               <span id={`${id}-title`} className="min-w-0 font-medium text-ink wrap-break-word">
                 {title}
               </span>
-              <span className="shrink-0 text-sm text-ink-muted">{count}</span>
+              <span className="ml-auto shrink-0 pl-2 text-sm text-ink-muted tabular-nums">{count}</span>
             </button>
           ) : (
-            <span className="flex min-h-11 items-center gap-2 px-2">
+            <span className="flex min-h-11 w-full items-center gap-2 px-2">
               <span id={`${id}-title`} className="min-w-0 font-medium text-ink wrap-break-word">
                 {title}
               </span>
-              <span className="shrink-0 text-sm text-ink-muted">{count}</span>
+              <span className="ml-auto shrink-0 pl-2 text-sm text-ink-muted tabular-nums">{count}</span>
             </span>
           )}
         </Heading>
