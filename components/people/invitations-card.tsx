@@ -65,6 +65,8 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
     const hadFocus = row?.contains(document.activeElement) ?? false;
     setBusy(id);
     setProblem(null);
+    // The busy button shows only a spinner, so the busy state is said here.
+    say(`Cancelling invitation for ${email}`);
     try {
       const result = await cancelInvitationAction(id);
       // Cancelled, or already used or cancelled: either way it is gone, so the row folds shut and then the list reloads.

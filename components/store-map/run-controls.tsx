@@ -57,7 +57,7 @@ export function RunControls({ layout, rack, dispatch }: RunControlsProps) {
             variant="secondary"
             disabled={behindSide === null}
             onClick={() => behindSide && command({ type: "addRackToRun", rackId: rack.id, side: behindSide, behind: true })}
-            aria-label="Add rack behind"
+            aria-label={`Add ${word} behind`}
           >
             <PlusArrow arrow={ArrowDown} />
           </Button>

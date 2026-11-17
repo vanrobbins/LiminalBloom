@@ -13,7 +13,7 @@ export function DrawingBar({ corners, onUndo, onCancel }: { corners: number; onU
       <Button icon variant="secondary" disabled={corners === 0} onClick={onUndo} aria-label="Undo corner">
         <Undo2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
-      <Button icon variant="secondary" onClick={onCancel} aria-label="Cancel drawing">
+      <Button icon variant="ghost" onClick={onCancel} aria-label="Cancel drawing">
         <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
     </div>

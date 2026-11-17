@@ -108,6 +108,18 @@ describe("InvitationsCard", () => {
     await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
   });
 
+  it("says Cancelling in the live region while the cancel is busy, since the busy button shows only a spinner", async () => {
+    const user = userEvent.setup();
+    let finish: (reply: unknown) => void = () => {};
+    actions.cancelInvitationAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(<InvitationsCard invitations={[invitationRow("jane@x.com")]} />);
+    await user.click(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" }));
+    expect(screen.getByRole("button", { name: "Cancel invitation for jane@x.com" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("Cancelling invitation for jane@x.com");
+    await act(async () => finish({ status: "cancelled", email: "jane@x.com" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Cancelled invitation for jane@x.com");
+  });
+
   describe("focus when the focused row's Cancel folds it away", () => {
     const cancelled = () => actions.cancelInvitationAction.mockResolvedValue({ status: "cancelled", email: "x" });
     const open = (...emails: string[]) =>
