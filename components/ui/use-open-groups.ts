@@ -1,7 +1,8 @@
 // Which zone groups are open (DECISIONS 11-09, A1): folded to start, what you
 // open is remembered on this device per store, and a group holding the
 // selection opens itself. A lone group is always open: folding it hides
-// everything for nothing.
+// everything for nothing. Groups nested inside those (the map's runs and table
+// sets) are remembered the same way, by their own ids, and are never lone.
 
 "use client";
 
@@ -45,9 +46,12 @@ function write(storeKey: string, ids: readonly string[]) {
   listeners.forEach((listener) => listener());
 }
 
-type Options = { storeKey: string; groupIds: readonly string[]; selectedGroupId?: string | null };
+/** `groupIds` are the top-level groups; `selectedGroupId` may name several, e.g. a zone and the run inside it. */
+type Options = { storeKey: string; groupIds: readonly string[]; selectedGroupId?: string | readonly (string | null)[] | null };
 
 export function useOpenGroups({ storeKey, groupIds, selectedGroupId = null }: Options) {
+  const selected = (Array.isArray(selectedGroupId) ? selectedGroupId : [selectedGroupId]).filter((id): id is string => id !== null);
+  const selectedKey = selected.join("|");
   // "[]" on the server and at hydration, so the first render matches: everything folded.
   const raw = useSyncExternalStore(
     subscribe,
@@ -57,20 +61,21 @@ export function useOpenGroups({ storeKey, groupIds, selectedGroupId = null }: Op
   const stored = useMemo(() => parse(raw), [raw]);
 
   // The selection's group opens itself until it's folded by hand; a new selection resets that.
-  const [folded, setFolded] = useState<{ selection: string | null; id: string | null }>({ selection: selectedGroupId, id: null });
-  if (folded.selection !== selectedGroupId) setFolded({ selection: selectedGroupId, id: null });
+  const [folded, setFolded] = useState<{ selection: string; ids: string[] }>({ selection: selectedKey, ids: [] });
+  if (folded.selection !== selectedKey) setFolded({ selection: selectedKey, ids: [] });
 
   const lone = groupIds.length === 1;
-  const isOpen = (id: string) => lone || stored.includes(id) || (id === selectedGroupId && folded.id !== id);
+  const isLone = (id: string) => lone && groupIds.includes(id);
+  const isOpen = (id: string) => isLone(id) || stored.includes(id) || (selected.includes(id) && !folded.ids.includes(id));
 
   function toggle(id: string) {
-    if (lone) return;
+    if (isLone(id)) return;
     if (isOpen(id)) {
       write(storeKey, stored.filter((x) => x !== id));
-      if (id === selectedGroupId) setFolded({ selection: selectedGroupId, id });
+      if (selected.includes(id)) setFolded({ selection: selectedKey, ids: [...folded.ids, id] });
     } else {
       write(storeKey, [...stored, id]);
-      if (folded.id === id) setFolded({ selection: selectedGroupId, id: null });
+      if (folded.ids.includes(id)) setFolded({ selection: selectedKey, ids: folded.ids.filter((x) => x !== id) });
     }
   }
 

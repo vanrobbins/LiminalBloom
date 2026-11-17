@@ -75,6 +75,14 @@ describe("focus and reveal", () => {
     expect(session.focus).toEqual({ kind: "zone", id: "zone-a" });
     expect(session.selection).toEqual(["fixture-a"]);
   });
+
+  it("revealing with ids selects the whole group and goes to the one named", () => {
+    const reduce = reducer();
+    const layout = { ...store(), zones: [zone()], fixtures: [fixture({ x: 100, y: 100, zoneId: "zone-a" }), fixture({ id: "b", name: "Table 2", x: 150, y: 100, zoneId: "zone-a" })] };
+    const session = reduce(editing(layout), { type: "reveal", id: "fixture-a", ids: ["fixture-a", "b"] });
+    expect(session.focus).toEqual({ kind: "zone", id: "zone-a" });
+    expect(session.selection).toEqual(["fixture-a", "b"]);
+  });
 });
 
 describe("rebase", () => {

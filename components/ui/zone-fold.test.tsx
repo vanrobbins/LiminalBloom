@@ -56,4 +56,14 @@ describe("ZoneFold and useOpenGroups", () => {
     act(() => result.current.toggle("only"));
     expect(result.current.isOpen("only")).toBe(true);
   });
+
+  it("a lone top-level group stays open while a group nested in it still folds", () => {
+    const { result } = renderHook(() => useOpenGroups({ storeKey: "s1", groupIds: ["only"], selectedGroupId: ["only", "run"] }));
+    expect(result.current.isOpen("only")).toBe(true);
+    expect(result.current.isOpen("run")).toBe(true);
+    act(() => result.current.toggle("run"));
+    expect(result.current.isOpen("run")).toBe(false);
+    act(() => result.current.toggle("only"));
+    expect(result.current.isOpen("only")).toBe(true);
+  });
 });
