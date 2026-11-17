@@ -1,6 +1,8 @@
 // A zone's (or the store floor's) fixtures in the list: runs and table sets
 // as folds inside it, the rest as plain rows. Each fold's arrow folds it and
-// the rest of its row selects, like the zone's own.
+// the rest of its row selects, like the zone's own. A run split across zones
+// shows in each, folding apart; its row reveals this zone's first rack and
+// selects the whole run.
 
 "use client";
 
@@ -22,10 +24,12 @@ type LayoutFixturesProps = {
   dispatch: (action: SessionAction) => void;
   isOpen: (id: string) => boolean;
   toggle: (id: string) => void;
+  /** One level under the heading this list sits below. */
+  as: "h3" | "h4";
   className?: string;
 };
 
-export function LayoutFixtures({ layout, fixtures, selection, problem, dispatch, isOpen, toggle, className }: LayoutFixturesProps) {
+export function LayoutFixtures({ layout, fixtures, selection, problem, dispatch, isOpen, toggle, as, className }: LayoutFixturesProps) {
   const { runs, sets, loose } = groupFixtures(layout, fixtures);
   const row = (f: Fixture) => (
     <LayoutListItem
@@ -41,14 +45,14 @@ export function LayoutFixtures({ layout, fixtures, selection, problem, dispatch,
     <div className={`flex flex-col gap-1 ${className ?? ""}`}>
       {runs.map((run) => (
         <ZoneFold
-          key={run.id}
-          as="h4"
+          key={run.key}
+          as={as}
           title={run.title}
           count={run.racks.length}
-          open={isOpen(run.id)}
-          onToggle={() => toggle(run.id)}
+          open={isOpen(run.key)}
+          onToggle={() => toggle(run.key)}
           selected={run.ids.every((id) => selection.includes(id))}
-          onSelect={() => dispatch({ type: "reveal", id: run.ids[0], ids: run.ids })}
+          onSelect={() => dispatch({ type: "reveal", id: run.racks[0].id, ids: run.ids })}
         >
           <ul className="pl-6">{run.racks.map(row)}</ul>
         </ZoneFold>
@@ -56,7 +60,7 @@ export function LayoutFixtures({ layout, fixtures, selection, problem, dispatch,
       {sets.map(({ upper, lowers }) => (
         <ZoneFold
           key={upper.id}
-          as="h4"
+          as={as}
           title={upper.name}
           count={lowers.length}
           summary={problem(upper.id) ? <span className="text-danger">{problem(upper.id)}</span> : undefined}

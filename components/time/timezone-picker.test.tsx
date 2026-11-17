@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -57,6 +57,24 @@ describe("TimezonePicker", () => {
     expect(active()).toHaveAccessibleName("Mountain (America/Denver)");
     expect(onChange).not.toHaveBeenCalled();
     expect(trigger()).toHaveTextContent("Pacific (America/Los Angeles)");
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+  });
+
+  it("Home and End jump the active option to the first and last, choosing nothing", async () => {
+    const { user, onChange } = await open();
+    const active = () => document.getElementById(search().getAttribute("aria-activedescendant")!);
+    const options = screen.getAllByRole("option");
+    await user.keyboard("{End}");
+    expect(active()).toBe(options[options.length - 1]);
+    await user.keyboard("{Home}");
+    expect(active()).toBe(options[0]);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("Enter while an IME is composing does not choose", async () => {
+    const { onChange } = await open();
+    fireEvent.keyDown(search(), { key: "Enter", isComposing: true });
+    expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByRole("listbox")).toBeInTheDocument();
   });
 

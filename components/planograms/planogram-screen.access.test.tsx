@@ -90,6 +90,14 @@ describe("PlanogramScreen controls by switch", () => {
     expect(await screen.findByRole("menuitem", { name: "Set due date" })).toBeInTheDocument();
   });
 
+  it("guides show wherever this user can move tiles: the latest version with no draft, and a draft; never for a viewer", () => {
+    const guides = (c: HTMLElement) => c.querySelector("[data-guides]");
+    expect(guides(show(["view", "planograms.draft"]).container)).not.toBeNull();
+    expect(guides(show(["view", "planograms.draft"], { draft }).container)).not.toBeNull();
+    expect(guides(show(["view"]).container)).toBeNull();
+    expect(guides(show(["view", "planograms.publish"]).container)).toBeNull();
+  });
+
   it("with both, the draft shows Publish, the one filled button, and the visible Discard draft", () => {
     show(["view", "planograms.draft", "planograms.publish"], { draft });
     expect(screen.getByRole("button", { name: "Publish" })).toHaveClass("bg-brand");

@@ -1,5 +1,5 @@
 // The search box and short list inside the time zone picker (DECISIONS "Time", 11-16):
-// an ARIA combobox. Arrow keys move the active option and choose nothing; Enter
+// an ARIA combobox. Arrow keys, Home and End move the active option and choose nothing; Enter
 // or a click chooses. This device's zone is suggested on top, then matches with
 // the United States first. Only the first CAP matches are drawn, so ~400 zones
 // stay fast; typing narrows the rest.
@@ -61,8 +61,13 @@ export function ZoneSearch({ current, onPick }: ZoneSearchProps) {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       setMoved(Math.max(0, Math.min(options.length - 1, active + (event.key === "ArrowDown" ? 1 : -1))));
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setMoved(event.key === "Home" ? 0 : options.length - 1);
     } else if (event.key === "Enter") {
       event.preventDefault();
+      // Enter that confirms an IME candidate isn't a choice.
+      if (event.nativeEvent.isComposing) return;
       if (options[active]) onPick(options[active].zone);
     }
   }

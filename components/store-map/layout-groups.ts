@@ -4,8 +4,13 @@
 import { byName } from "@/lib/natural-sort";
 import type { Fixture, Layout } from "@/lib/layout/types";
 
+/** The open/closed key of a run's part in one zone: a run split across zones folds each part on its own. */
+export const runKey = (runId: string, zoneId: string | null) => `${runId}:${zoneId ?? ""}`;
+
 export type RunGroup = {
   id: string;
+  /** Keys this part's fold (see runKey). */
+  key: string;
   /** "Run · first–last": a run has no name of its own. */
   title: string;
   /** The racks here, in run order. */
@@ -31,7 +36,7 @@ export function groupFixtures(layout: Layout, fixtures: Fixture[]) {
       const racks = fixtures.filter((x) => x.runId === f.runId).sort(inRun);
       const ids = layout.fixtures.filter((x) => x.runId === f.runId).sort(inRun).map((x) => x.id);
       const names = racks.length > 1 ? `${racks[0].name}–${racks[racks.length - 1].name}` : racks[0].name;
-      runs.push({ id: f.runId, title: `Run · ${names}`, racks, ids });
+      runs.push({ id: f.runId, key: runKey(f.runId, f.zoneId), title: `Run · ${names}`, racks, ids });
     } else if (lowers.length > 0) sets.push({ upper: f, lowers });
     else loose.push(f);
   }

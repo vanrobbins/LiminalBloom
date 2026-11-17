@@ -40,7 +40,7 @@ describe("MapEditor", () => {
     const layout = { ...store(), zones: [zone()], fixtures: [fixture({ id: "in", name: "Table 1", x: 100, y: 100, zoneId: "zone-a" })] };
     render(<MapEditor storeId="s" initialLayout={layout} {...actions} />);
     expect(screen.queryByRole("button", { name: "Back to the whole store" })).toBeNull();
-    await userEvent.click(screen.getAllByRole("button", { name: /Open Front tables/ })[0]);
+    await userEvent.click(screen.getAllByRole("button", { name: /Show Front tables/ })[0]);
     await userEvent.click(screen.getAllByRole("button", { name: /Table 1/ })[0]);
     await userEvent.click(screen.getByRole("button", { name: "Back to the whole store" }));
     expect(screen.queryByRole("button", { name: "Back to the whole store" })).toBeNull();

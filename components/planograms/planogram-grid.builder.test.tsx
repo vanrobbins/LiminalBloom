@@ -49,9 +49,12 @@ describe("PlanogramGrid as the builder's surface", () => {
     expect(guides()?.style.backgroundImage).toContain("--color-line-subtle");
   });
 
-  it("the published view and a past version (not editing) draw no guides, even with a builder to start a draft", () => {
-    const { container } = render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builderWith()} />);
-    expect(container.querySelector("[data-guides]")).toBeNull();
+  it("a grid nobody can move (the read-only published view, a past version) draws no guides; one with a builder that can move does, draft or not", () => {
+    const grid = (props: Partial<React.ComponentProps<typeof PlanogramGrid>>) =>
+      render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} {...props} />).container;
+    expect(grid({}).querySelector("[data-guides]")).toBeNull();
+    expect(grid({ builder: builderWith({ canMove: false }) }).querySelector("[data-guides]")).toBeNull();
+    expect(grid({ builder: builderWith() }).querySelector("[data-guides]")).not.toBeNull();
   });
 
   it("draws each table of a set as its own labelled block", () => {
@@ -80,7 +83,8 @@ describe("PlanogramGrid as the builder's surface", () => {
     expect(container.querySelector("[data-drop-ghost]")).not.toBeNull();
     fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
     expect(builder.onCommit).toHaveBeenCalledWith(pant, expect.objectContaining({ ...fieldsOf(pant), col: 3 }), "Moved", expect.any(Function));
-    expect(container.querySelector("[data-guides]")).toBeNull();
+    // Back to the faint guides a movable grid always shows.
+    expect(container.querySelector<HTMLElement>("[data-guides]")?.style.backgroundImage).toContain("--color-line-subtle");
   });
 
   it("an invalid drop says why and commits nothing", () => {

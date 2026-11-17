@@ -21,6 +21,13 @@ describe("MapViewer", () => {
     expect(screen.queryByText(/look inside it/)).toBeNull();
   });
 
+  it("an empty map says so over the map, not in a row of its own that pushes the page past the screen", () => {
+    render(<MapViewer layout={{ ...store(), zones: [], fixtures: [] }} planograms={{}} looks={{}} storeKey="s" />);
+    const line = screen.getByText("Nothing on the map yet.");
+    expect(line.closest(".overflow-hidden")).not.toBeNull();
+    expect(line).toHaveClass("absolute");
+  });
+
   it("lists everything on the map beside it on desktop (UX audit U7)", () => {
     media.wide = true;
     render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" />);

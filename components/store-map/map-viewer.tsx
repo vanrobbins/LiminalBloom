@@ -86,7 +86,6 @@ export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProp
 
   return (
     <div className="flex flex-col gap-3">
-      {empty ? <p className="text-sm text-ink-muted">Nothing on the map yet.</p> : null}
       {focusedZone ? (
         <div className="flex min-h-11 items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -119,6 +118,7 @@ export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProp
             marquee={null}
             svgProps={pointer.handlers}
           />
+          {empty ? <p className="pointer-events-none absolute inset-x-0 top-16 z-10 px-4 text-center text-sm text-ink-muted">Nothing on the map yet.</p> : null}
           {!isWide && !focusedZone ? <div className="absolute top-3 left-4 z-10 md:left-3">{listButton}</div> : null}
           <ZoomControls onZoom={(factor) => dispatch({ type: "zoom", factor })} onFit={() => dispatch({ type: "fit" })} />
           {selectedFixture && !isPhone ? (

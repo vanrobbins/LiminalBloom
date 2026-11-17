@@ -2,7 +2,7 @@
 // combined view. HTML, not SVG: every placement is a real button. One unit is
 // half a foot on both axes (set-grid.ts), never under 20 px, filling the width;
 // a face too wide scrolls sideways with a fade on the clipped edge. No cell
-// lines; half-foot guides and a feet ruler show faint while a draft is edited
+// lines; half-foot guides and a feet ruler show faint wherever tiles can be moved (a draft, or the latest version)
 // and at full strength while a tile is dragged. With a builder, the selected tile drags and resizes: every frame is
 // rebuilt from the press's start (lib/planograms/builder), and whether it may
 // land is the builder's `check` (rules.ts).
@@ -49,7 +49,7 @@ type PlanogramGridProps = {
   slideFrom?: "left" | "right" | null;
   onSwipe?: (gesture: { dx: number; dy: number; edges: Edges }) => void;
   builder?: GridBuilder;
-  /** A draft is being edited (not Published, not a past version): the guides show. */
+  /** A draft is being edited: the guides show (they also show whenever `builder.canMove`). */
   editing?: boolean;
 };
 
@@ -140,7 +140,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
             {layout.blocks.map((block) => (
               <BlockView key={block.faceId} block={block} labelled={layout.blocks.length > 1} empty={empty.block} />
             ))}
-            {editing || drag ? <DragGuides layout={layout} dragging={drag !== null} /> : null}
+            {editing || builder?.canMove || drag ? <DragGuides layout={layout} dragging={drag !== null} /> : null}
             {drag?.mode === "move" && target && targetBlock ? <DropGhost rect={spanRect(targetBlock, target)} invalid={refusal !== null} /> : null}
             {drawn.map((item) => {
               const block = layout.blocks.find((b) => b.faceId === item.faceId);

@@ -1,8 +1,9 @@
 // One zone's group in a list, folded behind an arrow (DECISIONS 11-09, A1).
 // Shared by the map's "Everything on the map" and /planograms so every zone
 // grouping looks and works alike. The header is a button with aria-expanded.
-// With `onSelect` (the map's list) the header splits: the arrow alone folds,
-// and the rest of the row is a second button that selects the group.
+// With `onSelect` (the map's list) the row splits: the arrow button alone folds
+// (a fixed "Show X" name; aria-expanded says which), and the heading holds only
+// the button that selects the group. The row, not the heading, carries the highlight.
 
 "use client";
 
@@ -33,27 +34,25 @@ export function ZoneFold({ title, count, summary, open, canFold = true, onToggle
   const split = onSelect !== undefined;
   return (
     <section aria-labelledby={`${id}-title`} className="flex flex-col gap-1">
-      <div className="flex items-center gap-1">
-        <Heading data-selected={split ? selected : undefined} className={split ? "group flex min-w-0 flex-1 items-center gap-1 rounded data-[selected=true]:bg-brand data-[selected=true]:text-on-brand" : "min-w-0 flex-1"}>
+      <div data-selected={split ? selected : undefined} className={split ? "group flex items-center gap-1 rounded data-[selected=true]:bg-brand data-[selected=true]:text-on-brand" : "flex items-center gap-1"}>
+        {split && canFold ? (
+          <Button variant="ghost" icon aria-expanded={open} aria-controls={`${id}-body`} aria-label={`Show ${title}`} onClick={onToggle}>
+            <ChevronRight aria-hidden="true" strokeWidth={1.75} className={`size-4 text-ink-muted group-data-[selected=true]:text-on-brand motion-safe:transition-transform ${open ? "rotate-90" : ""}`} />
+          </Button>
+        ) : null}
+        <Heading className="min-w-0 flex-1">
           {split ? (
-            <>
-              {canFold ? (
-                <Button variant="ghost" icon aria-expanded={open} aria-controls={`${id}-body`} aria-label={`${open ? "Close" : "Open"} ${title}`} onClick={onToggle}>
-                  <ChevronRight aria-hidden="true" strokeWidth={1.75} className={`size-4 text-ink-muted group-data-[selected=true]:text-on-brand motion-safe:transition-transform ${open ? "rotate-90" : ""}`} />
-                </Button>
-              ) : null}
-              <button
-                type="button"
-                aria-pressed={selected}
-                onClick={onSelect}
-                className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded px-2 text-left text-ink focus-visible:outline-2 focus-visible:outline-ink aria-pressed:text-on-brand"
-              >
-                <span id={`${id}-title`} className="min-w-0 font-medium wrap-break-word">
-                  {title}
-                </span>
-                <span className="ml-auto shrink-0 pl-2 text-sm tabular-nums opacity-80">{count}</span>
-              </button>
-            </>
+            <button
+              type="button"
+              aria-pressed={selected}
+              onClick={onSelect}
+              className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded px-2 text-left text-ink focus-visible:outline-2 focus-visible:outline-ink aria-pressed:text-on-brand"
+            >
+              <span id={`${id}-title`} className="min-w-0 font-medium wrap-break-word">
+                {title}
+              </span>
+              <span className="ml-auto shrink-0 pl-2 text-sm tabular-nums opacity-80">{count}</span>
+            </button>
           ) : canFold ? (
             <button
               type="button"

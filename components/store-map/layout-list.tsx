@@ -14,6 +14,7 @@ import { OUTLINE_ID, type Fixture, type Issue, type Layout } from "@/lib/layout/
 import { byName } from "@/lib/natural-sort";
 
 import { LayoutFixtures } from "./layout-fixtures";
+import { runKey } from "./layout-groups";
 import { LayoutListItem } from "./layout-list-item";
 
 type LayoutListProps = {
@@ -30,14 +31,14 @@ export function LayoutList({ layout, selection, issues, dispatch, storeKey }: La
   const reveal = (id: string) => () => dispatch({ type: "reveal", id });
   const plain = byName(layout.fixtures.filter((f) => f.tableSetId === null));
   const zones = byName(layout.zones);
-  // The zone holding the selection opens itself, and so do the run and table set inside it, so selecting on the map never hides it in the list.
+  // The zones holding the selection open themselves, and so do the run and table set inside it, so selecting on the map never hides it in the list.
   const picked = layout.fixtures.filter((f) => selection.includes(f.id));
-  const selectedZone = zones.find((z) => selection.includes(z.id))?.id ?? picked.find((f) => f.zoneId !== null)?.zoneId ?? null;
+  const selectedZones = [...zones.filter((z) => selection.includes(z.id)).map((z) => z.id), ...picked.map((f) => f.zoneId)];
   const upperOf = (f: Fixture) => layout.tableSets.find((s) => s.id === f.tableSetId)?.upperFixtureId ?? f.id;
-  const selectedInner = picked.flatMap((f) => [f.runId, upperOf(f)]);
-  const { isOpen, toggle } = useOpenGroups({ storeKey, groupIds: zones.map((z) => z.id), selectedGroupId: [selectedZone, ...selectedInner], keepLoneOpen: false });
-  const fixtures = (zoneId: string | null, className?: string) => (
-    <LayoutFixtures layout={layout} fixtures={plain.filter((f) => f.zoneId === zoneId)} selection={selection} problem={problem} dispatch={dispatch} isOpen={isOpen} toggle={toggle} className={className} />
+  const selectedInner = picked.flatMap((f) => [f.runId && runKey(f.runId, f.zoneId), upperOf(f)]);
+  const { isOpen, toggle } = useOpenGroups({ storeKey, groupIds: zones.map((z) => z.id), selectedGroupId: [...selectedZones, ...selectedInner], keepLoneOpen: false });
+  const fixtures = (zoneId: string | null, as: "h3" | "h4", className?: string) => (
+    <LayoutFixtures layout={layout} fixtures={plain.filter((f) => f.zoneId === zoneId)} selection={selection} problem={problem} dispatch={dispatch} isOpen={isOpen} toggle={toggle} as={as} className={className} />
   );
 
   const storeLevel = plain.filter((f) => f.zoneId === null);
@@ -66,7 +67,7 @@ export function LayoutList({ layout, selection, issues, dispatch, storeKey }: La
               selected={selection.includes(zone.id)}
               onSelect={reveal(zone.id)}
             >
-              {inside.length > 0 ? fixtures(zone.id, "pl-6") : <p className="pl-8 text-sm text-ink-muted">Nothing in this zone.</p>}
+              {inside.length > 0 ? fixtures(zone.id, "h4", "pl-6") : <p className="pl-8 text-sm text-ink-muted">Nothing in this zone.</p>}
             </ZoneFold>
           );
         })}
@@ -75,7 +76,7 @@ export function LayoutList({ layout, selection, issues, dispatch, storeKey }: La
       {storeLevel.length > 0 ? (
         <section>
           <h2 className="mb-1 text-sm font-medium text-ink-muted">On the store floor</h2>
-          {fixtures(null)}
+          {fixtures(null, "h3")}
         </section>
       ) : null}
       {layout.entrances.length > 0 ? (
