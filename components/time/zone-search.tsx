@@ -58,6 +58,8 @@ export function ZoneSearch({ current, onPick }: ZoneSearchProps) {
   }, [base, active]);
 
   function onKeyDown(event: React.KeyboardEvent) {
+    // Keys while an IME is composing belong to the IME (Enter confirms a candidate, arrows move through them).
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       setMoved(Math.max(0, Math.min(options.length - 1, active + (event.key === "ArrowDown" ? 1 : -1))));
@@ -66,8 +68,6 @@ export function ZoneSearch({ current, onPick }: ZoneSearchProps) {
       setMoved(event.key === "Home" ? 0 : options.length - 1);
     } else if (event.key === "Enter") {
       event.preventDefault();
-      // Enter that confirms an IME candidate isn't a choice.
-      if (event.nativeEvent.isComposing) return;
       if (options[active]) onPick(options[active].zone);
     }
   }
