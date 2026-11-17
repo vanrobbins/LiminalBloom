@@ -182,6 +182,16 @@ describe("useBuilder", () => {
     expect(save).not.toHaveBeenCalled();
   });
 
+  it("a typed edit whose placement has left the draft is refused on the status line exactly once, since the form is told it was heard", async () => {
+    const pant = view("a", 0, 4);
+    const { result, save, refuse } = setup(state(view("x", 6)));
+    const outcome = await act(() => result.current.commit(pant, fields(pant, 4), "Changed"));
+    expect(outcome).toEqual({ ok: false, message: "Changed on another device" });
+    expect(save).not.toHaveBeenCalled();
+    expect(refuse).toHaveBeenCalledTimes(1);
+    expect(refuse).toHaveBeenCalledWith("Changed on another device");
+  });
+
   it("shows the other device's draft on a refusal and never starts a second one (Review Focus 3)", async () => {
     const published = { ...view("v-0", 0), id: "v-0" };
     const theirs = state(view("x", 6));

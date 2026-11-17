@@ -81,8 +81,8 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, ref
       return { ok: false, message: null };
     }
     if (!("placement" in found)) {
-      // A typed edit shows its refusal in its own form; the others on the status line.
-      if (found.message && verb !== "Changed") refuse(found.message);
+      // The status line says it, for a typed edit too: the form is told it was heard (a server refusal is said by the save).
+      if (found.message) refuse(found.message);
       return { ok: false, message: found.message };
     }
     const target = found.placement;
