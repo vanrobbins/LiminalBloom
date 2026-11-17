@@ -27,13 +27,15 @@ export function cardAllowed(holder: Holder, key: CardKey): boolean {
   return holdsAny(holder, CARD_SWITCHES[key]);
 }
 
-export type Reads = { planograms: boolean; invitations: boolean; activity: boolean; batch: boolean };
+export type Reads = { planograms: boolean; summaries: boolean; invitations: boolean; activity: boolean; batch: boolean };
 
 /** Which reads `loadHome` starts for this viewer. */
 export function readsFor(holder: Holder): Reads {
   return {
     // Planogram work and the not-placed fixtures count; layout.edit also needs the layout for the setup step.
     planograms: holdsAny(holder, ["planograms.draft", "planograms.publish", "layout.edit"]),
+    // The summaries (due dates, drafts) feed only cards 2 and 4; layout.edit alone needs just the layout.
+    summaries: holdsAny(holder, ["planograms.draft", "planograms.publish"]),
     invitations: can(holder, "people.manage"),
     activity: can(holder, "roles.manage"),
     batch: true,

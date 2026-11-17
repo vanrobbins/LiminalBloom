@@ -48,11 +48,15 @@ describe("cardAllowed", () => {
 
 describe("readsFor", () => {
   it("gives a Sales Associate only the home batch", () => {
-    expect(readsFor(roleHolder("sales_associate"))).toEqual({ planograms: false, invitations: false, activity: false, batch: true });
+    expect(readsFor(roleHolder("sales_associate"))).toEqual({ planograms: false, summaries: false, invitations: false, activity: false, batch: true });
   });
   it("reads planograms for draft, publish or layout.edit", () => {
     for (const s of ["planograms.draft", "planograms.publish", "layout.edit"] as const) expect(readsFor(holder(["view", s])).planograms).toBe(true);
     expect(readsFor(holder(["view", "products.edit", "people.manage", "roles.manage"])).planograms).toBe(false);
+  });
+  it("reads planogram summaries only for draft or publish, not layout.edit alone", () => {
+    expect(readsFor(holder(["view", "layout.edit"])).summaries).toBe(false);
+    for (const s of ["planograms.draft", "planograms.publish"] as const) expect(readsFor(holder(["view", s])).summaries).toBe(true);
   });
   it("reads invitations only with people.manage", () => {
     expect(readsFor(holder(["view", "roles.manage", "planograms.draft"])).invitations).toBe(false);

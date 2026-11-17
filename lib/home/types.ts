@@ -13,8 +13,8 @@ export type SetupRow = { key: "layout" | "product" | "team"; label: string; href
 export type PlanogramWorkRow = ListItem & { overdue: boolean };
 export type PlanogramWork = { rows: PlanogramWorkRow[]; total: number };
 
-/** A pending invitation on card 3. `state` carries the People card's words: Expires / Expired / Lapsed. */
-export type InvitationRow = { id: string; email: string; roleName: string; state: "pending" | "expired" | "lapsed"; expiresAt: Date };
+/** A pending invitation on card 3 (`id` is the invite link, so null unless the viewer may act on it, as on People). `state` carries the People card's words: Expires / Expired / Lapsed. */
+export type InvitationRow = { id: string | null; email: string; roleName: string; state: "pending" | "expired" | "lapsed"; expiresAt: Date };
 
 /** Card 4: counts of what has no place or no planogram yet. */
 export type NotPlaced = { products: number; fixtures: number };
