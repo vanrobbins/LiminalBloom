@@ -1,7 +1,7 @@
 // A fixture in its own frame: translated and rotated as one group, so its
 // rectangle, face markers and label all turn together (spec §6).
 
-import { bandPath, edgePath, middleOffset } from "@/lib/layout/curves";
+import { bandPath, edgePath, middleOffset, n as svgNumber } from "@/lib/layout/curves";
 import { FIXTURE_FONT, labelAngle } from "@/lib/layout/fixture-labels";
 import { FIXTURE_RULES } from "@/lib/layout/fixtures";
 import type { Face, Fixture } from "@/lib/layout/types";
@@ -89,7 +89,7 @@ export function FixtureShape({ fixture: f, faces, scale, muted, selected, proble
           paintOrder="stroke"
           vectorEffect="non-scaling-stroke"
           // Through the middle, along the longest edge, never upside down (labelAngle).
-          transform={`translate(0 ${middleOffset(f)}) rotate(${labelAngle(f) - f.rotation})`}
+          transform={`translate(0 ${svgNumber(middleOffset(f))}) rotate(${svgNumber(labelAngle(f) - f.rotation)})`}
           className="pointer-events-none select-none"
         >
           {f.name}

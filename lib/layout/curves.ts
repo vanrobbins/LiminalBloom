@@ -136,8 +136,8 @@ export function resizeCurved(f: Curved, pointer: Point): number {
   return clampSize(2 * radius * Math.asin(Math.min(1, chord / radius)));
 }
 
-/** Path numbers to 0.001 in, so the server and the browser print the same string (their trig differs in the last digits). */
-function n(v: number): string {
+/** SVG numbers to 0.001, so the server and the browser print the same string (their trig differs in the last digits); paths here and the fixture label transform use it. */
+export function n(v: number): string {
   return String(Math.round(v * 1000) / 1000 + 0);
 }
 
