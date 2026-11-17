@@ -131,6 +131,15 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
     );
   }
 
+  /** Undo or Redo took a placement away: a selection on it goes, and focus settles if it was lost with the tile or panel. */
+  function gone(id: string) {
+    if (current.current === id) select(null);
+    requestAnimationFrame(() => {
+      if (document.activeElement && document.activeElement !== document.body) return;
+      (document.querySelector<HTMLElement>("[data-planogram-grid]") ?? document.getElementById("content"))?.focus();
+    });
+  }
+
   /** The panel's Remove: deselects at once. */
   function remove(p: PlacementView) {
     select(null);
@@ -153,5 +162,5 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
 
   const { edit, moveToFace } = usePanelEdits({ scope, placements, builder, change });
 
-  return { gridBuilder, reorder, remove, moveToFace, edit };
+  return { gridBuilder, reorder, remove, moveToFace, edit, gone };
 }

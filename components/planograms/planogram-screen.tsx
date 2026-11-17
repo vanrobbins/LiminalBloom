@@ -84,6 +84,8 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       openSheet(null);
     },
     describe: (fields) => spotWords(scope.faces, fields),
+    // Read when an Undo or Redo lands, long after this render: `actions` is set by then.
+    onGone: (id) => actions.gone(id),
     reveal: (fields) => {
       if (scope.isSet || fields.faceId === face.faceId) return null;
       showFace(fields.faceId);

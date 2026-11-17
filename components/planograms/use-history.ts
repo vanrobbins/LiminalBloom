@@ -20,7 +20,7 @@ export const CONFLICT = "Changed on another device";
 type Options = {
   save: (pending: Pending) => Promise<SaveResult>;
   /** Read when a press is handled, not when it's made: the render that made it is long gone. */
-  latest: RefObject<{ enabled: boolean; reveal?: (fields: PlacementFields) => string | null }>;
+  latest: RefObject<{ enabled: boolean; reveal?: (fields: PlacementFields) => string | null; onGone?: (id: string) => void }>;
   /** True while a drag is held: Undo is ignored (store-map rule, DECISIONS 10-01). */
   dragging: RefObject<boolean>;
   say: (text: string) => void;
@@ -79,6 +79,8 @@ export function useHistory({ save, latest, dragging, say, refuse, describe }: Op
       setHistory((h) => (renamed ? rename(advance(h, direction, step.step), step.step.id, renamed) : advance(h, direction, step.step)));
       const done = direction === "undo" ? "Undone" : "Redone";
       const faceName = latest.current.reveal?.(step.fields);
+      // An Undo of an add or a Redo of a remove took a placement away: the screen drops its selection and settles focus.
+      if (step.change.kind === "remove") latest.current.onGone?.(step.change.id);
       // The corner bar's Undo and Redo icons are the way back (no toast); the live region says what happened.
       return say(`${done}: ${describe(step.fields)}${faceName ? `, on ${faceName}` : ""}`);
     }

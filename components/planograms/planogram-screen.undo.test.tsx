@@ -129,6 +129,59 @@ describe("Undo and Redo of a removed or added placement", () => {
     expect(lastChange()).toMatchObject({ kind: "update", id: "n2", version: 1, fields: expect.objectContaining({ col: 4 }) });
   });
 
+  const panelGone = () => {
+    expect(screen.queryByText(/Removed on another device/)).toBeNull();
+    expect(document.querySelector("[data-placement-editor]")).toBeNull();
+  };
+  const addTee = async (user: User) => {
+    await user.click(screen.getByRole("button", { name: "Add product" }));
+    await user.type(screen.getByLabelText("Find a product"), "Tee");
+    await user.click(await screen.findByRole("button", { name: /Tee/ }));
+    await waitFor(() => expect(tile("Tee")).toHaveFocus());
+  };
+  const openPanel = async (user: User) => {
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(document.querySelector("[data-placement-editor]")).not.toBeNull());
+  };
+
+  it("Ctrl+Z on an add whose tile has focus puts focus on the grid, not the page", async () => {
+    const user = userEvent.setup();
+    show();
+    await addTee(user);
+    await undoKey(user);
+    await gone("Tee");
+    await waitFor(() => expect(document.querySelector("[data-planogram-grid]")).toHaveFocus());
+  });
+
+  it("undoing an add of the selected tile closes its panel (no \"Removed on another device\") and Undo keeps focus", async () => {
+    const user = userEvent.setup();
+    show();
+    await addTee(user);
+    await openPanel(user);
+    const undo = screen.getByRole("button", { name: "Undo" });
+    await user.click(undo); // focus is in the panel's field, where Ctrl+Z is the field's own
+    await gone("Tee");
+    await waitFor(panelGone);
+    expect(undo).toHaveFocus();
+  });
+
+  it("Redo of a remove of the selected tile closes its panel (no \"Removed on another device\") and Redo keeps focus", async () => {
+    const user = userEvent.setup();
+    show();
+    await user.click(tile("Pant"));
+    await user.click(screen.getByRole("button", { name: "Remove Pant" }));
+    await gone("Pant");
+    await undoKey(user);
+    await back("Pant");
+    await user.click(tile("Pant"));
+    await openPanel(user);
+    const redo = screen.getByRole("button", { name: "Redo" });
+    await user.click(redo);
+    await gone("Pant");
+    await waitFor(panelGone);
+    expect(redo).toHaveFocus();
+  });
+
   it("a refused restore drops the step, says why on the status line, and leaves nothing to replay", async () => {
     const user = userEvent.setup();
     show();

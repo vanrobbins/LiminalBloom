@@ -45,17 +45,19 @@ type Options = {
   enabled?: boolean;
   /** Undo or Redo landed: shows the face it landed on and names it, if that wasn't the one showing. */
   reveal?: (fields: PlacementFields) => string | null;
+  /** Undo or Redo took this placement away (an add undone, a remove redone): the screen drops the selection if it was on it. */
+  onGone?: (id: string) => void;
 };
 
-export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal }: Options) {
+export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, refuse, onLeaveRef, onTakeRef, onStarted, onStale, describe, enabled = true, reveal, onGone }: Options) {
   const [announcement, say] = useAnnouncement();
   const dragging = useRef(false);
   // One start at a time: a second change before it's back waits for the same reply.
   const starting = useRef<ReturnType<typeof beginDraftAction> | null>(null);
   // Toast actions and the key listener outlive the render that made them.
-  const latest = useRef({ draft, enabled, reveal });
+  const latest = useRef({ draft, enabled, reveal, onGone });
   useEffect(() => {
-    latest.current = { draft, enabled, reveal };
+    latest.current = { draft, enabled, reveal, onGone };
   });
 
   /** The draft to work in: the one held, or one started now (a change or an add with none), once however many ask. */
