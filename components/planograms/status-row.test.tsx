@@ -3,10 +3,12 @@
 
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/(app)/planograms/actions", () => ({ setDueDateAction: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const media = vi.hoisted(() => ({ phone: false }));
+vi.mock("@/components/store-map/use-media-query", () => ({ PHONE_QUERY: "", useMediaQuery: () => media.phone }));
 
 import type { PublishedVersion } from "@/lib/planograms/queries";
 
@@ -14,14 +16,37 @@ import { StatusRow } from "./status-row";
 
 const latest: PublishedVersion = { number: 4, publishedAt: new Date("2026-10-08T15:05:00Z"), publishedByName: "Van", summary: null, placements: [] };
 type Props = React.ComponentProps<typeof StatusRow>;
-const show = (over: Partial<Props> = {}) =>
+const show = ({ children = null, ...over }: Partial<Props> = {}) =>
   render(
     <StatusRow fixtureId="fx" latest={latest} hasDraft view="draft" onView={vi.fn()} dueDate={null} today="2026-10-10" canSetDueDate status={null} {...over}>
-      {null}
+      {children}
     </StatusRow>,
   );
 
 describe("StatusRow", () => {
+  beforeEach(() => {
+    media.phone = false;
+  });
+
+  const barAmong = (phone: boolean) => {
+    media.phone = phone;
+    const { container } = show({ dueDate: "2026-10-14", status: { kind: "refused", message: "Blocked" }, children: <div data-corner-bar tabIndex={0} /> });
+    const bar = container.querySelector("[data-corner-bar]")!;
+    const others = [...container.querySelectorAll("[data-status-row] > :not([data-corner-bar])")];
+    return { bar, others };
+  };
+
+  it("on a phone, where the corner bar is the first row, it is first in the tab order too", () => {
+    const { bar, others } = barAmong(true);
+    expect(others.length).toBeGreaterThan(1);
+    for (const other of others) expect(bar.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING, other.outerHTML).toBeTruthy();
+  });
+
+  it("from tablet width, where it ends the row, it is last in the tab order too", () => {
+    const { bar, others } = barAmong(false);
+    for (const other of others) expect(bar.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_PRECEDING, other.outerHTML).toBeTruthy();
+  });
+
   it("never published: no toggle and no info button, just a quiet \"Draft · not published\"", () => {
     show({ latest: null });
     expect(screen.getByText("Draft · not published")).toHaveClass("text-sm", "text-ink-muted");

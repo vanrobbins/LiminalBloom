@@ -7,6 +7,7 @@
 
 "use client";
 
+import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-query";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Tooltip } from "@/components/ui/tooltip";
 import { GLOSSARY } from "@/lib/glossary";
@@ -55,12 +56,16 @@ function ViewToggle({ latest, view, onView }: { latest: PublishedVersion; view: 
 }
 
 export function StatusRow({ fixtureId, latest, hasDraft, view, onView, dueDate, today, canSetDueDate, status, children }: StatusRowProps) {
+  // The corner bar is the first row on a phone and ends the row from tablet width: it sits there in the page too, so the
+  // tab order follows what is seen at every size. (The bar's own `order-first` keeps the server's first paint right on a phone.)
+  const isPhone = useMediaQuery(PHONE_QUERY);
   return (
     <div data-status-row className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {isPhone ? children : null}
       {!latest ? <p className="text-sm text-ink-muted">Draft · not published</p> : hasDraft ? <ViewToggle latest={latest} view={view} onView={onView} /> : <VersionLine latest={latest} />}
       <DueDateChip fixtureId={fixtureId} dueDate={dueDate} today={today} canEdit={canSetDueDate} />
       {status ? <DraftStatusLine status={status} /> : null}
-      {children}
+      {isPhone ? null : children}
     </div>
   );
 }
