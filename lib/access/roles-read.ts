@@ -21,6 +21,13 @@ import { cleanSwitches } from "./switches";
 
 const ACTIVITY_LIMIT = 20;
 
+/** The store's latest access events as sentences, newest first. An invitation's email is worded out unless the viewer may manage people. */
+export async function readActivity(viewer: Member, limit: number): Promise<ActivityLine[]> {
+  const events = await db.select().from(accessEvents).where(eq(accessEvents.storeId, viewer.activeStoreId)).orderBy(desc(accessEvents.createdAt)).limit(limit);
+  const canSeeEmails = can(viewer, "people.manage");
+  return events.map((e) => ({ id: e.id, text: activityText(e.event, e.actorName, e.detail, canSeeEmails), at: e.createdAt.toISOString() }));
+}
+
 async function readPeopleOf(storeId: string, roleIds: string[]) {
   if (roleIds.length === 0) return { named: [], pending: [] };
   const [named, pending] = await Promise.all([
@@ -37,9 +44,9 @@ async function readPeopleOf(storeId: string, roleIds: string[]) {
 export async function rolesViewFor(viewer: Member): Promise<RolesView> {
   const storeId = viewer.activeStoreId;
   const actor = actorOf(viewer);
-  const [roles, events] = await Promise.all([
+  const [roles, activity] = await Promise.all([
     db.select().from(roleDefinitions).where(eq(roleDefinitions.storeId, storeId)).orderBy(asc(roleDefinitions.rank)),
-    db.select().from(accessEvents).where(eq(accessEvents.storeId, storeId)).orderBy(desc(accessEvents.createdAt)).limit(ACTIVITY_LIMIT),
+    readActivity(viewer, ACTIVITY_LIMIT),
   ]);
   // Built-ins can't be deleted, so only custom roles need to say who holds them.
   const { named, pending } = await readPeopleOf(storeId, roles.filter((r) => r.builtin === null).map((r) => r.id));
@@ -52,8 +59,6 @@ export async function rolesViewFor(viewer: Member): Promise<RolesView> {
     switches: r.switches,
     people: { names: byName(named.filter((p) => p.roleId === r.id).map((p) => ({ name: p.name }))).map((p) => p.name), invitations: pending.find((p) => p.roleId === r.id)?.n ?? 0 },
   }));
-  const canSeeEmails = can(viewer, "people.manage");
-  const activity: ActivityLine[] = events.map((e) => ({ id: e.id, text: activityText(e.event, e.actorName, e.detail, canSeeEmails), at: e.createdAt.toISOString() }));
   const placements = roles.filter((r) => r.rank >= actor.rank).map((r) => ({ id: r.id, name: r.name }));
   return {
     roles: buildRoleRows(input, actor, viewer.role?.id ?? null),
