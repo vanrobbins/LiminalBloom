@@ -1,4 +1,4 @@
-// The time zone's form on Store settings: the picker saves the moment a zone is chosen,
+// The time zone's form on Store settings: the picker saves the moment a zone is picked,
 // with the save indicator beside it and no Save button (R3, 0.7.0.5). The page reloads
 // after a save so every "today" on it follows the new zone.
 
@@ -53,16 +53,9 @@ export function TimezoneForm({ zone, version }: { zone: string; version: number 
   }
 
   return (
-    // The change event rises from the picker's select (the find box is a search input and saves nothing).
-    <form
-      aria-busy={busy || undefined}
-      className="flex flex-col gap-1"
-      onSubmit={(event) => event.preventDefault()}
-      onChange={(event) => {
-        if (event.target instanceof HTMLSelectElement) choose(event.target.value);
-      }}
-    >
-      <TimezonePicker name="timezone" defaultZone={zone} value={chosen} />
+    // The picker calls onChange once per pick; moving through its list and searching save nothing.
+    <form aria-busy={busy || undefined} className="flex flex-col gap-1" onSubmit={(event) => event.preventDefault()}>
+      <TimezonePicker name="timezone" defaultZone={zone} value={chosen} onChange={choose} />
       {problem ? <p className="text-sm text-danger">{problem}</p> : null}
       <PanelSaveLine status={status} />
     </form>

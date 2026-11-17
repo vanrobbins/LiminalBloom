@@ -13,19 +13,29 @@ import { TimezoneForm } from "./timezone-form";
 
 beforeEach(() => vi.clearAllMocks());
 
-const zone = () => screen.getByLabelText("Time zone", { selector: "select" });
+const zone = () => screen.getByRole("button", { name: /^Time zone/ });
+const NAMES: Record<string, string> = {
+  "America/Denver": "Mountain (America/Denver)",
+  "America/Chicago": "Central (America/Chicago)",
+  "America/New_York": "Eastern (America/New York)",
+};
+/** Opens the picker and clicks a zone, as a person would. */
+async function pick(user: ReturnType<typeof userEvent.setup>, id: string) {
+  await user.click(zone());
+  await user.click(screen.getByRole("option", { name: NAMES[id] }));
+}
 
 describe("TimezoneForm (auto-saves, R3)", () => {
   it("has no Save button", () => {
     render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
   });
 
   it("saves the moment a zone is chosen, with the version the page showed, says Saved, and reloads, with no toast", async () => {
     mocks.save.mockResolvedValue({ status: "saved", message: "Time zone saved" });
     const user = userEvent.setup();
     render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
-    await user.selectOptions(zone(), "America/Denver");
+    await pick(user, "America/Denver");
     await waitFor(() => expect(mocks.save).toHaveBeenCalledWith("America/Denver", 2));
     expect(await screen.findByText("Saved")).toBeInTheDocument();
     expect(mocks.refresh).toHaveBeenCalled();
@@ -46,19 +56,19 @@ describe("TimezoneForm (auto-saves, R3)", () => {
     mocks.refresh.mockImplementation(() => land("America/Denver", 3));
     render(<Page />);
     zone().focus();
-    await user.selectOptions(zone(), "America/Denver");
+    await pick(user, "America/Denver");
     expect(zone()).not.toBeDisabled();
     expect(zone()).toHaveFocus();
-    await user.selectOptions(zone(), "America/Chicago");
-    await user.selectOptions(zone(), "America/New_York");
+    await pick(user, "America/Chicago");
+    await pick(user, "America/New_York");
     // Nothing is sent while the first is out, and the picker shows the latest pick.
     expect(mocks.save).toHaveBeenCalledTimes(1);
-    expect(zone()).toHaveValue("America/New_York");
+    expect(zone()).toHaveTextContent("Eastern (America/New York)");
     finish({ status: "saved", message: "Time zone saved" });
     // The reload lands with the first zone and the next version; only then does the last pick go.
     await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(2));
     expect(mocks.save).toHaveBeenLastCalledWith("America/New_York", 3);
-    expect(zone()).toHaveValue("America/New_York");
+    expect(zone()).toHaveTextContent("Eastern (America/New York)");
     expect(zone()).toHaveFocus();
   });
 
@@ -66,11 +76,11 @@ describe("TimezoneForm (auto-saves, R3)", () => {
     mocks.save.mockResolvedValue({ status: "refused", message: "Changed on another device" });
     const user = userEvent.setup();
     const { rerender } = render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
-    await user.selectOptions(zone(), "America/Denver");
+    await pick(user, "America/Denver");
     await screen.findByText("Changed on another device");
-    expect(zone()).toHaveValue("America/Los_Angeles");
+    expect(zone()).toHaveTextContent("Pacific (America/Los Angeles)");
     rerender(<TimezoneForm zone="America/Chicago" version={3} />);
-    expect(zone()).toHaveValue("America/Chicago");
+    expect(zone()).toHaveTextContent("Central (America/Chicago)");
   });
 
   it("keeps focus on the picker through a refusal", async () => {
@@ -78,26 +88,32 @@ describe("TimezoneForm (auto-saves, R3)", () => {
     const user = userEvent.setup();
     render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
     zone().focus();
-    await user.selectOptions(zone(), "America/Denver");
+    await pick(user, "America/Denver");
     await screen.findByText("Changed on another device");
     expect(zone()).toHaveFocus();
   });
 
-  it("typing in the find box saves nothing", async () => {
+  it("searching and arrowing through the list save nothing; only a pick does", async () => {
+    mocks.save.mockResolvedValue({ status: "saved", message: "Time zone saved" });
     const user = userEvent.setup();
     render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
-    await user.type(screen.getByLabelText("Find a time zone"), "Denver");
+    await user.click(zone());
+    await user.type(screen.getByRole("combobox", { name: "Find a time zone" }), "Denver");
+    await user.keyboard("{ArrowDown}{ArrowUp}");
     expect(mocks.save).not.toHaveBeenCalled();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
+    expect(mocks.save).toHaveBeenCalledWith("America/Denver", 2);
   });
 
   it("says a refusal under the field, puts the stored zone back, and does not toast", async () => {
     mocks.save.mockResolvedValue({ status: "refused", message: "Changed on another device" });
     const user = userEvent.setup();
     render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
-    await user.selectOptions(zone(), "America/Denver");
+    await pick(user, "America/Denver");
     expect(await screen.findByText("Changed on another device")).toBeInTheDocument();
     expect(screen.getByText("Couldn't save")).toBeInTheDocument();
-    expect(zone()).toHaveValue("America/Los_Angeles");
+    expect(zone()).toHaveTextContent("Pacific (America/Los Angeles)");
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 
@@ -105,8 +121,8 @@ describe("TimezoneForm (auto-saves, R3)", () => {
     mocks.save.mockRejectedValue(new TypeError("Failed to fetch"));
     const user = userEvent.setup();
     render(<TimezoneForm zone="America/Los_Angeles" version={2} />);
-    await user.selectOptions(zone(), "America/Denver");
+    await pick(user, "America/Denver");
     await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error", title: "Couldn't save" })));
-    expect(zone()).toHaveValue("America/Denver");
+    expect(zone()).toHaveTextContent("Mountain (America/Denver)");
   });
 });

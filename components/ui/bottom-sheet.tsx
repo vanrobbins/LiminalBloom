@@ -34,6 +34,8 @@ type BottomSheetProps = {
   peek?: boolean;
   /** 75 dvh tall instead of fitting its content (the map's fixture panel). */
   tall?: boolean;
+  /** On opening: a CSS selector for the field inside to focus instead of the sheet itself (the time zone search). */
+  focusOnOpen?: string;
   /** On closing: `event.preventDefault()` to put focus somewhere else than the opener. */
   onCloseAutoFocus?: (event: Event) => void;
   children: React.ReactNode;
@@ -46,6 +48,7 @@ export function BottomSheet({
   hideTitle = false,
   peek = false,
   tall = false,
+  focusOnOpen,
   onCloseAutoFocus,
   children,
 }: BottomSheetProps) {
@@ -117,7 +120,8 @@ export function BottomSheet({
             returnFocusTo.current = document.activeElement as HTMLElement | null;
             // The sheet itself, not its × (whose tooltip would open and take the first Escape).
             event.preventDefault();
-            (event.target as HTMLElement).focus();
+            const sheet = event.target as HTMLElement;
+            ((focusOnOpen && sheet.querySelector<HTMLElement>(focusOnOpen)) || sheet).focus();
           }}
           onCloseAutoFocus={(event) => {
             onCloseAutoFocus?.(event);

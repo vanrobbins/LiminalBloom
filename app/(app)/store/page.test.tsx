@@ -20,7 +20,7 @@ describe("StorePage store name", () => {
     expect(screen.getByLabelText("Store name")).toHaveValue("Pioneer Place");
     // Both fields save as they are changed: no Save buttons on the page.
     expect(screen.queryByRole("button", { name: /^Save/ })).toBeNull();
-    expect(screen.getByLabelText("Time zone", { selector: "select" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Time zone/ })).toBeInTheDocument();
   });
 
   it("is read-only text with the reason for everyone else", async () => {
