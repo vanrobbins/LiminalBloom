@@ -1,5 +1,7 @@
-// What shows only while a tile is dragged (Part 2 spec §4 "Look"): half-foot
-// guides and a feet ruler on each face, the snapped spot the tile will land on
+// What a draft's grid draws beyond its tiles (Part 2 spec §4 "Look"; 0.7.0.5): half-foot
+// guides and a feet ruler on each face, faint while a draft is edited and at full
+// strength while a tile is dragged (the grid mounts them only for a draft, never in
+// the published view or a past version); and, only while dragging, the snapped spot the tile will land on
 // (dashed; brick when it can't go there), and a chip saying where that is in
 // words, or why not (with a warning icon). Visual only: the screen's live region speaks moves.
 
@@ -10,21 +12,21 @@ import type { GridLayout, Rect } from "@/lib/planograms/set-grid";
 
 import { at, placed } from "./grid-units";
 
-export function DragGuides({ layout }: { layout: GridLayout }) {
+export function DragGuides({ layout, dragging }: { layout: GridLayout; dragging: boolean }) {
   return (
     <>
       {layout.blocks.map((b) => (
         <div
           key={b.faceId}
           aria-hidden="true"
-          data-guides
+          data-guides={dragging ? "dragging" : "rest"}
           className="pointer-events-none absolute"
           style={{
             left: at(b.x),
             top: at(b.y),
             width: at(b.width),
             height: at(b.height),
-            backgroundImage: `repeating-linear-gradient(${b.turned ? "to bottom" : "to right"}, var(--color-line) 0 1px, transparent 1px var(--cell))`,
+            backgroundImage: `repeating-linear-gradient(${b.turned ? "to bottom" : "to right"}, var(${dragging ? "--color-line" : "--color-line-subtle"}) 0 1px, transparent 1px var(--cell))`,
           }}
         >
           {b.turned

@@ -106,6 +106,7 @@ export function PlanogramBody({
           slideFrom={slideFrom}
           onSwipe={onSwipe}
           builder={builder}
+          editing={isEditing}
         />
         <div className="flex flex-col gap-4">
           <ProductSheet open={sheetId !== null} item={sheetItem} face={scope.faces.find((f) => f.faceId === sheetItem?.faceId) ?? null} onClose={() => (isEditing ? setSelectedId(null) : openSheet(null))}>

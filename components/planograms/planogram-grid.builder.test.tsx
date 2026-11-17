@@ -31,6 +31,29 @@ describe("PlanogramGrid as the builder's surface", () => {
     expect(container.querySelector("[data-guides]")).toBeNull();
   });
 
+  it("while a draft is edited the guides and ruler show faint at rest, and at full strength while dragging", () => {
+    sized();
+    const builder = builderWith();
+    const { container } = render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builder} editing />);
+    const guides = () => container.querySelector<HTMLElement>("[data-guides]");
+    expect(guides()).not.toBeNull();
+    expect(guides()?.style.backgroundImage).toContain("--color-line-subtle");
+    expect(guides()).toHaveTextContent("0");
+    const tile = screen.getByRole("button", { name: /High-Rise Pant/ });
+    fireEvent.pointerDown(tile, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    expect(guides()?.style.backgroundImage).not.toContain("--color-line-subtle");
+    expect(guides()?.style.backgroundImage).toContain("--color-line");
+    fireEvent.pointerUp(tile, { pointerId: 1, clientX: 61, clientY: 0 });
+    // Back to faint, not gone.
+    expect(guides()?.style.backgroundImage).toContain("--color-line-subtle");
+  });
+
+  it("the published view and a past version (not editing) draw no guides, even with a builder to start a draft", () => {
+    const { container } = render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" selectedId="p1" onSelect={vi.fn()} builder={builderWith()} />);
+    expect(container.querySelector("[data-guides]")).toBeNull();
+  });
+
   it("draws each table of a set as its own labelled block", () => {
     const { container } = render(<PlanogramGrid layout={setBlocks([face("u", null, 3), face("f", "front", 2)])} items={[pant]} label="Set" onSelect={vi.fn()} />);
     expect(container.querySelector('[data-block="u"]')).toHaveTextContent("Upper");

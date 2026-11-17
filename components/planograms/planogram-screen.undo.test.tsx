@@ -160,7 +160,7 @@ describe("the history clears", () => {
     actions.previewPublishAction.mockResolvedValue({ planogramVersion: 2, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
     actions.publishAction.mockResolvedValue({ status: "saved", message: "Published" });
     const user = await withOneStep();
-    await user.click(screen.getByRole("button", { name: "Publish…" }));
+    await user.click(screen.getByRole("button", { name: "Publish" }));
     await user.click(await screen.findByRole("button", { name: /^Publish to / }));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -172,8 +172,7 @@ describe("the history clears", () => {
   it("after discard", async () => {
     actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
     const user = await withOneStep();
-    await user.click(screen.getByRole("button", { name: "More draft actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Discard draft…" }));
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
     await user.click(within(await screen.findByRole("dialog", { name: "Discard this draft?" })).getByRole("button", { name: "Discard draft" }));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

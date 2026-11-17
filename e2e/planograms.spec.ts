@@ -26,7 +26,7 @@ async function startDraft(page: Page) {
 async function publishVersionOne(page: Page) {
   await openTable(page);
   await startDraft(page);
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
 }
@@ -97,7 +97,7 @@ test("a draft from the floor is edited, published, and Search shows the new cell
     await block.click({ position: { x: blockBox.width - 12, y: blockBox.height / 2 } });
   }
   await expect(page.getByRole("button", { name: "Remove E2E High-Rise Pant" })).toBeHidden();
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByText("Top: 2 added")).toBeVisible();
   await page.getByLabel("Summary (optional)").fill("E2E reset");
   await page.getByRole("button", { name: /^Publish to / }).click();
@@ -112,7 +112,7 @@ test("a draft from the floor is edited, published, and Search shows the new cell
 test("history shows the version, and restore makes it the draft", async ({ page }) => {
   await openTable(page);
   await startDraft(page);
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
 
@@ -157,7 +157,7 @@ test("a refused placement says why", async ({ page }) => {
 test("Open planogram from Search highlights the product", async ({ page }) => {
   await openTable(page);
   await startDraft(page);
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
 
@@ -201,18 +201,16 @@ test("a fixture never published says so, and starts a draft from the empty box",
   await expect(page.getByRole("button", { name: "Add product" })).toBeVisible();
 });
 
-test("discarding a draft goes through the ⋯ menu and a confirmation; Escape on it puts focus back on the ⋯", async ({ page }) => {
+test("discarding a draft goes through the trash button and a confirmation; Escape on it puts focus back on the trash", async ({ page }) => {
   await openTable(page);
   await startDraft(page);
-  const more = page.getByRole("button", { name: "More draft actions" });
-  await more.click();
-  await page.getByRole("menuitem", { name: "Discard draft…" }).click();
+  const trash = page.getByRole("button", { name: "Discard draft", exact: true });
+  await trash.click();
   await expect(page.getByRole("dialog", { name: "Discard this draft?" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Discard this draft?" })).toBeHidden();
-  await expect(more).toBeFocused();
-  await more.click();
-  await page.getByRole("menuitem", { name: "Discard draft…" }).click();
+  await expect(trash).toBeFocused();
+  await trash.click();
   await page.getByRole("dialog", { name: "Discard this draft?" }).getByRole("button", { name: "Discard draft" }).click();
   await expect(page.getByRole("button", { name: "Start planogram" })).toBeVisible();
   await expect(page.getByText("No planogram yet")).toBeVisible();
@@ -220,10 +218,13 @@ test("discarding a draft goes through the ⋯ menu and a confirmation; Escape on
 
 test("the due date is set from its chip, and saved as soon as a date is picked", async ({ page }) => {
   await openTable(page);
-  // Nothing to be due until a draft exists (UX audit U19).
-  await expect(page.getByRole("button", { name: "Set due date" })).toHaveCount(0);
+  // Nothing to be due until a draft exists (UX audit U19): no status row, so no ⋯.
+  await expect(page.getByRole("button", { name: "More actions" })).toHaveCount(0);
   await startDraft(page);
-  await page.getByRole("button", { name: "Set due date" }).click();
+  // No chip until a date is set; Set due date is in the ⋯.
+  await expect(page.getByRole("button", { name: /^Due / })).toHaveCount(0);
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Set due date" }).click();
   await page.getByLabel("Due date", { exact: true }).fill("2099-10-14");
   await expect(page.getByRole("button", { name: "Due Oct 14" })).toBeVisible();
 });

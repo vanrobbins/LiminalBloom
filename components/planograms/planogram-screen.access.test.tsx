@@ -3,6 +3,7 @@
 // which is already long.
 
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/(app)/planograms/actions", () => ({
@@ -59,7 +60,7 @@ describe("PlanogramScreen controls by switch", () => {
   it("a viewer sees the published planogram and no draft, publish or due date controls", () => {
     show(["view"], { draft });
     expect(screen.getByRole("region", { name: /Rack 1, Front/ })).toBeInTheDocument();
-    for (const name of ["Start draft", "Start planogram", "Add product", "Undo", "Redo", "Publish…", "More draft actions", "Set due date", "Draft"]) {
+    for (const name of ["Start draft", "Start planogram", "Add product", "Undo", "Redo", "Publish", "Discard draft", "More actions", "Set due date", "Draft"]) {
       expect(screen.queryByRole("button", { name }), name).toBeNull();
     }
   });
@@ -73,24 +74,26 @@ describe("PlanogramScreen controls by switch", () => {
   it("a drafter with no draft yet gets + (which starts one), but no Undo, Publish, ⋯ or Set due date", () => {
     show(["view", "planograms.draft"]);
     expect(screen.getByRole("button", { name: "Add product" })).toBeInTheDocument();
-    for (const name of ["Start draft", "Undo", "Redo", "Publish…", "More draft actions", "Set due date"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
+    for (const name of ["Start draft", "Undo", "Redo", "Publish", "More actions", "Set due date"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
   });
 
-  it("a drafter in a draft gets Undo, Redo, Add product and the draft menu, but not Publish", () => {
+  it("a drafter in a draft gets Undo, Redo, Add product and Discard draft, but not Publish", () => {
     show(["view", "planograms.draft"], { draft });
-    for (const name of ["Undo", "Redo", "Add product", "More draft actions"]) expect(screen.getByRole("button", { name }), name).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Publish…" })).toBeNull();
+    for (const name of ["Undo", "Redo", "Add product", "Discard draft"]) expect(screen.getByRole("button", { name }), name).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
   });
 
-  it("a publisher gets the due date, but no draft controls at all", () => {
+  it("a publisher gets Set due date in the ⋯, but no draft controls at all", async () => {
     show(["view", "planograms.publish"]);
-    expect(screen.getByRole("button", { name: "Set due date" })).toBeInTheDocument();
-    for (const name of ["Start draft", "Add product", "Undo", "Redo", "Publish…", "More draft actions"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
+    for (const name of ["Start draft", "Add product", "Undo", "Redo", "Publish", "Discard draft"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Set due date" })).toBeInTheDocument();
   });
 
-  it("with both, the draft shows Publish, the one filled button", () => {
+  it("with both, the draft shows Publish, the one filled button, and the visible Discard draft", () => {
     show(["view", "planograms.draft", "planograms.publish"], { draft });
-    expect(screen.getByRole("button", { name: "Publish…" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("button", { name: "Publish" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("button", { name: "Discard draft" })).toBeVisible();
   });
 
   it("with no planogram yet, a drafter gets the one labelled Start planogram", () => {

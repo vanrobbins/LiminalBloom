@@ -2,7 +2,7 @@
 // past version, face by face (a table set as one combined view). The draft and
 // the latest version are editable on the grid: tap to select, then drag,
 // resize, use the corner discs (trash, pencil) or the keys; with no draft the first
-// change starts one. One status row above the grid holds the version line,
+// change starts one. One status row above the grid holds what applies of the version line,
 // Draft | Published, the due date and the actions (UX audit U20); on a phone
 // the corner bar (corner-bar.tsx) ends that row; + or a first change starts a draft.
 // With nothing yet, Start planogram sits in the empty box (U19).
@@ -137,7 +137,9 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     );
   }
 
-  const cornerBar = canDraft ? (
+  const canPublish = can(member, "planograms.publish");
+  // A publisher without the draft switch still gets the ⋯ (the due date).
+  const cornerBar = canDraft || canPublish ? (
     <CornerBar
       fixtureId={scope.fixtureId}
       row={row}
@@ -146,11 +148,13 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       status={isEditing ? status : null}
       canAdd={canMove}
       onAdd={() => setAdding({ cell: null })}
-      canPublish={can(member, "planograms.publish")}
+      canPublish={canPublish}
       canUndo={builder.canUndo}
       canRedo={builder.canRedo}
       onUndo={() => void builder.undo()}
       onRedo={() => void builder.redo()}
+      dueDate={dueDate}
+      canSetDueDate={canPublish}
       onLeave={leave}
     />
   ) : null;
@@ -158,7 +162,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   return (
     <div className="flex flex-col gap-4">
       {isEmpty ? null : (
-        <StatusRow fixtureId={scope.fixtureId} latest={latest} hasDraft={draft !== null} view={view} onView={showView} dueDate={dueDate} canSetDueDate={can(member, "planograms.publish")} today={today} status={isEditing ? status : null}>
+        <StatusRow fixtureId={scope.fixtureId} latest={latest} hasDraft={draft !== null} view={view} onView={showView} dueDate={dueDate} canSetDueDate={canPublish} today={today} status={isEditing ? status : null}>
           {cornerBar}
         </StatusRow>
       )}

@@ -153,7 +153,7 @@ test("an invalid drop snaps back and says why", async ({ page }, info) => {
 test("the first drag on a published planogram starts a draft", async ({ page }, info) => {
   await openTable(page);
   await startDraft(page);
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
   // Nothing to start: with the published version showing, + is there and Undo, Publish and ⋯ wait for a draft.

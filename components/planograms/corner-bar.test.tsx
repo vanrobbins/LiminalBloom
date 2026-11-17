@@ -8,7 +8,7 @@ import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({ previewPublishAction: vi.fn(), publishAction: vi.fn(), discardDraftAction: vi.fn() }));
-vi.mock("@/app/(app)/planograms/actions", () => actions);
+vi.mock("@/app/(app)/planograms/actions", () => ({ ...actions, setDueDateAction: vi.fn() }));
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 const toasts = vi.hoisted(() => ({ toast: vi.fn(), dismissToast: vi.fn() }));
@@ -31,6 +31,8 @@ const base: Props = {
   canRedo: true,
   onUndo: vi.fn(),
   onRedo: vi.fn(),
+  dueDate: null,
+  canSetDueDate: true,
   onLeave: vi.fn(),
 };
 const show = (over: Partial<Props> = {}) => render(<CornerBar {...base} {...over} />);
@@ -39,30 +41,57 @@ const button = (name: string) => screen.queryByRole("button", { name });
 describe("CornerBar", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("a drafter in a draft gets Undo, Redo, Add and the ⋯ menu, but not Publish", () => {
+  it("a drafter in a draft gets Undo, Redo, Add, Discard draft and the ⋯ menu, but not Publish", () => {
     show({ canPublish: false });
-    for (const name of ["Undo", "Redo", "Add product", "More draft actions"]) expect(button(name), name).not.toBeNull();
-    expect(button("Publish…")).toBeNull();
+    for (const name of ["Undo", "Redo", "Add product", "Discard draft", "More actions"]) expect(button(name), name).not.toBeNull();
+    expect(button("Publish")).toBeNull();
   });
 
-  it("with the publish switch too, Publish is there and is the only filled button", () => {
+  it("with the publish switch too, Publish is there, the only filled button, and an icon at every size", () => {
     show();
-    const publish = screen.getByRole("button", { name: "Publish…" });
+    const publish = screen.getByRole("button", { name: "Publish" });
     expect(publish).toHaveClass("bg-brand");
     for (const other of screen.getAllByRole("button").filter((b) => b !== publish)) expect(other, other.getAttribute("aria-label") ?? "").not.toHaveClass("bg-brand");
-    // The word comes from tablet width; the icon alone before that.
-    expect(publish.querySelector("span")).toHaveClass("hidden", "md:inline");
+    expect(publish).toHaveTextContent("");
+    expect(publish.querySelector("svg")).not.toBeNull();
+  });
+
+  it("Undo and Redo are ghosts (no box); Discard draft sits beside Publish, in the order Publish, Discard, ⋯", () => {
+    show();
+    for (const name of ["Undo", "Redo"]) expect(button(name), name).not.toHaveClass("border");
+    const names = screen.getAllByRole("button").map((b) => b.getAttribute("aria-label"));
+    expect(names.slice(-3)).toEqual(["Publish", "Discard draft", "More actions"]);
+  });
+
+  it("⋯ holds Set due date, which opens the editor, and Version history once published", async () => {
+    const user = userEvent.setup();
+    show({ row: { id: "r", fixtureId: "fx", basedOnVersion: null, publishedVersion: 2, hasDraft: true, dueDate: null, version: 5 } });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Version history" })).toHaveAttribute("href", "/planograms/fx/history");
+    expect(screen.queryByRole("menuitem", { name: "Discard draft…" })).toBeNull();
+    await user.click(screen.getByRole("menuitem", { name: "Set due date" }));
+    expect(await screen.findByRole("dialog", { name: "Set due date" })).toBeInTheDocument();
+  });
+
+  it("with a date set the item reads Change due date; without the publish switch it is gone, and with nothing left there is no ⋯", async () => {
+    const user = userEvent.setup();
+    const { rerender } = show({ dueDate: "2026-10-14" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Change due date" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    rerender(<CornerBar {...base} canSetDueDate={false} />);
+    expect(button("More actions")).toBeNull();
   });
 
   it("with nothing to offer (no draft shown, nothing to add to), the bar is not there at all", () => {
-    const { container } = show({ editing: false, canAdd: false, status: null });
+    const { container } = show({ editing: false, canAdd: false, status: null, canSetDueDate: false });
     expect(container).toBeEmptyDOMElement();
   });
 
   it("with no draft yet, only Add shows: Undo, Redo, Publish, the menu and the indicator wait for the draft", () => {
     show({ editing: false, status: null });
     expect(button("Add product")).not.toBeNull();
-    for (const name of ["Undo", "Redo", "Publish…", "More draft actions"]) expect(button(name), name).toBeNull();
+    for (const name of ["Undo", "Redo", "Publish", "Discard draft"]) expect(button(name), name).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
   });
 
@@ -95,16 +124,15 @@ describe("CornerBar", () => {
 
   it("Publish… opens the existing Publish dialog", async () => {
     actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
-    await userEvent.click(show().getByRole("button", { name: "Publish…" }));
+    await userEvent.click(show().getByRole("button", { name: "Publish" }));
     expect(await screen.findByRole("button", { name: /^Publish to / })).toBeInTheDocument();
   });
 
-  it("⋯ offers Discard draft…, which asks first and leaves when confirmed", async () => {
+  it("the trash button asks first and leaves when confirmed", async () => {
     actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
     const user = userEvent.setup();
     show();
-    await user.click(screen.getByRole("button", { name: "More draft actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Discard draft…" }));
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
     const dialog = await screen.findByRole("dialog", { name: "Discard this draft?" });
     expect(actions.discardDraftAction).not.toHaveBeenCalled();
     await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
@@ -112,19 +140,17 @@ describe("CornerBar", () => {
     expect(actions.discardDraftAction).toHaveBeenCalledWith("fx", 3);
   });
 
-  it("closing the Discard dialog puts focus back on the corner bar’s ⋯ (Escape: e2e planograms)", async () => {
+  it("closing the Discard dialog puts focus back on the trash button (Escape: e2e planograms)", async () => {
     const user = userEvent.setup();
     show();
-    await user.click(screen.getByRole("button", { name: "More draft actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Discard draft…" }));
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
     const dialog = await screen.findByRole("dialog", { name: "Discard this draft?" });
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    await waitFor(() => expect(screen.getByRole("button", { name: "More draft actions" })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Discard draft" })).toHaveFocus());
   });
   async function openDiscard(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole("button", { name: "More draft actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Discard draft…" }));
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
     return screen.findByRole("dialog", { name: "Discard this draft?" });
   }
 
@@ -157,7 +183,7 @@ describe("CornerBar", () => {
     expect(actions.discardDraftAction).toHaveBeenCalledTimes(2);
   });
 
-  it("when the ⋯ is gone after a discard, focus goes to the page's main area, not the top of the page", async () => {
+  it("when the trash is gone after a discard, focus goes to the page's main area, not the top of the page", async () => {
     actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
     const main = document.createElement("main");
     main.id = "content";
@@ -172,12 +198,12 @@ describe("CornerBar", () => {
     const dialog = await openDiscard(user);
     await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(screen.queryByRole("button", { name: "More draft actions" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Discard draft" })).toBeNull();
     await waitFor(() => expect(main).toHaveFocus());
     main.remove();
   });
 
-  it("after a successful discard focus goes to the main area even while the ⋯ is still mounted (it goes on the reload)", async () => {
+  it("after a successful discard focus goes to the main area even while the trash is still mounted (it goes on the reload)", async () => {
     actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
     const main = document.createElement("main");
     main.id = "content";
@@ -188,7 +214,7 @@ describe("CornerBar", () => {
     const dialog = await openDiscard(user);
     await user.click(within(dialog).getByRole("button", { name: "Discard draft" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(screen.getByRole("button", { name: "More draft actions" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Discard draft" })).toBeInTheDocument();
     await waitFor(() => expect(main).toHaveFocus());
     main.remove();
   });

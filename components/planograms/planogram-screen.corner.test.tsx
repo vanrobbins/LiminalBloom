@@ -59,17 +59,17 @@ describe("PlanogramScreen corner bar", () => {
     actions.pickerSearch.mockResolvedValue([teeFit]);
   });
 
-  it("the bar is in the status row, with Undo, Redo, Add and, on a draft, Publish and ⋯", () => {
+  it("the bar is in the status row, with Undo, Redo, Add and, on a draft, Publish, Discard and ⋯", () => {
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
     const row = screen.getByRole("button", { name: "Undo" }).closest("[data-status-row]") as HTMLElement;
-    for (const name of ["Redo", "Add product", "Publish…", "More draft actions"]) expect(within(row).getByRole("button", { name }), name).toBeInTheDocument();
+    for (const name of ["Redo", "Add product", "Publish", "Discard draft", "More actions"]) expect(within(row).getByRole("button", { name }), name).toBeInTheDocument();
   });
 
   it("on the published version with no draft there is no Start draft: just +, which starts one", () => {
     render(screenWith(published, null));
     expect(button("Start draft")).toBeNull();
     expect(button("Add product")).not.toBeNull();
-    for (const name of ["Undo", "Redo", "Publish…", "More draft actions"]) expect(button(name), name).toBeNull();
+    for (const name of ["Undo", "Redo", "Publish", "Discard draft"]) expect(button(name), name).toBeNull();
   });
 
   it("with no draft, Add product starts one and places the product clear of what's already on the floor", async () => {

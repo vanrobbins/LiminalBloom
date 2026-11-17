@@ -274,11 +274,11 @@ describe("PlanogramScreen", () => {
     expect(screen.queryByRole("button", { name: "Set due date" })).toBeNull();
   });
 
-  it("puts the status, Draft | Published and Publish… on one row", () => {
+  it("puts Draft | Published (which says the version in its tooltip, not beside it) and Publish on one row", () => {
     render(screenWith(published, { planogramVersion: 3, placements: [pant] }));
-    const row = screen.getByRole("button", { name: "Publish…" }).closest("[data-status-row]") as HTMLElement;
+    const row = screen.getByRole("button", { name: "Publish" }).closest("[data-status-row]") as HTMLElement;
     expect(row).not.toBeNull();
-    expect(within(row).getByText(/Version 1 · published/)).toBeInTheDocument();
+    expect(within(row).queryByText(/Version 1 · published/)).toBeNull();
     expect(within(row).getByRole("button", { name: "Published" })).toBeInTheDocument();
   });
 

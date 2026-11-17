@@ -68,7 +68,7 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
   await expect(page.getByRole("button", { name: "Move back" })).toBeEnabled();
   await expect(page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" }).locator("[data-layer-words]")).toHaveText("2nd from front");
 
-  await page.getByRole("button", { name: "Publish…" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /^Publish to / }).click();
   await expect(page.getByText("Version 1 published", { exact: true })).toBeVisible();
 

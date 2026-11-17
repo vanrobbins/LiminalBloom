@@ -78,9 +78,8 @@ test("tile labels and status chips are readable", async ({ page }) => {
   await check(tile.locator("span").filter({ hasText: "E2E High-Rise Pant" }), "tile label");
   await check(tile.locator("[data-count-badge]"), "tile count badge");
 
-  const chip = page.getByRole("button", { name: "Set due date" });
-  await check(chip, "due date chip");
-  await chip.click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Set due date" }).click();
   await page.locator("input[type=date]").fill("2000-01-02");
   await check(page.getByRole("button", { name: /^Overdue/ }), "overdue chip");
 
