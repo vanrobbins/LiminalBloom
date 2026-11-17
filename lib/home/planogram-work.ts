@@ -4,6 +4,7 @@
 // same rule as /planograms (`dueLabel`), so a date equal to today is due, not overdue.
 
 import { compareNames } from "@/lib/natural-sort";
+import { dueLabel } from "@/lib/planograms/dates";
 import type { ListGroup } from "@/lib/planograms/list";
 
 import type { PlanogramWork, PlanogramWorkRow } from "./types";
@@ -21,7 +22,7 @@ export function planogramWork(groups: readonly ListGroup[], today: string, limit
   const work = groups
     .flatMap((g) => g.items)
     .filter((i) => i.dueDate !== null || i.hasDraft)
-    .map((i): PlanogramWorkRow => ({ ...i, overdue: i.dueDate !== null && i.dueDate < today }))
+    .map((i): PlanogramWorkRow => ({ ...i, overdue: i.dueDate !== null && dueLabel(i.dueDate, today).overdue }))
     .sort(compareWork);
   return { rows: work.slice(0, limit), total: work.length };
 }

@@ -10,6 +10,7 @@ export type SetupFacts = {
   hasOutline: boolean;
   productCount: number;
   memberCount: number;
+  /** Invitations still open (state "pending"); expired and lapsed ones do not count. */
   pendingInvitations: number;
 };
 
