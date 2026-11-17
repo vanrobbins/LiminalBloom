@@ -102,8 +102,8 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
   return (
     <>
       {/* On a phone it takes a row of its own above the rest of the status row, right-aligned; from tablet width it ends the one row.
-          The status row puts it first or last in the page to match (tab order); `order-first` only covers the server's first paint. */}
-      <div data-corner-bar className="order-first flex w-full items-center justify-end gap-1 sm:gap-3 md:order-none md:ml-auto md:w-auto">
+          It is first in the page at every size (status-row.tsx, one stable place); `md:order-last` moves it to the end of the row. */}
+      <div data-corner-bar className="order-first flex w-full items-center justify-end gap-1 sm:gap-3 md:order-last md:ml-auto md:w-auto">
         {editing ? (
           <div className={GROUP}>
             {status ? <SaveIndicator status={status} quiet={panelOpen} /> : null}

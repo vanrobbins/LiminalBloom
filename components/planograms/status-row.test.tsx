@@ -1,6 +1,7 @@
 // The status row shows only what applies (0.7.0.5 task 10): the Draft | Published
 // toggle only once something was published, the due date only once set.
 
+import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,23 +29,40 @@ describe("StatusRow", () => {
     media.phone = false;
   });
 
-  const barAmong = (phone: boolean) => {
-    media.phone = phone;
-    const { container } = show({ dueDate: "2026-10-14", status: { kind: "refused", message: "Blocked" }, children: <div data-corner-bar tabIndex={0} /> });
-    const bar = container.querySelector("[data-corner-bar]")!;
-    const others = [...container.querySelectorAll("[data-status-row] > :not([data-corner-bar])")];
-    return { bar, others };
-  };
-
-  it("on a phone, where the corner bar is the first row, it is first in the tab order too", () => {
-    const { bar, others } = barAmong(true);
-    expect(others.length).toBeGreaterThan(1);
-    for (const other of others) expect(bar.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING, other.outerHTML).toBeTruthy();
+  it("the corner bar is first in the page at every size, so tab order is what a phone shows", () => {
+    for (const phone of [true, false]) {
+      media.phone = phone;
+      const { container, unmount } = show({ dueDate: "2026-10-14", status: { kind: "refused", message: "Blocked" }, children: <div data-corner-bar tabIndex={0} /> });
+      const bar = container.querySelector("[data-corner-bar]")!;
+      const others = [...container.querySelectorAll("[data-status-row] > :not([data-corner-bar])")];
+      expect(others.length).toBeGreaterThan(1);
+      for (const other of others) expect(bar.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING, other.outerHTML).toBeTruthy();
+      unmount();
+    }
   });
 
-  it("from tablet width, where it ends the row, it is last in the tab order too", () => {
-    const { bar, others } = barAmong(false);
-    for (const other of others) expect(bar.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_PRECEDING, other.outerHTML).toBeTruthy();
+  it("crossing the phone width does not remount the corner bar (an open dialog and its state survive)", () => {
+    const mounts = vi.fn();
+    function Bar() {
+      useEffect(() => {
+        mounts();
+      }, []);
+      return <div data-corner-bar />;
+    }
+    const tree = () => (
+      <StatusRow fixtureId="fx" latest={latest} hasDraft view="draft" onView={vi.fn()} dueDate={null} today="2026-10-10" canSetDueDate status={null}>
+        <Bar />
+      </StatusRow>
+    );
+    media.phone = false;
+    const { rerender } = render(tree());
+    const bar = document.querySelector("[data-corner-bar]");
+    media.phone = true;
+    rerender(tree());
+    media.phone = false;
+    rerender(tree());
+    expect(document.querySelector("[data-corner-bar]")).toBe(bar);
+    expect(mounts).toHaveBeenCalledTimes(1);
   });
 
   it("never published: no toggle and no info button, just a quiet \"Draft · not published\"", () => {
