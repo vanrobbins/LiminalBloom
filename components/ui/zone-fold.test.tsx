@@ -66,4 +66,15 @@ describe("ZoneFold and useOpenGroups", () => {
     act(() => result.current.toggle("only"));
     expect(result.current.isOpen("only")).toBe(true);
   });
+
+  it("a selected row highlights as one: the chevron sits inside the selected header", () => {
+    render(
+      <ZoneFold title="Zone a" count={1} open={false} onToggle={() => {}} onSelect={() => {}} selected>
+        <p>x</p>
+      </ZoneFold>,
+    );
+    const row = screen.getByRole("heading", { name: /Zone a/ });
+    expect(row).toHaveAttribute("data-selected", "true");
+    expect(row).toContainElement(screen.getByRole("button", { name: "Open Zone a" }));
+  });
 });

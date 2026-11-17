@@ -34,19 +34,19 @@ export function ZoneFold({ title, count, summary, open, canFold = true, onToggle
   return (
     <section aria-labelledby={`${id}-title`} className="flex flex-col gap-1">
       <div className="flex items-center gap-1">
-        <Heading className={split ? "flex min-w-0 flex-1 items-center gap-1" : "min-w-0 flex-1"}>
+        <Heading data-selected={split ? selected : undefined} className={split ? "group flex min-w-0 flex-1 items-center gap-1 rounded data-[selected=true]:bg-brand data-[selected=true]:text-on-brand" : "min-w-0 flex-1"}>
           {split ? (
             <>
               {canFold ? (
                 <Button variant="ghost" icon aria-expanded={open} aria-controls={`${id}-body`} aria-label={`${open ? "Close" : "Open"} ${title}`} onClick={onToggle}>
-                  <ChevronRight aria-hidden="true" strokeWidth={1.75} className={`size-4 text-ink-muted motion-safe:transition-transform ${open ? "rotate-90" : ""}`} />
+                  <ChevronRight aria-hidden="true" strokeWidth={1.75} className={`size-4 text-ink-muted group-data-[selected=true]:text-on-brand motion-safe:transition-transform ${open ? "rotate-90" : ""}`} />
                 </Button>
               ) : null}
               <button
                 type="button"
                 aria-pressed={selected}
                 onClick={onSelect}
-                className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded px-2 text-left text-ink focus-visible:outline-2 focus-visible:outline-ink aria-pressed:bg-brand aria-pressed:text-on-brand"
+                className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded px-2 text-left text-ink focus-visible:outline-2 focus-visible:outline-ink aria-pressed:text-on-brand"
               >
                 <span id={`${id}-title`} className="min-w-0 font-medium wrap-break-word">
                   {title}

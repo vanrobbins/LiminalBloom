@@ -47,9 +47,15 @@ function write(storeKey: string, ids: readonly string[]) {
 }
 
 /** `groupIds` are the top-level groups; `selectedGroupId` may name several, e.g. a zone and the run inside it. */
-type Options = { storeKey: string; groupIds: readonly string[]; selectedGroupId?: string | readonly (string | null)[] | null };
+type Options = {
+  storeKey: string;
+  groupIds: readonly string[];
+  selectedGroupId?: string | readonly (string | null)[] | null;
+  /** True (the default): a lone group is always open. The map's list passes false so every zone folds. */
+  keepLoneOpen?: boolean;
+};
 
-export function useOpenGroups({ storeKey, groupIds, selectedGroupId = null }: Options) {
+export function useOpenGroups({ storeKey, groupIds, selectedGroupId = null, keepLoneOpen = true }: Options) {
   const selected = (Array.isArray(selectedGroupId) ? selectedGroupId : [selectedGroupId]).filter((id): id is string => id !== null);
   const selectedKey = selected.join("|");
   // "[]" on the server and at hydration, so the first render matches: everything folded.
@@ -64,7 +70,7 @@ export function useOpenGroups({ storeKey, groupIds, selectedGroupId = null }: Op
   const [folded, setFolded] = useState<{ selection: string; ids: string[] }>({ selection: selectedKey, ids: [] });
   if (folded.selection !== selectedKey) setFolded({ selection: selectedKey, ids: [] });
 
-  const lone = groupIds.length === 1;
+  const lone = keepLoneOpen && groupIds.length === 1;
   const isLone = (id: string) => lone && groupIds.includes(id);
   const isOpen = (id: string) => isLone(id) || stored.includes(id) || (selected.includes(id) && !folded.ids.includes(id));
 

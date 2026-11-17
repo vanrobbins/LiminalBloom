@@ -35,7 +35,7 @@ export function LayoutList({ layout, selection, issues, dispatch, storeKey }: La
   const selectedZone = zones.find((z) => selection.includes(z.id))?.id ?? picked.find((f) => f.zoneId !== null)?.zoneId ?? null;
   const upperOf = (f: Fixture) => layout.tableSets.find((s) => s.id === f.tableSetId)?.upperFixtureId ?? f.id;
   const selectedInner = picked.flatMap((f) => [f.runId, upperOf(f)]);
-  const { isOpen, toggle } = useOpenGroups({ storeKey, groupIds: zones.map((z) => z.id), selectedGroupId: [selectedZone, ...selectedInner] });
+  const { isOpen, toggle } = useOpenGroups({ storeKey, groupIds: zones.map((z) => z.id), selectedGroupId: [selectedZone, ...selectedInner], keepLoneOpen: false });
   const fixtures = (zoneId: string | null, className?: string) => (
     <LayoutFixtures layout={layout} fixtures={plain.filter((f) => f.zoneId === zoneId)} selection={selection} problem={problem} dispatch={dispatch} isOpen={isOpen} toggle={toggle} className={className} />
   );

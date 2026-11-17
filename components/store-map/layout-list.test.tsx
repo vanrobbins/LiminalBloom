@@ -64,6 +64,25 @@ describe("LayoutList", () => {
     expect(screen.getByRole("button", { name: /^Front tables/ })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("a lone zone folds by its arrow and opens again", async () => {
+    const one = { ...layout, zones: [zone()] };
+    render(<LayoutList layout={one} selection={[]} issues={[]} dispatch={() => {}} storeKey="lone" />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Open Front tables" }));
+    expect(screen.getByRole("button", { name: /Table 1/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close Front tables" }));
+    expect(screen.queryByRole("button", { name: /Table 1/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Open Front tables" }));
+    expect(screen.getByRole("button", { name: /Table 1/ })).toBeInTheDocument();
+  });
+
+  it("folding the zone that holds the selection works and stays folded", async () => {
+    const one = { ...layout, zones: [zone()] };
+    render(<LayoutList layout={one} selection={["in"]} issues={[]} dispatch={() => {}} storeKey="lone2" />);
+    await userEvent.click(screen.getByRole("button", { name: "Close Front tables" }));
+    expect(screen.queryByRole("button", { name: /Table 1/ })).toBeNull();
+  });
+
   describe("runs and table sets", () => {
     const rack = (id: string, name: string, runIndex: number, over = {}) =>
       fixture({ id, name, type: "rack", x: 100 + runIndex * 40, y: 100, zoneId: "zone-a", runId: "run-1", runIndex, ...over });
