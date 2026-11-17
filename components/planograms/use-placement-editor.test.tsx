@@ -161,7 +161,9 @@ describe("a refused value is tied to the field it is about", () => {
     expect(field("Pieces")).not.toHaveAttribute("aria-invalid");
     await typeAndPause("Width (ft)", "2");
     await typeAndPause("Pieces", "5");
-    expect(screen.getByRole("alert")).toHaveTextContent("Changed on another device");
+    const refusal = screen.getByText("Changed on another device");
+    expect(refusal).not.toHaveAttribute("role");
     expect(field("Pieces")).toHaveAttribute("aria-invalid", "true");
+    expect(field("Pieces").getAttribute("aria-describedby")).toContain(refusal.id);
   });
 });

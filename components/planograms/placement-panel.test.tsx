@@ -55,7 +55,7 @@ describe("PlacementEditor", () => {
     renderPanel({ onSave: vi.fn().mockResolvedValue({ ok: false, message: "Changed on another device" }) });
     fireEvent.change(screen.getByLabelText("Pieces"), { target: { value: "5" } });
     await act(async () => vi.advanceTimersByTime(600));
-    expect(screen.getByRole("alert")).toHaveTextContent("Changed on another device");
+    expect(screen.getByText("Changed on another device")).not.toHaveAttribute("role", "alert");
   });
 
   it("sends what was typed when the panel closes, into the placement it was typed for", () => {

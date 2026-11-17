@@ -124,7 +124,7 @@ describe("the panel's numbers save as they change", () => {
     actions.saveChangeAction.mockResolvedValueOnce({ status: "refused", message: "Changed on another device", draft: draftOf() });
     fireEvent.change(pieces(), { target: { value: "5" } });
     const panel = screen.getByRole("complementary", { name: "Pant" });
-    expect(await within(panel).findByRole("alert")).toHaveTextContent("Changed on another device");
+    expect(await within(panel).findByText("Changed on another device")).toBeVisible();
     expect(await within(panel).findByText("Couldn't save")).toBeInTheDocument();
   });
 

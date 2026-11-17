@@ -158,6 +158,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
       dueDate={dueDate}
       canSetDueDate={canPublish}
       onLeave={leave}
+      panelOpen={isEditing && sheetId !== null}
     />
   ) : null;
 

@@ -17,7 +17,8 @@ export function PanelSaveLine({ status }: { status: DraftStatus }) {
   return (
     <p role="status" aria-live="polite" data-panel-status className={`flex min-h-6 items-center gap-1 text-sm ${kind === "refused" ? "text-danger" : "text-ink-muted"}`}>
       {/* Saving… is for the eye only, as in the corner: a screen reader hears the settled state. */}
-      <span key={kind} aria-hidden={kind === "saving" || undefined} className="inline-flex items-center gap-1 motion-safe:animate-fade-in">
+      {/* "Couldn't save" is for the eye too: the reason is said once, on the draft's status line. */}
+      <span key={kind} aria-hidden={kind === "saving" || kind === "refused" || undefined} className="inline-flex items-center gap-1 motion-safe:animate-fade-in">
         {kind === "refused" ? <AlertTriangle aria-hidden="true" strokeWidth={1.75} className="size-4" /> : null}
         {kind === "saved" ? <Check aria-hidden="true" strokeWidth={2} className="size-4" /> : null}
         {kind === "saving" ? <LoaderCircle aria-hidden="true" strokeWidth={1.75} className="size-4 motion-safe:animate-spin" /> : null}

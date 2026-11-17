@@ -14,7 +14,8 @@ export type FormValues = { fromLeft: string; width: string; rowStart: string; ro
 /** The number fields, which an error can be about (presentation is a choice, never invalid). */
 export type NumberKey = Exclude<keyof FormValues, "presentation">;
 /** Why it can't be sent, and which fields it is about (the form ties the message to them). */
-export type FieldError = { message: string; fields: readonly NumberKey[] };
+/** `heard`: the draft's status line already said it (a refusal from the server), so the form shows it without a second announcement. */
+export type FieldError = { message: string; fields: readonly NumberKey[]; heard?: true };
 const POSITION: readonly NumberKey[] = ["fromLeft", "width", "rowStart", "rowSpan"];
 export const ALL_NUMBERS: readonly NumberKey[] = [...POSITION, "pieces"];
 

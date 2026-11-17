@@ -71,7 +71,7 @@ export function PlacementForm(props: PlacementEditorOptions) {
         <Input label="Pieces" info="pieces" inputMode="numeric" value={values.pieces} onChange={(e) => edit("pieces", e.target.value)} {...about("pieces")} />
       </div>
       {error ? (
-        <p id={alertId} role="alert" className="text-sm text-danger">
+        <p id={alertId} role={error.heard ? undefined : "alert"} className="text-sm text-danger">
           {error.message}
         </p>
       ) : null}

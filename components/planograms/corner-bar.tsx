@@ -46,6 +46,8 @@ type CornerBarProps = {
   canSetDueDate: boolean;
   /** The draft was published or discarded. */
   onLeave: () => void;
+  /** The product panel is open: it says Saved on its own line, so the corner indicator stops being a live region. */
+  panelOpen?: boolean;
 };
 
 const ICON = {
@@ -57,7 +59,7 @@ const ICON = {
 const GROUP = "flex items-center gap-1";
 const SPACED = `${GROUP} border-l border-line-subtle pl-1.5 sm:pl-3`;
 
-export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAdd, onAdd, canPublish, canUndo, canRedo, onUndo, onRedo, dueDate, canSetDueDate, onLeave }: CornerBarProps) {
+export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAdd, onAdd, canPublish, canUndo, canRedo, onUndo, onRedo, dueDate, canSetDueDate, onLeave, panelOpen = false }: CornerBarProps) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -103,7 +105,7 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
       <div data-corner-bar className="order-first flex w-full items-center justify-end gap-1 sm:gap-3 md:order-none md:ml-auto md:w-auto">
         {editing ? (
           <div className={GROUP}>
-            {status ? <SaveIndicator status={status} /> : null}
+            {status ? <SaveIndicator status={status} quiet={panelOpen} /> : null}
             {/* aria-disabled, not disabled: a disabled button drops keyboard focus when the last step is undone and can't be named by a touch long-press. Pressing it with nothing to do does nothing. */}
             <Button variant="ghost" icon aria-label="Undo" aria-disabled={!canUndo} className="aria-disabled:opacity-60" onClick={canUndo ? onUndo : undefined}>
               <Undo2 {...ICON} />

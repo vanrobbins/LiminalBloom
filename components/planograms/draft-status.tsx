@@ -45,11 +45,12 @@ export function useCalmStatus(status: DraftStatus): DraftStatus {
   return shown;
 }
 
-export function SaveIndicator({ status }: { status: DraftStatus }) {
+/** `quiet`: the product panel is open and its own line says Saved, so this one is for the eye only (one voice, not two). */
+export function SaveIndicator({ status, quiet = false }: { status: DraftStatus; quiet?: boolean }) {
   const { kind } = useCalmStatus(status);
   const text = kind === "saving" ? "Saving…" : kind === "saved" ? "Saved" : "";
   return (
-    <p role="status" aria-live="polite" data-draft-status className={`flex size-6 shrink-0 items-center justify-center gap-1 text-sm sm:size-auto sm:min-w-20 sm:justify-end ${kind === "refused" ? "text-danger" : "text-ink-muted"}`}>
+    <p {...(quiet ? {} : { role: "status", "aria-live": "polite" as const })} data-draft-status className={`flex size-6 shrink-0 items-center justify-center gap-1 text-sm sm:size-auto sm:min-w-20 sm:justify-end ${kind === "refused" ? "text-danger" : "text-ink-muted"}`}>
       {/* Saving… is for the eye only: a screen reader hears the settled state, not "Saving…" then "Saved" on every edit. */}
       <span key={kind} aria-hidden={kind === "saving" || undefined} className="inline-flex items-center gap-1 motion-safe:animate-fade-in">
         {kind === "refused" ? <AlertTriangle aria-hidden="true" strokeWidth={1.75} className="size-4" /> : null}

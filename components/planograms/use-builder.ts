@@ -103,7 +103,8 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, ref
     // Undo and Redo ask for the depth it had, so a step puts it back in its place front to back.
     const after = kept ? fieldsOf(kept, true) : fields;
     history.record({ kind: "update", id: target.id, before: fieldsOf(result.before ?? target, true), after, aheadBefore: result.ahead?.before, aheadAfter: result.ahead?.after });
-    say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
+    // The panel's own typed edit says Saved on its own line: "Changed to …" would be a second voice (a notice is still said).
+    if (verb !== "Changed" || result.notice) say(isReorder(verb) ? verb : `${result.notice ?? verb} to ${describe(after)}`);
     return { ok: true, id: target.id, draft: result.draft };
   }
 

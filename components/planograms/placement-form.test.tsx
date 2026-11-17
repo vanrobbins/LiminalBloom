@@ -160,7 +160,8 @@ describe("PlacementForm", () => {
     const onSubmit = vi.fn().mockResolvedValueOnce({ ok: false, message: "Blocked by Crew Sock" }).mockResolvedValue(saved);
     renderForm({ onSubmit });
     await typeAndPause("Pieces", "5");
-    expect(screen.getByRole("alert")).toHaveTextContent("Blocked by Crew Sock");
+    // Shown beside the fields, but not announced a second time: the draft's status line says a server refusal.
+    expect(screen.getByText("Blocked by Crew Sock")).not.toHaveAttribute("role");
     await wait(300);
     expect(screen.getByText("Couldn't save")).toBeInTheDocument();
     await typeAndPause("Pieces", "6");

@@ -119,7 +119,7 @@ export function usePlacementEditor({ faces, initial, others, excludeId, footprin
     if (trackRef.current.held === sent) keep({ ...trackRef.current, held });
     // Published or discarded elsewhere is not the connection (and the page reloads); a bare failure already toasted.
     const message = result.gone ? GONE : (result.message ?? LOST_CONNECTION);
-    setError({ message, fields: result.gone ? [] : ALL_NUMBERS });
+    setError({ message, fields: result.gone ? [] : ALL_NUMBERS, ...(result.message ? { heard: true as const } : {}) });
     setStatus({ kind: "refused", message });
   }
 
