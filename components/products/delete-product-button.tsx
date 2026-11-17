@@ -5,6 +5,7 @@
 
 "use client";
 
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -65,8 +66,8 @@ export function DeleteProductButton(target: Target) {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
-      <Button variant="danger" onClick={() => setIsOpen(true)}>
-        Delete product
+      <Button icon variant="danger" onClick={() => setIsOpen(true)} aria-label="Delete product">
+        <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
       <DeleteProductDialog {...target} open={isOpen} onOpenChange={setIsOpen} />
     </>

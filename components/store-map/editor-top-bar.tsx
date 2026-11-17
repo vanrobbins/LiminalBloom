@@ -2,7 +2,7 @@
 
 "use client";
 
-import { Redo2, Undo2, X } from "lucide-react";
+import { Redo2, Save, Undo2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -29,8 +29,8 @@ type EditorTopBarProps = {
 export function EditorTopBar({ title, inZone, status, refusal, leaving, canUndo, canRedo, onDone, onLeaveZone, onUndo, onRedo, add }: EditorTopBarProps) {
   return (
     <header className="flex items-center gap-2 border-b border-line-subtle bg-raised px-2 py-1">
-      <Button variant="secondary" loading={leaving} loadingText="Saving…" onClick={onDone}>
-        Done
+      <Button icon variant="secondary" loading={leaving} loadingText="" aria-label={leaving ? "Saving…" : "Save and leave"} onClick={onDone}>
+        <Save aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
       <h1 className="min-w-0 flex-1 truncate text-center text-base font-semibold text-ink">{title}</h1>
       {inZone ? (

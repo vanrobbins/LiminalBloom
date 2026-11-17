@@ -7,7 +7,7 @@
 "use client";
 
 import { Label } from "radix-ui";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createInvitationAction } from "@/app/(app)/people/actions";
@@ -20,8 +20,11 @@ import { FIELD_CLASSES } from "@/components/ui/password-field";
 import { INVITATION_HOURS } from "@/lib/access/invite-limits";
 import type { RoleChoice } from "@/lib/access/people-view";
 
+import { CopyCheckIcon } from "./copy-check-icon";
 import { inviteRefusalText } from "./invite-refusal";
 import { NETWORK_TEXT } from "./refusal-text";
+
+const COPIED_MS = 1500;
 
 type Made = { email: string; link: string; expiresAt: string };
 
@@ -45,6 +48,9 @@ export function InviteDialog({ roles, onClose, onCloseAutoFocus }: InviteDialogP
   const [isSaving, setIsSaving] = useState(false);
   const [made, setMade] = useState<Made | null>(null);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const reset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(reset.current), []);
 
   async function create(event: React.FormEvent) {
     event.preventDefault();
@@ -70,6 +76,9 @@ export function InviteDialog({ roles, onClose, onCloseAutoFocus }: InviteDialogP
     try {
       await navigator.clipboard.writeText(link);
       setCopyNotice("Copied");
+      setCopied(true);
+      clearTimeout(reset.current);
+      reset.current = setTimeout(() => setCopied(false), COPIED_MS);
     } catch {
       // No clipboard (or it was refused): leave the link selected for a hand copy.
       linkField.current?.select();
@@ -86,8 +95,8 @@ export function InviteDialog({ roles, onClose, onCloseAutoFocus }: InviteDialogP
           </p>
           <Input ref={linkField} label="Invite link" readOnly value={made.link} onFocus={(event) => event.currentTarget.select()} />
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="secondary" onClick={() => copy(made.link)}>
-              Copy link
+            <Button icon variant="secondary" onClick={() => copy(made.link)} aria-label="Copy link">
+              <CopyCheckIcon copied={copied} />
             </Button>
             <Button onClick={onClose}>Done</Button>
           </div>

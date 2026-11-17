@@ -35,7 +35,7 @@ describe("DueDateChip", () => {
     const user = userEvent.setup();
     render(<DueDateChip canEdit fixtureId="f" dueDate="2026-10-14" today="2026-10-10" />);
     await user.click(screen.getByRole("button", { name: "Due Oct 14" }));
-    await user.click(screen.getByRole("button", { name: "Clear" }));
+    await user.click(screen.getByRole("button", { name: "Clear due date" }));
     expect(mocks.setDue).toHaveBeenCalledWith("f", null);
   });
 

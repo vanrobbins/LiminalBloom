@@ -4,7 +4,7 @@
 
 "use client";
 
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Neighbour } from "@/lib/planograms/rules";
@@ -38,8 +38,8 @@ export function PlacementEditor({ placement, isGone, faces, others, busy, onClos
   return isGone ? (
     <div className="flex flex-col items-start gap-3">
       <p className="text-ink">Removed on another device</p>
-      <Button variant="secondary" onClick={onClose}>
-        Close
+      <Button icon variant="secondary" onClick={onClose} aria-label="Close">
+        <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
     </div>
   ) : placement && isOrphan ? (

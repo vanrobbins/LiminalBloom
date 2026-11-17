@@ -2,17 +2,19 @@
 
 "use client";
 
+import { Undo2, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 
 export function DrawingBar({ corners, onUndo, onCancel }: { corners: number; onUndo: () => void; onCancel: () => void }) {
   return (
     <div className="absolute inset-x-3 top-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-raised p-3 shadow-lg">
       <p className="min-w-0 flex-1 text-sm text-ink">Tap to place each corner. Tap the first corner to finish.</p>
-      <Button variant="secondary" disabled={corners === 0} onClick={onUndo}>
-        Undo corner
+      <Button icon variant="secondary" disabled={corners === 0} onClick={onUndo} aria-label="Undo corner">
+        <Undo2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
-      <Button variant="ghost" onClick={onCancel}>
-        Cancel
+      <Button icon variant="secondary" onClick={onCancel} aria-label="Cancel drawing">
+        <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
     </div>
   );

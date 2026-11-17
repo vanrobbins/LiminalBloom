@@ -4,6 +4,8 @@
 
 "use client";
 
+import { Save, Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 
 type StagedBarProps = {
@@ -28,11 +30,11 @@ export function StagedBar({ count, problem, onDiscard, onReview }: StagedBarProp
         </p>
       ) : null}
       <div className="mt-2 flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={(event) => onDiscard(event.currentTarget)}>
-          Discard
+        <Button icon variant="secondary" onClick={(event) => onDiscard(event.currentTarget)} aria-label="Discard changes">
+          <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
-        <Button disabled={problem !== null} onClick={(event) => onReview(event.currentTarget)}>
-          Review and save
+        <Button icon disabled={problem !== null} onClick={(event) => onReview(event.currentTarget)} aria-label="Review and save">
+          <Save aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
       </div>
     </div>

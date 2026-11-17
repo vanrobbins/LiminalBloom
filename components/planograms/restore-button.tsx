@@ -2,6 +2,7 @@
 
 "use client";
 
+import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -32,8 +33,8 @@ export function RestoreButton({ fixtureId, expectedVersion, number }: { fixtureI
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)} aria-label={`Restore version ${number}`}>
-        Restore
+      <Button icon variant="secondary" onClick={() => setOpen(true)} aria-label={`Restore version ${number}`}>
+        <RotateCcw aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen} title={`Restore version ${number}?`} description="It becomes the draft, replacing any draft in progress. Nothing changes on the floor until you publish.">
         <Button onClick={restore} loading={busy} loadingText="Restoring…">

@@ -5,6 +5,8 @@
 
 "use client";
 
+import { Copy, RotateCw, Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Fold } from "@/components/ui/fold";
 import { FeetInchesInput } from "@/components/ui/feet-inches-input";
@@ -86,8 +88,8 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
               onCommit={(rotation) => update({ rotation })}
             />
           </div>
-          <Button variant="secondary" onClick={() => update({ rotation: fixture.rotation + 90 })}>
-            Rotate 90°
+          <Button icon variant="secondary" onClick={() => update({ rotation: fixture.rotation + 90 })} aria-label="Rotate 90°">
+            <RotateCw aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         </div>
       ) : null}
@@ -96,12 +98,12 @@ export function FixtureProperties({ layout, fixture, dispatch }: FixtureProperti
       {isRunType(fixture.type) ? <RunControls layout={layout} rack={fixture} dispatch={dispatch} /> : null}
       <div className="flex flex-wrap gap-2">
         {!isLower ? (
-          <Button variant="secondary" onClick={() => dispatch({ type: "duplicate" })}>
-            Duplicate
+          <Button icon variant="secondary" onClick={() => dispatch({ type: "duplicate" })} aria-label="Duplicate">
+            <Copy aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         ) : null}
-        <Button variant="danger" onClick={() => dispatch({ type: "command", command: { type: "delete", ids: [fixture.id] } })}>
-          {isLower ? "Remove lower table" : "Delete"}
+        <Button icon variant="danger" onClick={() => dispatch({ type: "command", command: { type: "delete", ids: [fixture.id] } })} aria-label={isLower ? "Remove lower table" : "Delete"}>
+          <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
       </div>
     </div>

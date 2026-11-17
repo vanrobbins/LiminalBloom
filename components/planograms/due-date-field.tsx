@@ -5,6 +5,7 @@
 
 "use client";
 
+import { CalendarX } from "lucide-react";
 import { useState } from "react";
 
 import { setDueDateAction } from "@/app/(app)/planograms/actions";
@@ -60,8 +61,8 @@ export function DueDateForm({ fixtureId, dueDate, onDone }: DueDateFormProps) {
       />
       <div className="flex items-center gap-3">
         {dueDate ? (
-          <Button variant="secondary" onClick={() => send(null)} aria-disabled={busy || undefined} className="aria-disabled:opacity-60">
-            Clear
+          <Button icon variant="secondary" onClick={() => send(null)} aria-label="Clear due date" aria-disabled={busy || undefined} className="aria-disabled:opacity-60">
+            <CalendarX aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         ) : null}
         <PanelSaveLine status={status} />

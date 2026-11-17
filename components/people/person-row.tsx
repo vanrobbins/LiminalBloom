@@ -1,6 +1,8 @@
 // One person in the list. The buttons exist only where the server said the rank
 // rule allows them (`canAct`); every other row is read-only.
 
+import { UserMinus, UserRoundCog } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { CollapseItem } from "@/components/ui/collapse-item";
 import type { PersonRow } from "@/lib/access/people-view";
@@ -28,11 +30,11 @@ export function PersonListItem({ person, onChangeRole, onRemove, leaving = false
       </span>
       {person.canAct ? (
         <>
-          <Button variant="secondary" data-change-role={person.memberId} onClick={(event) => onChangeRole(person, event.currentTarget)} aria-label={`Change role for ${person.name}`}>
-            Change role
+          <Button icon variant="secondary" data-change-role={person.memberId} onClick={(event) => onChangeRole(person, event.currentTarget)} aria-label={`Change role for ${person.name}`}>
+            <UserRoundCog aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
-          <Button variant="quiet-danger" onClick={(event) => onRemove(person, event.currentTarget)} aria-label={`Remove ${person.name}`}>
-            Remove
+          <Button icon variant="quiet-danger" onClick={(event) => onRemove(person, event.currentTarget)} aria-label={`Remove ${person.name}`}>
+            <UserMinus aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         </>
       ) : null}

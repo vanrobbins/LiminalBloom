@@ -14,7 +14,7 @@ describe("MapEditor", () => {
   it("shows the map, Done, undo and redo", () => {
     render(<MapEditor storeId="s" initialLayout={{ ...store(), fixtures: [fixture()] }} {...actions} />);
     expect(screen.getByRole("img", { name: /Store layout: 0 zones, 1 fixture/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save and leave" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
   });
 

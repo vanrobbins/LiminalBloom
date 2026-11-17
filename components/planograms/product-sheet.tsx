@@ -71,10 +71,9 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
               <dd className="font-mono text-ink">{item.pieceCount}</dd>
             </dl>
           </div>
-          <Button asChild variant="secondary" className="self-start">
-            <Link href={`/products?q=${encodeURIComponent(item.styleNumber)}`}>
-              <Search aria-hidden="true" strokeWidth={1.75} className="size-4" />
-              Find in Products
+          <Button asChild icon variant="secondary" className="self-start">
+            <Link href={`/products?q=${encodeURIComponent(item.styleNumber)}`} aria-label="Find in Products">
+              <Search aria-hidden="true" strokeWidth={1.75} className="size-5" />
             </Link>
           </Button>
         </>

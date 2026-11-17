@@ -2,6 +2,7 @@
 
 "use client";
 
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -39,7 +40,9 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
       <p role="status" aria-live="polite" className="sr-only">
         {said}
       </p>
-      <Button onClick={() => setOpen({ kind: "add" })}>Add category</Button>
+      <Button icon onClick={() => setOpen({ kind: "add" })} aria-label="Add category">
+        <Plus aria-hidden="true" strokeWidth={1.75} className="size-5" />
+      </Button>
       {categories.length === 0 ? (
         <p className="mt-6 rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">No categories yet.</p>
       ) : (
@@ -52,10 +55,11 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
                   {describeDefaults(c)} · {c.productCount} {c.productCount === 1 ? "product" : "products"}
                 </span>
               </span>
-              <Button variant="secondary" onClick={() => setOpen({ kind: "edit", category: c })} aria-label={`Edit ${c.name}`}>
-                Edit
+              <Button icon variant="secondary" onClick={() => setOpen({ kind: "edit", category: c })} aria-label={`Edit ${c.name}`}>
+                <Pencil aria-hidden="true" strokeWidth={1.75} className="size-5" />
               </Button>
               <Button
+                icon
                 variant="quiet-danger"
                 onClick={(event) => {
                   opener.current = event.currentTarget;
@@ -63,7 +67,7 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
                 }}
                 aria-label={`Delete ${c.name}`}
               >
-                Delete
+                <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
               </Button>
             </CollapseItem>
           ))}

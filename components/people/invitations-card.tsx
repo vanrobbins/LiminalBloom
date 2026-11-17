@@ -8,7 +8,7 @@
 
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 
@@ -24,10 +24,10 @@ import { useCollapseOut } from "@/components/ui/use-collapse-out";
 import type { InvitationRow } from "@/lib/access/people-view";
 import { toast } from "@/lib/toast";
 
+import { CopyCheckIcon } from "./copy-check-icon";
 import { refusalText } from "./refusal-text";
 
 const COPIED_MS = 1500;
-const FADE = "motion-safe:transition-opacity motion-safe:duration-300 motion-safe:ease-[var(--ease-enter)]";
 
 export function InvitationsCard({ invitations }: { invitations: InvitationRow[] }) {
   const router = useRouter();
@@ -106,16 +106,12 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
               </span>
               {id !== null && i.linkWorks && !i.expired && !i.lapsed ? (
                 <Button variant="secondary" icon onClick={() => copy(id)} aria-label={`Copy link for ${i.email}`}>
-                  {/* The copy icon swaps to a check: one slot, two icons trading opacity. */}
-                  <span className="relative size-5">
-                    <Copy aria-hidden="true" strokeWidth={1.75} className={`absolute inset-0 size-5 ${FADE} ${copied === id ? "opacity-0" : "opacity-100"}`} />
-                    <Check data-copied aria-hidden="true" strokeWidth={2} className={`absolute inset-0 size-5 ${FADE} ${copied === id ? "opacity-100" : "opacity-0"}`} />
-                  </span>
+                  <CopyCheckIcon copied={copied === id} />
                 </Button>
               ) : null}
               {id !== null ? (
-                <Button variant="quiet-danger" onClick={(event: MouseEvent<HTMLElement>) => cancel(id, i.email, event.currentTarget)} loading={busy === id} loadingText="Cancelling…" aria-label={`Cancel invitation for ${i.email}`}>
-                  Cancel
+                <Button icon variant="quiet-danger" onClick={(event: MouseEvent<HTMLElement>) => cancel(id, i.email, event.currentTarget)} loading={busy === id} loadingText="" aria-label={`Cancel invitation for ${i.email}`}>
+                  <X aria-hidden="true" strokeWidth={1.75} className="size-5" />
                 </Button>
               ) : null}
               {id !== null && problem?.id === id ? (

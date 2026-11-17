@@ -7,7 +7,7 @@
 
 "use client";
 
-import { List } from "lucide-react";
+import { ArrowLeft, List } from "lucide-react";
 import { useCallback, useMemo, useReducer, useState } from "react";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -79,16 +79,15 @@ export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProp
     <div className="flex flex-col gap-3">
       <div className="flex min-h-11 items-center justify-between gap-2">
         {focusedZone ? (
-          <Button variant="secondary" onClick={() => dispatch({ type: "focus", focus: OVERVIEW })}>
-            ← Whole store
+          <Button icon variant="secondary" onClick={() => dispatch({ type: "focus", focus: OVERVIEW })} aria-label="Whole store">
+            <ArrowLeft aria-hidden="true" strokeWidth={1.75} className="size-5" />
           </Button>
         ) : (
           <p className="min-w-0 flex-1 text-sm text-ink-muted">{hasMouse ? "Select" : "Tap"} a zone to look inside it, or a fixture for its planogram.</p>
         )}
         {isWide ? null : (
-          <Button variant="secondary" className="shrink-0" onClick={() => setListOpen(true)}>
+          <Button icon variant="secondary" className="shrink-0" onClick={() => setListOpen(true)} aria-label="List">
             <List aria-hidden="true" strokeWidth={1.75} className="size-5" />
-            List
           </Button>
         )}
       </div>

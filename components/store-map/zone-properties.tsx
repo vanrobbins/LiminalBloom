@@ -2,6 +2,7 @@
 
 "use client";
 
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -52,17 +53,17 @@ export function ZoneProperties({ zone, fixtureCount, cornerSelected, dispatch }:
         {formatArea(area(zone.points))} · {zone.points.length} corners
       </p>
       {cornerSelected ? (
-        <Button variant="secondary" onClick={() => dispatch({ type: "delete" })}>
-          Remove corner
+        <Button icon variant="secondary" onClick={() => dispatch({ type: "delete" })} aria-label="Remove corner">
+          <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
         </Button>
       ) : (
         <p className="text-sm text-ink-muted">Drag a corner to reshape, or tap + on an edge to add one.</p>
       )}
-      <Button variant="secondary" onClick={() => dispatch({ type: "focus", focus: { kind: "zone", id: zone.id } })}>
-        Edit fixtures
+      <Button icon variant="secondary" onClick={() => dispatch({ type: "focus", focus: { kind: "zone", id: zone.id } })} aria-label="Edit fixtures">
+        <Pencil aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
-      <Button variant="danger" onClick={() => setConfirming(true)}>
-        Delete zone
+      <Button icon variant="danger" onClick={() => setConfirming(true)} aria-label="Delete zone">
+        <Trash2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
       </Button>
       <Dialog
         open={confirming}

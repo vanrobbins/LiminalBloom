@@ -13,9 +13,8 @@ import type { SaveStatus as Status } from "./use-map-editor";
 export function EditorBottomBar({ status, refusal, onList }: { status: Status; refusal: string | null; onList: () => void }) {
   return (
     <nav aria-label="Editor" className="flex items-center justify-between gap-2 border-t border-line-subtle bg-raised px-3 py-2 md:hidden">
-      <Button variant="secondary" onClick={onList}>
+      <Button icon variant="secondary" onClick={onList} aria-label="List">
         <List aria-hidden="true" strokeWidth={1.75} className="size-5" />
-        List
       </Button>
       <div className="sm:hidden">
         <SaveStatus status={status} refusal={refusal} />

@@ -41,7 +41,7 @@ describe("DueDateForm (auto-saves, R3)", () => {
   it("clears an existing date with Clear, at once", async () => {
     const onDone = vi.fn();
     render(<DueDateForm fixtureId="fx" dueDate="2026-10-01" onDone={onDone} />);
-    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear due date" }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(actions.setDueDateAction).toHaveBeenCalledTimes(1);
     expect(actions.setDueDateAction).toHaveBeenCalledWith("fx", null);
@@ -101,7 +101,7 @@ describe("DueDateForm (auto-saves, R3)", () => {
     let finish: (reply: unknown) => void = () => {};
     actions.setDueDateAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     render(<DueDateForm fixtureId="fx" dueDate="2026-10-01" onDone={vi.fn()} />);
-    const clear = screen.getByRole("button", { name: "Clear" });
+    const clear = screen.getByRole("button", { name: "Clear due date" });
     await userEvent.click(clear);
     expect(clear).toHaveFocus();
     expect(clear).toBeEnabled();

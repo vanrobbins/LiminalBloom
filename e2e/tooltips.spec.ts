@@ -6,7 +6,7 @@ import type { Page } from "@playwright/test";
 
 import { expect, hydrated, sizeOf, test } from "./fixtures";
 import { seedLayout } from "./map-store";
-import { clearPeople, inviteeEmail, seedInvitation } from "./people-store";
+import { clearPeople, inviteeEmail, seedInvitation, seedTeam } from "./people-store";
 import { seedCatalog } from "./product-store";
 import { HOME_STORE, ipFor } from "./test-account";
 
@@ -88,6 +88,46 @@ test("/people and /roles each have an icon-only button here, and it shows its na
     await expect(page.getByRole("tooltip")).toHaveCount(0);
   }
 });
+
+// 0.7.0.5 (plan task 9c): the swept screens. Each control below was a word and is now a bare icon: a
+// 44 px target, named by its aria-label, and (desktop) the same name as a tooltip on hover.
+const SWEPT: { path: string; role: "button" | "link"; name: string; skipOnPhone?: boolean }[] = [
+  { path: "/layout", role: "button", name: "Edit" },
+  { path: "/layout/edit", role: "button", name: "Save and leave" },
+  { path: "/products", role: "link", name: "Add product" },
+  { path: "/products", role: "link", name: "Categories", skipOnPhone: true },
+  { path: "/products/categories", role: "button", name: "Add category" },
+  { path: "/products/categories", role: "button", name: "Edit E2E Pants" },
+  { path: "/products/categories", role: "button", name: "Delete E2E Pants" },
+  { path: "/people", role: "button", name: "Invite someone" },
+  { path: "/people", role: "button", name: "Change role for Zoe Sales" },
+  { path: "/people", role: "button", name: "Remove Zoe Sales" },
+  { path: "/roles", role: "button", name: "Add role" },
+  { path: "/account", role: "link", name: "Store settings" },
+];
+
+for (const { path, role, name, skipOnPhone } of SWEPT) {
+  test(`${path}: ${name} is a 44 px icon with an aria-label, and shows its name on hover`, async ({ page }) => {
+    test.skip(skipOnPhone === true && sizeOf(test.info()) === "phone", "On a phone this one lives in the ⋯ menu.");
+    if (path === "/people") await seedTeam();
+    await page.goto(path);
+    await hydrated(page);
+    const control = page.getByRole(role, { name, exact: true }).filter({ visible: true });
+    await expect(control).toBeVisible();
+    // An icon has no text of its own: the name is the aria-label, and the shape is the 44 px square.
+    await expect(control).toHaveText("");
+    const box = (await control.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(43.5);
+    expect(box.height).toBeGreaterThanOrEqual(43.5);
+    await expectIconsNamed(page);
+    if (sizeOf(test.info()) !== "desktop") return;
+    await control.hover();
+    await expect(page.getByRole("tooltip", { name })).toBeVisible();
+    await page.mouse.move(0, 0);
+    await page.mouse.move(5, 5);
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+  });
+}
 
 test("/welcome and /invite/[id]: every icon-only button has an aria-label", async ({ page, browser }) => {
   const email = inviteeEmail();

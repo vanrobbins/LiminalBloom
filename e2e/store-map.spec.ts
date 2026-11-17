@@ -132,7 +132,7 @@ test.describe("read-only map", () => {
 		await expect(page).toHaveURL(/\/layout$/);
 		await panel.getByRole("button", { name: "Rack", exact: true }).click();
 		await saved(page);
-		await page.getByRole("button", { name: "Done" }).click();
+		await page.getByRole("button", { name: "Save and leave" }).click();
 		await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
 		await expect(page.locator('[data-fixture-name="Rack 1"]')).toHaveCount(1);
 	});
@@ -242,7 +242,7 @@ test.describe("editing", () => {
 
 	test("Done returns to a map nobody can drag", async ({ page }) => {
 		await page.goto("/layout/edit");
-		await page.getByRole("button", { name: "Done" }).click();
+		await page.getByRole("button", { name: "Save and leave" }).click();
 		await page.waitForURL("**/layout");
 		await hydrated(page);
 		const before = await fixtureShape(page, "Table 1").getAttribute("transform");

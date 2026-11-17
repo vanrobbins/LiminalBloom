@@ -3,6 +3,8 @@
 
 "use client";
 
+import { FlipHorizontal2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { FeetInchesInput } from "@/components/ui/feet-inches-input";
 import { maxCurve } from "@/lib/layout/curves";
@@ -27,8 +29,8 @@ export function CurveField({ fixture, onChange }: CurveFieldProps) {
         <>
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm text-ink-muted">Bends toward the {curve > 0 ? "front" : "back"}</p>
-            <Button variant="secondary" onClick={() => onChange(-curve)}>
-              Flip curve
+            <Button icon variant="secondary" onClick={() => onChange(-curve)} aria-label="Flip curve">
+              <FlipHorizontal2 aria-hidden="true" strokeWidth={1.75} className="size-5" />
             </Button>
           </div>
           <p className="text-sm text-ink-muted">Width is measured along the curve&apos;s centre.</p>

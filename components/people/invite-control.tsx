@@ -25,14 +25,9 @@ export function InviteControl({ roles }: { roles: RoleChoice[] }) {
 
   return (
     <>
-      <div className="md:hidden">
-        <Button variant="secondary" icon aria-label="Invite someone" onClick={open}>
-          <UserPlus aria-hidden="true" strokeWidth={1.75} className="size-5" />
-        </Button>
-      </div>
-      <div className="hidden md:block">
-        <Button onClick={open}>Invite</Button>
-      </div>
+      <Button icon aria-label="Invite someone" onClick={open}>
+        <UserPlus aria-hidden="true" strokeWidth={1.75} className="size-5" />
+      </Button>
       {isOpen ? (
         <InviteDialog
           roles={roles}

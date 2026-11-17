@@ -4,6 +4,8 @@
 
 "use client";
 
+import { ArrowDown, ArrowUp, Pencil, RotateCcw, Trash2, type LucideIcon } from "lucide-react";
+
 import { Fold } from "@/components/ui/fold";
 import { Button } from "@/components/ui/button";
 import { cellEnabled, EDITABLE_SWITCHES, permissionCount, roleActions, type RoleAction, type RoleRow, type RolesView } from "@/lib/access/roles-view";
@@ -12,6 +14,8 @@ import { summaryLines } from "@/lib/access/switches";
 import { PermissionRow } from "./permission-row";
 import { cellNote, switchesOf, type Staged } from "./staged";
 import type { MoveSaid } from "./use-move-role";
+
+const ACTION_ICON: Record<RoleAction, LucideIcon> = { rename: Pencil, up: ArrowUp, down: ArrowDown, reset: RotateCcw, delete: Trash2 };
 
 type RoleFoldProps = {
   view: RolesView;
@@ -59,11 +63,14 @@ export function RoleFold({ view, row, staged, refusal, open, onOpen, onToggle, o
         </div>
         {roleActions(row).length > 0 ? (
           <div className="flex flex-wrap gap-2 px-2">
-            {roleActions(row).map((a) => (
-              <Button key={a.key} variant={a.key === "delete" ? "quiet-danger" : "secondary"} disabled={anyStaged} onClick={(event) => onAction(row, a.key, event.currentTarget)} aria-label={`${a.label} ${row.name}`}>
-                {a.label}
-              </Button>
-            ))}
+            {roleActions(row).map((a) => {
+              const Icon = ACTION_ICON[a.key];
+              return (
+                <Button key={a.key} icon variant={a.key === "delete" ? "quiet-danger" : "secondary"} disabled={anyStaged} onClick={(event) => onAction(row, a.key, event.currentTarget)} aria-label={`${a.label} ${row.name}`}>
+                  <Icon aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                </Button>
+              );
+            })}
             {anyStaged ? <p className="w-full text-sm text-ink-muted">Save or discard your changes first.</p> : null}
           </div>
         ) : null}
