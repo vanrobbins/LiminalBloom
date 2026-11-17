@@ -3,7 +3,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
 import { accessEvents, planogramVersions, planograms } from "@/db/schema";
@@ -16,7 +16,18 @@ import { dropStores, seedStoreFixtures } from "@/lib/products/test-stores";
 import { storeToday } from "@/lib/time/format";
 import { DEFAULT_TIMEZONE } from "@/lib/time/zones";
 
+import { planogramSummaries } from "@/lib/planograms/queries";
+
 import { loadHome } from "./load";
+
+vi.mock("@/lib/planograms/queries", async (original) => {
+  const real = await original<typeof import("@/lib/planograms/queries")>();
+  return { ...real, planogramSummaries: vi.fn(real.planogramSummaries) };
+});
+
+beforeEach(() => {
+  vi.mocked(planogramSummaries).mockClear();
+});
 
 afterAll(async () => {
   await dropStores();
@@ -82,6 +93,28 @@ describe("loadHome", () => {
     expect(data.setup?.map((r) => r.key)).toEqual(["layout"]);
     expect(data.planograms).toBeUndefined();
     expect(data.notPlaced).toBeUndefined();
+    expect(planogramSummaries).not.toHaveBeenCalled();
+  });
+
+  it("sends a people.manage viewer id null for an invitation to a role at or above their own, as People does", async () => {
+    const { store, roles } = await makeStoreWithRoles("home-rank");
+    const manager = await makePerson(store, roles.store_manager);
+    await makeInvitation(store, manager.userId, roles.assistant_manager);
+    await makeInvitation(store, manager.userId, roles.vm_manager);
+    await makeInvitation(store, manager.userId, roles.sales_associate);
+    const data = await loadHome(viewer(store, roles, "vm_manager"), NOW);
+    const idByRole = Object.fromEntries((data.invitations ?? []).map((i) => [i.roleName, i.id]));
+    expect(idByRole["Assistant Manager"]).toBeNull();
+    expect(idByRole["Visual Merchandising Manager"]).toBeNull();
+    expect(idByRole["Sales Associate"]).toEqual(expect.any(String));
+  });
+
+  it("gives a roles.manage viewer without people.manage the changes with no email, and no invitations", async () => {
+    const { store, roles } = await busyStore("home-roles");
+    const data = await loadHome(viewer(store, roles, "vm_worker", ["view", "roles.manage"]), NOW);
+    expect(data.invitations).toBeUndefined();
+    expect(data.changes?.length).toBeGreaterThan(0);
+    expect(JSON.stringify(data)).not.toContain("@");
   });
 
   it("offers Invite your team to a lone manager, and counts only a still-pending invitation as an invitation", async () => {
