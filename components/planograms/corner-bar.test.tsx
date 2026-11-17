@@ -152,6 +152,41 @@ describe("CornerBar", () => {
     expect(await screen.findByRole("button", { name: /^Publish to / })).toBeInTheDocument();
   });
 
+  it("after a Publish that went through, focus goes to the main area, not the page top (the Publish button goes on the reload)", async () => {
+    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
+    actions.publishAction.mockResolvedValue({ status: "saved", message: "Published" });
+    const main = document.createElement("main");
+    main.id = "content";
+    main.tabIndex = -1;
+    document.body.append(main);
+    function Host() {
+      const [editing, setEditing] = useState(true);
+      return <CornerBar {...base} editing={editing} onLeave={() => setEditing(false)} />;
+    }
+    const user = userEvent.setup();
+    render(<Host />);
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+    await user.click(await screen.findByRole("button", { name: /^Publish to / }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    try {
+      await waitFor(() => expect(main).toHaveFocus());
+    } finally {
+      main.remove();
+    }
+  });
+
+  it("closing the Publish dialog without publishing leaves focus to return to the Publish button", async () => {
+    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
+    const user = userEvent.setup();
+    show();
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Publish" })).toHaveFocus());
+  });
+
   it("the trash button asks first and leaves when confirmed", async () => {
     actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
     const user = userEvent.setup();

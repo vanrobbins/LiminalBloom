@@ -63,6 +63,9 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
   const [discarding, setDiscarding] = useState(false);
   const [busy, setBusy] = useState(false);
   const trash = useRef<HTMLButtonElement>(null);
+  const publish = useRef<HTMLButtonElement>(null);
+  // A publish that went through takes the Publish button away on the reload that follows, whenever that lands.
+  const published = useRef(false);
   // A discard that went through takes the ⋯ away on the reload that follows, whenever that lands.
   const discarded = useRef(false);
 
@@ -120,7 +123,15 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
         {editing || hasMenu ? (
           <div className={editing || canAdd ? SPACED : GROUP}>
             {editing && canPublish ? (
-              <Button icon aria-label="Publish" onClick={() => setPublishing(true)}>
+              <Button
+                ref={publish}
+                icon
+                aria-label="Publish"
+                onClick={() => {
+                  published.current = false;
+                  setPublishing(true);
+                }}
+              >
                 <Send {...ICON} />
               </Button>
             ) : null}
@@ -143,7 +154,20 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
           </div>
         ) : null}
       </div>
-      <PublishDialog open={publishing} onOpenChange={setPublishing} fixtureId={fixtureId} onPublished={onLeave} />
+      <PublishDialog
+        open={publishing}
+        onOpenChange={setPublishing}
+        fixtureId={fixtureId}
+        onPublished={() => {
+          published.current = true;
+          onLeave();
+        }}
+        // Back to the Publish button, or, after a publish that went through (it is on its way out), to the main area as Discard does.
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          (published.current ? document.getElementById("content") : publish.current)?.focus();
+        }}
+      />
       <Dialog
         open={discarding}
         onOpenChange={(open) => {
