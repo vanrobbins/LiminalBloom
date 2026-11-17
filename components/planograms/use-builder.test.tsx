@@ -192,6 +192,13 @@ describe("useBuilder", () => {
     expect(refuse).toHaveBeenCalledWith("Changed on another device");
   });
 
+  it("a nudge built on a tile rendered before a typed width came back keeps that width and moves only the position", async () => {
+    const rendered = view("a", 0, 4);
+    const { result, save } = setup(state({ ...rendered, colSpan: 4, pieceCount: 9, version: 4 }));
+    await act(() => result.current.commit(rendered, fields(rendered, 1), "Moved"));
+    expect(save).toHaveBeenLastCalledWith({ kind: "update", id: "a", version: 4, fields: { ...fields(rendered, 1), colSpan: 4, pieceCount: 9 } });
+  });
+
   it("shows the other device's draft on a refusal and never starts a second one (Review Focus 3)", async () => {
     const published = { ...view("v-0", 0), id: "v-0" };
     const theirs = state(view("x", 6));

@@ -11,7 +11,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 
 import { useAnnouncement } from "@/components/ui/use-announcement";
-import { fieldsOf, isReorder, keepPanelNumbers, type Verb } from "@/lib/planograms/builder/fields";
+import { fieldsOf, isReorder, keepUnchanged, type Verb } from "@/lib/planograms/builder/fields";
 import type { DraftState, PlacementFields, PlacementView } from "@/lib/planograms/types";
 import { toast } from "@/lib/toast";
 
@@ -88,9 +88,9 @@ export function useBuilder({ fixtureId, draft, expectedVersion, save, adopt, ref
     const target = found.placement;
     onFound?.(target.id);
     // A move, resize or reorder is built from the tile as rendered, which can be older than the panel's last typed edit
-    // (sent, not yet rendered): it takes the panel's numbers from the draft as it is when it goes.
+    // (sent, not yet rendered): what the gesture did not change is taken from the draft as it is when it goes.
     const result = await save(
-      verb === "Changed" ? { kind: "update", id: target.id, version: target.version, fields } : (held) => ({ kind: "update", id: target.id, version: target.version, fields: keepPanelNumbers(fields, held?.placements.find((p) => p.id === target.id)) }),
+      verb === "Changed" ? { kind: "update", id: target.id, version: target.version, fields } : (held) => ({ kind: "update", id: target.id, version: target.version, fields: keepUnchanged(fields, item, held?.placements.find((p) => p.id === target.id)) }),
     );
     if (!result.saved) {
       // The status line already says why: the save that was refused set it.
