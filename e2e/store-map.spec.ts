@@ -155,7 +155,7 @@ test.describe("first-time setup", () => {
 
 	test("a custom outline is drawn corner by corner", async ({ page }) => {
 		await page.goto("/layout/edit");
-		await page.getByRole("button", { name: "Draw it corner by corner" }).click();
+		await page.getByRole("button", { name: "Store outline" }).click();
 		const box = (await map(page).boundingBox())!;
 		// Kept clear of the drawing bar along the top and the zoom buttons at the bottom right.
 		const corners = [

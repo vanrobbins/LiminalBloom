@@ -80,6 +80,7 @@ export function InvitationsCard({ invitations }: { invitations: InvitationRow[] 
       router.refresh();
     } catch {
       toast({ tone: "error", title: "Couldn't cancel", description: "Check your connection and try again." });
+      say(`Couldn't cancel the invitation for ${email}`);
     } finally {
       setBusy(null);
     }

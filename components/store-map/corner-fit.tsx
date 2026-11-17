@@ -4,6 +4,8 @@
 
 "use client";
 
+import { Radius } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { cornerFit } from "@/lib/layout/curve-snap";
 import { formatLength } from "@/lib/layout/format";
@@ -19,6 +21,7 @@ export function CornerFit({ layout, fixture, dispatch }: CornerFitProps) {
   return (
     <div className="flex flex-col gap-1">
       <Button variant="secondary" onClick={() => dispatch({ type: "command", command: { type: "updateFixture", id: fixture.id, changes: fit.changes } })}>
+        <Radius aria-hidden="true" strokeWidth={1.75} className="size-5" />
         Fit to corner
       </Button>
       {fit.gap > 1 ? (

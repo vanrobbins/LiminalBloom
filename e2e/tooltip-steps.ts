@@ -30,7 +30,7 @@ export const corner = async (page: Page) => {
   await resetLayout();
   await page.goto("/layout/edit");
   await hydrated(page);
-  await page.getByRole("button", { name: "Draw it corner by corner" }).click();
+  await page.getByRole("button", { name: "Store outline" }).click();
   const at = (await page.getByRole("img", { name: /^Store layout:/ }).boundingBox())!;
   await page.mouse.click(at.x + at.width * 0.3, at.y + at.height * 0.4);
 };
