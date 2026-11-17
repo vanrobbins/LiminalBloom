@@ -168,7 +168,7 @@ describe("the selected tile's corner discs", () => {
 
   // The drawing space is 12 units wide and 6 tall; the scroller clips at all four sides.
   it.each([
-    ["left", { col: 0, row: 1, colSpan: 4, rowSpan: 1 }, "Remove", "x"],
+    ["right", { col: 8, row: 1, colSpan: 4, rowSpan: 1 }, "Remove", "x"],
     ["top", { col: 4, row: 0, colSpan: 4, rowSpan: 1 }, "Remove", "y"],
     ["right", { col: 8, row: 1, colSpan: 4, rowSpan: 1 }, "Edit", "x"],
     ["bottom", { col: 4, row: 2, colSpan: 4, rowSpan: 1 }, "Edit", "y"],
@@ -177,12 +177,13 @@ describe("the selected tile's corner discs", () => {
     expect(disc(`${which} Pant`)).toHaveAttribute(`data-${axis}`, "in");
   });
 
-  it("a tile in the middle of the grid has neither disc turned inward", () => {
+  // jsdom measures no cell size, so the tile counts as roomy: its pencil sits inside by design (tile-corners.tsx).
+  it("a tile in the middle of the grid has the trash not turned inward and the pencil inside its corner", () => {
     render(grid([{ ...pant, col: 4, row: 1, colSpan: 4, rowSpan: 1 }], "p1", builderWith()));
-    for (const name of ["Remove Pant", "Edit Pant"]) {
-      expect(disc(name)).not.toHaveAttribute("data-x", "in");
-      expect(disc(name)).not.toHaveAttribute("data-y", "in");
-    }
+    expect(disc("Remove Pant")).not.toHaveAttribute("data-x", "in");
+    expect(disc("Remove Pant")).not.toHaveAttribute("data-y", "in");
+    expect(disc("Edit Pant")).toHaveAttribute("data-x", "in");
+    expect(disc("Edit Pant")).toHaveAttribute("data-y", "in");
   });
 
   it("a keyboard press that selects shows them without animation; a pointer tap animates them", () => {

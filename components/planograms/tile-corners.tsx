@@ -1,12 +1,14 @@
-// The selected tile's two corner discs (0.7.0.5 spec §2.3): trash top-left,
-// pencil bottom-right, so a miss on one can't hit the other. Each is a 44 px
-// `Button icon` with a 28 px disc centred on its corner, above the neighbours.
-// On a tile under 88 px the discs sit fully outside their corners; on any of
-// the drawing space's four edges (clipped there) the target turns inward, the
-// rule tile-handle.tsx uses. Where a disc would touch a resize handle both
-// shrink together, never under 24 px. They follow the tile's layer offset,
-// fade in over 120 ms and out over 90 ms (none for a keyboard move or reduced
-// motion), and come after the tile in the tab order: tile, trash, pencil.
+// The selected tile's two corner discs (0.7.0.5 spec §2.3; moved 11-17, Van): trash
+// on the top-right corner, a bigger pencil inside the bottom-right. Each is a 44 px
+// `Button icon` above the neighbours. The trash's 28 px disc is centred on its
+// corner; on a tile under 88 px it sits fully outside, and on any of the drawing
+// space's four edges (clipped there) it turns inward, the rule tile-handle.tsx uses.
+// The pencil's 36 px disc sits inside the tile's corner; a tile under 88 px has no
+// room, so there it falls back to the trash's rule (outside, inward at an edge).
+// Where a disc would touch a resize handle both shrink together, never under 24 px.
+// They follow the tile's layer offset, fade in over 120 ms and out over 90 ms (none
+// for a keyboard move or reduced motion), and come after the tile in the tab order:
+// tile, trash, pencil.
 
 "use client";
 
@@ -21,7 +23,8 @@ import { at, KEEP_TOUCH } from "./grid-units";
 import { handleBox } from "./tile-handle";
 
 const TARGET = 44;
-const DISC = 28;
+/** Each disc's drawn size; the pencil, the more used, is the bigger one. */
+const DISC = { trash: 28, pencil: 36 } as const;
 const MIN_TARGET = 24;
 /** Under this many px on either axis the discs go fully outside. */
 const ROOMY = 88;
@@ -30,17 +33,23 @@ const EXIT_MS = 90;
 
 type Bounds = { width: number; height: number };
 type Axis = "in" | "out" | "mid";
-// Where the target's top-left sits from its corner, in target sizes. The trash is at the tile's
-// low corner (outward is negative); the pencil at its high one.
-const FROM: Record<"trash" | "pencil", Record<Axis, number>> = { trash: { out: -1, mid: -0.5, in: 0 }, pencil: { out: 0, mid: -0.5, in: -1 } };
+// Where the target's top-left sits from its corner, in target sizes, on a side of the tile that is
+// low (left, top: outward is negative) or high (right, bottom).
+const SIDE: Record<"low" | "high", Record<Axis, number>> = { low: { out: -1, mid: -0.5, in: 0 }, high: { out: 0, mid: -0.5, in: -1 } };
+// Trash on the top-right corner, pencil on the bottom-right.
+const FROM = {
+  trash: { x: SIDE.high, y: SIDE.low },
+  pencil: { x: SIDE.high, y: SIDE.high },
+} as const;
 
-/** Per axis: inward on the grid's edge, else outside on a small tile, else centred on the corner. */
+/** Per axis: inward on the grid's edge, else outside on a small tile, else centred on the corner (trash) or inside it (pencil). */
 function placesOf(rect: Rect, bounds: Bounds, cellPx: number) {
   const small = cellPx > 0 && (rect.width * cellPx < ROOMY || rect.height * cellPx < ROOMY);
   const pick = (atEdge: boolean): Axis => (atEdge ? "in" : small ? "out" : "mid");
+  const right = rect.x + rect.width >= bounds.width;
   return {
-    trash: { x: pick(rect.x <= 0), y: pick(rect.y <= 0) },
-    pencil: { x: pick(rect.x + rect.width >= bounds.width), y: pick(rect.y + rect.height >= bounds.height) },
+    trash: { x: pick(right), y: pick(rect.y <= 0) },
+    pencil: small ? { x: pick(right), y: pick(rect.y + rect.height >= bounds.height) } : { x: "in" as Axis, y: "in" as Axis },
   };
 }
 
@@ -50,8 +59,8 @@ export function targetSize(rect: Rect, bounds: Bounds, edges: readonly Edge[], c
   const places = placesOf(rect, bounds, cellPx);
   for (let size = TARGET; size > MIN_TARGET; size -= 2) {
     const boxes = [
-      { x: rect.x * cellPx + FROM.trash[places.trash.x] * size, y: rect.y * cellPx + FROM.trash[places.trash.y] * size, size },
-      { x: (rect.x + rect.width) * cellPx + FROM.pencil[places.pencil.x] * size, y: (rect.y + rect.height) * cellPx + FROM.pencil[places.pencil.y] * size, size },
+      { x: (rect.x + rect.width) * cellPx + FROM.trash.x[places.trash.x] * size, y: rect.y * cellPx + FROM.trash.y[places.trash.y] * size, size },
+      { x: (rect.x + rect.width) * cellPx + FROM.pencil.x[places.pencil.x] * size, y: (rect.y + rect.height) * cellPx + FROM.pencil.y[places.pencil.y] * size, size },
       ...edges.map((edge) => handleBox(edge, rect, bounds, size, cellPx)),
     ];
     const touching = boxes.some((a, i) => boxes.slice(i + 1).some((b) => a.x < b.x + b.size && b.x < a.x + a.size && a.y < b.y + b.size && b.y < a.y + a.size));
@@ -103,15 +112,16 @@ export function TileCorners({ name, rect, bounds, edges, cellPx, shift = 0, show
   const places = placesOf(rect, bounds, cellPx);
   const motion = instant ? "" : shown ? "motion-safe:animate-disc-in" : "motion-safe:animate-disc-out";
   const corners = [
-    { which: "trash", label: `Remove ${name}`, Icon: Trash2, tone: "text-danger", at: { x: rect.x, y: rect.y }, act: onRemove },
+    { which: "trash", label: `Remove ${name}`, Icon: Trash2, tone: "text-danger", at: { x: rect.x + rect.width, y: rect.y }, act: onRemove },
     { which: "pencil", label: `Edit ${name}`, Icon: Pencil, tone: "text-ink", at: { x: rect.x + rect.width, y: rect.y + rect.height }, act: onEdit },
   ] as const;
   return (
     <>
       {corners.map(({ which, label, Icon, tone, at: corner, act }) => {
         const place = places[which];
-        const fx = FROM[which][place.x];
-        const fy = FROM[which][place.y];
+        const fx = FROM[which].x[place.x];
+        const fy = FROM[which].y[place.y];
+        const disc = Math.min(DISC[which], size);
         return (
           <Button
             key={which}
@@ -141,10 +151,10 @@ export function TileCorners({ name, rect, bounds, edges, cellPx, shift = 0, show
             className={`absolute z-30 touch-manipulation ${shown ? "" : "pointer-events-none"} ${motion}`}
           >
             <span
-              style={{ width: Math.min(DISC, size), height: Math.min(DISC, size) }}
+              style={{ width: disc, height: disc }}
               className={`pointer-events-none flex items-center justify-center rounded-full border border-line bg-raised shadow-sm ${tone}`}
             >
-              <Icon aria-hidden="true" strokeWidth={1.75} className="size-4" />
+              <Icon aria-hidden="true" strokeWidth={1.75} className={which === "pencil" && disc > 28 ? "size-5" : "size-4"} />
             </span>
           </Button>
         );

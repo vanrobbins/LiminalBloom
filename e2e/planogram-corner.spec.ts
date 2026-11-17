@@ -107,12 +107,15 @@ async function emptyPoint(page: Page) {
     const block = document.querySelector<HTMLElement>("[data-block]")!.getBoundingClientRect();
     const unit = block.width / 12;
     const tiles = [...document.querySelectorAll("[data-placement]")].map((t) => t.getBoundingClientRect());
+    // A selected tile's corner discs reach outside it with a 44 px target: a tap there is not on empty grid.
+    const discs = [...document.querySelectorAll("[data-corner]")].map((d) => d.getBoundingClientRect());
+    const hitsDisc = (x: number, y: number) => discs.some((d) => x > d.left - 8 && x < d.right + 8 && y > d.top - 8 && y < d.bottom + 8);
     const free = (x: number, y: number, w: number, h: number) => !tiles.some((t) => x < t.right && x + w > t.left && y < t.bottom && y + h > t.top);
     for (let col = 0; col <= 8; col++) {
       for (let row = 0; row <= 1; row++) {
         const x = block.left + col * unit;
         const y = block.top + row * 2 * unit;
-        if (free(x, y, 4 * unit, 4 * unit)) return { x: x + unit / 2, y: y + unit, unit };
+        if (free(x, y, 4 * unit, 4 * unit) && !hitsDisc(x + unit / 2, y + unit)) return { x: x + unit / 2, y: y + unit, unit };
       }
     }
     return null;

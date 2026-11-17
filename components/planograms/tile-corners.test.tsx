@@ -69,49 +69,65 @@ describe("TileCorners", () => {
     expect(p.onEscape).toHaveBeenCalledTimes(2);
   });
 
-  it("a roomy tile in the middle has each disc centred on its corner", () => {
+  it("a roomy tile in the middle has the trash centred on its top-right corner and a bigger pencil inside its bottom-right", () => {
     render(<TileCorners {...props()} />);
-    for (const name of ["trash", "pencil"]) {
-      expect(disc(name)).toHaveAttribute("data-x", "mid");
-      expect(disc(name)).toHaveAttribute("data-y", "mid");
-    }
-    // 44 px target, 28 px disc, the target's centre on the corner: trash at (3, 2) units.
+    expect(disc("trash")).toHaveAttribute("data-x", "mid");
+    expect(disc("trash")).toHaveAttribute("data-y", "mid");
+    expect(disc("pencil")).toHaveAttribute("data-x", "in");
+    expect(disc("pencil")).toHaveAttribute("data-y", "in");
+    // 44 px target, 28 px disc, the target's centre on the corner: trash at (8, 2) units.
     expect(disc("trash").style.width).toBe("44px");
-    expect(disc("trash").style.left).toBe("calc(calc(var(--cell) * 3) + -22px)");
+    expect(disc("trash").style.left).toBe("calc(calc(var(--cell) * 8) + -22px)");
     expect(disc("trash").style.top).toBe("calc(calc(var(--cell) * 2) + -22px)");
     expect(disc("trash").firstElementChild).toHaveStyle({ width: "28px", height: "28px" });
+    // The pencil's target ends at the corner (8, 7), over the tile, with a 36 px disc.
+    expect(disc("pencil").style.left).toBe("calc(calc(var(--cell) * 8) + -44px)");
+    expect(disc("pencil").style.top).toBe("calc(calc(var(--cell) * 7) + -44px)");
+    expect(disc("pencil").firstElementChild).toHaveStyle({ width: "36px", height: "36px" });
   });
 
   // The drawing space is clipped at all four sides, so a disc on an edge turns inward over the tile.
   it.each([
-    ["left", { x: 0, y: 2, width: 5, height: 5 }, "trash", "x"],
-    ["top", { x: 3, y: 0, width: 5, height: 5 }, "trash", "y"],
-    ["right", { x: 7, y: 2, width: 5, height: 5 }, "pencil", "x"],
-    ["bottom", { x: 3, y: 3, width: 5, height: 5 }, "pencil", "y"],
-  ] as const)("at the grid's %s edge the %s disc turns inward, the other axis stays put", (_edge, rect, which, axis) => {
+    ["right", { x: 7, y: 2, width: 5, height: 5 }, "x"],
+    ["top", { x: 3, y: 0, width: 5, height: 5 }, "y"],
+  ] as const)("at the grid's %s edge the trash turns inward, the other axis stays put", (_edge, rect, axis) => {
     render(<TileCorners {...props({ rect })} />);
     const other = axis === "x" ? "y" : "x";
-    expect(disc(which)).toHaveAttribute(`data-${axis}`, "in");
-    expect(disc(which)).toHaveAttribute(`data-${other}`, "mid");
-    // The corner at the far side of the tile isn't on that edge.
-    expect(disc(which === "trash" ? "pencil" : "trash")).toHaveAttribute(`data-${axis}`, "mid");
+    expect(disc("trash")).toHaveAttribute(`data-${axis}`, "in");
+    expect(disc("trash")).toHaveAttribute(`data-${other}`, "mid");
   });
 
-  it("inward means the target starts at the corner and reaches over the tile", () => {
-    render(<TileCorners {...props({ rect: { x: 0, y: 0, width: 5, height: 5 } })} />);
-    expect(disc("trash").style.left).toBe("calc(calc(var(--cell) * 0) + 0px)");
+  it("the left and bottom edges don't move the trash, and a roomy tile's pencil is inside wherever it is", () => {
+    for (const rect of [roomy, { x: 0, y: 3, width: 5, height: 5 }, { x: 7, y: 0, width: 5, height: 5 }]) {
+      const { unmount } = render(<TileCorners {...props({ rect })} />);
+      expect(disc("pencil")).toHaveAttribute("data-x", "in");
+      expect(disc("pencil")).toHaveAttribute("data-y", "in");
+      if (rect.x === 0) expect(disc("trash")).toHaveAttribute("data-x", "mid");
+      unmount();
+    }
+  });
+
+  it("inward means the target ends at the corner and reaches over the tile", () => {
+    render(<TileCorners {...props({ rect: { x: 7, y: 0, width: 5, height: 5 } })} />);
+    // In the grid's corner both handles turn inward too, so the targets shrink; the trash still ends at the corner.
+    const size = parseInt(disc("trash").style.width);
+    expect(size).toBeLessThan(44);
+    expect(disc("trash").style.left).toBe(`calc(calc(var(--cell) * 12) + -${size}px)`);
     expect(disc("trash").style.top).toBe("calc(calc(var(--cell) * 0) + 0px)");
   });
 
-  it("under 88 px on either axis both discs sit fully outside their corners; 88 px is roomy", () => {
+  it("under 88 px on either axis both discs sit fully outside their corners, the pencil at its 28 px; 88 px is roomy", () => {
     const { rerender } = render(<TileCorners {...props({ rect: { x: 3, y: 2, width: 4, height: 2 } })} />);
     for (const name of ["trash", "pencil"]) {
       expect(disc(name)).toHaveAttribute("data-x", "out");
       expect(disc(name)).toHaveAttribute("data-y", "out");
     }
     // 80 x 40 px: the biggest target that still clears the edge handles is the tile's 40 px short side.
-    expect(disc("trash").style.left).toBe("calc(calc(var(--cell) * 3) + -40px)");
+    expect(disc("trash").style.left).toBe("calc(calc(var(--cell) * 7) + 0px)");
+    expect(disc("trash").style.top).toBe("calc(calc(var(--cell) * 2) + -40px)");
     expect(disc("pencil").style.left).toBe("calc(calc(var(--cell) * 7) + 0px)");
+    expect(disc("pencil").style.top).toBe("calc(calc(var(--cell) * 4) + 0px)");
+    expect(disc("pencil").firstElementChild).toHaveStyle({ width: "36px" });
     // Wide but short is still small.
     rerender(<TileCorners {...props({ rect: { x: 3, y: 2, width: 8, height: 2 } })} />);
     expect(disc("trash")).toHaveAttribute("data-x", "out");
@@ -122,7 +138,7 @@ describe("TileCorners", () => {
 
   it("rides a layered tile's offset (right and up), so it stays on the layer's painted box", () => {
     render(<TileCorners {...props({ shift: 12 })} />);
-    expect(disc("trash").style.left).toBe("calc(calc(var(--cell) * 3) + -10px)");
+    expect(disc("trash").style.left).toBe("calc(calc(var(--cell) * 8) + -10px)");
     expect(disc("trash").style.top).toBe("calc(calc(var(--cell) * 2) + -34px)");
   });
 
