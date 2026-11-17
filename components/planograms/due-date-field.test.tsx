@@ -110,8 +110,9 @@ describe("DueDateForm (auto-saves, R3)", () => {
     expect(actions.setDueDateAction).toHaveBeenCalledTimes(1);
     finish({ status: "refused", message: "Changed on another device" });
     await screen.findByText("Couldn't save");
+    // The status line and the busy flag are separate updates; under suite load they can land in different renders.
+    await waitFor(() => expect(clear).not.toHaveAttribute("aria-disabled"));
     expect(clear).toHaveFocus();
-    expect(clear).not.toHaveAttribute("aria-disabled");
   });
 
   it("stays open and says why, under the field and beside it, when the server refuses; no toast", async () => {
