@@ -43,7 +43,7 @@ export function LayoutList({ layout, selection, issues, dispatch, storeKey }: La
   const storeLevel = plain.filter((f) => f.zoneId === null);
 
   return (
-    <nav aria-label="Everything on the map" className="flex flex-col gap-4 p-4">
+    <nav aria-label="Everything on the map" className="flex flex-col gap-4 p-2 pr-3">
       <ul>
         {layout.outline ? (
           <LayoutListItem label="Store outline" selected={selection.includes(OUTLINE_ID)} problem={problem(OUTLINE_ID)} onReveal={reveal(OUTLINE_ID)} />

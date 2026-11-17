@@ -15,10 +15,10 @@ vi.mock("./use-media-query", () => ({
 const layout = { ...store(), zones: [zone()], fixtures: [fixture()] };
 
 describe("MapViewer", () => {
-  it("shows the labelled map, says Select on a mouse", () => {
+  it("shows the labelled map, has no hint row", () => {
     render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" />);
     expect(screen.getByRole("img", { name: "Store layout: 1 zone, 1 fixture, 0 entrances" })).toBeInTheDocument();
-    expect(screen.getByText(/^Select a zone/)).toBeInTheDocument();
+    expect(screen.queryByText(/look inside it/)).toBeNull();
   });
 
   it("lists everything on the map beside it on desktop (UX audit U7)", () => {
