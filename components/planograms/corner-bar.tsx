@@ -53,9 +53,9 @@ const ICON = {
   strokeWidth: 1.75,
   className: "size-5",
 } as const;
-// The gap inside a group is 4 px; between groups it's 12 + a hairline + 12.
+// The gap inside a group is 4 px; between groups it's 12 + a hairline + 12 (4 + hairline + 6 on a phone, so all six controls fit 360 px).
 const GROUP = "flex items-center gap-1";
-const SPACED = `${GROUP} border-l border-line-subtle pl-3`;
+const SPACED = `${GROUP} border-l border-line-subtle pl-1.5 sm:pl-3`;
 
 export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAdd, onAdd, canPublish, canUndo, canRedo, onUndo, onRedo, dueDate, canSetDueDate, onLeave }: CornerBarProps) {
   const router = useRouter();
@@ -97,7 +97,7 @@ export function CornerBar({ fixtureId, row, editing, draftVersion, status, canAd
   return (
     <>
       {/* On a phone it takes a row of its own above the rest of the status row, right-aligned; from tablet width it ends the one row. */}
-      <div data-corner-bar className="order-first flex w-full items-center justify-end gap-3 md:order-none md:ml-auto md:w-auto">
+      <div data-corner-bar className="order-first flex w-full items-center justify-end gap-1 sm:gap-3 md:order-none md:ml-auto md:w-auto">
         {editing ? (
           <div className={GROUP}>
             {status ? <SaveIndicator status={status} /> : null}
