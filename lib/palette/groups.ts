@@ -9,6 +9,7 @@ import { matchAndSort } from "./match";
 import { RECENT_MAX } from "./recent";
 import type { GroupKey, PaletteGroup, PaletteIndex, PaletteItem, PaletteProducts, RecentPick } from "./types";
 
+export const ALL_PRODUCTS_ID = "all-products";
 export const CAPS = { planograms: 5, zones: 3, products: 5 } as const;
 const HEADINGS: Record<GroupKey, string> = { recent: "Recent", planograms: "Planograms", zones: "Zones", products: "Products", goto: "Go to", actions: "Actions" };
 
@@ -40,7 +41,7 @@ function productItems(q: string, found: PaletteProducts | null): PaletteItem[] {
   }));
   const all: PaletteItem = {
     kind: "all-products",
-    id: "all-products",
+    id: ALL_PRODUCTS_ID,
     label: total > 0 ? `All ${total.toLocaleString("en-US")} products matching "${q}"` : `All products matching "${q}"`,
     keywords: "",
     href: `/products?${base}`,
@@ -86,10 +87,14 @@ export function paletteGroups(
   ];
 }
 
-/** The highlighted option after the list changed: the same id if it is still there, else the first, else none. */
+/**
+ * The highlighted option after the list changed: the same id if it is still there, else the first, else none.
+ * "All products matching" is the first row of the Products group but never what Enter should mean by default
+ * (typing "store" wants the Store page), so the fallback skips it unless it is all there is.
+ */
 export function keepActive(previousId: string | null, options: readonly { id: string }[]): string | null {
   if (previousId !== null && options.some((o) => o.id === previousId)) return previousId;
-  return options[0]?.id ?? null;
+  return (options.find((o) => o.id !== ALL_PRODUCTS_ID) ?? options[0])?.id ?? null;
 }
 
 const count = (groups: readonly PaletteGroup[], key: GroupKey) => groups.find((g) => g.key === key)?.items.filter((i) => i.kind !== "all-products").length ?? 0;

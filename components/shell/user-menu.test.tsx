@@ -96,6 +96,27 @@ describe("UserMenu", () => {
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 
+  it("signing out forgets this browser's recent palette picks, so a shared tablet never shows the last person's", async () => {
+    localStorage.setItem("liminal-bloom:palette-recent:u1:s1", "[]");
+    const user = userEvent.setup();
+    render(<UserMenu user={USER} variant="sidebar" />);
+    await openDropdown(user, "Van");
+    await user.click(screen.getByRole("menuitem", { name: "Sign out" }));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/sign-in"));
+    expect(localStorage.getItem("liminal-bloom:palette-recent:u1:s1")).toBeNull();
+  });
+
+  it("a refused sign-out keeps them", async () => {
+    localStorage.setItem("liminal-bloom:palette-recent:u1:s1", "[]");
+    mocks.signOut.mockResolvedValue({ data: null, error: { message: "server" } });
+    const user = userEvent.setup();
+    render(<UserMenu user={USER} variant="sidebar" />);
+    await openDropdown(user, "Van");
+    await user.click(screen.getByRole("menuitem", { name: "Sign out" }));
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalled());
+    expect(localStorage.getItem("liminal-bloom:palette-recent:u1:s1")).toBe("[]");
+  });
+
   it("a refused sign-out says what to do and stays put", async () => {
     const user = userEvent.setup();
     mocks.signOut.mockResolvedValue({ data: null, error: { message: "server" } });

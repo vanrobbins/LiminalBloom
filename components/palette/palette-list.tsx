@@ -10,7 +10,7 @@ import { useEffect, useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useAnnouncement } from "@/components/ui/use-announcement";
-import { describeResults, keepActive } from "@/lib/palette/groups";
+import { ALL_PRODUCTS_ID, describeResults, keepActive } from "@/lib/palette/groups";
 import type { PaletteGroup, PaletteItem } from "@/lib/palette/types";
 
 import { PaletteRow } from "./palette-row";
@@ -20,11 +20,9 @@ import type { ProductsState } from "./use-palette-data";
 const ANNOUNCE_MS = 500;
 const MAX_QUERY = 80;
 
-/** The highlight: the pinned id if still listed. A highlight nobody moved that sits on the placeholder "All products" row follows the first real product when one lands. */
+/** The highlight: the pinned id if still listed. One nobody moved that sits on the "All products" row (it was all there was) gives way to the first real option once there is one. */
 function resolveActive(pinned: string | null, moved: boolean, options: readonly PaletteItem[]): string | null {
-  const kept = keepActive(pinned, options);
-  const firstProduct = options.find((o) => o.kind === "product");
-  return !moved && kept === "all-products" && firstProduct ? firstProduct.id : kept;
+  return pinned === ALL_PRODUCTS_ID && !moved ? keepActive(null, options) : keepActive(pinned, options);
 }
 
 type PaletteListProps = {

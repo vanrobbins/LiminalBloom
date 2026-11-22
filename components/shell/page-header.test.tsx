@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -47,6 +47,19 @@ describe("PageHeader", () => {
       </ShellProvider>,
     );
     expect(screen.queryByRole("button", { name: /switch store/ })).not.toBeInTheDocument();
+  });
+
+  it("puts the search trigger just before the account menu, after the page's own actions, and only inside the shell", () => {
+    const { unmount } = render(
+      <ShellProvider value={two}>
+        <PageHeader title="Table 1" actions={<button>History</button>} />
+      </ShellProvider>,
+    );
+    const names = within(screen.getByRole("banner")).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent);
+    expect(names.slice(0, 3)).toEqual(["History", "Search", "Account menu"]);
+    unmount();
+    render(<PageHeader title="Table 1" />);
+    expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
   });
 
   it("keeps a long title on one line, whole in its title attribute (Review Focus 1)", () => {

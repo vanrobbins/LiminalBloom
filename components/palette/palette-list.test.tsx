@@ -113,6 +113,11 @@ describe("PaletteList: the highlight stays on what it was on", () => {
     expect(selected()).toBe("Navy TeeNT-1 · Front table");
   });
 
+  it("starts on the first real option, not on All products, when there is one", () => {
+    render(list({ query: "store", groups: [{ key: "products", heading: "Products", items: [all] }, goto], state: "loading" }));
+    expect(selected()).toBe("Home");
+  });
+
   it("but one the person moved onto All products stays there", async () => {
     const withTwo: PaletteGroup = { key: "products", heading: "Products", items: [all, page("/x", "Other")] };
     const { rerender } = render(list({ query: "navy", groups: [withTwo], state: "loading" }));

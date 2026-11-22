@@ -105,6 +105,11 @@ describe("keepActive", () => {
     expect(keepActive("b", options)).toBe("b");
     expect(keepActive("b", [{ id: "new" }, ...options])).toBe("b");
   });
+  it("the fallback skips the placeholder All products row when anything else is listed", () => {
+    expect(keepActive(null, [{ id: "all-products" }, { id: "b" }])).toBe("b");
+    expect(keepActive("gone", [{ id: "a" }, { id: "all-products" }])).toBe("a");
+    expect(keepActive(null, [{ id: "all-products" }])).toBe("all-products");
+  });
   it("falls back to the first option when it vanished, and to null when there are none", () => {
     expect(keepActive("gone", options)).toBe("a");
     expect(keepActive(null, options)).toBe("a");

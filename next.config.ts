@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   // default 1 MB action limit would refuse them. A little headroom for the form.
   experimental: { serverActions: { bodySizeLimit: "3mb" } },
   // Search merged into Products (Week 6.5 spec §2.1); old links keep their query.
-  // Temporary (307): a 308 is cached forever, and the command palette may claim the word.
+  // Temporary (307): a 308 is cached forever. (The command palette, 0.7.0.8, didn't claim the word: it has no URL.)
   // People and Roles moved into the Store panel (0.7.0.7 spec section 2.1): `/store` and `/store/roles`.
   // Config redirects run before any page, so the guards there decide who sees what; 307 for the same reason.
   redirects: async () => [
