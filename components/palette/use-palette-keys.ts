@@ -7,8 +7,18 @@
 
 import { useEffect } from "react";
 
-// The palette's own dialog carries data-palette, so it never counts as "another".
+// The palette's own dialog carries data-palette, so it never counts as "another". A popover (the
+// info buttons) is role=dialog too but not modal: Radix wraps it in a popper wrapper.
 const OTHER_MODAL = '[role="dialog"]:not([data-palette]), [role="alertdialog"], [role="menu"]';
+const POPPER = "[data-radix-popper-content-wrapper]";
+// The map editor embedded in /layout: leaving it by a palette pick is not covered by its own
+// leave rules, so the shortcuts stay out of its way (spec §13). The triggers hide with it.
+const EMBEDDED_EDITOR = "[data-embedded-editor]";
+
+function blockedNow(): boolean {
+  if (document.querySelector(EMBEDDED_EDITOR)) return true;
+  return Array.from(document.querySelectorAll(OTHER_MODAL)).some((el) => !el.closest(POPPER));
+}
 
 function typingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -20,7 +30,7 @@ export function usePaletteKeys(isOpen: boolean, setOpen: (open: boolean) => void
     function onKeyDown(event: KeyboardEvent) {
       // Held keys and IME composition (keyCode 229 on browsers that don't set isComposing) are not shortcuts.
       if (event.repeat || event.isComposing || event.keyCode === 229) return;
-      const blocked = document.querySelector(OTHER_MODAL) !== null;
+      const blocked = blockedNow();
       if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "k") {
         event.preventDefault();
         if (isOpen) setOpen(false);

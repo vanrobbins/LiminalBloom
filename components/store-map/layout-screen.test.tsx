@@ -47,4 +47,13 @@ describe("LayoutScreen", () => {
     rerender(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="b2" />);
     expect(screen.getByRole("button", { name: "Whole store" })).toBeInTheDocument();
   });
+
+  it("while editing, a zone pick's ?zone= and ?n= don't stay in the address (the viewer that drops them isn't there)", async () => {
+    const layout = { ...store(), zones: [zone()], fixtures: [fixture()] };
+    const { rerender } = render(<LayoutScreen member={EVERYTHING} {...props} layout={layout} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Edit" }));
+    window.history.replaceState(null, "", "/layout?zone=zone-a&n=b2&x=1");
+    rerender(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="b2" />);
+    expect(window.location.pathname + window.location.search).toBe("/layout?x=1");
+  });
 });

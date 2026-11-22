@@ -7,7 +7,7 @@
 
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import type { ChangeSet } from "@/lib/layout/diff";
 import type { FetchReply, SaveReply } from "@/lib/layout/replies";
 import type { Layout } from "@/lib/layout/types";
 import type { FloorPlanogram, ProductLook } from "@/lib/planograms/types";
+import { withoutParam } from "@/lib/url-params";
 
 import { MapEditor } from "./map-editor";
 import { MapViewer } from "./map-viewer";
@@ -47,6 +48,12 @@ export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLa
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const key = useMemo(() => layoutKey(layout), [layout]);
+  // The viewer drops ?zone=&n= once used; while editing it is not there, so the entry params would stay.
+  useEffect(() => {
+    if (!editing) return;
+    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "zone", "n");
+    if (clean !== null) window.history.replaceState(null, "", clean);
+  }, [editing, initialZone, nonce]);
 
   if (editing) {
     return (

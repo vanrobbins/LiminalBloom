@@ -69,6 +69,30 @@ describe("usePaletteKeys", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it("opens over a non-modal popover (the info buttons render role=dialog inside Radix's popper wrapper)", () => {
+    const setOpen = vi.fn();
+    render(<Host open={false} setOpen={setOpen} />);
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-radix-popper-content-wrapper", "");
+    const popover = document.createElement("div");
+    popover.setAttribute("role", "dialog");
+    wrapper.append(popover);
+    document.body.append(wrapper);
+    press(window, { key: "k", ctrlKey: true });
+    expect(setOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("does not open while the map editor is embedded in the page (leaving it by the palette needs its own care)", () => {
+    const setOpen = vi.fn();
+    render(<Host open={false} setOpen={setOpen} />);
+    const editor = document.createElement("div");
+    editor.setAttribute("data-embedded-editor", "");
+    document.body.append(editor);
+    expect(press(window, { key: "k", ctrlKey: true }).defaultPrevented).toBe(true);
+    press(document.body, { key: "/" });
+    expect(setOpen).not.toHaveBeenCalled();
+  });
+
   it("still closes when the only dialog open is the palette", () => {
     const setOpen = vi.fn();
     render(<Host open setOpen={setOpen} />);
