@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +9,7 @@ import type { PlanogramScope } from "@/lib/planograms/types";
 
 import { AdjustmentLines } from "./adjusted-line";
 
-const actions = vi.hoisted(() => ({ revertAdjustmentAction: vi.fn(), previewAdjustmentAction: vi.fn() }));
+const actions = vi.hoisted(() => ({ revertAdjustmentAction: vi.fn(), previewAdjustmentAction: vi.fn(), publishAdjustmentAction: vi.fn() }));
 vi.mock("@/app/(app)/planograms/adjust-actions", () => actions);
 const toast = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/toast", () => ({ toast }));
@@ -78,6 +78,34 @@ describe("AdjustmentLines", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("the Revert dialog says a draft still holds these changes when there is one, and nothing of the kind when there is none", async () => {
+    const { unmount } = lines({ draft: null, published: state() }, "planograms.publish");
+    await userEvent.click(screen.getByRole("button", { name: "Revert Quick Adjust" }));
+    expect(screen.getByRole("dialog")).not.toHaveTextContent(/draft/i);
+    unmount();
+    lines({ draft: state({ id: "next", state: "draft" }), published: state() }, "planograms.publish");
+    await userEvent.click(screen.getByRole("button", { name: "Revert Quick Adjust" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("A Quick Adjust draft still holds these changes. Publishing it would put them back.");
+  });
+
+  it("after a revert the line is gone and focus goes to the version line, not to a removed button", async () => {
+    actions.revertAdjustmentAction.mockResolvedValue({ status: "saved", message: "Quick Adjust reverted" });
+    const page = (adjustments: Adjustments) => (
+      <>
+        <p tabIndex={-1} data-version-line>
+          Version 3
+        </p>
+        <AdjustmentLines fixtureId="fx" scope={scope} adjustments={adjustments} version={version} looks={looks} member={{ switches: ["view", "planograms.publish"] } as never} />
+      </>
+    );
+    const { rerender } = render(page({ draft: null, published: state() }));
+    await userEvent.click(screen.getByRole("button", { name: "Revert Quick Adjust" }));
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Revert" }));
+    expect(refresh).toHaveBeenCalled();
+    rerender(page(none)); // what the refresh brings
+    await waitFor(() => expect(document.querySelector("[data-version-line]")).toHaveFocus());
+  });
+
   it("a refused revert says why in an error toast", async () => {
     actions.revertAdjustmentAction.mockResolvedValue({ status: "refused", message: "This Quick Adjust is no longer on the floor." });
     lines({ draft: null, published: state() }, "planograms.publish");
@@ -107,6 +135,30 @@ describe("AdjustmentLines", () => {
     lines({ draft, published: null }, "planograms.publish");
     expect(screen.getByText(/Quick Adjust draft · Sam/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Open Quick Adjust draft/ })).toBeNull();
+  });
+
+  it("a publisher who can't draft gets Compare and Publish on the draft line, instead of Open; Compare reads the draft", async () => {
+    actions.previewAdjustmentAction.mockResolvedValue({ kind: "draft", adjustmentId: "next", version: 4, basedOnVersion: 3, changes: diffPlacements([straight], []), before: [straight], after: [], looks: {}, soldOutAfter: [] });
+    actions.publishAdjustmentAction.mockResolvedValue({ status: "saved", message: "Quick Adjust published" });
+    lines({ draft: state({ id: "next", state: "draft", version: 4 }), published: null }, "planograms.publish");
+    const line = document.querySelector("[data-adjustment=draft]") as HTMLElement;
+    expect(within(line).queryByRole("link")).toBeNull();
+    await userEvent.click(within(line).getByRole("button", { name: "Compare Quick Adjust draft" }));
+    expect(await screen.findAllByRole("figure")).toHaveLength(2);
+    expect(actions.previewAdjustmentAction).toHaveBeenCalledWith("fx", "draft");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(within(line).getByRole("button", { name: "Publish Quick Adjust draft" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Publish to / }));
+    expect(actions.publishAdjustmentAction).toHaveBeenCalledWith("fx", "next", 4);
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("a drafter without planograms.publish gets Compare and Open on the draft line, and no Publish", () => {
+    lines({ draft: state({ state: "draft" }), published: null }, "planograms.draft");
+    const line = document.querySelector("[data-adjustment=draft]") as HTMLElement;
+    expect(within(line).getByRole("button", { name: "Compare Quick Adjust draft" })).toBeInTheDocument();
+    expect(within(line).getByRole("link", { name: "Open Quick Adjust draft" })).toBeInTheDocument();
+    expect(within(line).queryByRole("button", { name: /^Publish/ })).toBeNull();
   });
 
   it("a viewer who can neither draft nor publish does not see a draft", () => {

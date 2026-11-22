@@ -48,6 +48,8 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
   // The Published view draws the version with its published Quick Adjust applied (0.7.0.9 spec §6.4); the monthly draft and past versions are plain.
   const adjusted = state.latest && state.adjustments.published ? { ...state.latest, placements: adjustedFloor(state.latest, state.adjustments.published.changes) } : state.latest;
   const looks = await productLooks(activeStoreId, [...(state.latest?.placements ?? []), ...(adjusted?.placements ?? []), ...(viewing?.placements ?? [])].map((p) => p.productId));
+  // A Quick Adjust draft goes to the client only for those who may draft or publish it (the line hides it from the rest too).
+  const sees = can(member, "planograms.draft") || can(member, "planograms.publish");
   const product = typeof query.product === "string" && z.uuid().safeParse(query.product).success ? query.product : null;
 
   return (
@@ -86,7 +88,7 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         dueDate={state.row?.dueDate ?? null}
         today={today}
         replacedSpots={replacedSpots(state.adjustments.published?.changes ?? [])}
-        afterStatus={state.latest && !viewing ? <AdjustmentLines fixtureId={owner.id} scope={scope} adjustments={state.adjustments} version={state.latest} looks={looks} member={member} /> : undefined}
+        afterStatus={state.latest && !viewing ? <AdjustmentLines fixtureId={owner.id} scope={scope} adjustments={sees ? state.adjustments : { ...state.adjustments, draft: null }} version={state.latest} looks={looks} member={member} /> : undefined}
         member={member}
       />
     </div>

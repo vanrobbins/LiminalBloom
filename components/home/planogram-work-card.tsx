@@ -19,14 +19,16 @@ function stateWord(row: PlanogramWorkRow): string {
   return row.publishedVersion ? `Version ${row.publishedVersion}` : "Not published";
 }
 
-export function PlanogramWorkCard({ work }: { work: PlanogramWork }) {
+/** `canDraft`: the viewer holds planograms.draft, so a Quick Adjust draft has an adjust page for them; a publisher without it goes to the planogram. */
+export function PlanogramWorkCard({ work, canDraft }: { work: PlanogramWork; canDraft: boolean }) {
   return (
     <HomeCard title="Planograms to finish" icon={LayoutPanelTop} seeAll={{ href: "/planograms", page: "planograms", more: work.total - work.rows.length }} className="md:col-span-2">
       <ul className="flex flex-col divide-y divide-line-subtle">
         {work.rows.map((row) => {
           const type = typeHint(row.name, row.typeLabel);
-          // A Quick Adjust draft alone opens the adjust page; with a monthly draft too the row keeps the planogram (its page lines reach the adjustment).
-          const adjustOnly = row.adjustment === "draft" && !row.hasDraft;
+          // A Quick Adjust draft alone opens the adjust page for a drafter; with a monthly draft too, or for a publisher who can't draft, the row keeps the planogram (its page lines reach the adjustment).
+          const adjusting = row.adjustment === "draft" && !row.hasDraft;
+          const adjustOnly = adjusting && canDraft;
           const alsoAdjusting = row.adjustment === "draft" && row.hasDraft;
           const label = [row.name, type, stateWord(row), alsoAdjusting ? "Adjusting" : null, row.dueDate ? dueLabel(row.dueDate, work.today).text : null].filter(Boolean).join(", ");
           return (
@@ -37,7 +39,7 @@ export function PlanogramWorkCard({ work }: { work: PlanogramWork }) {
                   {type ? <span className="text-sm text-ink-muted">{type}</span> : null}
                 </span>
                 <span className="flex flex-wrap items-center gap-2 text-sm">
-                  {row.hasDraft || adjustOnly ? <span className="rounded border border-line px-2 text-ink">{stateWord(row)}</span> : <span className="text-ink-muted">{stateWord(row)}</span>}
+                  {row.hasDraft || adjusting ? <span className="rounded border border-line px-2 text-ink">{stateWord(row)}</span> : <span className="text-ink-muted">{stateWord(row)}</span>}
                   {alsoAdjusting ? <span className="rounded border border-line px-2 text-ink">Adjusting</span> : null}
                   {row.dueDate ? <DueBadge dueDate={row.dueDate} today={work.today} /> : null}
                 </span>

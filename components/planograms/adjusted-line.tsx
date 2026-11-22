@@ -1,6 +1,7 @@
 // The Quick Adjust lines on a planogram (0.7.0.9 spec §4.4, §4.5): the published one ("Quick Adjust · since Nov 17 ·
 // Van") with Compare for everyone, Edit for those who may draft and Revert for those who may publish; and a draft one
-// waiting ("Quick Adjust draft · Sam · Nov 17") with Open, which is how a publisher finds a VM Worker's draft.
+// waiting ("Quick Adjust draft · Sam · Nov 17") for those who may draft or publish: Compare, Open for drafters and
+// Publish for publishers (a publisher who can't draft has no adjust page, so Compare and Publish are how they act on it).
 // Controls are hidden by switch as a courtesy; the server checks each again.
 
 "use client";
@@ -53,7 +54,9 @@ export function AdjustmentLines({ fixtureId, scope, adjustments, version, looks,
                 </Link>
               </Button>
             ) : null}
-            {canPublish ? <RevertAdjustment fixtureId={fixtureId} adjustmentId={published.id} number={version.number} words={revertWords(published, version.placements, looks)} /> : null}
+            {canPublish ? (
+              <RevertAdjustment fixtureId={fixtureId} adjustmentId={published.id} number={version.number} words={revertWords(published, version.placements, looks)} draftHolds={draft !== null} />
+            ) : null}
           </span>
         </div>
       ) : null}
@@ -62,13 +65,17 @@ export function AdjustmentLines({ fixtureId, scope, adjustments, version, looks,
           <p>
             Quick Adjust draft · {draft.createdByName} · <LocalTime at={draft.createdAt} />
           </p>
-          {canDraft ? (
-            <Button asChild variant="secondary" icon>
-              <Link href={adjustHref} aria-label="Open Quick Adjust draft">
-                <Zap aria-hidden="true" strokeWidth={1.75} className="size-5" />
-              </Link>
-            </Button>
-          ) : null}
+          <span className="flex items-center gap-2">
+            <CompareButton fixtureId={fixtureId} scope={scope} which="draft" />
+            {canDraft ? (
+              <Button asChild variant="secondary" icon>
+                <Link href={adjustHref} aria-label="Open Quick Adjust draft">
+                  <Zap aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                </Link>
+              </Button>
+            ) : null}
+            {canPublish ? <CompareButton fixtureId={fixtureId} scope={scope} which="draft" publishing /> : null}
+          </span>
         </div>
       ) : null}
     </div>
