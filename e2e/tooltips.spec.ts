@@ -97,9 +97,11 @@ test("/store and /store/roles each have an icon-only button here, and it shows i
 // 44 px target, named by its aria-label, and (desktop) the same name as a tooltip on hover.
 // `open` gets the page to where the control shows (a dialog, a staged change, a selected rack); `only: "phone"` is for
 // one that exists on a phone only.
-type Swept = { path: string; role: "button" | "link"; name: string; skipOnPhone?: boolean; only?: "phone"; open?: (page: Page) => Promise<void> };
+type Swept = { path: string; role: "button" | "link"; name: string; skipOnPhone?: boolean; skipOnDesktop?: boolean; only?: "phone"; open?: (page: Page) => Promise<void> };
 const SWEPT: Swept[] = [
   { path: "/layout", role: "button", name: "Edit" },
+  // 0.7.0.8: the palette's trigger is an icon in the phone header and the tablet rail; the desktop sidebar one has a word and a hint.
+  { path: "/account", role: "button", name: "Search", skipOnDesktop: true },
   { path: "/layout/edit", role: "button", name: "Save and leave" },
   { path: "/products", role: "link", name: "Add product" },
   { path: "/products", role: "link", name: "Categories", skipOnPhone: true },
@@ -126,9 +128,10 @@ const SWEPT: Swept[] = [
   { path: "/layout/edit", role: "button", name: "Done selecting", only: "phone", open: more },
 ];
 
-for (const { path, role, name, skipOnPhone, only, open } of SWEPT) {
+for (const { path, role, name, skipOnPhone, skipOnDesktop, only, open } of SWEPT) {
   test(`${path}: ${name} is a 44 px icon with an aria-label, and shows its name on hover`, async ({ page }) => {
     test.skip(skipOnPhone === true && sizeOf(test.info()) === "phone", "On a phone this one lives in the ⋯ menu.");
+    test.skip(skipOnDesktop === true && sizeOf(test.info()) === "desktop", "The desktop sidebar's Search has a word and a shortcut hint.");
     test.skip(only === "phone" && sizeOf(test.info()) !== "phone", "A phone's control: wider screens have a menu or a side list.");
     if (path === "/store") await seedTeam();
     // Move up and Move down are a custom role's: Educator and Planner are the ones roles-edit.spec.ts moves.
@@ -154,6 +157,20 @@ for (const { path, role, name, skipOnPhone, only, open } of SWEPT) {
     await expect(page.getByRole("tooltip")).toHaveCount(0);
   });
 }
+
+test("the rail's Search icon shows its name on hover, as a mouse on a tablet-wide window sees it", async ({ page }) => {
+  test.skip(sizeOf(test.info()) !== "desktop", "Hover is the desktop's.");
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.goto("/account");
+  await hydrated(page);
+  const search = page.getByRole("button", { name: "Search", exact: true }).filter({ visible: true });
+  await search.hover();
+  await expect(page.getByRole("tooltip", { name: "Search" })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.mouse.move(5, 5);
+  await page.mouse.move(page.viewportSize()!.width - 5, 5);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
 
 test("/welcome and /invite/[id]: every icon-only button has an aria-label", async ({ page, browser }) => {
   const email = inviteeEmail();
