@@ -100,19 +100,28 @@ export async function loadAdjustments(storeId: string, planogramId: string): Pro
   return toAdjustments(adjustmentRows, changeRows);
 }
 
-/** Where a published Quick Adjust took this product off the floor: the planogram's fixture, for the location sheet. */
-export async function adjustedOff(storeId: string, productId: string): Promise<{ fixtureId: string; fixtureName: string }[]> {
+export type AdjustedOff = { fixtureId: string; fixtureName: string };
+
+/** Where a published Quick Adjust took these products off the floor, by product: the planogram's fixture, for the location sheet. */
+export async function adjustedOffFor(storeId: string, productIds: readonly string[]): Promise<Map<string, AdjustedOff[]>> {
+  const out = new Map<string, AdjustedOff[]>();
+  if (productIds.length === 0) return out;
   const [rows] = await withStore(storeId, [
     db
-      .selectDistinct({ fixtureId: planograms.fixtureId, fixtureName: fixtures.name })
+      .selectDistinct({ productId: changes.targetProductId, fixtureId: planograms.fixtureId, fixtureName: fixtures.name })
       .from(changes)
       .innerJoin(adjustments, and(eq(adjustments.storeId, changes.storeId), eq(adjustments.id, changes.adjustmentId)))
       .innerJoin(planograms, and(eq(planograms.storeId, adjustments.storeId), eq(planograms.id, adjustments.planogramId)))
       .innerJoin(fixtures, and(eq(fixtures.storeId, planograms.storeId), eq(fixtures.id, planograms.fixtureId)))
-      .where(and(eq(changes.storeId, storeId), eq(changes.targetProductId, productId), eq(adjustments.state, "published")))
-      .orderBy(asc(fixtures.name)),
+      .where(and(eq(changes.storeId, storeId), inArray(changes.targetProductId, [...productIds]), eq(adjustments.state, "published")))
+      .orderBy(asc(fixtures.name), asc(planograms.fixtureId)),
   ] as const);
-  return rows;
+  for (const { productId, ...place } of rows) out.set(productId, [...(out.get(productId) ?? []), place]);
+  return out;
+}
+
+export async function adjustedOff(storeId: string, productId: string): Promise<AdjustedOff[]> {
+  return (await adjustedOffFor(storeId, [productId])).get(productId) ?? [];
 }
 
 /** Products with their footprints and status (a sold out one is not eligible; the caller decides); `categoryId` narrows to one category, `ids` to these. */

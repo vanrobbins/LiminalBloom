@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { planogramAdjustments, products } from "@/db/schema";
 import { dropStores } from "@/lib/products/test-stores";
 
-import { adjustedOff } from "./adjust-queries";
+import { adjustedOff, adjustedOffFor } from "./adjust-queries";
 import { publishAdjustment } from "./adjust-publish";
 import { setChange } from "./adjust-write";
 import { floorPlanograms } from "./floor-view";
@@ -110,6 +110,9 @@ describe("adjustedOff", () => {
     await publishAdjustment(s.store, s.f.fixtureId, draft?.id ?? "", draft?.version ?? 0, VAN);
     expect(await adjustedOff(s.store, s.f.productId)).toEqual([{ fixtureId: s.f.fixtureId, fixtureName: "Front table 1" }]);
     expect(await adjustedOff(s.store, s.slim)).toEqual([]);
+    const many = await adjustedOffFor(s.store, [s.f.productId, s.slim]);
+    expect([...many.keys()]).toEqual([s.f.productId]);
+    expect((await adjustedOffFor(s.store, [])).size).toBe(0);
   });
 });
 

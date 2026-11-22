@@ -49,4 +49,32 @@ describe("LocationDetails: Quick Adjust entry (0.7.0.9 task 7a)", () => {
     render(<LocationDetails member={drafter} result={base} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
     expect(screen.getByRole("status")).toHaveTextContent("Sold out. On 2 displays.");
   });
+
+  const off = [{ fixtureId: "f3", fixtureName: "Wall B" }];
+
+  it("says which fixture a published Quick Adjust took it off, with an Adjust link for drafters", () => {
+    render(<LocationDetails member={drafter} result={{ ...base, locations: [], adjustedOff: off }} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    expect(screen.getByText("Off Wall B for a Quick Adjust")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Quick Adjust on Wall B" })).toHaveAttribute("href", "/planograms/f3/adjust?product=p1");
+    expect(screen.queryByText(/Not placed yet/)).toBeNull();
+  });
+
+  it("shows the Off line without the link when the member cannot draft", () => {
+    render(<LocationDetails member={viewer} result={{ ...base, locations: [], adjustedOff: off }} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    expect(screen.getByText("Off Wall B for a Quick Adjust")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Quick Adjust on / })).toBeNull();
+  });
+
+  it("keeps the other places listed beside the Off line, and the link even once restocked", () => {
+    render(<LocationDetails member={drafter} result={{ ...base, status: "in_stock", adjustedOff: off }} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    expect(screen.getByText("Off Wall B for a Quick Adjust")).toBeInTheDocument();
+    expect(screen.getByText("Front table 1 · Left")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Quick Adjust on Wall B" })).toBeInTheDocument();
+  });
+
+  it("has no Off line when nothing was adjusted off, and still says Not placed yet", () => {
+    render(<LocationDetails member={drafter} result={{ ...base, locations: [], adjustedOff: [] }} layout={EMPTY_LAYOUT} onChanged={() => {}} />);
+    expect(screen.queryByText(/for a Quick Adjust/)).toBeNull();
+    expect(screen.getByText(/Not placed yet/)).toBeInTheDocument();
+  });
 });
