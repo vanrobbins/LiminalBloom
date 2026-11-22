@@ -16,7 +16,7 @@ import { SetupCard } from "./setup-card";
 const ROWS: SetupRow[] = [
   { key: "layout", label: "Draw the store layout", href: "/layout/edit" },
   { key: "product", label: "Add the first product", href: "/products/new" },
-  { key: "team", label: "Invite your team", href: "/people" },
+  { key: "team", label: "Invite your team", href: "/store" },
 ];
 
 describe("SetupCard", () => {
@@ -30,7 +30,7 @@ describe("SetupCard", () => {
     expect(screen.getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([
       ["Draw the store layout", "/layout/edit"],
       ["Add the first product", "/products/new"],
-      ["Invite your team", "/people"],
+      ["Invite your team", "/store"],
     ]);
   });
 

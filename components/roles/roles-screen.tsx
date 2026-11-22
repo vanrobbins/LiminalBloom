@@ -83,7 +83,7 @@ export function RolesScreen({ view }: { view: RolesView }) {
     <div className="mx-auto w-full max-w-5xl">
       <PageHeader
         title="Roles and permissions"
-        back={{ href: "/people", label: "People" }}
+        back={{ href: "/store", label: "Store" }}
         actions={<AddRoleButton holdBack={hold} onOpen={(trigger) => openFrom(trigger, { kind: "add" })} />}
       />
       <p className="mb-4 inline-flex items-center gap-1 text-ink-muted">

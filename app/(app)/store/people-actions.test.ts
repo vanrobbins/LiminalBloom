@@ -23,7 +23,7 @@ import { accessEvents } from "@/db/schema";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
 
-import { cancelInvitationAction, changeRoleAction, createInvitationAction, removePersonAction } from "./actions";
+import { cancelInvitationAction, changeRoleAction, createInvitationAction, removePersonAction } from "./people-actions";
 
 afterAll(async () => {
   await dropStores();

@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { resetRoleAction } from "@/app/(app)/roles/actions";
+import { resetRoleAction } from "@/app/(app)/store/roles/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { builtinRole, withLockedSwitches } from "@/lib/access/roles";

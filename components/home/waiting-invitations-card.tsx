@@ -1,6 +1,6 @@
-// Card 3, "Invitations waiting" (0.7.0.6 spec section 4): pending invitations in the People card's
+// Card 3, "Invitations waiting" (0.7.0.6 spec section 4): pending invitations in the Store panel's
 // words, "Expires <moment>", "Expired <moment>" or "Lapsed". Rows are not links, because the actions
-// live on People. It draws the emails it is given and nothing more: the loader sends rows only to
+// live on the Store panel. It draws the emails it is given and nothing more: the loader sends rows only to
 // someone who may manage people.
 
 import { MailPlus } from "lucide-react";
@@ -24,7 +24,7 @@ function When({ row }: { row: InvitationRow }) {
 
 export function WaitingInvitationsCard({ rows }: { rows: InvitationRow[] }) {
   return (
-    <HomeCard title="Invitations waiting" icon={MailPlus} seeAll={{ href: "/people", page: "people", more: Math.max(0, rows.length - SHOWN) }}>
+    <HomeCard title="Invitations waiting" icon={MailPlus} seeAll={{ href: "/store", page: "invitations", more: Math.max(0, rows.length - SHOWN) }}>
       <ul className="flex flex-col divide-y divide-line-subtle">
         {rows.slice(0, SHOWN).map((row, n) => (
           <li key={row.id ?? `read-only-${n}`} className="flex min-h-11 flex-col justify-center py-2">

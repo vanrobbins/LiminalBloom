@@ -140,12 +140,12 @@ test("adds a role where chosen: names the role that blocks it until it nests, th
   await hydrated(page);
 });
 
-test("is reached from People by the Roles and permissions link, and goes back to People", async ({ page }) => {
-  await page.goto("/people");
+test("is reached from Store by the Roles and permissions link, and goes back to Store", async ({ page }) => {
+  await page.goto("/store");
   await hydrated(page);
   await page.getByRole("link", { name: "Roles and permissions" }).click();
-  await expect(page).toHaveURL(/\/roles$/);
+  await expect(page).toHaveURL(/\/store\/roles$/);
   await expect(page.getByRole("heading", { level: 1, name: "Roles and permissions" })).toBeVisible();
-  await page.getByRole("link", { name: /Back to People|People/ }).first().click();
-  await expect(page).toHaveURL(/\/people$/);
+  await page.locator("[data-page-header]").getByRole("link", { name: /^(Back to Store|← Store)$/ }).click();
+  await expect(page).toHaveURL(/\/store$/);
 });

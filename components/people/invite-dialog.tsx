@@ -10,7 +10,7 @@ import { Label } from "radix-ui";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { createInvitationAction } from "@/app/(app)/people/actions";
+import { createInvitationAction } from "@/app/(app)/store/people-actions";
 import { LocalTime } from "@/components/time/local-time";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";

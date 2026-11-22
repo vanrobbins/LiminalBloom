@@ -7,7 +7,7 @@
 // (proposal section 8.3). This is the pattern every signed-in screen follows.
 
 import Link from "next/link";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Store } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -59,8 +59,8 @@ export default async function AccountPage() {
                   </span>
                   {isActive ? (
                     <Button asChild icon variant="secondary">
-                      <Link href="/store" aria-label="Store settings">
-                        <Settings aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                      <Link href="/store" aria-label="Open Store">
+                        <Store aria-hidden="true" strokeWidth={1.75} className="size-5" />
                       </Link>
                     </Button>
                   ) : null}

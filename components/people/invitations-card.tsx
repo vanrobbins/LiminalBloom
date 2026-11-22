@@ -12,7 +12,7 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 
-import { cancelInvitationAction } from "@/app/(app)/people/actions";
+import { cancelInvitationAction } from "@/app/(app)/store/people-actions";
 import { LocalTime } from "@/components/time/local-time";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

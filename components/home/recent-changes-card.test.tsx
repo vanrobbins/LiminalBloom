@@ -29,7 +29,7 @@ describe("RecentChangesCard", () => {
 
   it("has a see-all link to Roles", () => {
     render(<RecentChangesCard rows={[change("1", "Van removed Lee")]} />);
-    expect(screen.getByRole("link", { name: "All roles" })).toHaveAttribute("href", "/roles");
+    expect(screen.getByRole("link", { name: "All roles" })).toHaveAttribute("href", "/store/roles");
   });
 
   it("prints only the words it was given, so an email the server left out is not there", () => {

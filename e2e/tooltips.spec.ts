@@ -65,7 +65,7 @@ async function expectIconsNamed(page: Page) {
   for (const control of await iconOnly(page)) expect(control.label, control.html).toBeTruthy();
 }
 
-for (const path of ["/people", "/roles", "/account", "/store"]) {
+for (const path of ["/store", "/store/roles", "/account"]) {
   test(`${path}: every icon-only button has an aria-label`, async ({ page }) => {
     await page.goto(path);
     await hydrated(page);
@@ -74,12 +74,12 @@ for (const path of ["/people", "/roles", "/account", "/store"]) {
   });
 }
 
-test("/people and /roles each have an icon-only button here, and it shows its name on hover", async ({ page }, testInfo) => {
+test("/store and /store/roles each have an icon-only button here, and it shows its name on hover", async ({ page }, testInfo) => {
   const size = sizeOf(testInfo);
   // Phone: Invite someone and Add role are icons; from 768 px the row menus on Roles are.
-  const named = { "/people": "Invite someone", "/roles": size === "phone" ? "Add role" : "More for Sales Associate" };
+  const named = { "/store": "Invite someone", "/store/roles": size === "phone" ? "Add role" : "More for Sales Associate" };
   for (const [path, label] of Object.entries(named)) {
-    if (path === "/people" && size !== "phone") continue;
+    if (path === "/store" && size !== "phone") continue;
     await page.goto(path);
     await hydrated(page);
     const button = page.getByRole("button", { name: label, exact: true }).filter({ visible: true });
@@ -106,15 +106,15 @@ const SWEPT: Swept[] = [
   { path: "/products/categories", role: "button", name: "Add category" },
   { path: "/products/categories", role: "button", name: "Edit E2E Pants" },
   { path: "/products/categories", role: "button", name: "Delete E2E Pants" },
-  { path: "/people", role: "button", name: "Invite someone" },
-  { path: "/people", role: "button", name: "Change role for Zoe Sales" },
-  { path: "/people", role: "button", name: "Remove Zoe Sales" },
-  { path: "/roles", role: "button", name: "Add role" },
-  { path: "/account", role: "link", name: "Store settings" },
-  { path: "/people", role: "button", name: "Copy link", open: (page) => invite(page, inviteeEmail(), "Sales Associate").then(() => {}) },
-  { path: "/roles", role: "button", name: "Discard changes", open: stage },
-  { path: "/roles", role: "button", name: "Review and save", open: stage },
-  ...["Rename", "Move up", "Move down", "Delete"].map((action): Swept => ({ path: "/roles", role: "button", name: `${action} Educator`, only: "phone", open: fold })),
+  { path: "/store", role: "button", name: "Invite someone" },
+  { path: "/store", role: "button", name: "Change role for Zoe Sales" },
+  { path: "/store", role: "button", name: "Remove Zoe Sales" },
+  { path: "/store/roles", role: "button", name: "Add role" },
+  { path: "/account", role: "link", name: "Open Store" },
+  { path: "/store", role: "button", name: "Copy link", open: (page) => invite(page, inviteeEmail(), "Sales Associate").then(() => {}) },
+  { path: "/store/roles", role: "button", name: "Discard changes", open: stage },
+  { path: "/store/roles", role: "button", name: "Review and save", open: stage },
+  ...["Rename", "Move up", "Move down", "Delete"].map((action): Swept => ({ path: "/store/roles", role: "button", name: `${action} Educator`, only: "phone", open: fold })),
   { path: "/layout/edit", role: "button", name: "List", only: "phone" },
   { path: "/layout/edit", role: "button", name: "Undo corner", open: corner },
   { path: "/layout/edit", role: "button", name: "Cancel drawing", open: corner },
@@ -130,9 +130,9 @@ for (const { path, role, name, skipOnPhone, only, open } of SWEPT) {
   test(`${path}: ${name} is a 44 px icon with an aria-label, and shows its name on hover`, async ({ page }) => {
     test.skip(skipOnPhone === true && sizeOf(test.info()) === "phone", "On a phone this one lives in the ⋯ menu.");
     test.skip(only === "phone" && sizeOf(test.info()) !== "phone", "A phone's control: wider screens have a menu or a side list.");
-    if (path === "/people") await seedTeam();
+    if (path === "/store") await seedTeam();
     // Move up and Move down are a custom role's: Educator and Planner are the ones roles-edit.spec.ts moves.
-    if (path === "/roles") for (const [role, rank] of [["Educator", 550], ["Planner", 600]] as const) await seedCustomRole(role, rank, ["view"]);
+    if (path === "/store/roles") for (const [role, rank] of [["Educator", 550], ["Planner", 600]] as const) await seedCustomRole(role, rank, ["view"]);
     await page.goto(path);
     await hydrated(page);
     await open?.(page);

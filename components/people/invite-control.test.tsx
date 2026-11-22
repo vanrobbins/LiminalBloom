@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/app/(app)/people/actions", () => ({ createInvitationAction: vi.fn() }));
+vi.mock("@/app/(app)/store/people-actions", () => ({ createInvitationAction: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 import { InviteControl } from "./invite-control";

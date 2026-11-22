@@ -108,8 +108,8 @@ test.describe("Assistant Manager", () => {
 
   test("can't change the store's name or time zone, and can set up the layout and add products", async ({ page }) => {
     await page.goto("/store");
-    await expect(page.getByRole("heading", { level: 1, name: "Store settings" })).toBeVisible();
-    await expect(page.getByText("Your role can't change this.")).toHaveCount(2);
+    await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
+    await expect(page.getByText("Your role can't change these.")).toHaveCount(1);
     await expect(page.getByRole("textbox", { name: "Store name" })).toHaveCount(0);
     await page.goto("/layout");
     await expect(setUpLayout(page)).toBeVisible();
@@ -135,9 +135,10 @@ test.describe("Visual Merchandising Manager", () => {
     await openPeople(page);
     await expect(rolesLink(page)).toHaveCount(0);
     expect(await navLabels(page)).toEqual(NAV);
+    await expectRefused(page, "/store/roles");
     await expectRefused(page, "/roles");
     await page.goto("/store");
-    await expect(page.getByText("Your role can't change this.")).toHaveCount(2);
+    await expect(page.getByText("Your role can't change these.")).toHaveCount(1);
   });
 
   test("edits products and the layout: Add product, the product form and the layout set-up are theirs", async ({ page }) => {

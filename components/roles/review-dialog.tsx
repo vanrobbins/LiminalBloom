@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { saveSwitchesAction } from "@/app/(app)/roles/actions";
+import { saveSwitchesAction } from "@/app/(app)/store/roles/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { changeSummary, type RoleRow } from "@/lib/access/roles-view";

@@ -1,4 +1,4 @@
-// The signed-in person's menu: who they are, their Account page, Store settings,
+// The signed-in person's menu: who they are, their Account page,
 // the theme, and signing out. A bottom sheet on a phone, a dropdown on tablet and
 // desktop (§5.2). The shell picks the variant by where it places the menu.
 //
@@ -7,7 +7,7 @@
 
 "use client";
 
-import { CircleUser, LogOut, Moon, Store, Sun } from "lucide-react";
+import { CircleUser, LogOut, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -92,12 +92,6 @@ export function UserMenu({
                 Account
               </Link>
             </Button>
-            <Button asChild variant="secondary">
-              <Link href="/store" onClick={() => setIsSheetOpen(false)}>
-                <Store {...ICON} />
-                Store settings
-              </Link>
-            </Button>
             {isMounted ? (
               <Button variant="secondary" onClick={switchTheme}>
                 <ThemeIcon {...ICON} />
@@ -142,12 +136,6 @@ export function UserMenu({
           <Link href="/account">
             <CircleUser {...ICON} />
             Account
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/store">
-            <Store {...ICON} />
-            Store settings
           </Link>
         </DropdownMenuItem>
         {isMounted ? (

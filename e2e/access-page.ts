@@ -13,9 +13,9 @@ export const rolesLink = (page: Page) => page.getByRole("link", { name: "Roles a
 export const mainText = (page: Page) => page.getByRole("main").innerText();
 
 export async function openPeople(page: Page) {
-  await page.goto("/people");
+  await page.goto("/store");
   await hydrated(page);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 }
 
 /** Who has a button of this kind on their row, by name, in list order. */
@@ -52,7 +52,7 @@ export async function expectRefused(page: Page, path: string) {
 }
 
 export const navLabels = (page: Page) => mainNav(page).getByRole("link").allTextContents();
-export const NAV = ["Home", "Products", "Layout", "Planograms", "People"];
+export const NAV = ["Home", "Products", "Layout", "Planograms", "Store"];
 
 /** Opens this worker's own product, so workers sharing the store never change the same one. */
 export async function openMyProduct(page: Page, testInfo: TestInfo) {

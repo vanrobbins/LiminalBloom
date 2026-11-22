@@ -9,7 +9,7 @@ import { expect, hydrated } from "./fixtures";
 export const narrow = (page: Page) => page.viewportSize()!.width < 768;
 
 export async function openRoles(page: Page) {
-  await page.goto("/roles");
+  await page.goto("/store/roles");
   await hydrated(page);
   await expect(page.getByRole("heading", { level: 1, name: "Roles and permissions" })).toBeVisible();
 }

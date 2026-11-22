@@ -42,7 +42,7 @@ describe("HomeCards", () => {
 
   it("renders the store and team cards from their slices", async () => {
     mocks.data = {
-      setup: [{ key: "team", label: "Invite your team", href: "/people" }],
+      setup: [{ key: "team", label: "Invite your team", href: "/store" }],
       invitations: [{ id: "i1", email: "ana@example.test", roleName: "Sales Associate", state: "pending", expiresAt: new Date("2026-11-20T18:00:00Z") }],
       changes: [{ id: "c1", text: "Van removed Lee", at: new Date("2026-11-15T18:00:00Z") }],
     };

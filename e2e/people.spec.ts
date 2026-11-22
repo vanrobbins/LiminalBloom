@@ -16,18 +16,18 @@ test.afterEach(async () => {
 });
 
 const mainNav = (page: Page) => page.locator("nav[data-nav]").filter({ visible: true });
-const groups = (page: Page) => page.locator("main h2").allTextContents();
+// The role groups only: the panel also has a "Store details" heading.
+const groups = async (page: Page) => (await page.locator("main h2").allTextContents()).filter((h) => h.includes(" · "));
 
 async function openPeople(page: Page) {
-  await page.goto("/people");
+  await page.goto("/store");
   await hydrated(page);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 }
 
-test("is in the navigation for this width, as the current page, and the groups run highest rank first", async ({ page }) => {
+test("is the Store tab for this width, as the current page, and the groups run highest rank first", async ({ page }) => {
   await openPeople(page);
-  await expect(mainNav(page).getByRole("link", { name: "People" })).toHaveAttribute("aria-current", "page");
-  await expect(mainNav(page).getByRole("link", { name: "People" })).toBeVisible();
+  await expect(mainNav(page).getByRole("link", { name: "Store" })).toHaveAttribute("aria-current", "page");
   expect(await groups(page)).toEqual([
     "Store Manager · 2",
     "Assistant Manager · 1",
@@ -74,7 +74,7 @@ test("keeps five phone tabs of 44 px or more at 320 px wide", async ({ page }, t
   const links = await mainNav(page).getByRole("link").all();
   expect(links).toHaveLength(5);
   for (const link of links) expect((await link.boundingBox())!.width).toBeGreaterThanOrEqual(44);
-  await expect(mainNav(page).getByRole("link", { name: "People" })).toBeVisible();
+  await expect(mainNav(page).getByRole("link", { name: "Store" })).toBeVisible();
 });
 
 test("changes a role: only lower roles are offered, the person moves group, the change is logged", async ({ page }) => {

@@ -16,9 +16,9 @@ export async function visitor(browser: Browser, page: Page) {
 }
 
 export async function openPeople(page: Page) {
-  await page.goto("/people");
+  await page.goto("/store");
   await hydrated(page);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 }
 
 // Exact: "Role" is also inside "Change role for Ann Assistant".
