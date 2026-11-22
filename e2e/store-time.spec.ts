@@ -4,6 +4,7 @@
 // store's zone at any hour the test runs.
 
 import { expect, hydrated, test } from "./fixtures";
+import { mainNav } from "./access-page";
 import { resetStoreZone, seedLayout } from "./map-store";
 
 test.beforeEach(async () => {
@@ -47,10 +48,10 @@ test("the store's time zone decides when a due date is overdue", async ({ page }
   await expect(page.getByRole("button", { name: `Overdue · ${shortDay(due)}` })).toBeVisible();
 });
 
-test("Store settings is in the account menu", async ({ page }) => {
+test("Store is a main tab", async ({ page }) => {
   await page.goto("/products");
   await hydrated(page);
-  await page.locator("[data-user-menu]").filter({ visible: true }).click();
-  await page.locator('a[href="/store"]').filter({ visible: true }).click();
+  await mainNav(page).getByRole("link", { name: "Store" }).click();
+  await expect(page).toHaveURL(/\/store$/);
   await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 });

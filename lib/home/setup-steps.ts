@@ -18,6 +18,6 @@ export function setupSteps(facts: SetupFacts, holder: Holder): SetupRow[] {
   const rows: SetupRow[] = [];
   if (!facts.hasOutline && can(holder, "layout.edit")) rows.push({ key: "layout", label: "Draw the store layout", href: "/layout/edit" });
   if (facts.productCount === 0 && can(holder, "products.edit")) rows.push({ key: "product", label: "Add the first product", href: "/products/new" });
-  if (facts.memberCount <= 1 && facts.pendingInvitations === 0 && can(holder, "people.manage")) rows.push({ key: "team", label: "Invite your team", href: "/people" });
+  if (facts.memberCount <= 1 && facts.pendingInvitations === 0 && can(holder, "people.manage")) rows.push({ key: "team", label: "Invite your team", href: "/store" });
   return rows;
 }

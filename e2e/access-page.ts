@@ -52,7 +52,7 @@ export async function expectRefused(page: Page, path: string) {
 }
 
 export const navLabels = (page: Page) => mainNav(page).getByRole("link").allTextContents();
-export const NAV = ["Home", "Products", "Layout", "Planograms", "People"];
+export const NAV = ["Home", "Products", "Layout", "Planograms", "Store"];
 
 /** Opens this worker's own product, so workers sharing the store never change the same one. */
 export async function openMyProduct(page: Page, testInfo: TestInfo) {

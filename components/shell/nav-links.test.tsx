@@ -27,7 +27,7 @@ describe("NavLinks", () => {
     render(<NavLinks variant="tabs" />);
     const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
     expect(links[0]).toHaveAccessibleName("Home");
-    expect(links.map((l) => l.textContent)).toEqual(["Home", "Products", "Layout", "Planograms", "People"]);
+    expect(links.map((l) => l.textContent)).toEqual(["Home", "Products", "Layout", "Planograms", "Store"]);
   });
 
   it("leaves Account to the avatar menu, so five tabs fit a 360 px phone", () => {
@@ -61,21 +61,28 @@ describe("NavLinks", () => {
     expect(link("Planograms")).toHaveAttribute("href", "/planograms");
   });
 
-  it("lists People in every form, after Planograms, current on /people", () => {
-    mocks.pathname = "/people";
-    for (const variant of ["tabs", "rail", "sidebar"] as const) {
-      const { unmount } = render(<NavLinks variant={variant} />);
-      expect(link("People")).toHaveAttribute("href", "/people");
-      expect(link("People")).toHaveAttribute("aria-current", "page");
-      expect(link("Planograms")).not.toHaveAttribute("aria-current");
-      unmount();
+  it("lists Store in every form, after Planograms, current on /store and on /store/roles", () => {
+    for (const pathname of ["/store", "/store/roles"]) {
+      mocks.pathname = pathname;
+      for (const variant of ["tabs", "rail", "sidebar"] as const) {
+        const { unmount } = render(<NavLinks variant={variant} />);
+        expect(link("Store")).toHaveAttribute("href", "/store");
+        expect(link("Store")).toHaveAttribute("aria-current", "page");
+        expect(link("Planograms")).not.toHaveAttribute("aria-current");
+        unmount();
+      }
     }
+  });
+
+  it("has no People entry: the people live in the Store panel", () => {
+    render(<NavLinks variant="tabs" />);
+    expect(within(screen.getByRole("navigation", { name: "Main" })).queryByRole("link", { name: "People" })).toBeNull();
   });
 
   it("marks only the page being shown", () => {
     render(<NavLinks variant="sidebar" />);
     expect(link("Products")).toHaveAttribute("aria-current", "page");
-    expect(link("People")).not.toHaveAttribute("aria-current");
+    expect(link("Store")).not.toHaveAttribute("aria-current");
   });
 
   it("still marks an entry on a page beneath it", () => {
@@ -94,7 +101,7 @@ describe("NavLinks", () => {
     for (const variant of ["tabs", "rail", "sidebar"] as const) {
       const { unmount } = render(<NavLinks variant={variant} />);
       expect(link("Products").className).toMatch(/\b(bg-brand|border-brand)\b/);
-      expect(link("People").className).not.toMatch(/\b(bg-brand|border-brand)\b/);
+      expect(link("Store").className).not.toMatch(/\b(bg-brand|border-brand)\b/);
       unmount();
     }
   });

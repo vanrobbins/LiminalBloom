@@ -110,7 +110,7 @@ const SWEPT: Swept[] = [
   { path: "/people", role: "button", name: "Change role for Zoe Sales" },
   { path: "/people", role: "button", name: "Remove Zoe Sales" },
   { path: "/roles", role: "button", name: "Add role" },
-  { path: "/account", role: "link", name: "Store settings" },
+  { path: "/account", role: "link", name: "Open Store" },
   { path: "/people", role: "button", name: "Copy link", open: (page) => invite(page, inviteeEmail(), "Sales Associate").then(() => {}) },
   { path: "/roles", role: "button", name: "Discard changes", open: stage },
   { path: "/roles", role: "button", name: "Review and save", open: stage },

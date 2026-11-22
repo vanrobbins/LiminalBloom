@@ -86,7 +86,7 @@ test("Products is the second bottom tab on phones, after Home, and opens ready t
   test.skip(sizeOf(test.info()) !== "phone", "Tabs are the phone's navigation.");
   await page.goto("/layout");
   const tabs = page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link");
-  await expect(tabs).toHaveText(["Home", "Products", "Layout", "Planograms", "People"]);
+  await expect(tabs).toHaveText(["Home", "Products", "Layout", "Planograms", "Store"]);
   await tabs.nth(1).click();
   await expect(page).toHaveURL(/\/products$/);
   await expect(searchBox(page)).toBeFocused();

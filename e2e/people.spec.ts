@@ -25,10 +25,9 @@ async function openPeople(page: Page) {
   await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 }
 
-test("is in the navigation for this width, as the current page, and the groups run highest rank first", async ({ page }) => {
+test("is the Store tab for this width, as the current page, and the groups run highest rank first", async ({ page }) => {
   await openPeople(page);
-  // The nav entry is renamed Store and checked as current in task 4 (0.7.0.7); until then it still reads People.
-  await expect(mainNav(page).getByRole("link", { name: "People" })).toBeVisible();
+  await expect(mainNav(page).getByRole("link", { name: "Store" })).toHaveAttribute("aria-current", "page");
   expect(await groups(page)).toEqual([
     "Store Manager · 2",
     "Assistant Manager · 1",
@@ -75,7 +74,7 @@ test("keeps five phone tabs of 44 px or more at 320 px wide", async ({ page }, t
   const links = await mainNav(page).getByRole("link").all();
   expect(links).toHaveLength(5);
   for (const link of links) expect((await link.boundingBox())!.width).toBeGreaterThanOrEqual(44);
-  await expect(mainNav(page).getByRole("link", { name: "People" })).toBeVisible();
+  await expect(mainNav(page).getByRole("link", { name: "Store" })).toBeVisible();
 });
 
 test("changes a role: only lower roles are offered, the person moves group, the change is logged", async ({ page }) => {

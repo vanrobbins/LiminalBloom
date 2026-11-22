@@ -44,7 +44,7 @@ async function expectNotPlaced(page: Page) {
 /** A role with people.manage: the invitation row with its address, and the Set up row for the missing layout. */
 async function expectManagersCards(page: Page) {
   await expect(card(page, "Invitations waiting").getByRole("listitem").filter({ hasText: INVITED })).toContainText("Sales Associate role · Expires");
-  await expect(card(page, "Invitations waiting").getByRole("link", { name: "All people", exact: true })).toHaveAttribute("href", "/people");
+  await expect(card(page, "Invitations waiting").getByRole("link", { name: "All store", exact: true })).toHaveAttribute("href", "/store");
   await expect(card(page, "Set up the store").getByRole("link", { name: "Draw the store layout" })).toHaveAttribute("href", "/layout/edit");
   // The role store has products and five people: those two steps are done.
   await expect(card(page, "Set up the store").getByRole("listitem")).toHaveCount(1);
@@ -52,7 +52,7 @@ async function expectManagersCards(page: Page) {
 
 async function expectChanges(page: Page) {
   await expect(card(page, "Recent changes").getByRole("listitem").filter({ hasText: `${ROLE_PEOPLE.store_manager} invited ${INVITED} as Sales Associate` })).toBeVisible();
-  await expect(card(page, "Recent changes").getByRole("link", { name: /^All roles/ })).toHaveAttribute("href", "/roles");
+  await expect(card(page, "Recent changes").getByRole("link", { name: /^All roles/ })).toHaveAttribute("href", "/store/roles");
 }
 
 /** Nothing of the people-managers' data reaches a role without people.manage. */

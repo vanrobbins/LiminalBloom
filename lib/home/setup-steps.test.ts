@@ -13,7 +13,7 @@ describe("setupSteps", () => {
     expect(setupSteps(NEW_STORE, ALL)).toEqual([
       { key: "layout", label: "Draw the store layout", href: "/layout/edit" },
       { key: "product", label: "Add the first product", href: "/products/new" },
-      { key: "team", label: "Invite your team", href: "/people" },
+      { key: "team", label: "Invite your team", href: "/store" },
     ]);
   });
 

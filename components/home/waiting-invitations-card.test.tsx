@@ -41,13 +41,13 @@ describe("WaitingInvitationsCard", () => {
     expect(items().map((li) => li.querySelector("span")?.textContent)).toEqual(["a@example.test", "b@example.test"]);
   });
 
-  it("shows at most five rows and names the remainder on the see-all link to People", () => {
+  it("shows at most five rows and names the remainder on the see-all link to Store", () => {
     render(<WaitingInvitationsCard rows={Array.from({ length: 8 }, (_, i) => inv(`p${i}@example.test`))} />);
     expect(items()).toHaveLength(5);
-    expect(screen.getByRole("link", { name: "All people, 3 more" })).toHaveAttribute("href", "/people");
+    expect(screen.getByRole("link", { name: "All store, 3 more" })).toHaveAttribute("href", "/store");
   });
 
-  it("has no row links: the actions live on People", () => {
+  it("has no row links: the actions live in Store", () => {
     render(<WaitingInvitationsCard rows={[inv("a@example.test")]} />);
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
