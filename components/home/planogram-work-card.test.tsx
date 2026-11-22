@@ -43,9 +43,9 @@ describe("PlanogramWorkCard", () => {
         ])}
       />,
     );
-    expect(screen.getByRole("link", { name: "Front table, Draft, Overdue · Nov 9" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Wall 2, Version 3, Due Nov 20" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Endcap, Not published, Due Nov 30" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Front table, Rack, Draft, Overdue · Nov 9" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Wall 2, Rack, Version 3, Due Nov 20" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Endcap, Rack, Not published, Due Nov 30" })).toBeInTheDocument();
   });
 
   it("shows the due chip with its words, and the type only when the name doesn't say it", () => {

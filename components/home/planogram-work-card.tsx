@@ -24,7 +24,7 @@ export function PlanogramWorkCard({ work }: { work: PlanogramWork }) {
       <ul className="flex flex-col divide-y divide-line-subtle">
         {work.rows.map((row) => {
           const type = typeHint(row.name, row.typeLabel);
-          const label = [row.name, stateWord(row), row.dueDate ? dueLabel(row.dueDate, work.today).text : null].filter(Boolean).join(", ");
+          const label = [row.name, type, stateWord(row), row.dueDate ? dueLabel(row.dueDate, work.today).text : null].filter(Boolean).join(", ");
           return (
             <li key={row.fixtureId}>
               <Link href={`/planograms/${row.fixtureId}`} aria-label={label} className="flex min-h-11 flex-col gap-1 py-2 md:flex-row md:items-center md:justify-between">
