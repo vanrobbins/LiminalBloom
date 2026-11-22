@@ -51,7 +51,7 @@ export function MapViewer({ layout, planograms, looks, storeKey, initialZone }: 
   });
   // The param only opens the map: drop it so a refresh, or Whole store, behaves as it always did.
   useEffect(() => {
-    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "zone");
+    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "zone", "n");
     if (clean !== null) window.history.replaceState(null, "", clean);
   }, []);
   const isPhone = useMediaQuery(PHONE_QUERY);

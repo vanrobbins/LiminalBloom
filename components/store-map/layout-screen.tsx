@@ -31,6 +31,8 @@ type LayoutScreenProps = {
   member: Holder;
   /** From /layout?zone= (checked as an id by the page, as a zone of this map by the viewer). */
   initialZone?: string;
+  /** From /layout?n=: changes when the same zone is picked again, so the viewer starts over on it. */
+  nonce?: string;
 };
 
 /** Changes whenever the loaded layout does, so the viewer starts over from it after editing. */
@@ -41,7 +43,7 @@ function layoutKey(layout: Layout): string {
   return (hash >>> 0).toString(36);
 }
 
-export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest, member, initialZone }: LayoutScreenProps) {
+export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest, member, initialZone, nonce = "" }: LayoutScreenProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const key = useMemo(() => layoutKey(layout), [layout]);
@@ -77,7 +79,7 @@ export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLa
           ) : null
         }
       />
-      <MapViewer key={`${key}:${initialZone ?? ""}`} layout={layout} planograms={planograms} looks={looks} storeKey={storeId} initialZone={initialZone} />
+      <MapViewer key={`${key}:${initialZone ?? ""}:${nonce}`} layout={layout} planograms={planograms} looks={looks} storeKey={storeId} initialZone={initialZone} />
     </>
   );
 }

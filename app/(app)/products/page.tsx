@@ -7,7 +7,7 @@ import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
 import { listCategories, listColors, search } from "@/lib/products/queries";
 import { fromSearchParams, toSearchParams } from "@/lib/products/search-params";
-import { uuidParam } from "@/lib/url-params";
+import { nonceParam, uuidParam } from "@/lib/url-params";
 
 // Status changes on other devices must show on every visit (§3.2 item 8).
 export const dynamic = "force-dynamic";
@@ -32,8 +32,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     // navigations; typing only uses replaceState, which does not re-render here.
     // A store switch keeps the URL, so the store is in the key too: otherwise the
     // refreshed page keeps showing the last store's results under the new name.
+    // `n` (from the palette) is new each time it picks a product, so picking the same one twice reopens it.
     <SearchScreen
-      key={`${activeStoreId}?${toSearchParams(initial)}&open=${openId ?? ""}`}
+      key={`${activeStoreId}?${toSearchParams(initial)}&open=${openId ?? ""}&n=${nonceParam(params)}`}
       initial={initial}
       initialResults={page.results}
       initialTotal={page.total}

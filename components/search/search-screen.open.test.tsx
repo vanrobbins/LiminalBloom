@@ -67,6 +67,13 @@ describe("SearchScreen initialOpenId", () => {
     expect(here()).toBe("/products?q=p");
   });
 
+  it("closing drops the nonce too", async () => {
+    window.history.replaceState(null, "", "/products?q=p&open=p2&n=k3");
+    renderScreen("p2");
+    await userEvent.setup().click(within(screen.getByRole("complementary", { name: /Pocket Tee/ })).getByRole("button", { name: /close/i }));
+    expect(here()).toBe("/products?q=p");
+  });
+
   it("typing drops open from the address and never writes it", async () => {
     renderScreen("p2");
     await userEvent.setup().type(screen.getByRole("searchbox", { name: "Search products" }), "a");

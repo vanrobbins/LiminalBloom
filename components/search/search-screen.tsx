@@ -100,7 +100,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
   function close() {
     setOpenId(null);
     // The address no longer names an open product.
-    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "open");
+    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "open", "n");
     if (clean !== null) window.history.replaceState(null, "", clean);
     // The phone's sheet is a dialog and gives focus back itself; the side panel
     // is not, so focus goes back to the card it came from.

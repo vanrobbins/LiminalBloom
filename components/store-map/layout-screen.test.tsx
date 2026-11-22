@@ -36,4 +36,15 @@ describe("LayoutScreen", () => {
     render(<LayoutScreen member={EVERYTHING} {...props} layout={{ ...store(), zones: [zone()], fixtures: [fixture()] }} initialZone="zone-a" />);
     expect(screen.getByRole("button", { name: "Whole store" })).toBeInTheDocument();
   });
+
+  it("starts over on the entry zone when the same pick arrives again with a new nonce", async () => {
+    const layout = { ...store(), zones: [zone()], fixtures: [fixture()] };
+    const { rerender } = render(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="a1" />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Whole store" }));
+    expect(screen.queryByRole("button", { name: "Whole store" })).toBeNull();
+    rerender(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="a1" />);
+    expect(screen.queryByRole("button", { name: "Whole store" })).toBeNull();
+    rerender(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="b2" />);
+    expect(screen.getByRole("button", { name: "Whole store" })).toBeInTheDocument();
+  });
 });

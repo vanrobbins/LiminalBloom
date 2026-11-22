@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { BUILTIN_ROLES } from "@/lib/access/roles";
 
 import { commandsFor } from "./commands";
-import { keepActive, paletteGroups } from "./groups";
+import { describeResults, keepActive, paletteGroups } from "./groups";
 import type { PaletteIndex, PaletteProducts, RecentPick } from "./types";
 
 const commands = commandsFor({ switches: BUILTIN_ROLES[0].switches }, [{ id: "s1", name: "Main" }], "s1", "light");
@@ -109,5 +109,16 @@ describe("keepActive", () => {
     expect(keepActive("gone", options)).toBe("a");
     expect(keepActive(null, options)).toBe("a");
     expect(keepActive("a", [])).toBeNull();
+  });
+});
+
+describe("describeResults", () => {
+  it("counts what matched, leaving out the always-present All products row", () => {
+    expect(describeResults(run("rack"), "rack")).toBe("5 planograms, 3 zones, 5 products");
+    expect(describeResults(run("front table", { products: null }), "front table")).toBe("1 planogram");
+  });
+  it("counts pages and actions, and says so when nothing matched", () => {
+    expect(describeResults(run("account", { products: null }), "account")).toBe("1 page or action");
+    expect(describeResults(run("zzzz", { products: null }), " zzzz ")).toBe('No matches for "zzzz".');
   });
 });

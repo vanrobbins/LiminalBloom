@@ -15,9 +15,9 @@ vi.mock("next/link", () => ({
 import { PageHeader } from "./page-header";
 import { ShellProvider, type ShellValue } from "./shell-context";
 
-const user = { name: "Van", email: "v@x.co" };
-const two: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Washington Square" }], activeStoreId: "a", user };
-const one: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }], activeStoreId: "a", user };
+const user = { id: "u", name: "Van", email: "v@x.co" };
+const two: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Washington Square" }], activeStoreId: "a", user, switches: ["view"] };
+const one: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }], activeStoreId: "a", user, switches: ["view"] };
 
 describe("PageHeader", () => {
   it("draws one h1, the back links and the account menu", () => {

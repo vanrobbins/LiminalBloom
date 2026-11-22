@@ -91,3 +91,18 @@ export function keepActive(previousId: string | null, options: readonly { id: st
   if (previousId !== null && options.some((o) => o.id === previousId)) return previousId;
   return options[0]?.id ?? null;
 }
+
+const count = (groups: readonly PaletteGroup[], key: GroupKey) => groups.find((g) => g.key === key)?.items.filter((i) => i.kind !== "all-products").length ?? 0;
+
+/** What a screen reader hears once the answer settles: "2 planograms, 1 zone, 5 products", or that nothing matched. */
+export function describeResults(groups: readonly PaletteGroup[], query: string): string {
+  const pages = count(groups, "goto") + count(groups, "actions");
+  const parts = [
+    [count(groups, "planograms"), "planogram", "planograms"],
+    [count(groups, "zones"), "zone", "zones"],
+    [count(groups, "products"), "product", "products"],
+    [pages, "page or action", "pages and actions"],
+  ] as const;
+  const said = parts.filter(([n]) => n > 0).map(([n, one, many]) => plural(n, one, many));
+  return said.length > 0 ? said.join(", ") : `No matches for "${query.trim()}".`;
+}

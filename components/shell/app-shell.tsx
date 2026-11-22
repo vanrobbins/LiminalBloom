@@ -13,10 +13,10 @@ import { StoreMenu } from "./store-menu";
 import { UserMenu } from "./user-menu";
 
 export function AppShell({ member, children }: { member: Member; children: React.ReactNode }) {
-  const { user, stores, activeStoreId } = member;
+  const { user, stores, activeStoreId, switches } = member;
 
   return (
-    <ShellProvider value={{ stores, activeStoreId, user: { name: user.name, email: user.email } }}>
+    <ShellProvider value={{ stores, activeStoreId, user: { id: user.id, name: user.name, email: user.email }, switches }}>
       <div className="flex flex-1 flex-col bg-surface md:flex-row">
         <a
           href="#content"

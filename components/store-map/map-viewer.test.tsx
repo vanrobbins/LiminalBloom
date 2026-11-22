@@ -75,6 +75,12 @@ describe("MapViewer entry zone (/layout?zone=, 0.7.0.8)", () => {
     expect(window.location.search).toBe("");
   });
 
+  it("drops the nonce with it", () => {
+    window.history.replaceState(null, "", "/layout?zone=zone-a&n=k3");
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" initialZone="zone-a" />);
+    expect(window.location.search).toBe("");
+  });
+
   it("leaves a plain /layout address alone", () => {
     render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" />);
     expect(window.location.pathname + window.location.search).toBe("/layout");
