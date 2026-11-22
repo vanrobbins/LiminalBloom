@@ -52,5 +52,5 @@ test("Store settings is in the account menu", async ({ page }) => {
   await hydrated(page);
   await page.locator("[data-user-menu]").filter({ visible: true }).click();
   await page.locator('a[href="/store"]').filter({ visible: true }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Store settings" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 });

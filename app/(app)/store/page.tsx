@@ -1,57 +1,32 @@
-// Store settings: the store's name and its time zone (DECISIONS "Time", 10-12), which
-// decides what "today" and overdue mean for everyone working there. Only a
-// role with the store.settings switch can change either; everyone else sees them.
+// The Store panel (0.7.0.7 spec section 6): the store's name and time zone, who works there, and, by
+// switch, the tools to change them. Every member can open it (`requireMember`); what a viewer is sent
+// is decided by the reads (`peopleViewFor` sends emails and invitations only to `people.manage`), and
+// every action checks its switch again. Roles and permissions is its own page, `/store/roles`.
 
+import { InviteControl } from "@/components/people/invite-control";
+import { PeopleScreen } from "@/components/people/people-screen";
 import { PageHeader } from "@/components/shell/page-header";
-import { Card } from "@/components/ui/card";
+import { RolesLink } from "@/components/store/roles-link";
+import { peopleViewFor } from "@/lib/access/people";
 import { can, requireMember } from "@/lib/current-member";
 import { storeSettingsFor } from "@/lib/store-settings";
-import { DEFAULT_TIMEZONE, zoneLabel } from "@/lib/time/zones";
+import { DEFAULT_TIMEZONE } from "@/lib/time/zones";
 
-import { StoreNameForm } from "./store-name-form";
-import { TimezoneForm } from "./timezone-form";
-import { InfoPopover } from "@/components/ui/info-popover";
+import { StoreDetails } from "./store-details";
 
 export const dynamic = "force-dynamic";
 
 export default async function StorePage() {
   const member = await requireMember();
-  const settings = await storeSettingsFor(member.activeStoreId);
-  const canManage = can(member, "store.settings");
-  const zone = settings?.timezone ?? DEFAULT_TIMEZONE;
+  const [settings, view] = await Promise.all([storeSettingsFor(member.activeStoreId), peopleViewFor(member)]);
   const storeName = member.stores.find((store) => store.id === member.activeStoreId)?.name ?? "Your store";
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <PageHeader title="Store settings" back={{ href: "/account", label: "Account" }} />
-      <Card className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-ink">Store name</h2>
-        <p className="text-sm text-ink-muted">Shown in the header and the store switcher, for everyone in the store.</p>
-        {canManage ? (
-          <StoreNameForm name={storeName} />
-        ) : (
-          <p className="text-ink wrap-break-word">
-            {storeName}
-            <span className="block text-sm text-ink-muted">Your role can&apos;t change this.</span>
-          </p>
-        )}
-      </Card>
-      <Card className="flex flex-col gap-3">
-        <h2 className="inline-flex items-center gap-1 text-lg font-semibold text-ink">
-          Time zone
-          <InfoPopover term="storeTime" />
-        </h2>
-        <p className="text-sm text-ink-muted">Due dates turn overdue at midnight here, wherever you are. Times like &ldquo;published at&rdquo; show in your own device&apos;s time.</p>
-        {canManage ? (
-          // Version 0 = no settings row yet; saving makes it.
-          <TimezoneForm zone={zone} version={settings?.version ?? 0} />
-        ) : (
-          <p className="text-ink">
-            {zoneLabel(zone)}
-            <span className="block text-sm text-ink-muted">Your role can&apos;t change this.</span>
-          </p>
-        )}
-      </Card>
+    <div className="mx-auto w-full max-w-2xl">
+      <PageHeader title="Store" actions={view.assignable.length > 0 ? <InviteControl roles={view.assignable} /> : null} />
+      <StoreDetails name={storeName} zone={settings?.timezone ?? DEFAULT_TIMEZONE} version={settings?.version ?? 0} canManage={can(member, "store.settings")} />
+      {can(member, "roles.manage") ? <RolesLink /> : null}
+      <PeopleScreen view={view} storeName={storeName} />
     </div>
   );
 }

@@ -45,7 +45,7 @@ async function expectNoManagement(page: Page) {
   await expect(page.getByText("This store has no layout yet.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Set up your store layout" })).toHaveCount(0);
   await page.goto("/store");
-  await expect(page.getByText("Your role can't change this.")).toHaveCount(2);
+  await expect(page.getByText("Your role can't change these.")).toHaveCount(1);
   await expect(page.getByRole("textbox", { name: "Store name" })).toHaveCount(0);
 }
 

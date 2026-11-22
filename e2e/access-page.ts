@@ -13,9 +13,9 @@ export const rolesLink = (page: Page) => page.getByRole("link", { name: "Roles a
 export const mainText = (page: Page) => page.getByRole("main").innerText();
 
 export async function openPeople(page: Page) {
-  await page.goto("/people");
+  await page.goto("/store");
   await hydrated(page);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 }
 
 /** Who has a button of this kind on their row, by name, in list order. */

@@ -1,33 +1,100 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ switches: ["view", "store.settings"] as string[] }));
+import { invitationRow, person, ROLES, viewOf } from "@/components/people/test-view";
+import type { PeopleView } from "@/lib/access/people-view";
+
+const mocks = vi.hoisted(() => ({ switches: ["view", "store.settings"] as string[], view: null as PeopleView | null }));
 
 vi.mock("@/lib/current-member", () => ({
   requireMember: async () => ({ kind: "member", user: { id: "u", name: "Van", email: "v@x.co" }, stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Other" }], activeStoreId: "a", switches: mocks.switches }),
   can: (member: { switches: string[] }, wanted: string) => member.switches.includes(wanted),
 }));
 vi.mock("@/lib/store-settings", () => ({ storeSettingsFor: async () => ({ timezone: "America/Los_Angeles", version: 1 }) }));
+vi.mock("@/lib/access/people", () => ({ peopleViewFor: async () => mocks.view }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock("./actions", () => ({ renameStoreAction: vi.fn(), saveTimezoneAction: vi.fn() }));
+vi.mock("./people-actions", () => ({ cancelInvitationAction: vi.fn(), changeRoleAction: vi.fn(), createInvitationAction: vi.fn(), removePersonAction: vi.fn() }));
 
 import StorePage from "./page";
 
-describe("StorePage store name", () => {
-  it("is an editable field, filled with the working store's name, for someone with store.settings", async () => {
-    mocks.switches = ["view", "store.settings"];
-    render(await StorePage());
-    expect(screen.getByLabelText("Store name")).toHaveValue("Pioneer Place");
-    // Both fields save as they are changed: no Save buttons on the page.
-    expect(screen.queryByRole("button", { name: /^Save/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /^Time zone/ })).toBeInTheDocument();
+const STAFF = viewOf([person("Van Robbins", "r-sa", "Sales Associate", 500, { isYou: true }), person("Zoe Sales", "r-sa", "Sales Associate", 500)]);
+const MANAGER = viewOf(
+  [person("Van Robbins", "r-am", "Assistant Manager", 200, { isYou: true, email: "van@x.co" }), person("Zoe Sales", "r-sa", "Sales Associate", 500, { email: "zoe@x.co", canAct: true })],
+  { canManage: true, assignable: ROLES, invitations: [invitationRow("new@x.co")] },
+);
+
+async function show(switches: string[], view: PeopleView) {
+  mocks.switches = switches;
+  mocks.view = view;
+  render(await StorePage());
+}
+
+describe("StorePage", () => {
+  beforeEach(() => {
+    mocks.view = STAFF;
   });
 
-  it("is read-only text with the reason for everyone else", async () => {
-    mocks.switches = ["view"];
-    render(await StorePage());
-    expect(screen.queryByLabelText("Store name")).toBeNull();
-    expect(screen.getByText("Pioneer Place")).toBeInTheDocument();
-    expect(screen.getAllByText("Your role can't change this.")).toHaveLength(2);
+  it("gives everyone the Store title, the details and the people, in that order, with no back link", async () => {
+    await show(["view"], STAFF);
+    expect(screen.getByRole("heading", { level: 1, name: "Store" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Back to/ })).toBeNull();
+    expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual(["Store", "Store details", "Sales Associate · 2"]);
+    expect(screen.getByText("Zoe Sales")).toBeInTheDocument();
+  });
+
+  it("offers Invite when the viewer may grant a role", async () => {
+    await show(["view", "people.manage"], MANAGER);
+    expect(screen.getByRole("button", { name: "Invite someone" })).toBeInTheDocument();
+  });
+
+  it("has no Invite for a view with nothing to grant", async () => {
+    await show(["view", "people.manage"], viewOf(MANAGER.groups.flatMap((g) => g.people), { canManage: true, assignable: [] }));
+    expect(screen.queryByRole("button", { name: "Invite someone" })).toBeNull();
+  });
+
+  it("links Roles and permissions to /store/roles with roles.manage", async () => {
+    await show(["view", "roles.manage"], STAFF);
+    expect(screen.getByRole("link", { name: "Roles and permissions" })).toHaveAttribute("href", "/store/roles");
+  });
+
+  it("has no Roles link without roles.manage", async () => {
+    await show(["view", "people.manage", "store.settings"], MANAGER);
+    expect(screen.queryByRole("link", { name: "Roles and permissions" })).toBeNull();
+  });
+
+  it("puts the details, then the Roles link, then the people", async () => {
+    await show(["view", "roles.manage"], STAFF);
+    const details = screen.getByRole("region", { name: "Store details" });
+    const link = screen.getByRole("link", { name: "Roles and permissions" });
+    const group = screen.getByRole("heading", { name: "Sales Associate · 2" });
+    expect(details.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows the name and time zone fields with store.settings", async () => {
+    await show(["view", "store.settings"], STAFF);
+    expect(screen.getByLabelText("Store name")).toHaveValue("Pioneer Place");
+    expect(screen.getByRole("button", { name: /^Time zone/ })).toBeInTheDocument();
+    expect(screen.queryByText("Your role can't change these.")).toBeNull();
+  });
+
+  it("shows the name and zone as text with one reason for everyone else", async () => {
+    await show(["view"], STAFF);
+    const details = within(screen.getByRole("region", { name: "Store details" }));
+    expect(details.queryByLabelText("Store name")).toBeNull();
+    expect(details.getByText("Pioneer Place")).toBeInTheDocument();
+    expect(screen.getAllByText("Your role can't change these.")).toHaveLength(1);
+  });
+
+  it("renders no address from a view without people.manage", async () => {
+    await show(["view"], STAFF);
+    expect(document.body.textContent).not.toContain("@");
+  });
+
+  it("shows every address and the invitations in a manager's view", async () => {
+    await show(["view", "people.manage"], MANAGER);
+    expect(screen.getByText("zoe@x.co")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Invitations waiting/ })).toBeInTheDocument();
   });
 });
