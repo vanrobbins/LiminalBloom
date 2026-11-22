@@ -3,11 +3,13 @@
 
 "use client";
 
+import { Zap } from "lucide-react";
 import Link from "next/link";
 
 import { ProductImage } from "@/components/products/product-image";
 import { InfoPopover } from "@/components/ui/info-popover";
-import type { Holder } from "@/lib/access/can";
+import { Button } from "@/components/ui/button";
+import { can, type Holder } from "@/lib/access/can";
 import type { Layout } from "@/lib/layout/types";
 import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 import type { ProductRow, SearchResult } from "@/lib/products/queries";
@@ -19,6 +21,8 @@ import { StatusControl } from "./status-control";
 type LocationDetailsProps = { result: SearchResult; layout: Layout; member: Holder; onChanged: (product: ProductRow) => void };
 
 export function LocationDetails({ result, layout, member, onChanged }: LocationDetailsProps) {
+  // Quick Adjust (0.7.0.9): a sold-out or on-sale product's floor places link to the adjust page for those who may draft.
+  const canAdjust = can(member, "planograms.draft") && result.status !== "in_stock";
   return (
     <div className="flex flex-col gap-5">
       <div className="flex gap-4">
@@ -38,7 +42,7 @@ export function LocationDetails({ result, layout, member, onChanged }: LocationD
           ) : null}
         </dl>
       </div>
-      <StatusControl product={result} member={member} onChanged={onChanged} />
+      <StatusControl product={result} member={member} onChanged={onChanged} displays={result.locations.filter((l) => l.floor).length} />
       <section aria-labelledby="where-heading" className="flex flex-col gap-4">
         <h3 id="where-heading" className="font-semibold text-ink">
           Where it goes
@@ -64,12 +68,21 @@ export function LocationDetails({ result, layout, member, onChanged }: LocationD
                   <>
                     <LocationMap layout={layout} fixtureId={l.floor.fixtureId} />
                     <FaceGrid grid={l.floor.grid} cells={l.floor.cells} label={`${l.label}, ${l.detail}`} />
-                    <Link
-                      href={`/planograms/${l.floor.fixtureId}?product=${result.id}`}
-                      className="inline-flex min-h-11 items-center self-start text-ink underline underline-offset-4"
-                    >
-                      Open planogram
-                    </Link>
+                    <div className="flex items-center gap-3 self-start">
+                      <Link
+                        href={`/planograms/${l.floor.fixtureId}?product=${result.id}`}
+                        className="inline-flex min-h-11 items-center text-ink underline underline-offset-4"
+                      >
+                        Open planogram
+                      </Link>
+                      {canAdjust ? (
+                        <Button asChild icon variant="secondary">
+                          <Link href={`/planograms/${l.floor.fixtureId}/adjust?product=${result.id}`} aria-label={`Quick Adjust on ${l.label}`}>
+                            <Zap aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
                   </>
                 ) : null}
               </li>
