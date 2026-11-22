@@ -13,14 +13,19 @@ import type { CardKey, HomeData } from "@/lib/home/types";
 
 import { NotPlacedCard } from "./not-placed-card";
 import { PlanogramWorkCard } from "./planogram-work-card";
+import { RecentChangesCard } from "./recent-changes-card";
 import { RecentPublishesCard } from "./recent-publishes-card";
+import { SetupCard } from "./setup-card";
+import { WaitingInvitationsCard } from "./waiting-invitations-card";
 
 function Card({ cardKey, data }: { cardKey: CardKey; data: HomeData }) {
   switch (cardKey) {
     case "setup":
+      return data.setup ? <SetupCard rows={data.setup} /> : null;
     case "invitations":
+      return data.invitations ? <WaitingInvitationsCard rows={data.invitations} /> : null;
     case "changes":
-      return null;
+      return data.changes ? <RecentChangesCard rows={data.changes} /> : null;
     case "planograms":
       return data.planograms ? <PlanogramWorkCard work={data.planograms} /> : null;
     case "notPlaced":

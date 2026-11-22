@@ -39,4 +39,23 @@ describe("HomeCards", () => {
     render(await HomeCards());
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Planograms to finish", "Not placed yet", "Recently published"]);
   });
+
+  it("renders the store and team cards from their slices", async () => {
+    mocks.data = {
+      setup: [{ key: "team", label: "Invite your team", href: "/people" }],
+      invitations: [{ id: "i1", email: "ana@example.test", roleName: "Sales Associate", state: "pending", expiresAt: new Date("2026-11-20T18:00:00Z") }],
+      changes: [{ id: "c1", text: "Van removed Lee", at: new Date("2026-11-15T18:00:00Z") }],
+    };
+    mocks.shown = ["setup", "invitations", "changes"];
+    render(await HomeCards());
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Set up the store", "Invitations waiting", "Recent changes"]);
+  });
+
+  it("never prints an email when the data carries no invitations", async () => {
+    mocks.data = { changes: [{ id: "c1", text: "Van removed Lee", at: new Date("2026-11-15T18:00:00Z") }] };
+    mocks.shown = ["invitations", "changes"];
+    const { container } = render(await HomeCards());
+    expect(screen.queryByRole("heading", { name: "Invitations waiting" })).toBeNull();
+    expect(container.textContent).not.toContain("@");
+  });
 });
