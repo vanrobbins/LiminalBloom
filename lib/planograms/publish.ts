@@ -4,17 +4,20 @@
 
 import "server-only";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
-import type { BatchItem } from "drizzle-orm/batch";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { planogramPlacements, planograms, planogramVersions, productLocations } from "@/db/schema";
+import { planogramPlacements, planograms, planogramVersions } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
 import { databaseError } from "@/lib/products/errors";
 import { guarded } from "@/lib/products/write";
 
+import { endingAdjustments, type EndingAdjustment } from "./adjust";
+import { endOpenAdjustments, guardedWith } from "./adjust-core";
+import { loadAdjustments } from "./adjust-queries";
 import { comparableDraft, diffPlacements, sortByFaceOrder, type FaceChanges } from "./diff";
 import { productFits } from "./draft-sources";
+import { floorStatements } from "./floor-rows";
 import { loadPlanogram, loadVersion, type PlanogramRow } from "./queries";
 import { restoreRows, type Skipped } from "./restore";
 import { draftIssues } from "./rules";
@@ -29,6 +32,8 @@ export type Preview = {
   changes: FaceChanges[];
   issues: { id: string; productName: string; message: string }[];
   isEmpty: boolean;
+  /** Quick Adjusts this publish ends (spec 0.7.0.9 §6.3): the published one and a draft, with what each changed. */
+  adjustments: EndingAdjustment[];
 };
 export type Publisher = { id: string | null; name: string };
 export type PublishOutcome =
@@ -44,6 +49,7 @@ export async function previewPublish(storeId: string, fixtureId: string): Promis
   const { row, draft, latest } = await loadPlanogram(storeId, fixtureId);
   if (!scope || !row || !draft) return null;
   const issues = draftIssues(draft.placements, scope.faces);
+  const adjustments = endingAdjustments(await loadAdjustments(storeId, row.id), latest?.placements ?? []);
   return {
     planogramVersion: row.version,
     basedOnVersion: row.basedOnVersion,
@@ -55,6 +61,7 @@ export async function previewPublish(storeId: string, fixtureId: string): Promis
       return message ? [{ id: p.id, productName: p.productName, message }] : [];
     }),
     isEmpty: draft.placements.length === 0,
+    adjustments,
   };
 }
 
@@ -68,26 +75,9 @@ export function publishStatements(
   publisher: Publisher,
 ): Statements {
   const number = (row.publishedVersion ?? 0) + 1;
-  const faceIds = scope.faces.map((f) => f.faceId);
-  const floor: BatchItem<"pg">[] = draft.placements.length
-    ? [
-        db.insert(productLocations).values(
-          draft.placements.map((p) => ({
-            storeId,
-            productId: p.productId,
-            presentation: p.presentation,
-            faceId: p.faceId,
-            col: p.col,
-            row: p.row,
-            colSpan: p.colSpan,
-            rowSpan: p.rowSpan,
-            depth: p.depth,
-          })),
-        ),
-      ]
-    : [];
   return [
-    guarded(
+    // The same statement ends the planogram's open Quick Adjusts, so a refused publish leaves them as they were.
+    guardedWith(
       db
         .update(planograms)
         .set({ publishedVersion: number, hasDraft: false, basedOnVersion: null, ...bumped() })
@@ -101,6 +91,7 @@ export function publishStatements(
         )
         .returning({ id: planograms.id }),
       "planogram",
+      endOpenAdjustments(storeId, row.id),
     ),
     db.insert(planogramVersions).values({
       storeId,
@@ -112,8 +103,7 @@ export function publishStatements(
       placements: buildSnapshot(draft.placements, scope.faces),
     }),
     // Only this planogram's faces: other fixtures and stockroom bins are never touched.
-    db.delete(productLocations).where(and(eq(productLocations.storeId, storeId), inArray(productLocations.faceId, faceIds))),
-    ...floor,
+    ...floorStatements(storeId, scope.faces.map((f) => f.faceId), draft.placements),
     db.delete(planogramPlacements).where(and(eq(planogramPlacements.storeId, storeId), eq(planogramPlacements.planogramId, row.id))),
   ];
 }

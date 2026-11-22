@@ -38,11 +38,11 @@ export const SWITCH_TEXT: Record<Switch, { label: string; can: string }> = {
   },
   "planograms.draft": {
     label: "Draft planograms",
-    can: "Start a planogram draft, change what is in it and discard it",
+    can: "Start a planogram draft or a Quick Adjust, change what is in it and discard it",
   },
   "planograms.publish": {
     label: "Publish planograms",
-    can: "Publish a planogram, restore an earlier version and set due dates",
+    can: "Publish a planogram or a Quick Adjust, revert a Quick Adjust, restore an earlier version and set due dates",
   },
   "layout.edit": {
     label: "Edit the map",

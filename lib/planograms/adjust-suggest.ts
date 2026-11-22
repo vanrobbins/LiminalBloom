@@ -9,7 +9,7 @@ import type { ProductStatus } from "@/lib/product-status";
 
 import { targetKey } from "./adjust";
 import { sharesSpace } from "./layers";
-import { checkPlacement } from "./rules";
+import { checkPlacement, type Neighbour } from "./rules";
 import type { PlanogramFace, ProductFit, SnapshotEntry } from "./types";
 
 export const MAX_SUGGESTIONS = 6;
@@ -23,7 +23,26 @@ export type SuggestTarget = { entry: SnapshotEntry; categoryId: string; color: s
 
 export type Suggestion = { product: Candidate; colSpan: number; rowSpan: number; tier: 1 | 2; reason: string };
 
-const neighbour = (e: SnapshotEntry) => ({ ...e, id: targetKey(e) });
+/** A tile of the floor as the rules see it (always with its presentation: hung may share rail space). */
+export type Other = Neighbour & { presentation: SnapshotEntry["presentation"] };
+const neighbour = (e: SnapshotEntry): Other => ({ ...e, id: targetKey(e) });
+
+/** The floor without the target: what a replacement is fitted against. */
+export const othersOf = (floor: readonly SnapshotEntry[], entry: SnapshotEntry): Other[] =>
+  floor.filter((e) => targetKey(e) !== targetKey(entry)).map(neighbour);
+
+/**
+ * Why a footprint can't go where the target is, in the placement rules' words, or null when it fits. The target's top-left,
+ * presentation, pieces and rail layer stay; only the footprint is the product's own. Hung products may share rail space but never a
+ * layer: a wider one must not land on a neighbour's depth.
+ */
+export function fitProblem(entry: SnapshotEntry, colSpan: number, rowSpan: number, others: readonly Other[], faces: readonly PlanogramFace[]): string | null {
+  const placed = { ...entry, id: null, colSpan, rowSpan };
+  const refusal = checkPlacement(placed, others, faces);
+  if (refusal) return refusal.message;
+  const self = { ...placed, id: "candidate" };
+  return others.some((o) => sharesSpace(self, o) && (o.depth ?? 0) === (entry.depth ?? 0)) ? "Shares a layer with a neighbour" : null;
+}
 
 export function suggestReplacements(
   target: SuggestTarget,
@@ -33,19 +52,14 @@ export function suggestReplacements(
 ): Suggestion[] {
   const { entry } = target;
   const onDisplay = new Set(floor.map((e) => e.productId));
-  const others = floor.filter((e) => targetKey(e) !== targetKey(entry)).map(neighbour);
+  const others = othersOf(floor, entry);
   const family = colorFamily(target.color, target.swatch);
   const targetArea = entry.colSpan * entry.rowSpan;
 
   const found = candidates.flatMap((product): (Suggestion & { distance: number })[] => {
     if (product.categoryId !== target.categoryId || product.status === "sold_out" || onDisplay.has(product.id)) return [];
     const { columns: colSpan, rows: rowSpan } = product.footprints[entry.presentation];
-    // The target's top-left, presentation, pieces and rail layer; only the footprint is the product's own.
-    const placed = { ...entry, id: null, colSpan, rowSpan };
-    if (checkPlacement(placed, others, faces)) return [];
-    // Hung products may share rail space, but never a layer: a wider one must not land on a neighbour's depth.
-    const self = { ...placed, id: "candidate" };
-    if (others.some((o) => sharesSpace(self, o) && (o.depth ?? 0) === (entry.depth ?? 0))) return [];
+    if (fitProblem(entry, colSpan, rowSpan, others, faces)) return [];
     const tier = family !== null && colorFamily(product.color, product.swatch) === family ? 1 : 2;
     return [{ product, colSpan, rowSpan, tier, reason: TIER_REASON[tier], distance: Math.abs(colSpan * rowSpan - targetArea) }];
   });
