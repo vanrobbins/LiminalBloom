@@ -25,7 +25,7 @@ export function CompareFigure({ caption, faces, items }: { caption: string; face
     <figure data-compare-figure className="flex min-w-0 flex-col gap-2">
       <figcaption className="text-sm font-semibold text-ink">{caption}</figcaption>
       {faces.map((f) => (
-        <PlanogramGrid key={f.key} fit layout={f.layout} items={items} label={`${caption}, ${f.label}`} onSelect={noop} />
+        <PlanogramGrid key={f.key} fit readOnly layout={f.layout} items={items} label={`${caption}, ${f.label}`} onSelect={noop} />
       ))}
     </figure>
   );

@@ -21,6 +21,7 @@ import { shortSpot, spotSummary } from "@/lib/products/location-words";
 import { DragChip, DragGuides, DropGhost } from "./drag-guides";
 import { BlockView } from "./block-view";
 import type { GridBuilder } from "./grid-builder";
+import type { PlanogramGridProps } from "./planogram-grid-props";
 import { GridTile } from "./grid-tile";
 import { at } from "./grid-units";
 import type { GridItem } from "./grid-items";
@@ -28,7 +29,7 @@ import { edgeFade, useFaceSwipe } from "./use-face-swipe";
 import { useCellPx } from "./use-cell-px";
 import { usePendingLanding } from "./use-pending-landing";
 import { useEmptyTap } from "./use-empty-tap";
-import { useScrollEdges, type Edges } from "./use-scroll-edges";
+import { useScrollEdges } from "./use-scroll-edges";
 import { useTileGesture, type Gesture } from "./use-tile-gesture";
 import { useTileRemoval } from "./use-tile-removal";
 
@@ -38,26 +39,10 @@ const OFF_FACE = "Off the edge of the face";
 
 export type { GridBuilder };
 
-type PlanogramGridProps = {
-  layout: GridLayout;
-  items: readonly GridItem[];
-  label: string;
-  selectedId?: string | null;
-  highlightProductId?: string | null;
-  issues?: ReadonlyMap<string, string>;
-  onSelect: (id: string) => void;
-  slideFrom?: "left" | "right" | null;
-  onSwipe?: (gesture: { dx: number; dy: number; edges: Edges }) => void;
-  builder?: GridBuilder;
-  /** A draft is being edited: the guides show (they also show whenever `builder.canMove`). */
-  editing?: boolean;
-  fit?: boolean; // scaled to the width however narrow (Compare in a phone's sheet), not 20 px a unit at least
-};
-
 const sameSpot = (a: PlacementFields, b: PlacementFields) =>
   a.faceId === b.faceId && a.col === b.col && a.row === b.row && a.colSpan === b.colSpan && a.rowSpan === b.rowSpan;
 
-export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, slideFrom = null, onSwipe, builder, editing = false, fit = false }: PlanogramGridProps) {
+export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, slideFrom = null, onSwipe, builder, editing = false, fit = false, readOnly = false }: PlanogramGridProps) {
   const faceKey = layout.blocks.map((b) => b.faceId).join();
   const { ref, edges } = useScrollEdges<HTMLDivElement>(faceKey);
   const space = useRef<HTMLDivElement>(null);
@@ -162,6 +147,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
                   issue={issues?.get(item.id)}
                   movable={isMoving}
                   offset={isMoving && drag?.mode === "move" ? drag : null}
+                  readOnly={readOnly}
                   held={landed.isHeld(item.id)}
                   invalid={isMoving && refusal !== null}
                   bounds={layout}

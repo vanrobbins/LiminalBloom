@@ -52,14 +52,22 @@ describe("AdjustCompare", () => {
     show();
     const figures = await screen.findAllByRole("figure");
     expect(figures.map((f) => f.querySelector("figcaption")?.textContent)).toEqual(["Before · Version 3", "After"]);
-    expect(within(figures[0]).getByRole("button", { name: /^Straight jean, will change/ })).toHaveAttribute("data-status", "changed");
-    expect(within(figures[1]).getByRole("button", { name: /^Slim jean, replaces Straight jean/ })).toHaveAttribute("data-status", "replaced");
+    expect(within(figures[0]).getByRole("img", { name: /^Straight jean, will change/ })).toHaveAttribute("data-status", "changed");
+    expect(within(figures[1]).getByRole("img", { name: /^Slim jean, replaces Straight jean/ })).toHaveAttribute("data-status", "replaced");
   });
 
   it("asks for the kind it was given, so the published line never reads a draft", async () => {
     show({ which: "published" });
     await screen.findAllByRole("figure");
     expect(actions.previewAdjustmentAction).toHaveBeenCalledWith("fx", "published");
+  });
+
+  it("the grids are for looking: no tile is a button or a tab stop", async () => {
+    show();
+    for (const figure of await screen.findAllByRole("figure")) {
+      expect(within(figure).queryAllByRole("button")).toEqual([]);
+      for (const tile of figure.querySelectorAll("[data-placement]")) expect(tile).not.toHaveAttribute("aria-pressed");
+    }
   });
 
   it("stacks Before above After and goes side by side from 1024 px (lg), not 768 (md)", async () => {
