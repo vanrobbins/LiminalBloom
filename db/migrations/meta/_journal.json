@@ -134,6 +134,13 @@
       "when": 1794419566343,
       "tag": "0018_access_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795381630503,
+      "tag": "0019_quick_adjust",
+      "breakpoints": true
     }
   ]
 }
