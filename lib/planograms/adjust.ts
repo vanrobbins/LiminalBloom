@@ -43,6 +43,12 @@ export function targetKey(t: TargetRef): string {
   return [t.faceId, t.col, t.row, t.depth ?? 0, t.productId].join("|");
 }
 
+/** Where a tile sits in a version, without its product: a replacement keeps its target's face, cells and depth. */
+export const spotKey = (t: Pick<TargetRef, "faceId" | "col" | "row" | "depth">): string => [t.faceId, t.col, t.row, t.depth ?? 0].join("|");
+
+/** The spots a published adjustment put a different product on: those tiles are not in the monthly version a draft starts from. */
+export const replacedSpots = (changes: readonly AdjustChange[]): Set<string> => new Set(changes.filter((c) => c.kind === "replace").map((c) => spotKey(c.target)));
+
 /** The entries with the changes applied. A change whose target is no longer there is skipped and counted. */
 export function applyAdjustment(snapshot: readonly SnapshotEntry[], changes: readonly AdjustChange[]): { entries: SnapshotEntry[]; skipped: number } {
   const byTarget = new Map(changes.map((c) => [targetKey(c.target), c]));

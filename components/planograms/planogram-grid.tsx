@@ -73,7 +73,8 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
   const mask = edgeFade(edges);
 
-  const moving = builder?.canMove ? (drawn.find((i) => i.id === selectedId) ?? null) : null;
+  // A tile a Quick Adjust put on the floor isn't in the monthly draft a move would start: it stays put.
+  const moving = builder?.canMove ? (drawn.find((i) => i.id === selectedId && !i.adjusted) ?? null) : null;
   const movingBlock = moving ? (layout.blocks.find((b) => b.faceId === moving.faceId) ?? null) : null;
   function landing(g: Gesture): PlacementFields | null {
     if (!moving || !movingBlock) return null;

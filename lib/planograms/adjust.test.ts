@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { adjustedFloor, applyAdjustment, targetKey } from "./adjust";
+import { adjustedFloor, applyAdjustment, replacedSpots, spotKey, targetKey } from "./adjust";
 import { emptying, entry, replacing } from "./test-adjust";
 
 const a = entry({ productId: "a", productName: "A", col: 0 });
@@ -67,5 +67,14 @@ describe("adjustedFloor", () => {
     expect(adjustedFloor({ number: 3, placements: [a, b] }, null)).toEqual([a, b]);
     expect(adjustedFloor({ number: 3, placements: [a, b] }, [])).toEqual([a, b]);
     expect(adjustedFloor(null, [emptying(a)])).toEqual([]);
+  });
+});
+
+describe("replacedSpots", () => {
+  it("names the spots of replacements only (an emptied tile has nothing on the floor to move), by face, cell and depth, not by product", () => {
+    const spots = replacedSpots([replacing(a, "slim"), emptying(b)]);
+    expect([...spots]).toEqual([spotKey(a)]);
+    expect(spots.has(spotKey({ ...a, depth: undefined }))).toBe(true);
+    expect(spots.has(spotKey({ ...a, productId: "slim" } as typeof a))).toBe(true);
   });
 });

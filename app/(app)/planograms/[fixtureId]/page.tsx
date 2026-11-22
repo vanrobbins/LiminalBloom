@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
-import { adjustedFloor } from "@/lib/planograms/adjust";
+import { adjustedFloor, replacedSpots } from "@/lib/planograms/adjust";
 import { planogramOwner, planogramScope } from "@/lib/planograms/faces";
 import { productLooks } from "@/lib/planograms/product-looks";
 import { loadPlanogram, loadVersion } from "@/lib/planograms/queries";
@@ -76,6 +76,7 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         highlightProductId={product}
         dueDate={state.row?.dueDate ?? null}
         today={today}
+        replacedSpots={replacedSpots(state.adjustments.published?.changes ?? [])}
         member={member}
       />
     </div>

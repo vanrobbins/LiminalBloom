@@ -43,11 +43,13 @@ type PlanogramScreenProps = {
   highlightProductId: string | null;
   dueDate: string | null;
   today: string;
+  /** The spots a published Quick Adjust put a different product on (`replacedSpots`): those tiles can't be moved from Published. */
+  replacedSpots?: ReadonlySet<string>;
   /** Whose switches decide which controls show; the server checks them again. */
   member: Holder;
 };
 
-export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing, looks, highlightProductId, dueDate, today, member }: PlanogramScreenProps) {
+export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing, looks, highlightProductId, dueDate, today, replacedSpots, member }: PlanogramScreenProps) {
   const router = useRouter();
   const canDraft = can(member, "planograms.draft");
   // A draft is for those who may draft: without the switch the page reads as the published planogram only.
@@ -65,7 +67,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const canMove = canDraft && viewing === null && (isEditing || (draft === null && latest !== null));
   const placements = draft?.placements ?? [];
   const issues = isEditing ? draftIssues(placements, scope.faces) : new Map<string, string>();
-  const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks, viewing === null);
+  const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks, viewing === null, replacedSpots);
   const busy = status.kind === "saving";
   const isEmpty = !latest && !draft;
   const { selectedId, setSelectedId, sheetId, openSheet, select, onTile, editNumbers } = useSelection(isEditing, items);
