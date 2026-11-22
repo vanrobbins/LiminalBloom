@@ -8,19 +8,21 @@
 import { Zap } from "lucide-react";
 import Link from "next/link";
 
+import { CompareButton } from "@/components/quick-adjust/compare-button";
 import { LocalTime } from "@/components/time/local-time";
 import { Button } from "@/components/ui/button";
 import { InfoPopover } from "@/components/ui/info-popover";
 import { can, type Holder } from "@/lib/access/can";
 import type { Adjustments } from "@/lib/planograms/adjust";
 import { revertWords } from "@/lib/planograms/adjust-words";
-import type { ProductLook, SnapshotEntry } from "@/lib/planograms/types";
+import type { PlanogramScope, ProductLook, SnapshotEntry } from "@/lib/planograms/types";
 
-import { ComparePlaceholder } from "./compare-placeholder";
 import { RevertAdjustment } from "./revert-adjustment";
 
 type AdjustmentLinesProps = {
   fixtureId: string;
+  /** Compare draws the faces of this fixture. */
+  scope: PlanogramScope;
   adjustments: Adjustments;
   /** The version the floor sits on, as published: its tiles name what a revert puts back. */
   version: { number: number; placements: readonly SnapshotEntry[] };
@@ -28,7 +30,7 @@ type AdjustmentLinesProps = {
   member: Holder;
 };
 
-export function AdjustmentLines({ fixtureId, adjustments, version, looks, member }: AdjustmentLinesProps) {
+export function AdjustmentLines({ fixtureId, scope, adjustments, version, looks, member }: AdjustmentLinesProps) {
   const { draft, published } = adjustments;
   const canDraft = can(member, "planograms.draft");
   const canPublish = can(member, "planograms.publish");
@@ -43,10 +45,10 @@ export function AdjustmentLines({ fixtureId, adjustments, version, looks, member
           </p>
           <InfoPopover term="quickAdjust" />
           <span className="flex items-center gap-2">
-            <ComparePlaceholder fixtureId={fixtureId} />
+            <CompareButton fixtureId={fixtureId} scope={scope} />
             {canDraft ? (
               <Button asChild variant="secondary" icon>
-                <Link href={adjustHref} aria-label="Quick Adjust">
+                <Link href={adjustHref} aria-label="Edit Quick Adjust">
                   <Zap aria-hidden="true" strokeWidth={1.75} className="size-5" />
                 </Link>
               </Button>

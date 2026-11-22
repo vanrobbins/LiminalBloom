@@ -45,11 +45,13 @@ type PlanogramScreenProps = {
   today: string;
   /** The spots a published Quick Adjust put a different product on (`replacedSpots`): those tiles can't be moved from Published. */
   replacedSpots?: ReadonlySet<string>;
+  /** Under the status row: the Quick Adjust lines (a server-rendered element from the page). */
+  afterStatus?: React.ReactNode;
   /** Whose switches decide which controls show; the server checks them again. */
   member: Holder;
 };
 
-export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing, looks, highlightProductId, dueDate, today, replacedSpots, member }: PlanogramScreenProps) {
+export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing, looks, highlightProductId, dueDate, today, replacedSpots, afterStatus, member }: PlanogramScreenProps) {
   const router = useRouter();
   const canDraft = can(member, "planograms.draft");
   // A draft is for those who may draft: without the switch the page reads as the published planogram only.
@@ -171,6 +173,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
           {cornerBar}
         </StatusRow>
       )}
+      {afterStatus}
       {isEmpty ? (
         <div data-empty className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-line p-8">
           <p className="text-lg font-semibold text-ink">No planogram yet</p>

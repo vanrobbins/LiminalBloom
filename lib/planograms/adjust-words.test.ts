@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { AdjustmentState } from "./adjust";
-import { endingWords, revertWords } from "./adjust-words";
+import { changeWords, endingWords, revertWords } from "./adjust-words";
 import { emptying, entry, replacing } from "./test-adjust";
 
 const straight = entry({ productId: "straight", productName: "Straight jean" });
@@ -31,5 +31,24 @@ describe("revertWords", () => {
   it("leaves out a tile that is no longer in the version, and a product with no look", () => {
     expect(revertWords(published(row(replacing(straight, "slim"))), [], {})).toEqual([]);
     expect(revertWords(published(row(replacing(straight, "slim"))), [straight], {})).toEqual(["Straight jean goes back on Wall bay 3."]);
+  });
+});
+
+describe("changeWords", () => {
+  it("is one line per changed tile, in the order of the version: the two products, or left empty", () => {
+    const slim = { ...straight, productId: "slim", productName: "Slim jean" };
+    expect(changeWords([straight, tee], [slim, tee])).toEqual([{ faceId: "f1", text: "Wall bay 3 · Front: Straight jean → Slim jean" }]);
+    expect(changeWords([straight, tee], [straight])).toEqual([{ faceId: "f1", text: "Front table 1 · Front: Pocket tee → left empty" }]);
+  });
+
+  it("says nothing for tiles that did not change, nor when nothing did", () => {
+    expect(changeWords([straight, tee], [straight, tee])).toEqual([]);
+  });
+
+  it("pairs a replacement with the tile at the same spot and depth, not another layer", () => {
+    const back = entry({ productId: "belt", productName: "Belt", presentation: "hung", depth: 1, col: 6 });
+    const front = { ...back, productId: "scarf", productName: "Scarf", depth: 0 };
+    const slimBack = { ...back, productId: "slim", productName: "Slim belt" };
+    expect(changeWords([front, back], [front, slimBack])).toEqual([{ faceId: "f1", text: "Wall bay 3 · Front: Belt → Slim belt" }]);
   });
 });

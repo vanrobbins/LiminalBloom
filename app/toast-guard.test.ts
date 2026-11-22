@@ -32,6 +32,8 @@ const ALLOWED: Record<string, Allowed> = {
   "components/products/category-form.tsx": { calls: 1, why: "a category changed on another device, told in the form's dialog" },
   "components/products/delete-product-button.tsx": { calls: 4, why: "deleting a product navigates away, so its result is a toast" },
   "components/products/product-form.tsx": { calls: 6, why: "the product form is long and saves with a button: its result, its refusals and \"Saved, but the image wasn't\"" },
+  "components/quick-adjust/adjust-compare.tsx": { calls: 2, why: `publish a Quick Adjust (the floor changes out of sight, as a publish does), and ${CONNECTION}` },
+  "components/quick-adjust/discard-adjustment.tsx": { calls: 2, why: `discard a Quick Adjust (a final task whose result is on the next screen), and ${CONNECTION}` },
   "components/quick-adjust/use-adjustment.ts": { calls: 1, why: CONNECTION },
   "components/roles/use-move-role.ts": { calls: 1, why: CONNECTION },
   "components/roles/roles-screen.tsx": { calls: 1, why: "the batch Save, Add, Rename, Reset and Delete dialogs close on their result, which is a toast" },

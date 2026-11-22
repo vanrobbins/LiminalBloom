@@ -23,7 +23,10 @@ import { combinedBlocks, singleBlock } from "@/lib/planograms/set-grid";
 import type { PlanogramScope, ProductLook } from "@/lib/planograms/types";
 
 import { AdjustBar } from "./adjust-bar";
+import { AdjustCompare } from "./adjust-compare";
 import { AdjustPanel } from "./adjust-panel";
+import { DiscardAdjustment } from "./discard-adjustment";
+import { wantVersionFocus } from "./focus-version";
 import { adjustItems } from "./tile-marks";
 import { choiceOf, refOf, useAdjustment } from "./use-adjustment";
 
@@ -111,6 +114,18 @@ export function QuickAdjustScreen({ scope, version, draft: pageDraft, published,
           onClose={() => setSelectedId(null)}
         />
       </div>
+      <AdjustCompare
+        fixtureId={fixtureId}
+        scope={scope}
+        open={dialog === "compare" || dialog === "publish"}
+        onOpenChange={(open) => !open && setDialog(null)}
+        publishing={dialog === "publish"}
+        onPublished={() => {
+          wantVersionFocus();
+          router.push(`/planograms/${fixtureId}`);
+        }}
+      />
+      {a.draft ? <DiscardAdjustment open={dialog === "discard"} onOpenChange={(open) => !open && setDialog(null)} fixtureId={fixtureId} adjustmentId={a.draft.id} expectedVersion={a.draft.version} /> : null}
       <AddProductDialog
         open={dialog === "search" && entry !== null}
         onOpenChange={(open) => !open && setDialog(null)}

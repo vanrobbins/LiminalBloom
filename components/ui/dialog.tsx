@@ -15,12 +15,14 @@ type DialogProps = {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
+  /** Room for two planogram grids side by side (Quick Adjust's Compare): max-w-5xl instead of max-w-md. */
+  wide?: boolean;
   children: React.ReactNode;
   /** Call `event.preventDefault()` to send focus somewhere other than back to the opener. */
   onCloseAutoFocus?: (event: Event) => void;
 };
 
-export function Dialog({ open, onOpenChange, title, description, children, onCloseAutoFocus }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, wide = false, children, onCloseAutoFocus }: DialogProps) {
   return (
     <Primitive.Root open={open} onOpenChange={onOpenChange}>
       <Primitive.Portal>
@@ -35,7 +37,7 @@ export function Dialog({ open, onOpenChange, title, description, children, onClo
           }}
           // Without a description, say so, or Radix warns about a missing one.
           {...(description ? {} : { "aria-describedby": undefined })}
-          className="fixed top-1/2 left-1/2 z-50 flex max-h-[85dvh] w-[calc(100vw-32px)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-lg border border-line-subtle bg-raised p-6 shadow-2xl outline-none"
+          className={`fixed top-1/2 left-1/2 z-50 flex max-h-[85dvh] w-[calc(100vw-32px)] ${wide ? "max-w-5xl" : "max-w-md"} -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-lg border border-line-subtle bg-raised p-6 shadow-2xl outline-none`}
         >
           <div className="flex items-start justify-between gap-4">
             <Primitive.Title className="text-xl font-semibold tracking-tight text-ink">{title}</Primitive.Title>

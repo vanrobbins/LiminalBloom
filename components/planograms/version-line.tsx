@@ -3,6 +3,9 @@
 
 "use client";
 
+import { useEffect, useRef } from "react";
+
+import { takeVersionFocus } from "@/components/quick-adjust/focus-version";
 import { LocalTime } from "@/components/time/local-time";
 import { useDeviceTimezone } from "@/components/time/use-device-timezone";
 import { inUserTime } from "@/lib/time/format";
@@ -20,8 +23,13 @@ export function useVersionText(latest: Latest): string {
 }
 
 export function VersionLine({ latest }: { latest: Latest | null }) {
+  const line = useRef<HTMLParagraphElement>(null);
+  // Landing here after publishing a Quick Adjust: focus is on this line (focus-version.ts).
+  useEffect(() => {
+    if (takeVersionFocus()) line.current?.focus();
+  }, []);
   return (
-    <p className="text-sm text-ink-muted">
+    <p ref={line} tabIndex={-1} data-version-line className="text-sm text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
       {latest ? (
         <>
           Version {latest.number} · published <LocalTime at={latest.publishedAt} /> by {latest.publishedByName}

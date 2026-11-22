@@ -74,7 +74,6 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
           ) : null
         }
       />
-      {state.latest && !viewing ? <AdjustmentLines fixtureId={owner.id} adjustments={state.adjustments} version={state.latest} looks={looks} member={member} /> : null}
       <PlanogramScreen
         key={`${state.row?.version ?? 0}-${viewing?.number ?? 0}`}
         scope={scope}
@@ -87,6 +86,7 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         dueDate={state.row?.dueDate ?? null}
         today={today}
         replacedSpots={replacedSpots(state.adjustments.published?.changes ?? [])}
+        afterStatus={state.latest && !viewing ? <AdjustmentLines fixtureId={owner.id} scope={scope} adjustments={state.adjustments} version={state.latest} looks={looks} member={member} /> : undefined}
         member={member}
       />
     </div>

@@ -51,12 +51,13 @@ type PlanogramGridProps = {
   builder?: GridBuilder;
   /** A draft is being edited: the guides show (they also show whenever `builder.canMove`). */
   editing?: boolean;
+  fit?: boolean; // scaled to the width however narrow (Compare in a phone's sheet), not 20 px a unit at least
 };
 
 const sameSpot = (a: PlacementFields, b: PlacementFields) =>
   a.faceId === b.faceId && a.col === b.col && a.row === b.row && a.colSpan === b.colSpan && a.rowSpan === b.rowSpan;
 
-export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, slideFrom = null, onSwipe, builder, editing = false }: PlanogramGridProps) {
+export function PlanogramGrid({ layout, items, label, selectedId, highlightProductId, issues, onSelect, slideFrom = null, onSwipe, builder, editing = false, fit = false }: PlanogramGridProps) {
   const faceKey = layout.blocks.map((b) => b.faceId).join();
   const { ref, edges } = useScrollEdges<HTMLDivElement>(faceKey);
   const space = useRef<HTMLDivElement>(null);
@@ -73,7 +74,6 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
   const count = `${drawn.length} ${drawn.length === 1 ? "product" : "products"}`;
   const mask = edgeFade(edges);
 
-  // A tile a Quick Adjust put on the floor isn't in the monthly draft a move would start: it stays put.
   const moving = builder?.canMove ? (drawn.find((i) => i.id === selectedId && !i.adjusted) ?? null) : null;
   const movingBlock = moving ? (layout.blocks.find((b) => b.faceId === moving.faceId) ?? null) : null;
   function landing(g: Gesture): PlacementFields | null {
@@ -131,7 +131,7 @@ export function PlanogramGrid({ layout, items, label, selectedId, highlightProdu
           className={`relative ${slide}`}
           style={
             {
-              "--cell": `max(1.25rem, calc(100cqw / ${layout.width}))`,
+              "--cell": fit ? `calc(100cqw / ${layout.width})` : `max(1.25rem, calc(100cqw / ${layout.width}))`,
               width: at(layout.width),
               height: `calc(${GUTTER} + ${at(layout.height)})`,
             } as React.CSSProperties

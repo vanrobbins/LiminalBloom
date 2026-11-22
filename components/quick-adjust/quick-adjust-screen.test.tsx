@@ -119,6 +119,27 @@ describe("QuickAdjustScreen", () => {
     for (const button of screen.getAllByRole("button", { name: /^(Undo|Redo|Compare|Publish|Discard)$/ })) expect(button).not.toBeDisabled();
   });
 
+  it("Publish is live only with a change in the draft, and opens Compare with the confirm", async () => {
+    actions.previewAdjustmentAction.mockResolvedValue(null);
+    show({ draft: draft(2, [row(0)]) });
+    const publish = screen.getByRole("button", { name: "Publish" });
+    expect(publish).toHaveAttribute("aria-disabled", "false");
+    await userEvent.click(publish);
+    expect(await screen.findByRole("dialog", { name: "Publish to this store?" })).toBeInTheDocument();
+  });
+
+  it("Discard asks first and, once confirmed, discards the draft and goes back to the planogram", async () => {
+    actions.discardAdjustmentAction.mockResolvedValue({ status: "saved", message: "Quick Adjust discarded" });
+    show({ draft: draft(2, [row(0)]) });
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    const dialog = screen.getByRole("dialog", { name: "Discard this Quick Adjust?" });
+    expect(dialog).toHaveTextContent("The floor stays as it is.");
+    expect(actions.discardAdjustmentAction).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
+    expect(actions.discardAdjustmentAction).toHaveBeenCalledWith("fx", "adj", 2);
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/planograms/fx"));
+  });
+
   it("says which version it adjusts, with the glossary beside it", () => {
     show();
     expect(screen.getByText(/Quick Adjust on Version 3/)).toBeInTheDocument();

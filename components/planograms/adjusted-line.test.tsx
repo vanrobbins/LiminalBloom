@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AdjustmentState, Adjustments } from "@/lib/planograms/adjust";
-import { emptying, entry, replacing } from "@/lib/planograms/test-adjust";
+import { diffPlacements } from "@/lib/planograms/diff";
+import { emptying, entry, FACE, replacing } from "@/lib/planograms/test-adjust";
+import type { PlanogramScope } from "@/lib/planograms/types";
 
 import { AdjustmentLines } from "./adjusted-line";
 
@@ -11,9 +13,11 @@ const actions = vi.hoisted(() => ({ revertAdjustmentAction: vi.fn(), previewAdju
 vi.mock("@/app/(app)/planograms/adjust-actions", () => actions);
 const toast = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/toast", () => ({ toast }));
+vi.mock("@/components/store-map/use-media-query", () => ({ PHONE_QUERY: "", useMediaQuery: () => false }));
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
+const scope: PlanogramScope = { fixtureId: "fx", fixtureName: "Wall bay 3", isSet: false, faces: [FACE] };
 const straight = entry({ productId: "straight", productName: "Straight jean" });
 const version = { number: 3, placements: [straight] };
 const looks = { straight: { imageKey: null, categoryName: "Jeans", status: "sold_out" as const } };
@@ -32,7 +36,7 @@ const state = (over: Partial<AdjustmentState> = {}): AdjustmentState => ({
 });
 const none: Adjustments = { draft: null, published: null };
 const lines = (adjustments: Adjustments, ...switches: string[]) =>
-  render(<AdjustmentLines fixtureId="fx" adjustments={adjustments} version={version} looks={looks} member={{ switches: ["view", ...switches] } as never} />);
+  render(<AdjustmentLines fixtureId="fx" scope={scope} adjustments={adjustments} version={version} looks={looks} member={{ switches: ["view", ...switches] } as never} />);
 
 describe("AdjustmentLines", () => {
   beforeEach(() => vi.resetAllMocks());
@@ -47,18 +51,18 @@ describe("AdjustmentLines", () => {
     const line = screen.getByText(/Quick Adjust · since/).closest("[data-adjustment]") as HTMLElement;
     expect(line).toHaveTextContent(/since Nov 17, .+ · Van/);
     expect(within(line).getByRole("button", { name: "Compare Quick Adjust" })).toBeInTheDocument();
-    expect(within(line).queryByRole("link", { name: "Quick Adjust" })).toBeNull();
+    expect(within(line).queryByRole("link", { name: "Edit Quick Adjust" })).toBeNull();
     expect(within(line).queryByRole("button", { name: "Revert Quick Adjust" })).toBeNull();
   });
 
   it("Edit needs planograms.draft and goes to the adjust page; Revert needs planograms.publish", () => {
     const { unmount } = lines({ draft: null, published: state() }, "planograms.draft");
-    expect(screen.getByRole("link", { name: "Quick Adjust" })).toHaveAttribute("href", "/planograms/fx/adjust");
+    expect(screen.getByRole("link", { name: "Edit Quick Adjust" })).toHaveAttribute("href", "/planograms/fx/adjust");
     expect(screen.queryByRole("button", { name: "Revert Quick Adjust" })).toBeNull();
     unmount();
     lines({ draft: null, published: state() }, "planograms.publish");
     expect(screen.getByRole("button", { name: "Revert Quick Adjust" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Quick Adjust" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Edit Quick Adjust" })).toBeNull();
   });
 
   it("Revert asks first, says what goes back, then reverts and toasts", async () => {
@@ -82,11 +86,15 @@ describe("AdjustmentLines", () => {
     expect(toast).toHaveBeenCalledWith({ tone: "error", title: "This Quick Adjust is no longer on the floor." });
   });
 
-  it("Compare lists the changes in words", async () => {
-    actions.previewAdjustmentAction.mockResolvedValue({ changes: [{ faceId: "f1", label: "Front", added: [{}], removed: [{}], moved: [], recounted: [] }] });
+  it("Compare opens the real Compare for the published adjustment: the words, then the two figures", async () => {
+    actions.previewAdjustmentAction.mockResolvedValue({
+      kind: "published", adjustmentId: "adj", version: 2, basedOnVersion: 3, changes: diffPlacements([straight], []), before: [straight], after: [], looks: {}, soldOutAfter: [],
+    });
     lines({ draft: null, published: state({ changes: [{ ...emptying(straight), id: "c", version: 1 }] }) });
     await userEvent.click(screen.getByRole("button", { name: "Compare Quick Adjust" }));
-    expect(await screen.findByText("Front: 1 added, 1 removed")).toBeInTheDocument();
+    expect(await screen.findByText("Wall bay 3 · Front: Straight jean → left empty")).toBeInTheDocument();
+    expect(screen.getAllByRole("figure").map((f) => f.querySelector("figcaption")?.textContent)).toEqual(["Before · Version 3", "After · Quick Adjust"]);
+    expect(screen.queryByRole("button", { name: /^Publish/ })).toBeNull();
   });
 
   it("a draft waiting shows who and when, with Open for drafters; a publisher without the switch just sees it", () => {
