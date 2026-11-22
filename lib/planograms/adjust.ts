@@ -31,6 +31,7 @@ export type AdjustmentState = {
   basedOnVersion: number;
   version: number;
   createdByName: string;
+  createdAt: Date;
   publishedAt: Date | null;
   publishedByName: string | null;
   changes: ChangeRow[];

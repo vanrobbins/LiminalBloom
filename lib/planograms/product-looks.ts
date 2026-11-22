@@ -20,7 +20,7 @@ export async function productLooks(storeId: string, ids: readonly string[]): Pro
   if (unique.length === 0) return {};
   const [rows] = await withStore(storeId, [
     db
-      .select({ id: products.id, imagePath: products.imagePath, categoryName: productCategories.name, swatch: products.swatch, texture: products.texture, colorWord: products.color })
+      .select({ id: products.id, imagePath: products.imagePath, categoryName: productCategories.name, swatch: products.swatch, texture: products.texture, colorWord: products.color, status: products.status })
       .from(products)
       .innerJoin(productCategories, eq(productCategories.id, products.categoryId))
       .where(and(eq(products.storeId, storeId), inArray(products.id, unique))),

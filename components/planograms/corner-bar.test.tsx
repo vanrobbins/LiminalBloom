@@ -147,13 +147,13 @@ describe("CornerBar", () => {
   });
 
   it("Publish… opens the existing Publish dialog", async () => {
-    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
+    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false, adjustments: [], soldOut: [] });
     await userEvent.click(show().getByRole("button", { name: "Publish" }));
     expect(await screen.findByRole("button", { name: /^Publish to / })).toBeInTheDocument();
   });
 
   it("after a Publish that went through, focus goes to the main area, not the page top (the Publish button goes on the reload)", async () => {
-    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
+    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false, adjustments: [], soldOut: [] });
     actions.publishAction.mockResolvedValue({ status: "saved", message: "Published" });
     const main = document.createElement("main");
     main.id = "content";

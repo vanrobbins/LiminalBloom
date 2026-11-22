@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { previewPublishAction, publishAction } from "@/app/(app)/planograms/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { endingWords } from "@/lib/planograms/adjust-words";
 import { faceSummary } from "@/lib/planograms/diff";
 import type { Preview } from "@/lib/planograms/publish";
 import { toast } from "@/lib/toast";
@@ -86,6 +87,17 @@ export function PublishBody({ fixtureId, store, onDone, onPublished }: { fixture
               {preview.changes.length === 0 ? <li>No changes from the published version.</li> : preview.changes.map((c) => <li key={c.faceId}>{faceSummary(c)}</li>)}
             </ul>
           )}
+          {/* A full publish ends any Quick Adjust (0.7.0.9 spec §6.3): say so before it does. */}
+          {preview.adjustments.length > 0 ? (
+            <ul className="flex flex-col gap-1 text-sm text-ink-muted">
+              {preview.adjustments.flatMap((a) => a.changes.map((c, i) => <li key={`${a.adjustmentId}-${i}`}>{`Ends the Quick Adjust: ${endingWords(c)}`}</li>))}
+            </ul>
+          ) : null}
+          {preview.soldOut.map((name) => (
+            <p key={name} className="text-sm text-danger">
+              {`${name} is sold out and is in this version.`}
+            </p>
+          ))}
           <p className="text-sm text-ink-muted">Becomes version {preview.nextNumber}.</p>
           <Input label="Summary (optional)" value={summary} maxLength={200} onChange={(e) => setSummary(e.target.value)} hint="Like “October denim reset”." />
           <Button onClick={() => publish(preview)} loading={busy} loadingText="Publishing…">

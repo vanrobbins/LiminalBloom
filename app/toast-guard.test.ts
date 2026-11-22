@@ -24,6 +24,7 @@ const ALLOWED: Record<string, Allowed> = {
   "components/people/invitations-card.tsx": { calls: 1, why: CONNECTION },
   "components/planograms/corner-bar.tsx": { calls: 2, why: `discard draft (a long, final task), and ${CONNECTION}` },
   "components/planograms/publish-body.tsx": { calls: 2, why: `publish (a long task whose result is out of sight), and ${CONNECTION}` },
+  "components/planograms/revert-adjustment.tsx": { calls: 2, why: `revert a Quick Adjust (the floor changes out of sight, as a restore does), and ${CONNECTION}` },
   "components/planograms/restore-button.tsx": { calls: 2, why: `restore a version, and ${CONNECTION}` },
   "components/planograms/start-planogram.tsx": { calls: 2, why: `the empty box has no status line, so a refusal and ${CONNECTION} are toasts` },
   "components/planograms/use-builder.ts": { calls: 1, why: CONNECTION },

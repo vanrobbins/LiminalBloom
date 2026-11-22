@@ -65,7 +65,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const canMove = canDraft && viewing === null && (isEditing || (draft === null && latest !== null));
   const placements = draft?.placements ?? [];
   const issues = isEditing ? draftIssues(placements, scope.faces) : new Map<string, string>();
-  const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks);
+  const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks, viewing === null);
   const busy = status.kind === "saving";
   const isEmpty = !latest && !draft;
   const { selectedId, setSelectedId, sheetId, openSheet, select, onTile, editNumbers } = useSelection(isEditing, items);

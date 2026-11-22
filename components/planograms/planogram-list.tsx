@@ -57,6 +57,7 @@ export function PlanogramList({ groups, today, storeKey }: { groups: ListGroup[]
                         {item.publishedVersion && item.publishedAt ? (
                           <span className="text-ink-muted">
                             Version {item.publishedVersion} · <LocalTime at={item.publishedAt} />
+                            {item.adjustment ? ` · ${item.adjustment === "draft" ? "adjusting" : "adjusted"}` : null}
                           </span>
                         ) : item.hasDraft ? (
                           <span className="rounded border border-line px-2 text-ink">Draft</span>

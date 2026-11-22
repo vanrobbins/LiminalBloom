@@ -17,11 +17,14 @@ export type GridItem = Cells & {
   depth?: number;
 } & ProductLook;
 
-/** A product deleted since publishing has no look: it keeps its snapshot name and draws the default shape, neutral. */
-export function itemsFromSnapshot(entries: readonly SnapshotEntry[], looks: Readonly<Record<string, ProductLook>>): GridItem[] {
+/**
+ * A product deleted since publishing has no look: it keeps its snapshot name and draws the default shape, neutral.
+ * `marks` carries each product's status so the tile can say sold out or on sale: the Published view only, never a past version or the map.
+ */
+export function itemsFromSnapshot(entries: readonly SnapshotEntry[], looks: Readonly<Record<string, ProductLook>>, marks = false): GridItem[] {
   return entries.map((e, i) => {
     const look = looks[e.productId];
-    return { ...e, id: `v-${i}`, imageKey: look?.imageKey ?? null, categoryName: look?.categoryName ?? "", swatch: look?.swatch, texture: look?.texture, colorWord: look?.colorWord };
+    return { ...e, id: `v-${i}`, imageKey: look?.imageKey ?? null, categoryName: look?.categoryName ?? "", swatch: look?.swatch, texture: look?.texture, colorWord: look?.colorWord, ...(marks && look?.status ? { status: look.status } : {}) };
   });
 }
 

@@ -18,6 +18,7 @@ import { loadAdjustments } from "./adjust-queries";
 import { comparableDraft, diffPlacements, sortByFaceOrder, type FaceChanges } from "./diff";
 import { productFits } from "./draft-sources";
 import { floorStatements } from "./floor-rows";
+import { productLooks } from "./product-looks";
 import { loadPlanogram, loadVersion, type PlanogramRow } from "./queries";
 import { restoreRows, type Skipped } from "./restore";
 import { draftIssues } from "./rules";
@@ -34,6 +35,8 @@ export type Preview = {
   isEmpty: boolean;
   /** Quick Adjusts this publish ends (spec 0.7.0.9 §6.3): the published one and a draft, with what each changed. */
   adjustments: EndingAdjustment[];
+  /** Products that are sold out and still in this draft: it would put them back on the floor. */
+  soldOut: string[];
 };
 export type Publisher = { id: string | null; name: string };
 export type PublishOutcome =
@@ -50,6 +53,8 @@ export async function previewPublish(storeId: string, fixtureId: string): Promis
   if (!scope || !row || !draft) return null;
   const issues = draftIssues(draft.placements, scope.faces);
   const adjustments = endingAdjustments(await loadAdjustments(storeId, row.id), latest?.placements ?? []);
+  const looks = await productLooks(storeId, draft.placements.map((p) => p.productId));
+  const soldOut = [...new Set(draft.placements.filter((p) => looks[p.productId]?.status === "sold_out").map((p) => p.productName))];
   return {
     planogramVersion: row.version,
     basedOnVersion: row.basedOnVersion,
@@ -62,6 +67,7 @@ export async function previewPublish(storeId: string, fixtureId: string): Promis
     }),
     isEmpty: draft.placements.length === 0,
     adjustments,
+    soldOut,
   };
 }
 

@@ -3,6 +3,7 @@
 import type { FaceSide, FixtureType, Side } from "@/lib/layout/types";
 import type { Footprint, Presentation } from "@/lib/products/footprint";
 import type { Cells } from "@/lib/products/location-label";
+import type { ProductStatus } from "@/lib/product-status";
 import type { Texture } from "@/lib/products/schemas";
 
 /** Pieces per placement. Hung products share rail space as separate placements (layers.ts), so this caps each one. */
@@ -33,9 +34,9 @@ export type Placement = PlacementFields & { id: string; productId: string; versi
  * What a tile draws a product with (Week 6.5 spec §4.6): its photo key, else a
  * drawing from its category, tinted by its swatch or colour word, with its
  * texture. The drawing fields are optional: a product deleted since
- * publishing has none and draws neutral.
+ * publishing has none and draws neutral. `status` is read by the Published view only (it marks sold-out and on-sale tiles).
  */
-export type ProductLook = { imageKey: string | null; categoryName: string; swatch?: string | null; texture?: Texture; colorWord?: string };
+export type ProductLook = { imageKey: string | null; categoryName: string; swatch?: string | null; texture?: Texture; colorWord?: string; status?: ProductStatus };
 
 /** A draft row with what the screens show beside it. */
 export type PlacementView = Placement & ProductLook & { productName: string; styleNumber: string };

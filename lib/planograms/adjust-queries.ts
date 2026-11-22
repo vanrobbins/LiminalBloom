@@ -13,8 +13,8 @@ import type { AdjustChange, AdjustmentState, Adjustments, ChangeRow } from "./ad
 import type { Candidate } from "./adjust-suggest";
 import { productFits } from "./draft-sources";
 
-/** The two reads, for a caller that batches them with its own (loadPlanogram). */
-export function adjustmentQueries(storeId: string, planogramId: string) {
+/** The two reads, for a caller that batches them with its own (loadPlanogram, floorPlanograms); with no planogram, every planogram's in the store. */
+export function adjustmentQueries(storeId: string, planogramId?: string) {
   return [
     db
       .select({
@@ -24,11 +24,12 @@ export function adjustmentQueries(storeId: string, planogramId: string) {
         basedOnVersion: adjustments.basedOnVersion,
         version: adjustments.version,
         createdByName: adjustments.createdByName,
+        createdAt: adjustments.createdAt,
         publishedAt: adjustments.publishedAt,
         publishedByName: adjustments.publishedByName,
       })
       .from(adjustments)
-      .where(and(eq(adjustments.storeId, storeId), eq(adjustments.planogramId, planogramId), ne(adjustments.state, "ended"))),
+      .where(and(eq(adjustments.storeId, storeId), planogramId ? eq(adjustments.planogramId, planogramId) : undefined, ne(adjustments.state, "ended"))),
     db
       .select({
         id: changes.id,
@@ -53,13 +54,13 @@ export function adjustmentQueries(storeId: string, planogramId: string) {
       .from(changes)
       .innerJoin(adjustments, and(eq(adjustments.storeId, changes.storeId), eq(adjustments.id, changes.adjustmentId)))
       .leftJoin(products, and(eq(products.storeId, changes.storeId), eq(products.id, changes.replacementProductId)))
-      .where(and(eq(changes.storeId, storeId), eq(adjustments.planogramId, planogramId), ne(adjustments.state, "ended")))
+      .where(and(eq(changes.storeId, storeId), planogramId ? eq(adjustments.planogramId, planogramId) : undefined, ne(adjustments.state, "ended")))
       .orderBy(asc(changes.createdAt), asc(changes.id)),
   ] as const;
 }
 
-type AdjustmentRow = Awaited<ReturnType<ReturnType<typeof adjustmentQueries>[0]["execute"]>>[number];
-type ChangeQueryRow = Awaited<ReturnType<ReturnType<typeof adjustmentQueries>[1]["execute"]>>[number];
+export type AdjustmentRow = Awaited<ReturnType<ReturnType<typeof adjustmentQueries>[0]["execute"]>>[number];
+export type ChangeQueryRow = Awaited<ReturnType<ReturnType<typeof adjustmentQueries>[1]["execute"]>>[number];
 
 function toChange(r: ChangeQueryRow): ChangeRow {
   const target = { faceId: r.faceId, productId: r.targetProductId, presentation: r.presentation, col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan, depth: r.depth };
@@ -79,6 +80,7 @@ export function toAdjustments(adjustmentRows: readonly AdjustmentRow[], changeRo
     basedOnVersion: r.basedOnVersion,
     version: r.version,
     createdByName: r.createdByName,
+    createdAt: r.createdAt,
     publishedAt: r.publishedAt,
     publishedByName: r.publishedByName,
     changes: changeRows.filter((c) => c.adjustmentId === r.id).map(toChange),
@@ -86,6 +88,12 @@ export function toAdjustments(adjustmentRows: readonly AdjustmentRow[], changeRo
   const rows = adjustmentRows.map(build);
   return { draft: rows.find((a) => a.state === "draft") ?? null, published: rows.find((a) => a.state === "published") ?? null };
 }
+
+export const NO_ADJUSTMENTS: Adjustments = { draft: null, published: null };
+
+/** One planogram's adjustments out of a store-wide read (floorPlanograms). */
+export const adjustmentsOf = (planogramId: string, adjustmentRows: readonly AdjustmentRow[], changeRows: readonly ChangeQueryRow[]): Adjustments =>
+  toAdjustments(adjustmentRows.filter((a) => a.planogramId === planogramId), changeRows);
 
 export async function loadAdjustments(storeId: string, planogramId: string): Promise<Adjustments> {
   const [adjustmentRows, changeRows] = await withStore(storeId, adjustmentQueries(storeId, planogramId));

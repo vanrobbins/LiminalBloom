@@ -20,6 +20,7 @@ import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 import type { GridItem } from "./grid-items";
 import { at, KEEP_TOUCH, placed, type Gestures } from "./grid-units";
 import { TileCorners, targetSize } from "./tile-corners";
+import { markOf, STATUS_WORD, TileStatusBadge } from "./tile-status";
 import { TileHandle } from "./tile-handle";
 
 /** A tile sharing rail space with others (hung layers, layers.ts). */
@@ -82,6 +83,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
   // Back to front: nearer the front paints over; the selected one above all (lifted tiles are z-10).
   const zIndex = layer && !movable ? (selected ? 10 : 9 - Math.min(layer.rank, 8)) : undefined;
   const self = useRef<HTMLButtonElement>(null);
+  const mark = markOf(item);
   const edges = resizeEdges(block);
   // Shrunk only where a corner disc would touch a handle; the same for every handle, so worked out once.
   const handleSize = movable && !offset && corners ? targetSize(rect, bounds, edges, corners.cellPx) : 44;
@@ -101,9 +103,10 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         data-invalid={invalid ? "" : undefined}
         data-leaving={leaving ? "" : undefined}
         data-layered={layer ? "" : undefined}
+        data-status={mark ?? undefined}
         data-rank={layer ? layer.rank : undefined}
         aria-pressed={selected}
-        aria-label={`${item.productName}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
+        aria-label={`${item.productName}${mark ? `, ${STATUS_WORD[mark]}` : ""}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
         onClick={(e) => {
           // A keyboard click (detail 0) is never the end of a drag, even one whose click went elsewhere.
           const wasDrag = gestures.consumeDrag();
@@ -131,7 +134,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         }}
         {...grab}
         style={{ ...placed(rect), transform, zIndex, pointerEvents: passThrough ? "none" : undefined }}
-        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface data-layered:border-transparent data-layered:bg-transparent data-layered:hover:outline-1 data-layered:hover:outline-dashed data-layered:hover:outline-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none data-held:transition-none data-leaving:pointer-events-none motion-safe:data-leaving:animate-tile-out"
+        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface data-layered:border-transparent data-layered:bg-transparent data-layered:hover:outline-1 data-layered:hover:outline-dashed data-layered:hover:outline-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger data-[status=sold_out]:border-2 data-[status=sold_out]:border-danger data-[status=on_sale]:border-2 data-[status=on_sale]:border-info motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none data-held:transition-none data-leaving:pointer-events-none motion-safe:data-leaving:animate-tile-out"
       >
         <span className={`min-h-0 w-full flex-1 ${passThrough ? "[&_img]:pointer-events-auto [&_path]:pointer-events-auto [&_rect]:pointer-events-auto" : ""}`}>
           <ProductImage
@@ -158,6 +161,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
           {item.presentation === "hung" ? <Shirt strokeWidth={1.75} className="size-3" /> : <Layers strokeWidth={1.75} className="size-3" />}
           {item.pieceCount}
         </span>
+        {mark ? <TileStatusBadge mark={mark} /> : null}
         {issue ? <AlertTriangle aria-hidden="true" strokeWidth={2} className="absolute top-1 left-1 size-4 text-danger" /> : null}
         {named ? (
           // Under the drawing, not over it (UX audit U21).

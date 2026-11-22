@@ -6,11 +6,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
+import { AdjustmentLines } from "@/components/planograms/adjusted-line";
 import { PlanogramScreen } from "@/components/planograms/planogram-screen";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
+import { adjustedFloor } from "@/lib/planograms/adjust";
 import { planogramOwner, planogramScope } from "@/lib/planograms/faces";
 import { productLooks } from "@/lib/planograms/product-looks";
 import { loadPlanogram, loadVersion } from "@/lib/planograms/queries";
@@ -38,11 +40,13 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
   const scope = planogramScope(layout, owner.id);
   if (!scope || scope.faces.length === 0) notFound();
 
-  const [state, zone] = await Promise.all([loadPlanogram(activeStoreId, owner.id), storeTimezone(activeStoreId)]);
+  const [state, zone] = await Promise.all([loadPlanogram(activeStoreId, owner.id, true), storeTimezone(activeStoreId)]);
   const today = storeToday(zone);
   const versionNumber = z.coerce.number().int().min(1).safeParse(query.version);
   const viewing = versionNumber.success && state.row ? await loadVersion(activeStoreId, state.row.id, versionNumber.data) : null;
-  const looks = await productLooks(activeStoreId, [...(state.latest?.placements ?? []), ...(viewing?.placements ?? [])].map((p) => p.productId));
+  // The Published view draws the version with its published Quick Adjust applied (0.7.0.9 spec §6.4); the monthly draft and past versions are plain.
+  const adjusted = state.latest && state.adjustments.published ? { ...state.latest, placements: adjustedFloor(state.latest, state.adjustments.published.changes) } : state.latest;
+  const looks = await productLooks(activeStoreId, [...(state.latest?.placements ?? []), ...(adjusted?.placements ?? []), ...(viewing?.placements ?? [])].map((p) => p.productId));
   const product = typeof query.product === "string" && z.uuid().safeParse(query.product).success ? query.product : null;
 
   return (
@@ -60,11 +64,12 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
           ) : null
         }
       />
+      {state.latest && !viewing ? <AdjustmentLines fixtureId={owner.id} adjustments={state.adjustments} version={state.latest} looks={looks} member={member} /> : null}
       <PlanogramScreen
         key={`${state.row?.version ?? 0}-${viewing?.number ?? 0}`}
         scope={scope}
         row={state.row}
-        latest={state.latest}
+        latest={adjusted}
         draft={state.draft}
         viewing={viewing}
         looks={looks}
