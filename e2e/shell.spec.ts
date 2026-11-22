@@ -27,19 +27,25 @@ test("shows exactly one navigation, the one for this width", async ({ page }, te
   expect(shown).toBe(NAV_FOR[sizeOf(testInfo)]);
 });
 
-test("moves between Products and Account", async ({ page }) => {
+test("moves between Products and Account, which lives in the avatar menu, not the tabs", async ({ page }) => {
   await page.goto("/products");
+  await hydrated(page);
+  await expect(mainNav(page).getByRole("link", { name: "Account" })).toHaveCount(0);
 
-  await mainNav(page).getByRole("link", { name: "Account" }).click();
+  await page.locator("[data-user-menu]").filter({ visible: true }).click();
+  // A phone's menu is a sheet of links; the dropdown's entries are menu items.
+  await page.getByRole("link", { name: "Account" }).or(page.getByRole("menuitem", { name: "Account" })).click();
   await expect(page).toHaveURL(/\/account$/);
   await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
-  await expect(mainNav(page).getByRole("link", { name: "Account" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
 
   await mainNav(page).getByRole("link", { name: "Products" }).click();
   await expect(page).toHaveURL(/\/products$/);
+});
+
+test("Home is the first tab, current on /home", async ({ page }) => {
+  await page.goto("/home");
+  await expect(mainNav(page).getByRole("link").first()).toHaveAccessibleName("Home");
+  await expect(mainNav(page).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
 });
 
 test("switches stores from the shell, there and back", async ({ page }) => {

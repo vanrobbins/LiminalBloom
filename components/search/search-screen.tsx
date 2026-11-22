@@ -10,7 +10,6 @@ import { ProductsActions } from "@/components/products/products-actions";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { PHONE_QUERY, useMediaQuery } from "@/components/store-map/use-media-query";
-import { Input } from "@/components/ui/input";
 import { can, type Holder } from "@/lib/access/can";
 import type { Layout } from "@/lib/layout/types";
 import type { SearchResult } from "@/lib/products/queries";
@@ -19,6 +18,7 @@ import { MAX_OFFSET } from "@/lib/products/schemas";
 import { hasFilters, resultCount } from "@/lib/products/search-params";
 
 import { LocationSheet } from "./location-sheet";
+import { SearchField } from "./search-field";
 import { SearchFilters } from "./search-filters";
 import { SearchResults } from "./search-results";
 import { useAutoLoad } from "./use-auto-load";
@@ -108,17 +108,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
         <PageHeader title="Products" actions={<ProductsActions member={member} />} />
         <form role="search" onSubmit={(event) => event.preventDefault()}>
           <SearchFilters input={input} categories={categories} colors={colors} onChange={update}>
-            <Input
-              label="Search products"
-              type="search"
-              name="q"
-              value={input.q}
-              onChange={(event) => update({ q: event.target.value })}
-              hint="Name, style number, category or color."
-              autoComplete="off"
-              enterKeyHint="search"
-              ref={searchBox}
-            />
+            <SearchField value={input.q} onChange={(event) => update({ q: event.target.value })} ref={searchBox} />
           </SearchFilters>
         </form>
         <p className="mt-4 min-h-6 text-sm text-ink-muted">
