@@ -52,7 +52,7 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
     <div className="flex flex-col gap-4">
       {item ? (
         <>
-          <div className="flex gap-4">
+          <div className="flex gap-4 md:max-lg:flex-col">
             <ProductImage productId={item.productId} name={item.productName} categoryName={item.categoryName} imageKey={item.imageKey} swatch={item.swatch} texture={item.texture} colorWord={item.colorWord} size="lg" />
             <dl className="grid min-w-0 content-start grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
               <dt className="text-ink-muted">Style</dt>
