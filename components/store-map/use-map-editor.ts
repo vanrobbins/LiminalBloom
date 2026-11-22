@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { applyChanges, changeCount, changeIds, type ChangeSet } from "@/lib/layout/diff";
 import { MAX_CHANGES_PER_SAVE } from "@/lib/layout/limits";
 import type { FetchReply, SaveReply } from "@/lib/layout/replies";
-import { SAVE_DELAY_MS, begin, createQueue, failed, hasPending, type Queue } from "@/lib/layout/save-queue";
+import { SAVE_DELAY_MS, begin, createQueue, failed, hasPending, rebase, type Queue } from "@/lib/layout/save-queue";
 import { createReducer } from "@/lib/layout/session";
 import { createSession } from "@/lib/layout/session-core";
 import type { Layout } from "@/lib/layout/types";
@@ -53,6 +53,8 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
   const [refusal, setRefusal] = useState<string | null>(null);
   const latest = useRef(session.layout);
   const stopped = useRef(false);
+  // Set once the editor is gone (client navigation fires no beforeunload): nothing renders, so what is left is sent from refs.
+  const gone = useRef(false);
   const retry = useRef<number | undefined>(undefined);
   const reload = useRef<number | undefined>(undefined);
   const saveRef = useRef<() => Promise<void>>(async () => {});
@@ -157,11 +159,18 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
       setQueue(result.queue);
       setOffline(true);
       window.clearTimeout(retry.current);
+      if (gone.current) return; // no one is here to see it fail, and a retry loop would never end
       retry.current = window.setTimeout(() => void saveRef.current(), result.retryInMs);
       return;
     }
     setOffline(false);
     handleReply(reply, started.request);
+    if (gone.current && reply.status === "saved") {
+      // Edits made while that save was in flight: lay them over the server's copy (the reducer is gone) and send them.
+      const sent = new Set(changeIds(started.request));
+      latest.current = rebase(latest.current, applyChanges(started.queue.confirmed, started.request), reply.layout, new Set(), sent).layout;
+      void saveRef.current();
+    }
   }, [handleReply, save, setQueue, storeId]);
 
   useEffect(() => {
@@ -186,13 +195,16 @@ export function useMapEditor({ storeId, initial, save, fetchLatest, onLeft }: Op
 
   useEditorSync({ storeId, notice: session.notice, onNotice: setRefusal, dispatch, fetchLatest, queueRef, setQueue, latest, stopped });
 
-  useEffect(
-    () => () => {
+  // Leaving with changes waiting (a nav link, the command palette) sends them, as the planogram panel does on unmount.
+  useEffect(() => {
+    gone.current = false;
+    return () => {
+      gone.current = true;
       window.clearTimeout(retry.current);
       window.clearTimeout(reload.current);
-    },
-    [],
-  );
+      void saveRef.current();
+    };
+  }, []);
 
   const status: SaveStatus = offline ? "offline" : pending ? "saving" : "saved";
   const done = useCallback(() => setLeaving(true), []);

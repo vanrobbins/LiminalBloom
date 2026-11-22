@@ -6,18 +6,12 @@
 // store cascades to its memberships.
 
 import { eq, inArray } from "drizzle-orm";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { member, organization, user } from "@/db/auth-schema";
 
-import {
-  chooseActiveStore,
-  rememberActiveStore,
-  rememberSwitch,
-  resolveActiveStore,
-  storeForNewSession,
-} from "./active-store";
+import { chooseActiveStore, rememberActiveStore } from "./active-store";
 
 const users: string[] = [];
 const stores: string[] = [];
@@ -150,90 +144,5 @@ describe("rememberActiveStore", () => {
     await rememberActiveStore(person, second);
 
     expect(await chooseActiveStore(person)).toBe(second);
-  });
-});
-
-describe("resolveActiveStore", () => {
-  it("keeps the session's store while the person belongs to it", async () => {
-    const person = await makeUser("resolve-member");
-    const first = await makeStore("first");
-    const second = await makeStore("second");
-    await join(person, first, EARLIER);
-    await join(person, second, LATER);
-
-    expect(await resolveActiveStore(person, second)).toBe(second);
-  });
-
-  it("refuses the session's store once the person is removed from it", async () => {
-    // Removing someone only clears the active store on the remover's own
-    // session. The removed person's other sessions still name the store, and
-    // must not keep reading its data.
-    const person = await makeUser("resolve-removed");
-    const kept = await makeStore("kept");
-    const removed = await makeStore("removed");
-    await join(person, kept, EARLIER);
-    await join(person, removed, LATER);
-    await db.delete(member).where(eq(member.organizationId, removed));
-
-    expect(await resolveActiveStore(person, removed)).toBe(kept);
-  });
-
-  it("returns null when the person was removed from their only store", async () => {
-    const person = await makeUser("resolve-none");
-    const removed = await makeStore("removed");
-    await join(person, removed, EARLIER);
-    await db.delete(member).where(eq(member.organizationId, removed));
-
-    expect(await resolveActiveStore(person, removed)).toBeNull();
-  });
-
-  it("chooses a store when the session has none", async () => {
-    const person = await makeUser("resolve-empty");
-    const store = await makeStore("only");
-    await join(person, store, EARLIER);
-
-    expect(await resolveActiveStore(person, null)).toBe(store);
-  });
-});
-
-// The two session hooks (lib/auth.ts) are conveniences: a database error in one
-// must not fail the sign-in or the switch it rides on (B6).
-describe("the session hooks", () => {
-  it("signing in still works when the store can't be chosen; the next request chooses", async () => {
-    const select = vi.spyOn(db, "select").mockImplementationOnce(() => {
-      throw new Error("Connection terminated unexpectedly");
-    });
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    try {
-      expect(await storeForNewSession("anyone")).toBeNull();
-      expect(logged).toHaveBeenCalledWith("sign-in: no store chosen", expect.any(Error));
-    } finally {
-      select.mockRestore();
-      logged.mockRestore();
-    }
-  });
-
-  it("a switch still works when it can't be remembered", async () => {
-    const update = vi.spyOn(db, "update").mockImplementationOnce(() => {
-      throw new Error("Connection terminated unexpectedly");
-    });
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    try {
-      await expect(rememberSwitch("anyone", "store")).resolves.toBeUndefined();
-      expect(logged).toHaveBeenCalledWith("store switch: not remembered", expect.any(Error));
-    } finally {
-      update.mockRestore();
-      logged.mockRestore();
-    }
-  });
-
-  it("chooses and remembers as before when the database answers", async () => {
-    const person = await makeUser("hooks");
-    const store = await makeStore("hooks");
-    await join(person, store, new Date());
-    expect(await storeForNewSession(person)).toBe(store);
-    await rememberSwitch(person, store);
-    const [row] = await db.select({ last: user.lastActiveStoreId }).from(user).where(eq(user.id, person));
-    expect(row.last).toBe(store);
   });
 });

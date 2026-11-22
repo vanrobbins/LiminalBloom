@@ -1,0 +1,128 @@
+import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const actions = vi.hoisted(() => ({ runSearch: vi.fn() }));
+const mediaQuery = vi.hoisted(() => ({ PHONE_QUERY: "(max-width: 767px)", useMediaQuery: vi.fn((query: string) => (void query, false)) }));
+vi.mock("@/app/(app)/products/search-actions", () => actions);
+vi.mock("@/components/store-map/use-media-query", () => mediaQuery);
+vi.mock("./location-details", () => ({ LocationDetails: () => <p>Where it is</p> }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/products" }));
+vi.mock("@/app/(app)/products/actions", () => ({ removeProduct: vi.fn() }));
+
+import { EMPTY_LAYOUT } from "@/lib/layout/types";
+import type { SearchResult } from "@/lib/products/queries";
+import { searchInput } from "@/lib/products/schemas";
+
+import { EVERYTHING } from "@/lib/access/test-guard";
+import { SearchScreen } from "./search-screen";
+
+const product = (id: string, name: string, overrides?: Partial<SearchResult>): SearchResult => ({
+  id, name, styleNumber: `${id}-01`, color: "Black", sizeRange: "", status: "in_stock",
+  version: 1, categoryId: "c", categoryName: "Pants", imageKey: null, sizeIsOwn: false, swatch: null, texture: "solid", locations: [],
+  ...overrides,
+});
+const pant = product("p1", "High-Rise Pant");
+const tee = product("p2", "Pocket Tee");
+
+beforeEach(() => {
+  actions.runSearch.mockReset();
+  mediaQuery.useMediaQuery.mockReturnValue(false);
+  window.history.replaceState(null, "", "/products");
+});
+
+const renderScreen = (overrides?: Partial<Parameters<typeof SearchScreen>[0]>) =>
+  render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({ q: "p" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} {...overrides} />);
+
+describe("SearchScreen card menu", () => {
+  it("gives each card a ⋯ menu only from 1024 px", () => {
+    const { unmount } = renderScreen();
+    expect(screen.queryByRole("button", { name: "More for High-Rise Pant" })).toBeNull();
+    unmount();
+    mediaQuery.useMediaQuery.mockImplementation((query: string) => query === "(min-width: 1024px)");
+    renderScreen();
+    expect(screen.getByRole("button", { name: "More for High-Rise Pant" })).toBeInTheDocument();
+  });
+});
+
+describe("SearchScreen empty state", () => {
+  it("tells a store with no products how to start", () => {
+    render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({})} initialResults={[]} initialTotal={0} isCatalogEmpty categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    expect(screen.getByText("No products yet. Add the first one, or set up categories.")).toBeInTheDocument();
+  });
+
+  it("does not tell someone without products.edit to add a product", () => {
+    render(<SearchScreen member={{ switches: ["products.stock"] }} initial={searchInput.parse({})} initialResults={[]} initialTotal={0} isCatalogEmpty categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    expect(screen.getByText("No products yet.")).toBeInTheDocument();
+    expect(screen.queryByText(/Add the first one/)).toBeNull();
+  });
+
+  it("shows empty results message when no products found", () => {
+    render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({ q: "xyz" })} initialResults={[]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    expect(screen.getByText("0 products")).toBeInTheDocument();
+  });
+
+  it("renders all-products view with no query", () => {
+    render(<SearchScreen member={EVERYTHING} initial={searchInput.parse({ q: "" })} initialResults={[pant, tee]} categories={[]} colors={[]} layout={EMPTY_LAYOUT} />);
+    expect(screen.getByText("2 products")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /High-Rise Pant/ })).toBeInTheDocument();
+  });
+});
+
+describe("SearchScreen focus and panel management", () => {
+  it("moves focus into the panel on desktop", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const row = screen.getByRole("button", { name: /Pocket Tee/ });
+    await user.click(row);
+    expect(screen.getByRole("heading", { name: "Pocket Tee" })).toHaveFocus();
+  });
+
+  it("returns focus to row on close", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const row = screen.getByRole("button", { name: /Pocket Tee/ });
+    await user.click(row);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(row).toHaveFocus();
+  });
+
+  it("marks the open result with aria-current, and clears it when the panel closes", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const row = screen.getByRole("button", { name: /Pocket Tee/ });
+    await user.click(row);
+    expect(row).toHaveAttribute("aria-current", "true");
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(row).not.toHaveAttribute("aria-current");
+  });
+
+  it("forgets the open product when search leaves it out", async () => {
+    const user = userEvent.setup();
+    actions.runSearch.mockResolvedValueOnce({ results: [pant], total: 1 }).mockResolvedValueOnce({ results: [pant, tee], total: 2 });
+    renderScreen();
+    await user.click(screen.getByRole("button", { name: /Pocket Tee/ }));
+    const box = screen.getByRole("searchbox", { name: "Search products" });
+    await user.type(box, "a");
+    await vi.waitFor(() => expect(screen.queryByRole("complementary", { name: "Pocket Tee" })).not.toBeInTheDocument());
+
+    // The product comes back in a later search: it shows in the list, but its panel stays shut.
+    await user.type(box, "n");
+    await screen.findByRole("button", { name: /Pocket Tee/ });
+    await act(async () => {});
+    expect(screen.queryByRole("complementary", { name: "Pocket Tee" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pocket Tee/ })).not.toHaveAttribute("aria-current");
+  });
+
+  it("on tablet and desktop, opening a card moves focus into the panel, and Escape brings it back (P3.4)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const card = screen.getByRole("button", { name: /High-Rise Pant/ });
+    await user.click(card);
+    expect(screen.getByRole("heading", { level: 2, name: "High-Rise Pant" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("complementary", { name: "High-Rise Pant" })).toBeNull();
+    expect(card).toHaveFocus();
+  });
+});

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { fixture, store } from "@/lib/layout/test-layouts";
+import { fixture, store, zone } from "@/lib/layout/test-layouts";
 
 import { EVERYTHING } from "@/lib/access/test-guard";
 import { LayoutScreen } from "./layout-screen";
@@ -30,5 +30,30 @@ describe("LayoutScreen", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.getByRole("button", { name: "Save and leave" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Add to the map" })).toBeNull();
+  });
+
+  it("hands the entry zone to the viewer", () => {
+    render(<LayoutScreen member={EVERYTHING} {...props} layout={{ ...store(), zones: [zone()], fixtures: [fixture()] }} initialZone="zone-a" />);
+    expect(screen.getByRole("button", { name: "Whole store" })).toBeInTheDocument();
+  });
+
+  it("starts over on the entry zone when the same pick arrives again with a new nonce", async () => {
+    const layout = { ...store(), zones: [zone()], fixtures: [fixture()] };
+    const { rerender } = render(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="a1" />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Whole store" }));
+    expect(screen.queryByRole("button", { name: "Whole store" })).toBeNull();
+    rerender(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="a1" />);
+    expect(screen.queryByRole("button", { name: "Whole store" })).toBeNull();
+    rerender(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="b2" />);
+    expect(screen.getByRole("button", { name: "Whole store" })).toBeInTheDocument();
+  });
+
+  it("while editing, a zone pick's ?zone= and ?n= don't stay in the address (the viewer that drops them isn't there)", async () => {
+    const layout = { ...store(), zones: [zone()], fixtures: [fixture()] };
+    const { rerender } = render(<LayoutScreen member={EVERYTHING} {...props} layout={layout} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Edit" }));
+    window.history.replaceState(null, "", "/layout?zone=zone-a&n=b2&x=1");
+    rerender(<LayoutScreen member={EVERYTHING} {...props} layout={layout} initialZone="zone-a" nonce="b2" />);
+    expect(window.location.pathname + window.location.search).toBe("/layout?x=1");
   });
 });

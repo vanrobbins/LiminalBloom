@@ -136,6 +136,19 @@ test.describe("read-only map", () => {
 		await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
 		await expect(page.locator('[data-fixture-name="Rack 1"]')).toHaveCount(1);
 	});
+
+	test("leaving the embedded editor by a nav link saves what was still waiting (client navigation fires no beforeunload)", async ({ page }) => {
+		test.skip(sizeOf(test.info()) === "phone", "The editor covers the phone's tabs, so there is no link to click.");
+		await page.goto("/layout");
+		await hydrated(page);
+		await page.getByRole("button", { name: "Edit" }).click();
+		await page.getByRole("button", { name: "Add", exact: true }).click();
+		await page.getByRole("dialog", { name: "Add to the map" }).getByRole("button", { name: "Rack", exact: true }).click();
+		// No wait for "Saved": the 600 ms pause is still running when the link is clicked.
+		await page.getByRole("link", { name: "Products", exact: true }).filter({ visible: true }).click();
+		await expect(page).toHaveURL(/\/products/);
+		await expect.poll(async () => (await layoutCounts(HOME_STORE)).fixtures, { timeout: 10_000 }).toBe(2);
+	});
 });
 
 test.describe("first-time setup", () => {

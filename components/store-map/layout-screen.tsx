@@ -7,7 +7,7 @@
 
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import type { ChangeSet } from "@/lib/layout/diff";
 import type { FetchReply, SaveReply } from "@/lib/layout/replies";
 import type { Layout } from "@/lib/layout/types";
 import type { FloorPlanogram, ProductLook } from "@/lib/planograms/types";
+import { withoutParam } from "@/lib/url-params";
 
 import { MapEditor } from "./map-editor";
 import { MapViewer } from "./map-viewer";
@@ -29,6 +30,10 @@ type LayoutScreenProps = {
   fetchLatest: (storeId: string) => Promise<FetchReply>;
   /** Whose switches decide whether Edit shows; the server checks them again. */
   member: Holder;
+  /** From /layout?zone= (checked as an id by the page, as a zone of this map by the viewer). */
+  initialZone?: string;
+  /** From /layout?n=: changes when the same zone is picked again, so the viewer starts over on it. */
+  nonce?: string;
 };
 
 /** Changes whenever the loaded layout does, so the viewer starts over from it after editing. */
@@ -39,10 +44,16 @@ function layoutKey(layout: Layout): string {
   return (hash >>> 0).toString(36);
 }
 
-export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest, member }: LayoutScreenProps) {
+export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest, member, initialZone, nonce = "" }: LayoutScreenProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const key = useMemo(() => layoutKey(layout), [layout]);
+  // The viewer drops ?zone=&n= once used; while editing it is not there, so the entry params would stay.
+  useEffect(() => {
+    if (!editing) return;
+    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "zone", "n");
+    if (clean !== null) window.history.replaceState(null, "", clean);
+  }, [editing, initialZone, nonce]);
 
   if (editing) {
     return (
@@ -75,7 +86,7 @@ export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLa
           ) : null
         }
       />
-      <MapViewer key={key} layout={layout} planograms={planograms} looks={looks} storeKey={storeId} />
+      <MapViewer key={`${key}:${initialZone ?? ""}:${nonce}`} layout={layout} planograms={planograms} looks={looks} storeKey={storeId} initialZone={initialZone} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fixture, store, zone } from "@/lib/layout/test-layouts";
 
@@ -41,5 +41,54 @@ describe("MapViewer", () => {
     expect(screen.queryByRole("navigation", { name: "Everything on the map" })).toBeNull();
     await userEvent.setup().click(screen.getByRole("button", { name: "List" }));
     expect(screen.getByRole("dialog", { name: "Everything on the map" })).toBeInTheDocument();
+  });
+});
+
+describe("MapViewer entry zone (/layout?zone=, 0.7.0.8)", () => {
+  beforeEach(() => window.history.replaceState(null, "", "/layout"));
+
+  it("starts focused on a known zone: its name and Whole store show", () => {
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" initialZone="zone-a" />);
+    expect(screen.getByRole("heading", { name: "Front tables" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Whole store" })).toBeInTheDocument();
+  });
+
+  it("shows the whole store for a zone that is not on this map", () => {
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" initialZone="zone-elsewhere" />);
+    expect(screen.queryByRole("button", { name: "Whole store" })).toBeNull();
+  });
+
+  it("shows the whole store with no entry zone", () => {
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" />);
+    expect(screen.queryByRole("button", { name: "Whole store" })).toBeNull();
+  });
+
+  it("drops zone from the address on mount and keeps the other params", () => {
+    window.history.replaceState(null, "", "/layout?zone=zone-a&x=1");
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" initialZone="zone-a" />);
+    expect(window.location.pathname + window.location.search).toBe("/layout?x=1");
+  });
+
+  it("cleans the address for an unknown zone too", () => {
+    window.history.replaceState(null, "", "/layout?zone=zone-elsewhere");
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" initialZone="zone-elsewhere" />);
+    expect(window.location.search).toBe("");
+  });
+
+  it("drops the nonce with it", () => {
+    window.history.replaceState(null, "", "/layout?zone=zone-a&n=k3");
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" initialZone="zone-a" />);
+    expect(window.location.search).toBe("");
+  });
+
+  it("leaves a plain /layout address alone", () => {
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" />);
+    expect(window.location.pathname + window.location.search).toBe("/layout");
+  });
+
+  it("Whole store from the entry zone goes back to the overview", async () => {
+    render(<MapViewer layout={layout} planograms={{}} looks={{}} storeKey="s" initialZone="zone-a" />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Whole store" }));
+    expect(screen.queryByRole("button", { name: "Whole store" })).toBeNull();
   });
 });

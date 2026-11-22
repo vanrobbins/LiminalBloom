@@ -7,12 +7,15 @@
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
+import type { Switch } from "@/lib/access/switches";
+
 import type { Store } from "./use-switch-store";
 
-export type ShellValue = { stores: Store[]; activeStoreId: string; user: { name: string; email: string } };
+/** `switches` are the member's, as plain values: the command palette builds its pages and actions from them in the browser. */
+export type ShellValue = { stores: Store[]; activeStoreId: string; user: { id: string; name: string; email: string }; switches: Switch[] };
 
-/** The phone header's two sheets. */
-export type ShellSheet = "stores" | "account";
+/** The shell's sheets: the phone header's two, and the command palette, shared by every trigger. */
+export type ShellSheet = "stores" | "account" | "palette";
 type SheetState = { open: (which: ShellSheet) => boolean; set: (which: ShellSheet, open: boolean) => void };
 
 const ShellContext = createContext<ShellValue | null>(null);

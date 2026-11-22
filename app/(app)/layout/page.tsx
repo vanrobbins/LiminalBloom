@@ -12,20 +12,24 @@ import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
 import { floorPlanograms } from "@/lib/planograms/floor-view";
 import { productLooks } from "@/lib/planograms/product-looks";
+import { nonceParam, uuidParam } from "@/lib/url-params";
 
 import { fetchLayout, saveLayoutChanges } from "@/app/(editor)/layout/edit/actions";
 
 // Always the current layout; another member may have just changed it.
 export const dynamic = "force-dynamic";
 
-export default async function LayoutPage() {
+// ?zone= is where the command palette's Zone result lands: the map opens on that zone.
+export default async function LayoutPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const member = await requireMember();
+  const params = await searchParams;
+  const zone = uuidParam(params, "zone");
   const { activeStoreId } = member;
   const [layout, planograms] = await Promise.all([loadLayout(activeStoreId), floorPlanograms(activeStoreId)]);
   const looks = await productLooks(activeStoreId, Object.values(planograms).flatMap((p) => p.latest?.placements.map((e) => e.productId) ?? []));
 
   if (layout.outline) {
-    return <LayoutScreen storeId={activeStoreId} layout={layout} planograms={planograms} looks={looks} save={saveLayoutChanges} fetchLatest={fetchLayout} member={member} />;
+    return <LayoutScreen storeId={activeStoreId} layout={layout} planograms={planograms} looks={looks} save={saveLayoutChanges} fetchLatest={fetchLayout} member={member} initialZone={zone} nonce={nonceParam(params)} />;
   }
 
   return (

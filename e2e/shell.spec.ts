@@ -63,6 +63,15 @@ test("switches stores from the shell, there and back", async ({ page }) => {
   await expect(page.locator("[data-status]").first()).toBeVisible();
 });
 
+test("the sidebar offers Search with its shortcut hint, and the other widths an icon", async ({ page }, testInfo) => {
+  await page.goto("/products");
+  await hydrated(page);
+  const search = page.locator("button[aria-keyshortcuts]").filter({ visible: true });
+  await expect(search).toHaveCount(1);
+  if (sizeOf(testInfo) === "desktop") await expect(search).toHaveText(/Search\s*(Ctrl K|⌘K)/);
+  else await expect(search).toHaveAccessibleName("Search");
+});
+
 test("the first Tab reaches a skip link that jumps to the page", async ({ page }, testInfo) => {
   // A touch screen's Products opens in the search box; with a keyboard it must not.
   await page.goto(sizeOf(testInfo) === "desktop" ? "/products" : "/account");

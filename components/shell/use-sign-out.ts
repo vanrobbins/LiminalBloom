@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { clearRecent } from "@/lib/palette/recent";
 import { toast } from "@/lib/toast";
 
 export function useSignOut() {
@@ -38,6 +39,9 @@ export function useSignOut() {
       });
       return;
     }
+
+    // This browser's recent palette picks go with the session: store devices are shared.
+    clearRecent();
 
     // Replace, so Back cannot return to the signed-in page; refresh, so the
     // router cache holds nothing of the person who just left (Next restores

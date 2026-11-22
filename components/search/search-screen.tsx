@@ -16,6 +16,7 @@ import type { SearchResult } from "@/lib/products/queries";
 import type { SearchInput } from "@/lib/products/schemas";
 import { MAX_OFFSET } from "@/lib/products/schemas";
 import { hasFilters, resultCount } from "@/lib/products/search-params";
+import { withoutParam } from "@/lib/url-params";
 
 import { LocationSheet } from "./location-sheet";
 import { SearchField } from "./search-field";
@@ -35,15 +36,17 @@ type SearchScreenProps = {
   initialTotal?: number;
   /** The store has no products at all (not just none matching). */
   isCatalogEmpty?: boolean;
+  /** From /products?open=: starts with this result's sheet or panel open (the palette's Product result). */
+  initialOpenId?: string;
 };
 
 const DESKTOP_QUERY = "(min-width: 1024px)";
 
-export function SearchScreen({ initial, initialResults, categories, colors, layout, member, initialTotal = initialResults.length, isCatalogEmpty = false }: SearchScreenProps) {
+export function SearchScreen({ initial, initialResults, categories, colors, layout, member, initialTotal = initialResults.length, isCatalogEmpty = false, initialOpenId }: SearchScreenProps) {
   const { input, results, total, isPending, isOffline, isLoadingMore, moreFailed, update, showMore, patchProduct, removeProduct } = useSearch(initial, initialResults, initialTotal);
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId && initialResults.some((r) => r.id === initialOpenId) ? initialOpenId : null);
   const pendingFocus = useRef<string | null>(null);
   const searchBox = useRef<HTMLInputElement>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -94,8 +97,20 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
   if (openId !== null && open === null) setOpenId(null);
   const clear = () => update({ categoryIds: [], colors: [], statuses: [], places: [] });
 
+  // The address no longer names an open product (it did only for the palette's entry link).
+  function dropOpenParam() {
+    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "open", "n");
+    if (clean !== null) window.history.replaceState(null, "", clean);
+  }
+
+  function openCard(id: string) {
+    setOpenId(id);
+    dropOpenParam();
+  }
+
   function close() {
     setOpenId(null);
+    dropOpenParam();
     // The phone's sheet is a dialog and gives focus back itself; the side panel
     // is not, so focus goes back to the card it came from.
     if (!isPhone && openId) document.querySelector<HTMLElement>(`[data-result-id="${openId}"]`)?.focus();
@@ -119,7 +134,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
           openId={open?.id ?? null}
           query={input.q}
           hasFilters={hasFilters(input)}
-          onOpen={setOpenId}
+          onOpen={openCard}
           onClear={clear}
           onDeleted={isDesktop && can(member, "products.edit") ? removeProduct : undefined}
           isCatalogEmpty={isCatalogEmpty && results.length === 0 && total === 0}

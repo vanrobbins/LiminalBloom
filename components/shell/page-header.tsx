@@ -1,5 +1,5 @@
 // Each signed-in page's header (spec §3, council 10-10). On a phone it is the
-// sticky top bar: back · title · avatar, and under the title the store line for
+// sticky top bar: back · title · search · avatar, and under the title the store line for
 // someone in two or more stores. On tablet and desktop it is the page's own
 // back link and big title; store and avatar stay in the rail or sidebar.
 
@@ -7,6 +7,8 @@
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+
+import { PaletteTrigger } from "@/components/palette/palette-trigger";
 
 import { useShell } from "./shell-context";
 import { StoreMenu } from "./store-menu";
@@ -51,6 +53,11 @@ export function PageHeader({ title, back, actions }: PageHeaderProps) {
           {title}
         </h1>
         {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
+        {shell ? (
+          <div className="md:hidden">
+            <PaletteTrigger variant="header" />
+          </div>
+        ) : null}
         {shell ? (
           <div className="md:hidden">
             <UserMenu variant="sheet" user={shell.user} />

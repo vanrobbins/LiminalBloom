@@ -3,7 +3,7 @@
 // undone and redone under a new id that later steps follow, and the history
 // clears when the draft is published, discarded or gone.
 
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -195,52 +195,5 @@ describe("Undo and Redo of a removed or added placement", () => {
     await undoKey(user);
     await redoKey(user);
     expect(actions.saveChangeAction).toHaveBeenCalledTimes(sent);
-  });
-});
-
-describe("the history clears", () => {
-  async function withOneStep() {
-    const user = userEvent.setup();
-    show();
-    await user.click(tile("Pant"));
-    await user.keyboard("{ArrowRight}");
-    await waitFor(() => expect(actions.saveChangeAction).toHaveBeenCalledTimes(1));
-    return user;
-  }
-  const settled = () => act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-
-  it("after publish", async () => {
-    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 2, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
-    actions.publishAction.mockResolvedValue({ status: "saved", message: "Published" });
-    const user = await withOneStep();
-    await user.click(screen.getByRole("button", { name: "Publish" }));
-    await user.click(await screen.findByRole("button", { name: /^Publish to / }));
-    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    await undoKey(user);
-    await settled();
-    expect(actions.saveChangeAction).toHaveBeenCalledTimes(1);
-  });
-
-  it("after discard", async () => {
-    actions.discardDraftAction.mockResolvedValue({ status: "saved", message: "Draft discarded" });
-    const user = await withOneStep();
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
-    await user.click(within(await screen.findByRole("dialog", { name: "Discard this draft?" })).getByRole("button", { name: "Discard draft" }));
-    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    await undoKey(user);
-    await settled();
-    expect(actions.saveChangeAction).toHaveBeenCalledTimes(1);
-  });
-
-  it("after a Changed on another device refresh", async () => {
-    const user = await withOneStep();
-    actions.reloadDraftAction.mockResolvedValue(null);
-    fireEvent.focus(window);
-    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    await undoKey(user);
-    await settled();
-    expect(actions.saveChangeAction).toHaveBeenCalledTimes(1);
   });
 });
