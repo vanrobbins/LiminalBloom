@@ -24,7 +24,7 @@ describe("SignUpForm", () => {
   it("stays on Creating account… while the next page loads", async () => {
     mocks.email.mockResolvedValue({ error: null });
     await submit();
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
     expect(mocks.refresh).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: /Creating account…/ })).toBeDisabled();
   });
@@ -67,7 +67,7 @@ describe("SignUpForm", () => {
   it("ignores a return path that leaves the site", async () => {
     mocks.email.mockResolvedValue({ error: null });
     await submit("https://evil.example");
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
   });
 
   it("keeps the return path on the link to sign in", () => {

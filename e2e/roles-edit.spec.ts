@@ -128,7 +128,7 @@ test("a permission turned off takes effect on that person's next action, and the
   await guest.page.waitForURL("**/welcome");
   await guest.page.goto(`/invite/${invitation}`);
   await guest.page.getByRole("button", { name: "Accept invitation" }).click();
-  await guest.page.waitForURL("**/products");
+  await guest.page.waitForURL("**/home");
   await openRoles(guest.page);
   await reveal(guest.page, "Sales Associate");
   await expect(box(guest.page, "Run sales", "Sales Associate")).toBeEnabled();

@@ -112,9 +112,9 @@ test.describe("toast position", () => {
 
 test("create-store offers a way back to members", async ({ page }) => {
   await page.goto("/create-store");
-  await expect(page.getByRole("link", { name: "Back to products" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Back to Home" })).toHaveAttribute(
     "href",
-    "/products",
+    "/home",
   );
 });
 

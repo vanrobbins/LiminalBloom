@@ -69,7 +69,7 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
       ) : null}
       {look.state === "already-member" ? (
         <Button asChild variant="secondary">
-          <Link href="/products">Go to products</Link>
+          <Link href="/home">Go to Home</Link>
         </Button>
       ) : null}
     </PageShell>

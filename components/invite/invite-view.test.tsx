@@ -39,12 +39,12 @@ describe("InviteView", () => {
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
   });
 
-  it("lets someone with the wrong email sign in as another account, and a member go to products", () => {
+  it("lets someone with the wrong email sign in as another account, and a member go to Home", () => {
     const { unmount } = show({ state: "wrong-email", ...named }, "nia@example.test");
     expect(screen.getByRole("link", { name: "Sign in with another account" })).toHaveAttribute("href", "/sign-in?next=%2Finvite%2Fabc123");
     unmount();
     show({ state: "already-member", ...named }, "nia@example.test");
-    expect(screen.getByRole("link", { name: "Go to products" })).toHaveAttribute("href", "/products");
+    expect(screen.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", "/home");
   });
 
   it.each([

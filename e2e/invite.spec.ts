@@ -34,7 +34,7 @@ test("invite, sign up from the link, accept: lands in the store with that role a
   await expect(guest.page.getByRole("button", { name: "Accept invitation" })).toBeVisible();
   await expect(guest.page).toHaveURL(link);
   await guest.page.getByRole("button", { name: "Accept invitation" }).click();
-  await guest.page.waitForURL("**/products");
+  await guest.page.waitForURL("**/home");
 
   await openPeople(guest.page);
   await expect(guest.page.getByRole("heading", { name: "Visual Merchandising Worker · 2" })).toBeVisible();
@@ -146,16 +146,16 @@ test("/welcome: a new account sees the invitation waiting for its email by name 
   expect(await guest.page.content()).not.toContain(id);
   await guest.page.goto(`/invite/${id}`);
   await guest.page.getByRole("button", { name: "Accept invitation" }).click();
-  await guest.page.waitForURL("**/products");
+  await guest.page.waitForURL("**/home");
   await openPeople(guest.page);
   await expect(guest.page.getByRole("heading", { name: "Sales Associate · 3" })).toBeVisible();
   // With a store, /welcome has nothing for them.
   await guest.page.goto("/welcome");
-  await expect(guest.page).toHaveURL(/\/products$/);
+  await expect(guest.page).toHaveURL(/\/home$/);
   await guest.context.close();
-  // The Store Manager's own visit goes straight to Products too.
+  // The Store Manager's own visit goes straight to Home too.
   await page.goto("/welcome");
-  await expect(page).toHaveURL(/\/products$/);
+  await expect(page).toHaveURL(/\/home$/);
 });
 
 test("/welcome: paste the invite link and Accept opens the invitation; accepting joins with its role", async ({ page, browser }) => {
@@ -183,7 +183,7 @@ test("/welcome: paste the invite link and Accept opens the invitation; accepting
   await guest.page.getByRole("button", { name: "Accept", exact: true }).click();
   await expect(guest.page).toHaveURL(new RegExp(`/invite/${id}$`));
   await guest.page.getByRole("button", { name: "Accept invitation" }).click();
-  await guest.page.waitForURL("**/products");
+  await guest.page.waitForURL("**/home");
 
   await openPeople(guest.page);
   await expect(guest.page.getByRole("heading", { name: "Visual Merchandising Worker · 2" })).toBeVisible();

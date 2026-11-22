@@ -52,9 +52,9 @@ export function SignUpForm({ next }: { next: string | null }) {
       return;
     }
 
-    // Still "Creating account…" until /products replaces this page. Clearing
+    // Still "Creating account…" until /home replaces this page. Clearing
     // it here left an idle button for the second the server took to render.
-    router.push(safeReturnPath(next) ?? "/products");
+    router.push(safeReturnPath(next) ?? "/home");
     router.refresh();
   }
 

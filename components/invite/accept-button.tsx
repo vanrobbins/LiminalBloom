@@ -33,10 +33,10 @@ export function AcceptButton({ invitationId, storeName, label = "Accept invitati
     try {
       const result = await acceptInvitationAction(invitationId);
       if (result.status === "accepted") {
-        // Stay disabled until the products page replaces this one.
+        // Stay disabled until Home replaces this one.
         setDone(true);
         toast({ tone: "success", title: `Joined ${result.storeName} as ${result.roleName}` });
-        router.replace("/products");
+        router.replace("/home");
         router.refresh();
         return;
       }

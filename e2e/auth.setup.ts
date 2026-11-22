@@ -17,7 +17,7 @@ async function createStore(page: Page, name: string) {
   await page.goto("/create-store");
   await page.getByLabel("Store name").fill(name);
   await page.getByRole("button", { name: "Create store" }).click();
-  await page.waitForURL("**/products");
+  await page.waitForURL("**/home");
 }
 
 async function signInOrUp(page: Page, account: { email: string; password: string }, name: string) {
@@ -36,7 +36,7 @@ async function signInOrUp(page: Page, account: { email: string; password: string
   await page.getByLabel("Work email").fill(account.email);
   await page.getByLabel("Password", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL(/\/(products|welcome)/);
+  await page.waitForURL(/\/(home|welcome)/);
 }
 
 setup("sign in every worker's account, each with two stores, in the home store", async ({ browser }) => {

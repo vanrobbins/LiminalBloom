@@ -17,12 +17,12 @@ test("a wrong password shows the error next to the form", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in$/);
 });
 
-test("signing in lands on products, with no \"Opened <store>\" toast", async ({ page }) => {
+test("signing in lands on Home, with no \"Opened <store>\" toast", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Work email").fill(TEST_ACCOUNT.email);
   await page.getByLabel("Password", { exact: true }).fill(TEST_ACCOUNT.password);
   await page.getByRole("button", { name: /Sign in/ }).click();
 
-  await expect(page).toHaveURL(/\/products/);
+  await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByText(/^Opened /)).toHaveCount(0);
 });

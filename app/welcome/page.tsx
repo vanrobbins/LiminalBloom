@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function WelcomePage() {
   const current = await getCurrentMember();
   if (current.kind === "signed-out") redirect("/sign-in");
-  if (current.kind === "member") redirect("/products");
+  if (current.kind === "member") redirect("/home");
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");

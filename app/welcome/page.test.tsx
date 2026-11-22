@@ -26,11 +26,11 @@ beforeEach(() => {
 });
 
 describe("WelcomePage", () => {
-  it("sends a signed-out visitor to sign in and a person who has a store to products", async () => {
+  it("sends a signed-out visitor to sign in and a person who has a store to Home", async () => {
     mocks.current.mockResolvedValue({ kind: "signed-out" });
     await expect(WelcomePage()).rejects.toThrow("redirect:/sign-in");
     mocks.current.mockResolvedValue({ kind: "member" });
-    await expect(WelcomePage()).rejects.toThrow("redirect:/products");
+    await expect(WelcomePage()).rejects.toThrow("redirect:/home");
   });
 
   it("lists the invitations waiting for their email by store, role and expiry, and tells them to paste their link", async () => {

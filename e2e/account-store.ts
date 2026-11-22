@@ -38,14 +38,14 @@ export async function signUpWithStore(page: Page, email: string, storeName: stri
   await page.getByLabel("Work email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL(/\/(products|welcome)/);
+  await page.waitForURL(/\/(home|welcome)/);
   await page.goto("/create-store");
   await page.getByLabel("Store name").fill(storeName);
   await page.getByRole("button", { name: "Create store" }).click();
-  await page.waitForURL("**/products");
+  await page.waitForURL("**/home");
 }
 
-/** Signs in on the sign-in screen and waits on Products. `keep` ticks Keep me signed in. */
+/** Signs in on the sign-in screen and waits on Home. `keep` ticks Keep me signed in. */
 export async function signInOnScreen(page: Page, email: string, password: string, keep = false) {
   await page.goto("/sign-in");
   await hydrated(page);
@@ -53,5 +53,5 @@ export async function signInOnScreen(page: Page, email: string, password: string
   await page.getByLabel("Password", { exact: true }).fill(password);
   if (keep) await page.getByLabel("Keep me signed in").check();
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL("**/products");
+  await page.waitForURL("**/home");
 }

@@ -46,7 +46,7 @@ describe("CreateStoreForm", () => {
   });
 
   it("lets a redirect through instead of calling it a connection error", async () => {
-    mocks.createStore.mockRejectedValue(getRedirectError("/products", "push"));
+    mocks.createStore.mockRejectedValue(getRedirectError("/home", "push"));
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     await submit();
     expect(await screen.findByTestId("boundary")).toBeInTheDocument();

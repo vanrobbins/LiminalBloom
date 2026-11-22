@@ -80,7 +80,7 @@ export async function createStore(
         headers: requestHeaders,
       });
 
-      redirect("/products");
+      redirect("/home");
     } catch (error) {
       // `redirect()` works by throwing, so it must be re-thrown rather than
       // swallowed as a failure. This is a real and easy mistake to make.
