@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function PlanogramsPage() {
   const member = await requireMember();
   const { activeStoreId } = member;
-  const [layout, summaries, zone] = await Promise.all([loadLayout(activeStoreId), planogramSummaries(activeStoreId), storeTimezone(activeStoreId)]);
+  const [layout, summaries, zone] = await Promise.all([loadLayout(activeStoreId), planogramSummaries(activeStoreId, can(member, "planograms.draft") || can(member, "planograms.publish")), storeTimezone(activeStoreId)]);
   const today = storeToday(zone);
   const groups = planogramList(layout, summaries);
 

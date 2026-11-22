@@ -81,7 +81,8 @@ function draftQuery(storeId: string, planogramId: string) {
     .orderBy(asc(planogramPlacements.row), asc(planogramPlacements.col), asc(planogramPlacements.id));
 }
 
-export async function planogramSummaries(storeId: string): Promise<PlanogramSummary[]> {
+/** `seesDrafts` false: a Quick Adjust being drafted is not told (only the one on the floor), for members who may neither draft nor publish. */
+export async function planogramSummaries(storeId: string, seesDrafts = true): Promise<PlanogramSummary[]> {
   const [rows, open] = await withStore(storeId, [
     db
       .select({
@@ -106,7 +107,7 @@ export async function planogramSummaries(storeId: string): Promise<PlanogramSumm
   // One word for the row: a Quick Adjust being drafted (it is the work waiting) over one that is on the floor.
   const wordFor = (planogramId: string): PlanogramSummary["adjustment"] => {
     const states = open.filter((a) => a.planogramId === planogramId).map((a) => a.state);
-    return states.includes("draft") ? "draft" : states.includes("published") ? "published" : null;
+    return seesDrafts && states.includes("draft") ? "draft" : states.includes("published") ? "published" : null;
   };
   return rows.map(({ id, ...summary }) => ({ ...summary, adjustment: wordFor(id) }));
 }

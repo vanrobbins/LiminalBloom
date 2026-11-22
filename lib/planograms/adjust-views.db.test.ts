@@ -91,6 +91,16 @@ describe("planogramSummaries", () => {
     await openDraft(s);
     expect(await word()).toBe("draft");
   });
+
+  it("for someone who can't see drafts: adjusted when one is on the floor, whatever is being drafted, and nothing for a draft alone", async () => {
+    const s = await publishedPlanogram("adjv-summary-viewer");
+    const word = async () => (await planogramSummaries(s.store, false)).find((p) => p.fixtureId === s.f.fixtureId)?.adjustment;
+    const draft = await replaceTile(s);
+    expect(await word()).toBeNull();
+    await publishAdjustment(s.store, s.f.fixtureId, draft?.id ?? "", draft?.version ?? 0, VAN);
+    await openDraft(s);
+    expect(await word()).toBe("published");
+  });
 });
 
 describe("productLooks", () => {
