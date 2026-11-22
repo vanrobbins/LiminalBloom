@@ -24,7 +24,7 @@ function When({ row }: { row: InvitationRow }) {
 
 export function WaitingInvitationsCard({ rows }: { rows: InvitationRow[] }) {
   return (
-    <HomeCard title="Invitations waiting" icon={MailPlus} seeAll={{ href: "/store", page: "store", more: Math.max(0, rows.length - SHOWN) }}>
+    <HomeCard title="Invitations waiting" icon={MailPlus} seeAll={{ href: "/store", page: "invitations", more: Math.max(0, rows.length - SHOWN) }}>
       <ul className="flex flex-col divide-y divide-line-subtle">
         {rows.slice(0, SHOWN).map((row, n) => (
           <li key={row.id ?? `read-only-${n}`} className="flex min-h-11 flex-col justify-center py-2">

@@ -44,7 +44,7 @@ async function expectNotPlaced(page: Page) {
 /** A role with people.manage: the invitation row with its address, and the Set up row for the missing layout. */
 async function expectManagersCards(page: Page) {
   await expect(card(page, "Invitations waiting").getByRole("listitem").filter({ hasText: INVITED })).toContainText("Sales Associate role · Expires");
-  await expect(card(page, "Invitations waiting").getByRole("link", { name: "All store", exact: true })).toHaveAttribute("href", "/store");
+  await expect(card(page, "Invitations waiting").getByRole("link", { name: "All invitations", exact: true })).toHaveAttribute("href", "/store");
   await expect(card(page, "Set up the store").getByRole("link", { name: "Draw the store layout" })).toHaveAttribute("href", "/layout/edit");
   // The role store has products and five people: those two steps are done.
   await expect(card(page, "Set up the store").getByRole("listitem")).toHaveCount(1);

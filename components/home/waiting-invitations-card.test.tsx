@@ -44,7 +44,7 @@ describe("WaitingInvitationsCard", () => {
   it("shows at most five rows and names the remainder on the see-all link to Store", () => {
     render(<WaitingInvitationsCard rows={Array.from({ length: 8 }, (_, i) => inv(`p${i}@example.test`))} />);
     expect(items()).toHaveLength(5);
-    expect(screen.getByRole("link", { name: "All store, 3 more" })).toHaveAttribute("href", "/store");
+    expect(screen.getByRole("link", { name: "All invitations, 3 more" })).toHaveAttribute("href", "/store");
   });
 
   it("has no row links: the actions live in Store", () => {
