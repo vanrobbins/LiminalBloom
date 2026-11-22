@@ -54,9 +54,9 @@ export function ProductSheet({ open, item, face, onClose, children }: ProductShe
         <>
           <div className="flex gap-4">
             <ProductImage productId={item.productId} name={item.productName} categoryName={item.categoryName} imageKey={item.imageKey} swatch={item.swatch} texture={item.texture} colorWord={item.colorWord} size="lg" />
-            <dl className="grid content-start grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+            <dl className="grid min-w-0 content-start grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
               <dt className="text-ink-muted">Style</dt>
-              <dd className="font-mono text-ink">{item.styleNumber}</dd>
+              <dd className="font-mono text-ink wrap-anywhere">{item.styleNumber}</dd>
               {item && face ? (
                 <>
                   <dt className="text-ink-muted">Where</dt>
