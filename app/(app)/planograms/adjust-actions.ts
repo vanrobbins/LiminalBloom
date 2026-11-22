@@ -1,11 +1,13 @@
 "use server";
 
 // Quick Adjust actions (0.7.0.9 spec §6.3). Input is parsed here; the store comes from the session (CODESTYLE rule 8).
-// Drafting needs planograms.draft, publishing and reverting planograms.publish, Compare only view. Replies carry words the
+// Drafting needs planograms.draft, publishing and reverting planograms.publish, Compare only view (a draft's Compare
+// needs draft or publish). Replies carry words the
 // screen can show as-is, and a write hands back the whole draft (co-editing precedent).
 
 import { z } from "zod";
 
+import { can } from "@/lib/access/can";
 import { requireSwitchForAction } from "@/lib/current-member";
 import type { AdjustmentState } from "@/lib/planograms/adjust";
 import { publishAdjustment, revertAdjustment } from "@/lib/planograms/adjust-publish";
@@ -61,11 +63,13 @@ export async function suggestionsForAction(fixtureId: string, target: unknown): 
   return isId(fixtureId) && ref.success ? ((await suggestionsFor(activeStoreId, fixtureId, ref.data)) ?? []) : [];
 }
 
-export async function previewAdjustmentAction(fixtureId: string): Promise<AdjustPreview | null> {
+/** "published" is for anyone who can see; a draft is read by those who may draft or publish it, never by a viewer. */
+export async function previewAdjustmentAction(fixtureId: string, which: "draft" | "published"): Promise<AdjustPreview | null> {
   const check = await requireSwitchForAction("view");
-  if (check.status === "forbidden") return null;
+  if (check.status === "forbidden" || (which !== "draft" && which !== "published")) return null;
   const { activeStoreId } = check.member;
-  return isId(fixtureId) ? previewAdjustment(activeStoreId, fixtureId) : null;
+  if (which === "draft" && !can(check.member, "planograms.draft") && !can(check.member, "planograms.publish")) return null;
+  return isId(fixtureId) ? previewAdjustment(activeStoreId, fixtureId, which) : null;
 }
 
 export async function publishAdjustmentAction(fixtureId: string, adjustmentId: string, expectedVersion: number): Promise<DoneReply> {

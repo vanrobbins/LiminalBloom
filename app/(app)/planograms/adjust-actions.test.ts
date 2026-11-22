@@ -154,10 +154,28 @@ describe("planograms.publish", () => {
 
 describe("view", () => {
   it("previewAdjustmentAction is for anyone who can see, and nobody else", async () => {
-    expect(await previewAdjustmentAction(f)).toBeNull();
+    expect(await previewAdjustmentAction(f, "published")).toBeNull();
     expect(fake.previewAdjustment).not.toHaveBeenCalled();
     as("view");
-    expect(await previewAdjustmentAction(f)).toEqual({ kind: "draft" });
-    expect(await previewAdjustmentAction("nope")).toBeNull();
+    expect(await previewAdjustmentAction(f, "published")).toEqual({ kind: "draft" });
+    expect(fake.previewAdjustment).toHaveBeenCalledWith("store_a", f, "published");
+    expect(await previewAdjustmentAction("nope", "published")).toBeNull();
+  });
+
+  it("a draft preview is only for those who draft or publish; a viewer never gets a draft", async () => {
+    as("view");
+    expect(await previewAdjustmentAction(f, "draft")).toBeNull();
+    expect(fake.previewAdjustment).not.toHaveBeenCalled();
+    as("view", "planograms.draft");
+    expect(await previewAdjustmentAction(f, "draft")).toEqual({ kind: "draft" });
+    as("view", "planograms.publish");
+    expect(await previewAdjustmentAction(f, "draft")).toEqual({ kind: "draft" });
+    expect(fake.previewAdjustment).toHaveBeenCalledWith("store_a", f, "draft");
+  });
+
+  it("anything but the two kinds is refused", async () => {
+    as("view", "planograms.draft");
+    expect(await previewAdjustmentAction(f, "both" as never)).toBeNull();
+    expect(fake.previewAdjustment).not.toHaveBeenCalled();
   });
 });

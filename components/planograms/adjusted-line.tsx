@@ -45,7 +45,7 @@ export function AdjustmentLines({ fixtureId, scope, adjustments, version, looks,
           </p>
           <InfoPopover term="quickAdjust" />
           <span className="flex items-center gap-2">
-            <CompareButton fixtureId={fixtureId} scope={scope} />
+            <CompareButton fixtureId={fixtureId} scope={scope} which="published" />
             {canDraft ? (
               <Button asChild variant="secondary" icon>
                 <Link href={adjustHref} aria-label="Edit Quick Adjust">

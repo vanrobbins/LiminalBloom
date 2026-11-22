@@ -45,13 +45,13 @@ export type AdjustPreview = {
   soldOutAfter: string[];
 };
 
-/** Compare's data: the draft against its version, else the published adjustment against its version; null with neither. */
-export async function previewAdjustment(storeId: string, fixtureId: string): Promise<AdjustPreview | null> {
+/** Compare's data: the draft, or the published adjustment, against its version, as `which` says and never the other (a viewer asking for the published one must not see a draft); null with none. */
+export async function previewAdjustment(storeId: string, fixtureId: string, which: "draft" | "published"): Promise<AdjustPreview | null> {
   const scope = await scopeFor(storeId, fixtureId);
   const { row, latest } = await loadPlanogram(storeId, fixtureId);
   if (!scope || !row || !latest) return null;
   const { draft, published } = await loadAdjustments(storeId, row.id);
-  const adjustment = draft ?? published;
+  const adjustment = which === "draft" ? draft : published;
   if (!adjustment) return null;
   const after = adjustedFloor(latest, adjustment.changes);
   const looks = await productLooks(storeId, [...latest.placements, ...after].map((e) => e.productId));

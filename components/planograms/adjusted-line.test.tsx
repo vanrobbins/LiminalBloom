@@ -95,6 +95,7 @@ describe("AdjustmentLines", () => {
     expect(await screen.findByText("Wall bay 3 · Front: Straight jean → left empty")).toBeInTheDocument();
     expect(screen.getAllByRole("figure").map((f) => f.querySelector("figcaption")?.textContent)).toEqual(["Before · Version 3", "After · Quick Adjust"]);
     expect(screen.queryByRole("button", { name: /^Publish/ })).toBeNull();
+    expect(actions.previewAdjustmentAction).toHaveBeenCalledWith("fx", "published");
   });
 
   it("a draft waiting shows who and when, with Open for drafters; a publisher without the switch just sees it", () => {

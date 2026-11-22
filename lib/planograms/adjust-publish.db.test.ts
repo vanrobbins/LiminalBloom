@@ -158,7 +158,7 @@ describe("a full publish and the preview", () => {
 describe("previewAdjustment", () => {
   it("compares the version with its adjusted floor, in words and in two layouts", async () => {
     const { s, draft } = await replaced("adjp-preview");
-    const preview = await previewAdjustment(s.store, s.f.fixtureId);
+    const preview = await previewAdjustment(s.store, s.f.fixtureId, "draft");
     expect(preview).toMatchObject({ kind: "draft", adjustmentId: draft.id, version: draft.version, basedOnVersion: 1 });
     expect(preview?.changes.map((c) => [c.label, c.added.map((p) => p.productName), c.removed.map((p) => p.productName)])).toEqual([["Top", ["Slim Jean"], ["High-Rise Pant"]]]);
     expect(preview?.before.map((e) => e.productName)).toEqual(["High-Rise Pant"]);
@@ -171,16 +171,22 @@ describe("previewAdjustment", () => {
 
   it("names the products still sold out on the floor after the adjustment, for the publish warning", async () => {
     const { s } = await replaced("adjp-preview-sold");
-    expect((await previewAdjustment(s.store, s.f.fixtureId))?.soldOutAfter).toEqual([]);
+    expect((await previewAdjustment(s.store, s.f.fixtureId, "draft"))?.soldOutAfter).toEqual([]);
     await db.update(products).set({ status: "sold_out" }).where(eq(products.id, s.slim));
-    expect((await previewAdjustment(s.store, s.f.fixtureId))?.soldOutAfter).toEqual(["Slim Jean"]);
+    expect((await previewAdjustment(s.store, s.f.fixtureId, "draft"))?.soldOutAfter).toEqual(["Slim Jean"]);
   });
 
-  it("reads the published adjustment when there is no draft, and nothing when there is neither", async () => {
+  it("reads only the kind asked for: a draft is never shown as the published one, and nothing when there is neither", async () => {
     const { s, draft } = await replaced("adjp-preview-pub");
+    expect(await previewAdjustment(s.store, s.f.fixtureId, "published")).toBeNull();
     await publishAdjustment(s.store, s.f.fixtureId, draft.id, draft.version, VAN);
-    expect(await previewAdjustment(s.store, s.f.fixtureId)).toMatchObject({ kind: "published", adjustmentId: draft.id });
+    expect(await previewAdjustment(s.store, s.f.fixtureId, "published")).toMatchObject({ kind: "published", adjustmentId: draft.id });
+    expect(await previewAdjustment(s.store, s.f.fixtureId, "draft")).toBeNull();
+    const next = await openDraft(s);
+    await setChange(s.store, s.f.fixtureId, next.id, s.target, { kind: "empty" }, next.changes[0].version);
+    expect(await previewAdjustment(s.store, s.f.fixtureId, "published")).toMatchObject({ kind: "published", adjustmentId: draft.id, after: [{ productName: "Slim Jean" }] });
+    expect(await previewAdjustment(s.store, s.f.fixtureId, "draft")).toMatchObject({ kind: "draft", adjustmentId: next.id, after: [] });
     await revertAdjustment(s.store, s.f.fixtureId, draft.id);
-    expect(await previewAdjustment(s.store, s.f.fixtureId)).toBeNull();
+    expect(await previewAdjustment(s.store, s.f.fixtureId, "published")).toBeNull();
   });
 });

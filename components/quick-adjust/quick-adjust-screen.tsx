@@ -116,6 +116,7 @@ export function QuickAdjustScreen({ scope, version, draft: pageDraft, published,
       </div>
       <AdjustCompare
         fixtureId={fixtureId}
+        which="draft"
         scope={scope}
         open={dialog === "compare" || dialog === "publish"}
         onOpenChange={(open) => !open && setDialog(null)}

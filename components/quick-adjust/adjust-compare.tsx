@@ -1,6 +1,6 @@
 // Compare (0.7.0.9 spec §5.3), one component used three ways: from the adjust bar (the draft, no button), from Publish
-// (the same, with the Publish confirm button) and from the Published view's adjusted line (the published adjustment
-// against its version). The word list comes first and is the text equivalent of the two grids: Before above After on a
+// (the same, with the Publish confirm button) and from a planogram's Quick Adjust lines (the published adjustment, or a
+// draft for those who may publish it, against its version). The word list comes first and is the text equivalent of the two grids: Before above After on a
 // phone and tablet, side by side from 1024 px (two wall bays need about 960 px). A phone gets a full-height sheet, the
 // rest a wide dialog. It reads fresh each time it opens, since another device may have changed the draft.
 
@@ -23,9 +23,12 @@ import { toast } from "@/lib/toast";
 import { CompareFigure, drawnFaces } from "./compare-figure";
 import { compareItems } from "./tile-marks";
 
-type CompareBodyProps = { fixtureId: string; scope: PlanogramScope; publishing: boolean; store: string; onPublished: () => void };
+/** Which Quick Adjust it shows: the draft (for drafters and publishers) or the one on the floor (for everyone). */
+export type Which = "draft" | "published";
 
-function CompareBody({ fixtureId, scope, publishing, store, onPublished }: CompareBodyProps) {
+type CompareBodyProps = { fixtureId: string; which: Which; scope: PlanogramScope; publishing: boolean; store: string; onPublished: () => void };
+
+function CompareBody({ fixtureId, which, scope, publishing, store, onPublished }: CompareBodyProps) {
   const [preview, setPreview] = useState<AdjustPreview | null | "loading">("loading");
   const [reloads, setReloads] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
@@ -33,13 +36,13 @@ function CompareBody({ fixtureId, scope, publishing, store, onPublished }: Compa
 
   useEffect(() => {
     let live = true;
-    previewAdjustmentAction(fixtureId)
+    previewAdjustmentAction(fixtureId, which)
       .then((p) => live && setPreview(p))
       .catch(() => live && setPreview(null));
     return () => {
       live = false;
     };
-  }, [fixtureId, reloads]);
+  }, [fixtureId, which, reloads]);
 
   // A refusal's words stay above whatever the reloaded preview shows.
   const alert = message ? (
@@ -122,6 +125,7 @@ function CompareBody({ fixtureId, scope, publishing, store, onPublished }: Compa
 
 type AdjustCompareProps = {
   fixtureId: string;
+  which: Which;
   scope: PlanogramScope;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -131,7 +135,7 @@ type AdjustCompareProps = {
   onPublished?: () => void;
 };
 
-export function AdjustCompare({ fixtureId, scope, open, onOpenChange, publishing = false, onPublished }: AdjustCompareProps) {
+export function AdjustCompare({ fixtureId, which, scope, open, onOpenChange, publishing = false, onPublished }: AdjustCompareProps) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const store = useActiveStoreName() ?? "this store";
   // A publish that went through takes the opener away: focus is not sent back to it.
@@ -142,6 +146,7 @@ export function AdjustCompare({ fixtureId, scope, open, onOpenChange, publishing
   const body = open ? (
     <CompareBody
       fixtureId={fixtureId}
+      which={which}
       scope={scope}
       publishing={publishing}
       store={store}

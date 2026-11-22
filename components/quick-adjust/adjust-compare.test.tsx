@@ -30,7 +30,7 @@ const preview = (over: Partial<AdjustPreview> = {}): AdjustPreview => ({
 function show(props: Partial<React.ComponentProps<typeof AdjustCompare>> = {}) {
   const onOpenChange = vi.fn();
   const onPublished = vi.fn();
-  const view = render(<AdjustCompare fixtureId="fx" scope={scope} open onOpenChange={onOpenChange} onPublished={onPublished} {...props} />);
+  const view = render(<AdjustCompare fixtureId="fx" which="draft" scope={scope} open onOpenChange={onOpenChange} onPublished={onPublished} {...props} />);
   return { onOpenChange, onPublished, ...view };
 }
 
@@ -54,6 +54,12 @@ describe("AdjustCompare", () => {
     expect(figures.map((f) => f.querySelector("figcaption")?.textContent)).toEqual(["Before · Version 3", "After"]);
     expect(within(figures[0]).getByRole("button", { name: /^Straight jean, will change/ })).toHaveAttribute("data-status", "changed");
     expect(within(figures[1]).getByRole("button", { name: /^Slim jean, replaces Straight jean/ })).toHaveAttribute("data-status", "replaced");
+  });
+
+  it("asks for the kind it was given, so the published line never reads a draft", async () => {
+    show({ which: "published" });
+    await screen.findAllByRole("figure");
+    expect(actions.previewAdjustmentAction).toHaveBeenCalledWith("fx", "published");
   });
 
   it("stacks Before above After and goes side by side from 1024 px (lg), not 768 (md)", async () => {
