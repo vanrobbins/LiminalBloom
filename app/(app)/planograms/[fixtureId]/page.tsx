@@ -1,7 +1,7 @@
 // Planogram Detail (spec §5.2): the published planogram, the draft, or a past
 // version (?version=K), face by face; ?product=<id> highlights a product.
 
-import { History } from "lucide-react";
+import { History, Zap } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import { AdjustmentLines } from "@/components/planograms/adjusted-line";
 import { PlanogramScreen } from "@/components/planograms/planogram-screen";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
+import { can } from "@/lib/access/can";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
 import { adjustedFloor, replacedSpots } from "@/lib/planograms/adjust";
@@ -56,11 +57,20 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         back={{ href: "/planograms", label: "Planograms" }}
         actions={
           state.row?.publishedVersion ? (
-            <Button asChild variant="secondary" icon>
-              <Link href={`/planograms/${owner.id}/history`} aria-label="History">
-                <History aria-hidden="true" strokeWidth={1.75} className="size-5" />
-              </Link>
-            </Button>
+            <>
+              {can(member, "planograms.draft") ? (
+                <Button asChild variant="secondary" icon>
+                  <Link href={`/planograms/${owner.id}/adjust`} aria-label="Quick Adjust">
+                    <Zap aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                  </Link>
+                </Button>
+              ) : null}
+              <Button asChild variant="secondary" icon>
+                <Link href={`/planograms/${owner.id}/history`} aria-label="History">
+                  <History aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                </Link>
+              </Button>
+            </>
           ) : null
         }
       />

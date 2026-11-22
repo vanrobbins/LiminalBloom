@@ -8,7 +8,7 @@
 // tap opens its panel.
 "use client";
 
-import { AlertTriangle, Layers, Shirt } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useRef } from "react";
 
 import { ProductImage } from "@/components/products/product-image";
@@ -20,7 +20,7 @@ import { PRESENTATION_LABEL } from "@/lib/products/footprint";
 import type { GridItem } from "./grid-items";
 import { at, KEEP_TOUCH, placed, type Gestures } from "./grid-units";
 import { TileCorners, targetSize } from "./tile-corners";
-import { markOf, STATUS_WORD, TileStatusBadge } from "./tile-status";
+import { markOf, TileCount, tileName, TileStatusBadge } from "./tile-status";
 import { TileHandle } from "./tile-handle";
 
 /** A tile sharing rail space with others (hung layers, layers.ts). */
@@ -72,7 +72,7 @@ type GridTileProps = {
 export function GridTile({ item, layer = null, block, rect, words, selected, highlighted, issue, movable, offset, held = false, invalid, bounds, gestures, onSelect, corners, leaving = false, onKey, onReorder, onEscape }: GridTileProps) {
   // Under 2 ft wide there is room for the photo and stock only; the name is in the sheet and the card.
   // Sharing a rail, the name strip would hide the product behind: its name is in the label and the Layers list.
-  const named = rect.width >= 2 * ROW_UNITS && !layer;
+  const named = rect.width >= 2 * ROW_UNITS && !layer && item.adjust?.kind !== "empty";
   // A shared tile takes the pointer only where its garment (or photo, or badge) is painted, so a click
   // lands on what shows; selected, it rises to the top and takes its whole box, so it can be dragged.
   const passThrough = layer !== null && !selected && !movable;
@@ -106,7 +106,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         data-status={mark ?? undefined}
         data-rank={layer ? layer.rank : undefined}
         aria-pressed={selected}
-        aria-label={`${item.productName}${mark ? `, ${STATUS_WORD[mark]}` : ""}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
+        aria-label={`${tileName(item, mark)}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
         onClick={(e) => {
           // A keyboard click (detail 0) is never the end of a drag, even one whose click went elsewhere.
           const wasDrag = gestures.consumeDrag();
@@ -134,33 +134,26 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         }}
         {...grab}
         style={{ ...placed(rect), transform, zIndex, pointerEvents: passThrough ? "none" : undefined }}
-        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface data-layered:border-transparent data-layered:bg-transparent data-layered:hover:outline-1 data-layered:hover:outline-dashed data-layered:hover:outline-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger data-[status=sold_out]:border-2 data-[status=sold_out]:border-danger data-[status=on_sale]:border-2 data-[status=on_sale]:border-info motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none data-held:transition-none data-leaving:pointer-events-none motion-safe:data-leaving:animate-tile-out"
+        className="absolute flex flex-col overflow-hidden rounded-md border border-line bg-surface data-layered:border-transparent data-layered:bg-transparent data-layered:hover:outline-1 data-layered:hover:outline-dashed data-layered:hover:outline-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink data-marked:ring-3 data-marked:ring-brand data-issue:border-2 data-issue:border-dashed data-issue:border-danger data-lifted:z-10 data-lifted:cursor-grab data-lifted:touch-none data-dragging:cursor-grabbing data-invalid:border-2 data-invalid:border-danger data-[status=sold_out]:border-2 data-[status=sold_out]:border-danger data-[status=on_sale]:border-2 data-[status=on_sale]:border-info data-[status=replaced]:border-2 data-[status=replaced]:border-ink data-[status=changed]:border-2 data-[status=changed]:border-ink data-[status=empty]:border-dashed data-[status=empty]:bg-transparent motion-safe:animate-fade-in motion-safe:transition-transform motion-safe:duration-(--duration-fast) motion-safe:ease-(--ease-out-soft) motion-safe:active:scale-[0.97] motion-safe:data-highlighted:animate-tile-pulse data-dragging:transition-none data-held:transition-none data-leaving:pointer-events-none motion-safe:data-leaving:animate-tile-out"
       >
         <span className={`min-h-0 w-full flex-1 ${passThrough ? "[&_img]:pointer-events-auto [&_path]:pointer-events-auto [&_rect]:pointer-events-auto" : ""}`}>
-          <ProductImage
-            productId={item.productId}
-            name={item.productName}
-            categoryName={item.categoryName}
-            imageKey={item.imageKey}
-            view={viewFor(item.presentation, block.side)}
-            swatch={item.swatch}
-            texture={item.texture}
-            colorWord={item.colorWord}
-            size="fill"
-            decorative
-            clear={layer !== null}
-          />
+          {mark === "empty" ? null : (
+            <ProductImage
+              productId={item.productId}
+              name={item.productName}
+              categoryName={item.categoryName}
+              imageKey={item.imageKey}
+              view={viewFor(item.presentation, block.side)}
+              swatch={item.swatch}
+              texture={item.texture}
+              colorWord={item.colorWord}
+              size="fill"
+              decorative
+              clear={layer !== null}
+            />
+          )}
         </span>
-        {/* An icon for hung or folded and the piece count, not "F 1" (UX audit U21); the words are in the label and on hover. */}
-        <span
-          aria-hidden="true"
-          data-count-badge
-          title={`${PRESENTATION_LABEL[item.presentation]} · ${item.pieceCount} ${item.pieceCount === 1 ? "piece" : "pieces"}`}
-          className="pointer-events-auto absolute top-1 right-1 inline-flex items-center gap-0.5 rounded bg-raised/90 px-1 text-xs text-ink"
-        >
-          {item.presentation === "hung" ? <Shirt strokeWidth={1.75} className="size-3" /> : <Layers strokeWidth={1.75} className="size-3" />}
-          {item.pieceCount}
-        </span>
+        <TileCount item={item} />
         {mark ? <TileStatusBadge mark={mark} /> : null}
         {issue ? <AlertTriangle aria-hidden="true" strokeWidth={2} className="absolute top-1 left-1 size-4 text-danger" /> : null}
         {named ? (

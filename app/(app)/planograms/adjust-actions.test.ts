@@ -16,6 +16,7 @@ const fake = vi.hoisted(() => {
     publishAdjustment: vi.fn(async () => ({ status: "saved" })),
     revertAdjustment: vi.fn(async () => ({ status: "saved" })),
     draftOf: vi.fn(async () => draft),
+    looksOfDraft: vi.fn(async () => ({})),
     suggestionsFor: vi.fn(async () => [{ productId: "p" }]),
     previewAdjustment: vi.fn(async () => ({ kind: "draft" })),
   };
@@ -23,7 +24,7 @@ const fake = vi.hoisted(() => {
 vi.mock("@/lib/current-member");
 vi.mock("@/lib/planograms/adjust-write", () => ({ openAdjustment: fake.openAdjustment, setChange: fake.setChange, discardAdjustment: fake.discardAdjustment }));
 vi.mock("@/lib/planograms/adjust-publish", () => ({ publishAdjustment: fake.publishAdjustment, revertAdjustment: fake.revertAdjustment }));
-vi.mock("@/lib/planograms/adjust-reads", () => ({ draftOf: fake.draftOf, suggestionsFor: fake.suggestionsFor, previewAdjustment: fake.previewAdjustment }));
+vi.mock("@/lib/planograms/adjust-reads", () => ({ draftOf: fake.draftOf, looksOfDraft: fake.looksOfDraft, suggestionsFor: fake.suggestionsFor, previewAdjustment: fake.previewAdjustment }));
 
 import type { Switch } from "@/lib/access/switches";
 import { guardFor, memberWith } from "@/lib/access/test-guard";
@@ -66,7 +67,7 @@ describe("planograms.draft", () => {
     expect(await openAdjustmentAction(f)).toEqual({ status: "forbidden", message: DRAFT, draft: null });
     nothingWritten();
     as("planograms.draft");
-    expect(await openAdjustmentAction(f)).toEqual({ status: "saved", draft: fake.draft });
+    expect(await openAdjustmentAction(f)).toEqual({ status: "saved", draft: fake.draft, looks: {} });
     expect(fake.openAdjustment).toHaveBeenCalledWith("store_a", f, "Test User");
   });
 
@@ -74,7 +75,7 @@ describe("planograms.draft", () => {
     expect(await setChangeAction(f, adj, target, replace, null)).toEqual({ status: "forbidden", message: DRAFT, draft: null });
     nothingWritten();
     as("planograms.draft");
-    expect(await setChangeAction(f, adj, target, replace, 3)).toEqual({ status: "saved", draft: fake.draft });
+    expect(await setChangeAction(f, adj, target, replace, 3)).toEqual({ status: "saved", draft: fake.draft, looks: {} });
     expect(fake.setChange).toHaveBeenCalledWith("store_a", f, adj, target, replace, 3);
   });
 

@@ -7,8 +7,9 @@ import { adjustedFloor, applyAdjustment, targetKey, type AdjustmentState, type T
 import { loadAdjustments, loadCandidates, productLook } from "./adjust-queries";
 import { suggestReplacements, type Suggestion } from "./adjust-suggest";
 import { diffPlacements, sortByFaceOrder, type FaceChanges } from "./diff";
+import { productLooks } from "./product-looks";
 import { loadPlanogram } from "./queries";
-import type { SnapshotEntry } from "./types";
+import type { ProductLook, SnapshotEntry } from "./types";
 import { scopeFor } from "./write-core";
 
 /** A suggestion as the screen needs it: the product, the footprint it would take and why it is listed. */
@@ -39,6 +40,9 @@ export type AdjustPreview = {
   changes: FaceChanges[];
   before: SnapshotEntry[];
   after: SnapshotEntry[];
+  /** What the two grids draw their products with, and who is still sold out on the floor after (a publish warns about them). */
+  looks: Record<string, ProductLook>;
+  soldOutAfter: string[];
 };
 
 /** Compare's data: the draft against its version, else the published adjustment against its version; null with neither. */
@@ -50,6 +54,8 @@ export async function previewAdjustment(storeId: string, fixtureId: string): Pro
   const adjustment = draft ?? published;
   if (!adjustment) return null;
   const after = adjustedFloor(latest, adjustment.changes);
+  const looks = await productLooks(storeId, [...latest.placements, ...after].map((e) => e.productId));
+  const soldOutAfter = [...new Set(after.filter((e) => looks[e.productId]?.status === "sold_out").map((e) => e.productName))];
   return {
     kind: adjustment.state,
     adjustmentId: adjustment.id,
@@ -58,6 +64,8 @@ export async function previewAdjustment(storeId: string, fixtureId: string): Pro
     changes: sortByFaceOrder(diffPlacements(latest.placements, after), scope.faces.map((f) => f.faceId)),
     before: latest.placements,
     after,
+    looks,
+    soldOutAfter,
   };
 }
 
@@ -66,3 +74,7 @@ export async function draftOf(storeId: string, fixtureId: string): Promise<Adjus
   const { row } = await loadPlanogram(storeId, fixtureId);
   return row ? (await loadAdjustments(storeId, row.id)).draft : null;
 }
+
+/** The look of every replacement product in a draft: what a tile needs to draw the choice (replies carry it with the draft). */
+export const looksOfDraft = (storeId: string, draft: AdjustmentState): Promise<Record<string, ProductLook>> =>
+  productLooks(storeId, draft.changes.flatMap((c) => (c.kind === "replace" ? [c.replacement.productId] : [])));

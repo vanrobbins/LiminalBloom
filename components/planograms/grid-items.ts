@@ -18,6 +18,8 @@ export type GridItem = Cells & {
   depth?: number;
   /** A published Quick Adjust put this product here: the monthly draft has the original, so this tile can't be moved or edited from the Published view. */
   adjusted?: true;
+  /** The Quick Adjust page only: this tile shows a replacement (with the product it replaces) or stands empty (with the product it was). */
+  adjust?: { kind: "replaced"; from: string } | { kind: "empty"; was: string } | { kind: "changed" };
 } & ProductLook;
 
 /**

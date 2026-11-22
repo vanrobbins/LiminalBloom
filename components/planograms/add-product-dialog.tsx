@@ -25,9 +25,12 @@ type AddProductDialogProps = {
   onCloseAutoFocus?: (event: Event) => void;
   /** Opened by a tap on empty space: it goes there if it can. */
   tapped?: boolean;
+  /** Quick Adjust's Search reuses this dialog: its own title and the line under it. */
+  title?: string;
+  hint?: string;
 };
 
-export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus, tapped = false }: AddProductDialogProps) {
+export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus, tapped = false, title = "Add product", hint }: AddProductDialogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProductFit[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +78,7 @@ export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus,
     else close(false);
   }
 
-  const where = tapped ? "It goes where you tapped, or the nearest open spot that fits." : "It goes to the first open spot that fits.";
+  const where = hint ?? (tapped ? "It goes where you tapped, or the nearest open spot that fits." : "It goes to the first open spot that fits.");
   const body = (
     <div className="flex flex-col gap-3">
       <Input label="Find a product" type="search" value={query} onChange={(e) => search(e.target.value)} autoFocus={!isPhone} />
@@ -105,7 +108,7 @@ export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus,
 
   if (isPhone) {
     return (
-      <BottomSheet open={open} onOpenChange={close} title="Add product" tall onCloseAutoFocus={onCloseAutoFocus}>
+      <BottomSheet open={open} onOpenChange={close} title={title} tall onCloseAutoFocus={onCloseAutoFocus}>
         <p className="mb-3 text-sm text-ink-muted">{where}</p>
         {body}
       </BottomSheet>
@@ -113,7 +116,7 @@ export function AddProductDialog({ open, onOpenChange, onPick, onCloseAutoFocus,
   }
 
   return (
-    <Dialog open={open} onOpenChange={close} title="Add product" description={where} onCloseAutoFocus={onCloseAutoFocus}>
+    <Dialog open={open} onOpenChange={close} title={title} description={where} onCloseAutoFocus={onCloseAutoFocus}>
       {body}
     </Dialog>
   );

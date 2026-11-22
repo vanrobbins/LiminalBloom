@@ -163,8 +163,17 @@ describe("previewAdjustment", () => {
     expect(preview?.changes.map((c) => [c.label, c.added.map((p) => p.productName), c.removed.map((p) => p.productName)])).toEqual([["Top", ["Slim Jean"], ["High-Rise Pant"]]]);
     expect(preview?.before.map((e) => e.productName)).toEqual(["High-Rise Pant"]);
     expect(preview?.after.map((e) => e.productName)).toEqual(["Slim Jean"]);
+    expect(Object.keys(preview?.looks ?? {}).sort()).toEqual([s.f.productId, s.slim].sort()); // what both grids draw with
+    expect(preview?.soldOutAfter).toEqual([]);
     const latest = (await loadPlanogram(s.store, s.f.fixtureId)).latest;
     expect(adjustedFloor(latest, draft.changes).map((e) => e.productName)).toEqual(["Slim Jean"]);
+  });
+
+  it("names the products still sold out on the floor after the adjustment, for the publish warning", async () => {
+    const { s } = await replaced("adjp-preview-sold");
+    expect((await previewAdjustment(s.store, s.f.fixtureId))?.soldOutAfter).toEqual([]);
+    await db.update(products).set({ status: "sold_out" }).where(eq(products.id, s.slim));
+    expect((await previewAdjustment(s.store, s.f.fixtureId))?.soldOutAfter).toEqual(["Slim Jean"]);
   });
 
   it("reads the published adjustment when there is no draft, and nothing when there is neither", async () => {

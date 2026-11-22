@@ -9,15 +9,16 @@ import { z } from "zod";
 import { requireSwitchForAction } from "@/lib/current-member";
 import type { AdjustmentState } from "@/lib/planograms/adjust";
 import { publishAdjustment, revertAdjustment } from "@/lib/planograms/adjust-publish";
-import { draftOf, previewAdjustment, suggestionsFor, type AdjustPreview, type SuggestionView } from "@/lib/planograms/adjust-reads";
+import { draftOf, looksOfDraft, previewAdjustment, suggestionsFor, type AdjustPreview, type SuggestionView } from "@/lib/planograms/adjust-reads";
 import { changeVersionInput, choiceInput, targetInput } from "@/lib/planograms/adjust-schemas";
 import { discardAdjustment, openAdjustment, setChange } from "@/lib/planograms/adjust-write";
 import { versionInput } from "@/lib/planograms/schemas";
+import type { ProductLook } from "@/lib/planograms/types";
 
 import type { DoneReply } from "./actions";
 
 export type AdjustReply =
-  | { status: "saved"; draft: AdjustmentState }
+  | { status: "saved"; draft: AdjustmentState; looks: Record<string, ProductLook> }
   | { status: "refused"; message: string; draft: AdjustmentState | null }
   | { status: "forbidden"; message: string; draft: null };
 
@@ -34,7 +35,7 @@ export async function openAdjustmentAction(fixtureId: string): Promise<AdjustRep
   const { activeStoreId, user } = check.member;
   if (!isId(fixtureId)) return { status: "refused", message: RELOAD, draft: null };
   const result = await openAdjustment(activeStoreId, fixtureId, user.name || user.email);
-  if (result.status === "saved") return { status: "saved", draft: result.draft };
+  if (result.status === "saved") return { status: "saved", draft: result.draft, looks: await looksOfDraft(activeStoreId, result.draft) };
   return { status: "refused", message: result.status === "not-found" ? "Publish a version before adjusting it." : CONFLICT, draft: null };
 }
 
@@ -48,7 +49,7 @@ export async function setChangeAction(fixtureId: string, adjustmentId: string, t
   if (!isId(fixtureId) || !isId(adjustmentId) || !ref.success || !pick.success || !version.success) return { status: "refused", message: RELOAD, draft: null };
   const result = await setChange(activeStoreId, fixtureId, adjustmentId, ref.data, pick.data, version.data);
   const draft = await draftOf(activeStoreId, fixtureId);
-  if (result.status === "saved" && draft) return { status: "saved", draft };
+  if (result.status === "saved" && draft) return { status: "saved", draft, looks: await looksOfDraft(activeStoreId, draft) };
   return { status: "refused", message: result.status === "invalid" ? result.message : result.status === "not-found" ? GONE : CONFLICT, draft };
 }
 
