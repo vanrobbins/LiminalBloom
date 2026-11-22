@@ -1,6 +1,6 @@
 // Roles and permissions (spec 0.7, 4.8 part 1): what each role can do, edited in
 // one staged batch. Needs `roles.manage`; anyone else goes to /no-access. Reached
-// from People ("Roles and permissions"); there is no nav entry.
+// from the Store panel ("Roles and permissions", 0.7.0.7); there is no nav entry.
 
 import { RolesScreen } from "@/components/roles/roles-screen";
 import { rolesViewFor } from "@/lib/access/roles-read";

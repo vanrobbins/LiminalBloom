@@ -10,7 +10,7 @@ import { Label } from "radix-ui";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { deleteRoleAction } from "@/app/(app)/roles/actions";
+import { deleteRoleAction } from "@/app/(app)/store/roles/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FIELD_CLASSES } from "@/components/ui/password-field";

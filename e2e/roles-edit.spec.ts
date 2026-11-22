@@ -151,7 +151,7 @@ test("a permission turned off takes effect on that person's next action, and the
   await rename.getByRole("button", { name: "Save name" }).click();
   await expect(rename.getByRole("status")).toHaveText("Your role can't do this anymore.");
   expect((await storedRoles()).map((r) => r.name)).toContain("Sales Associate");
-  await guest.page.goto("/roles");
+  await guest.page.goto("/store/roles");
   await expect(guest.page).toHaveURL(/\/no-access$/);
   await guest.context.close();
 });

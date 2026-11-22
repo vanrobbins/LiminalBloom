@@ -6,7 +6,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { removePersonAction } from "@/app/(app)/people/actions";
+import { removePersonAction } from "@/app/(app)/store/people-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import type { PersonRow } from "@/lib/access/people-view";

@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 
-import { moveRoleAction } from "@/app/(app)/roles/actions";
+import { moveRoleAction } from "@/app/(app)/store/roles/actions";
 import { nestingText } from "@/lib/access/nesting";
 import type { RoleRow } from "@/lib/access/roles-view";
 import { toast } from "@/lib/toast";

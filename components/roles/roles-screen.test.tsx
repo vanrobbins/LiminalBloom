@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({ saveSwitchesAction: vi.fn(), moveRoleAction: vi.fn(), renameRoleAction: vi.fn(), resetRoleAction: vi.fn(), deleteRoleAction: vi.fn(), createRoleAction: vi.fn() }));
-vi.mock("@/app/(app)/roles/actions", () => actions);
+vi.mock("@/app/(app)/store/roles/actions", () => actions);
 const routerMock = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => routerMock }));
 const toastMock = vi.hoisted(() => ({ toast: vi.fn() }));

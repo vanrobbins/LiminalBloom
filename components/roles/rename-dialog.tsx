@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { renameRoleAction } from "@/app/(app)/roles/actions";
+import { renameRoleAction } from "@/app/(app)/store/roles/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

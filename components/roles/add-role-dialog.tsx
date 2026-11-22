@@ -9,7 +9,7 @@ import { Label } from "radix-ui";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { createRoleAction } from "@/app/(app)/roles/actions";
+import { createRoleAction } from "@/app/(app)/store/roles/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

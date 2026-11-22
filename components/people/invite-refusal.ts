@@ -1,6 +1,6 @@
 // What the invite dialog says when the server refuses (spec 0.7, 4.8 part 5).
 
-import type { InviteResult } from "@/app/(app)/people/actions";
+import type { InviteResult } from "@/app/(app)/store/people-actions";
 import { MAX_INVITATIONS, MAX_PEOPLE } from "@/lib/access/invite-limits";
 
 export type InviteRefusal = Exclude<InviteResult, { status: "created" }> | { status: "forbidden" };
