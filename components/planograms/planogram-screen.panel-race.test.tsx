@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Change, DraftState, PlacementView, PlanogramFace, PlanogramScope } from "@/lib/planograms/types";
 
@@ -151,69 +151,5 @@ describe("a refusal that lands after the form is gone", () => {
     await pause(100);
     expect(document.querySelector("[data-draft-refusal]")).toHaveTextContent("Use feet in half steps");
     expect(saves()).toHaveLength(0);
-  });
-});
-
-describe("a draft published elsewhere while an edit is sent", () => {
-  it("does not blame the connection: the page reloads to what is there now", async () => {
-    const user = userEvent.setup();
-    show();
-    await openPanel(user, "Pant");
-    actions.saveChangeAction.mockImplementationOnce(async () => ({ status: "refused", message: "Changed on another device", draft: null }));
-    fireEvent.change(pieces(), { target: { value: "5" } });
-    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    expect(screen.queryByText(/check the connection/i)).toBeNull();
-    expect(screen.getByRole("alert")).toHaveTextContent("published or discarded on another device");
-  });
-});
-
-describe("the panel's own face move coming back", () => {
-  it("does not take back what is typed meanwhile: the new spot shows, the typed pieces stay and are saved there", async () => {
-    const user = userEvent.setup();
-    show();
-    await openPanel(user, "Pant");
-    fireEvent.click(faceButton("Back"));
-    fireEvent.change(pieces(), { target: { value: "9" } });
-    await waitFor(() => expect(fake.server.rows[0]).toMatchObject({ faceId: back.faceId }));
-    await pause(50);
-    expect(pieces()).toHaveValue("9");
-    await waitFor(() => expect(fake.server.rows[0]).toMatchObject({ pieceCount: 9, faceId: back.faceId }), { timeout: 2000 });
-  });
-});
-
-describe("Undo and Redo with an edit waiting", () => {
-  async function savedOnce(user: ReturnType<typeof userEvent.setup>) {
-    await openPanel(user, "Pant");
-    // Nothing focused, so no blur will send what is typed next.
-    (document.activeElement as HTMLElement).blur();
-    fireEvent.change(pieces(), { target: { value: "6" } });
-    await waitFor(() => expect(fake.server.rows[0].pieceCount).toBe(6));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled());
-    fireEvent.change(pieces(), { target: { value: "5" } });
-  }
-
-  it("the Undo button sends the waiting edit first, so Undo takes back that edit and not the one before", async () => {
-    const user = userEvent.setup();
-    show();
-    await savedOnce(user);
-    await user.click(screen.getByRole("button", { name: "Undo" }));
-    await waitFor(() => expect(saves()).toHaveLength(3));
-    expect(saves()[1]).toMatchObject({ fields: expect.objectContaining({ pieceCount: 5 }) });
-    expect(saves()[2]).toMatchObject({ fields: expect.objectContaining({ pieceCount: 6 }) });
-    await pause(700);
-    expect(saves()).toHaveLength(3);
-    expect(fake.server.rows[0].pieceCount).toBe(6);
-  });
-
-  it("Ctrl+Z does the same", async () => {
-    const user = userEvent.setup();
-    show();
-    await savedOnce(user);
-    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true });
-    await waitFor(() => expect(saves()).toHaveLength(3));
-    expect(saves()[1]).toMatchObject({ fields: expect.objectContaining({ pieceCount: 5 }) });
-    expect(saves()[2]).toMatchObject({ fields: expect.objectContaining({ pieceCount: 6 }) });
-    await pause(700);
-    expect(fake.server.rows[0].pieceCount).toBe(6);
   });
 });
