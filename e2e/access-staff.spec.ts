@@ -34,6 +34,7 @@ async function expectNamesOnly(page: Page) {
 
 /** Everything a role with only the status switches is turned away from, by page and by what the pages leave out. */
 async function expectNoManagement(page: Page) {
+  await expectRefused(page, "/store/roles");
   await expectRefused(page, "/roles");
   await expectRefused(page, "/products/new");
   await expectRefused(page, "/products/categories");

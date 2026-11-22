@@ -135,6 +135,7 @@ test.describe("Visual Merchandising Manager", () => {
     await openPeople(page);
     await expect(rolesLink(page)).toHaveCount(0);
     expect(await navLabels(page)).toEqual(NAV);
+    await expectRefused(page, "/store/roles");
     await expectRefused(page, "/roles");
     await page.goto("/store");
     await expect(page.getByText("Your role can't change these.")).toHaveCount(1);
