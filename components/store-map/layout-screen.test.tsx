@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { fixture, store } from "@/lib/layout/test-layouts";
+import { fixture, store, zone } from "@/lib/layout/test-layouts";
 
 import { EVERYTHING } from "@/lib/access/test-guard";
 import { LayoutScreen } from "./layout-screen";
@@ -30,5 +30,10 @@ describe("LayoutScreen", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.getByRole("button", { name: "Save and leave" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Add to the map" })).toBeNull();
+  });
+
+  it("hands the entry zone to the viewer", () => {
+    render(<LayoutScreen member={EVERYTHING} {...props} layout={{ ...store(), zones: [zone()], fixtures: [fixture()] }} initialZone="zone-a" />);
+    expect(screen.getByRole("button", { name: "Whole store" })).toBeInTheDocument();
   });
 });

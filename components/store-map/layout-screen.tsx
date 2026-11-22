@@ -29,6 +29,8 @@ type LayoutScreenProps = {
   fetchLatest: (storeId: string) => Promise<FetchReply>;
   /** Whose switches decide whether Edit shows; the server checks them again. */
   member: Holder;
+  /** From /layout?zone= (checked as an id by the page, as a zone of this map by the viewer). */
+  initialZone?: string;
 };
 
 /** Changes whenever the loaded layout does, so the viewer starts over from it after editing. */
@@ -39,7 +41,7 @@ function layoutKey(layout: Layout): string {
   return (hash >>> 0).toString(36);
 }
 
-export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest, member }: LayoutScreenProps) {
+export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLatest, member, initialZone }: LayoutScreenProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const key = useMemo(() => layoutKey(layout), [layout]);
@@ -75,7 +77,7 @@ export function LayoutScreen({ storeId, layout, planograms, looks, save, fetchLa
           ) : null
         }
       />
-      <MapViewer key={key} layout={layout} planograms={planograms} looks={looks} storeKey={storeId} />
+      <MapViewer key={`${key}:${initialZone ?? ""}`} layout={layout} planograms={planograms} looks={looks} storeKey={storeId} initialZone={initialZone} />
     </>
   );
 }

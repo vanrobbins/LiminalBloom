@@ -10,7 +10,7 @@
 "use client";
 
 import { ArrowLeft, List } from "lucide-react";
-import { useCallback, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import { OVERVIEW, hitTest } from "@/lib/layout/hit-test";
 import { createReducer } from "@/lib/layout/session";
 import { createSession } from "@/lib/layout/session-core";
+import { withoutParam } from "@/lib/url-params";
 import type { Layout } from "@/lib/layout/types";
 import type { FloorPlanogram, ProductLook } from "@/lib/planograms/types";
 
@@ -35,14 +36,24 @@ type MapViewerProps = {
   looks: Readonly<Record<string, ProductLook>>;
   /** Keys the list's remembered open zones (A1). */
   storeKey: string;
+  /** /layout?zone=: open focused on this zone if the map has it, else the whole store (the palette's Zone result). */
+  initialZone?: string;
 };
 
 const WIDE_QUERY = "(min-width: 1024px)";
 
-export function MapViewer({ layout, planograms, looks, storeKey }: MapViewerProps) {
+export function MapViewer({ layout, planograms, looks, storeKey, initialZone }: MapViewerProps) {
   // The viewer never makes new items, so its ids are never used.
   const reduce = useMemo(() => createReducer(() => crypto.randomUUID()), []);
-  const [session, dispatch] = useReducer(reduce, layout, (initial) => createSession(initial, true));
+  const [session, dispatch] = useReducer(reduce, layout, (initial) => {
+    const start = createSession(initial, true);
+    return initialZone && initial.zones.some((z) => z.id === initialZone) ? { ...start, focus: { kind: "zone" as const, id: initialZone } } : start;
+  });
+  // The param only opens the map: drop it so a refresh, or Whole store, behaves as it always did.
+  useEffect(() => {
+    const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "zone");
+    if (clean !== null) window.history.replaceState(null, "", clean);
+  }, []);
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const [listOpen, setListOpen] = useState(false);
