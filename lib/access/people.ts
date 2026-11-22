@@ -57,11 +57,28 @@ async function readRoles(storeId: string): Promise<RoleChoice[]> {
   return db.select({ id: roleDefinitions.id, name: roleDefinitions.name, rank: roleDefinitions.rank }).from(roleDefinitions).where(eq(roleDefinitions.storeId, storeId)).orderBy(asc(roleDefinitions.rank));
 }
 
+/** The store's pending invitations as People shows them. The caller decides whether the viewer may see them: this does not check people.manage. */
+export async function invitationRowsFor(viewer: Member, now: Date = new Date()): Promise<InvitationRow[]> {
+  const actor = actorOf(viewer);
+  const pending = await readInvitations(viewer.activeStoreId);
+  return pending.map((i) => {
+    const canAct = canActOn(actor, i.rank ?? NO_ROLE_RANK, "people.manage");
+    // The id is the invite link (/invite/<id>), so only someone who may act on the row is sent it.
+    return { id: canAct ? i.id : null, email: i.email, roleName: i.roleName ?? NO_ROLE_NAME, expiresAt: i.expiresAt.toISOString(), expired: i.expiresAt <= now, lapsed: i.lapsed, canAct, linkWorks: i.roleName !== null };
+  });
+}
+
+/** How many people are in the store. */
+export async function memberCount(storeId: string): Promise<number> {
+  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(member).where(eq(member.organizationId, storeId));
+  return row?.n ?? 0;
+}
+
 export async function peopleViewFor(viewer: Member, now: Date = new Date()): Promise<PeopleView> {
   const storeId = viewer.activeStoreId;
   const canManage = can(viewer, "people.manage");
   const actor = actorOf(viewer);
-  const [people, pending, roles] = await Promise.all([readPeople(storeId), canManage ? readInvitations(storeId) : [], canManage ? readRoles(storeId) : []]);
+  const [people, invitations, roles] = await Promise.all([readPeople(storeId), canManage ? invitationRowsFor(viewer, now) : [], canManage ? readRoles(storeId) : []]);
 
   const rows: PersonRow[] = people.map((p) => {
     const rank = p.rank ?? NO_ROLE_RANK;
@@ -78,11 +95,6 @@ export async function peopleViewFor(viewer: Member, now: Date = new Date()): Pro
     };
   });
   const managers = people.filter((p) => p.builtin === "store_manager");
-  const invitations: InvitationRow[] = pending.map((i) => {
-    const canAct = canActOn(actor, i.rank ?? NO_ROLE_RANK, "people.manage");
-    // The id is the invite link (/invite/<id>), so only someone who may act on the row is sent it.
-    return { id: canAct ? i.id : null, email: i.email, roleName: i.roleName ?? NO_ROLE_NAME, expiresAt: i.expiresAt.toISOString(), expired: i.expiresAt <= now, lapsed: i.lapsed, canAct, linkWorks: i.roleName !== null };
-  });
 
   return {
     canManage,

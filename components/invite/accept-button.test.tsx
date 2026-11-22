@@ -22,7 +22,7 @@ describe("AcceptButton", () => {
     mocks.accept.mockResolvedValue({ status: "accepted", storeName: "Spring Street", roleName: "Sales Associate" });
     await click();
     expect(mocks.accept).toHaveBeenCalledWith("inv-1");
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/products"));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/home"));
     expect(mocks.refresh).toHaveBeenCalled();
     expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "success", title: "Joined Spring Street as Sales Associate" }));
     expect(screen.getByRole("button", { name: /Joining…/ })).toBeDisabled();

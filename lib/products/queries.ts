@@ -79,7 +79,7 @@ function toRow({ imagePath, ...rest }: Omit<ProductRow, "imageKey"> & { imagePat
 const located = (where: SQL) =>
   sql`exists (select 1 from ${productLocations} where ${productLocations.productId} = ${products.id} and ${where})`;
 
-function placeCondition(place: Place): SQL {
+export function placeCondition(place: Place): SQL {
   if (place === "floor") return located(sql`${productLocations.faceId} is not null`);
   if (place === "stockroom") return located(sql`${productLocations.binId} is not null`);
   return sql`not ${located(sql`true`)}`;

@@ -86,7 +86,7 @@ test("marks the current page, in gold", async ({ page }) => {
   const current = mainNav(page).getByRole("link", { name: "Products" });
 
   await expect(current).toHaveAttribute("aria-current", "page");
-  await expect(mainNav(page).getByRole("link", { name: "Account" })).not.toHaveAttribute(
+  await expect(mainNav(page).getByRole("link", { name: "Layout" })).not.toHaveAttribute(
     "aria-current",
     "page",
   );

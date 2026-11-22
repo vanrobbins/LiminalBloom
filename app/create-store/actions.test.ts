@@ -75,7 +75,7 @@ describe("createStore", () => {
   it("gives the new store the time zone its creator chose", async () => {
     const { storeId } = await createdStore();
     await expect(createStore(null, form("Pioneer Place", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
-    expect(mocks.redirect).toHaveBeenCalledWith("/products");
+    expect(mocks.redirect).toHaveBeenCalledWith("/home");
     expect(await storeSettingsFor(storeId)).toEqual({ timezone: "America/Denver", version: 2 });
   });
 
@@ -107,7 +107,7 @@ describe("createStore", () => {
     try {
       await expect(createStore(null, form("Clackamas", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
       expect(mocks.setActiveOrganization).toHaveBeenCalled();
-      expect(mocks.redirect).toHaveBeenCalledWith("/products");
+      expect(mocks.redirect).toHaveBeenCalledWith("/home");
       expect(mocks.createOrganization).toHaveBeenCalledTimes(1);
       expect(logged).toHaveBeenCalledWith("create-store: time zone not saved", storeId, settings.fail);
     } finally {

@@ -55,7 +55,21 @@ test("a tee dragged partly onto a pant hangs behind it, clicks where it shows, m
   // Select the pant from its card (the selected tee lies over it), then the tee by its badge, which shows in the offset strip.
   await page.locator("[data-card]").filter({ hasText: "E2E High-Rise Pant" }).click();
   await expect(pant).toHaveAttribute("aria-pressed", "true");
-  await tee.locator("[data-count-badge]").click();
+  // The pant's trash disc may cover part of the badge, so click a point of it that the page's hit test gives the badge.
+  const badge = tee.locator("[data-count-badge]");
+  await expect(badge).toBeVisible();
+  const spot = await badge.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    for (let dx = 2; dx < r.width; dx += 2) {
+      for (let dy = 2; dy < r.height; dy += 2) {
+        const hit = document.elementFromPoint(r.left + dx, r.top + dy);
+        if (hit && el.contains(hit)) return { x: dx, y: dy };
+      }
+    }
+    return null;
+  });
+  expect(spot, "some part of the tee's badge shows").not.toBeNull();
+  await badge.click({ position: spot! });
   await expect(tee).toHaveAttribute("aria-pressed", "true");
 
   await page.keyboard.press("Alt+ArrowUp");

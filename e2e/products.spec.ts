@@ -82,12 +82,12 @@ test("an unmatched search says so", async ({ page }) => {
   await expect(page.getByText("No products match “zzqqxx”.")).toBeVisible();
 });
 
-test("Products is the first bottom tab on phones, and opens ready to type", async ({ page }) => {
+test("Products is the second bottom tab on phones, after Home, and opens ready to type", async ({ page }) => {
   test.skip(sizeOf(test.info()) !== "phone", "Tabs are the phone's navigation.");
   await page.goto("/layout");
   const tabs = page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link");
-  await expect(tabs).toHaveText(["Products", "Layout", "Planograms", "People", "Account"]);
-  await tabs.first().click();
+  await expect(tabs).toHaveText(["Home", "Products", "Layout", "Planograms", "People"]);
+  await tabs.nth(1).click();
   await expect(page).toHaveURL(/\/products$/);
   await expect(searchBox(page)).toBeFocused();
 });

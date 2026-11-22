@@ -50,9 +50,9 @@ export function SignInForm({ next }: { next: string | null }) {
       return;
     }
 
-    // Still "Signing in…" until /products replaces this page. Clearing it
+    // Still "Signing in…" until /home replaces this page. Clearing it
     // here left an idle button for the second the server took to render.
-    router.push(safeReturnPath(next) ?? "/products");
+    router.push(safeReturnPath(next) ?? "/home");
     router.refresh();
   }
 

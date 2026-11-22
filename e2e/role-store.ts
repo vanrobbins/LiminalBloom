@@ -1,6 +1,6 @@
 // The shared store the per-role accounts work in (test-account.ts: ROLE_STORE). Setup creates it with the
 // Store Manager account, adds the other four people to it, and gives it a product for each worker to change
-// the status of, and a waiting invitation, so a role that must not see invitations has one to not see.
+// the status of, a waiting invitation and its access event, so a role that must not see invitations has one to not see.
 // Rows are written straight to the development database as the owner, because setup is not what is being tested.
 
 import { randomUUID } from "node:crypto";
@@ -36,7 +36,7 @@ export const roleProduct = (worker: number) => ({ name: `E2E Role Tee ${worker}`
 
 export const INVITED = "pending.person@example.test";
 
-/** The store's products and its one waiting invitation, made fresh. */
+/** The store's products, its one waiting invitation and the access event for it, made fresh. */
 export async function seedRoleStore(store: string): Promise<void> {
   const db = sql();
   await db`delete from product_categories where store_id = ${store} and name = 'E2E Roles'`;
@@ -52,6 +52,11 @@ export async function seedRoleStore(store: string): Promise<void> {
     values (${randomUUID()}, ${store}, ${INVITED}, 'member', 'pending', ${expiresAt},
       (select id from "user" where email = ${roleAccount("store_manager").email}),
       (select id from role_definitions where store_id = ${store} and builtin = 'sales_associate'))`;
+  // The Store Manager's invitation as Recent changes words it (Home's card for roles.manage), made fresh like the rest.
+  await db`delete from access_events where store_id = ${store} and event = 'invitation_created' and detail->>'email' = ${INVITED}`;
+  await db`insert into access_events (store_id, actor_id, actor_name, event, detail)
+    values (${store}, (select id from "user" where email = ${roleAccount("store_manager").email}), ${roleAccount("store_manager").name}, 'invitation_created',
+      ${JSON.stringify({ email: INVITED, role: "Sales Associate" })}::jsonb)`;
 }
 
 /** Puts a worker's product back in stock, for a test that changed it. */

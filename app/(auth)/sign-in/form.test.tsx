@@ -26,7 +26,7 @@ describe("SignInForm", () => {
   it("stays on Signing in… while the next page loads", async () => {
     mocks.email.mockResolvedValue({ error: null });
     await submit();
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
     expect(mocks.refresh).toHaveBeenCalled();
     // No "Opened <store>" notice any more, so no flag is left for it.
     expect(sessionStorage.getItem("liminal:signed-in")).toBeNull();
@@ -64,7 +64,7 @@ describe("SignInForm", () => {
   it("ignores a return path that leaves the site", async () => {
     mocks.email.mockResolvedValue({ error: null });
     await submit("//evil.example/x");
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/products"));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
   });
 
   it("offers Keep me signed in, off until ticked", () => {
