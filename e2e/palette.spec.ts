@@ -133,3 +133,57 @@ test("Ctrl+K does not open over an open delete dialog", async ({ page }) => {
   await expect(paletteDialog(page)).toHaveCount(0);
   await expect(confirm).toBeVisible();
 });
+
+// Moved here from tooltips.spec.ts: the palette's own triggers.
+test("the Search icon is a 44 px square named by its aria-label (the desktop sidebar's has a word and a hint)", async ({ page }) => {
+  test.skip(desktop(), "The desktop sidebar's Search has a word and a shortcut hint.");
+  await page.goto("/account");
+  await hydrated(page);
+  const search = page.getByRole("button", { name: "Search", exact: true }).filter({ visible: true });
+  await expect(search).toHaveText("");
+  const box = (await search.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(43.5);
+  expect(box.height).toBeGreaterThanOrEqual(43.5);
+});
+
+test("the rail's Search icon shows its name on hover, as a mouse on a tablet-wide window sees it", async ({ page }) => {
+  test.skip(!desktop(), "Hover is the desktop's.");
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.goto("/account");
+  await hydrated(page);
+  await page.getByRole("button", { name: "Search", exact: true }).filter({ visible: true }).hover();
+  await expect(page.getByRole("tooltip", { name: "Search" })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.mouse.move(5, 5);
+  await page.mouse.move(page.viewportSize()!.width - 5, 5);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
+
+test("while the map editor is open on /layout the Search triggers are gone and the shortcuts do nothing", async ({ page }) => {
+  await page.goto("/layout");
+  await hydrated(page);
+  await expect(searchTrigger(page)).toHaveCount(1);
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("button", { name: "Save and leave" })).toBeVisible();
+  await expect(searchTrigger(page)).toHaveCount(0);
+  if (desktop()) {
+    await page.keyboard.press("Control+K");
+    await page.keyboard.press("/");
+    await expect(paletteDialog(page)).toHaveCount(0);
+  }
+  await page.getByRole("button", { name: "Save and leave" }).click();
+  await expect(searchTrigger(page)).toHaveCount(1);
+});
+
+test("the field's placeholder fits on one line at every size, down to a 360 px phone", async ({ page }) => {
+  if (sizeOf(test.info()) === "phone") await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/account");
+  await openPalette(page);
+  const spare = await paletteField(page).evaluate((input: HTMLInputElement) => {
+    const style = getComputedStyle(input);
+    const canvas = document.createElement("canvas").getContext("2d")!;
+    canvas.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    return input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - canvas.measureText(input.placeholder).width;
+  });
+  expect(spare).toBeGreaterThanOrEqual(0);
+});

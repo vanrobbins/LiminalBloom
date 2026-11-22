@@ -102,6 +102,25 @@ describe("usePaletteData: products", () => {
     expect(result.current.searching).toBe(true);
   });
 
+  it("the 300 ms wait applies again after an answer: asking for a query already shown slow once does not flash the row", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (!isProducts(url)) return reply(index);
+      // "navy" alone is slow; everything else answers at once.
+      return String(url).endsWith("q=navy") ? new Promise((resolve) => setTimeout(() => resolve(reply(found)), 400)) : reply(found);
+    });
+    const { result, rerender } = setup({ open: true, query: "navy", storeId: "s1" });
+    await settle(400);
+    expect(result.current.searching).toBe(true);
+    await settle(400);
+    expect(result.current.state).toBe("ready");
+    rerender({ open: true, query: "navy x", storeId: "s1" });
+    await settle(200);
+    expect(result.current.state).toBe("ready");
+    rerender({ open: true, query: "navy", storeId: "s1" });
+    expect(result.current.state).toBe("loading");
+    expect(result.current.searching).toBe(false);
+  });
+
   it("a failed search is an error state, not a thrown one", async () => {
     fetchMock.mockImplementation((url: string) => (isProducts(url) ? Promise.reject(new TypeError("offline")) : reply(index)));
     const { result } = setup({ open: true, query: "navy", storeId: "s1" });

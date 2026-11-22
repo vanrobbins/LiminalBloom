@@ -64,6 +64,16 @@ describe("recent picks", () => {
     expect(readRecent("u1", "s1", s)).toEqual([]);
   });
 
+  it("drops stored picks whose address is not a path on this site (storage can be edited)", () => {
+    const s = memory();
+    for (const href of ["https://evil.example/x", "//evil.example/x", "javascript:alert(1)", "products"]) {
+      s.setItem("liminal-bloom:palette-recent:u1:s1", JSON.stringify([{ ...pick(1), href }]));
+      expect(readRecent("u1", "s1", s)).toEqual([]);
+    }
+    s.setItem("liminal-bloom:palette-recent:u1:s1", JSON.stringify([{ ...pick(1), href: "/products?q=a&open=b" }]));
+    expect(readRecent("u1", "s1", s)).toHaveLength(1);
+  });
+
   it("clears every person's and store's picks on sign-out, and nothing else", () => {
     const s = memory();
     pushRecent("u1", "s1", pick(1), s);

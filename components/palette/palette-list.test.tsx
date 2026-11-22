@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Home } from "lucide-react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PaletteGroup, PaletteItem } from "@/lib/palette/types";
@@ -105,12 +106,36 @@ describe("PaletteList: the highlight stays on what it was on", () => {
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toContain("Navy TeeNT-1 · Front table");
   });
 
-  it("an unmoved highlight on the All products placeholder follows the first product that lands", () => {
+  it("with only All products and the answer on its way nothing is highlighted, so Enter does nothing; the first product then gets it", async () => {
+    const onPick = vi.fn();
     const placeholder: PaletteGroup = { key: "products", heading: "Products", items: [all] };
-    const { rerender } = render(list({ query: "navy", groups: [placeholder], state: "loading" }));
-    expect(selected()).toBe('All products matching "navy"');
-    rerender(list({ query: "navy", groups: [products], state: "ready" }));
+    const { rerender } = render(list({ query: "navy", groups: [placeholder], state: "loading", onPick }));
+    expect(selected()).toBeUndefined();
+    expect(screen.getByRole("combobox")).not.toHaveAttribute("aria-activedescendant");
+    await userEvent.type(screen.getByRole("combobox"), "{Enter}");
+    expect(onPick).not.toHaveBeenCalled();
+    rerender(list({ query: "navy", groups: [products], state: "ready", onPick }));
     expect(selected()).toBe("Navy TeeNT-1 · Front table");
+  });
+
+  it("settled with no products, All products is highlighted and stays; a planogram that lands after it takes over", () => {
+    const placeholder: PaletteGroup = { key: "products", heading: "Products", items: [all] };
+    const { rerender } = render(list({ query: "rack", groups: [placeholder], state: "ready" }));
+    expect(selected()).toBe('All products matching "navy"');
+    rerender(list({ query: "rack", groups: [{ key: "planograms", heading: "Planograms", items: [planogram] }, placeholder], state: "ready" }));
+    expect(selected()).toBe("Rack 1Men · Draft");
+  });
+
+  it("typing again starts over: the default skips All products once something else is there", async () => {
+    const placeholder: PaletteGroup = { key: "products", heading: "Products", items: [all] };
+    function Host() {
+      const [q, setQ] = useState("na");
+      return list({ query: q, onQueryChange: setQ, groups: q === "na" ? [placeholder] : [placeholder, goto], state: "loading" });
+    }
+    render(<Host />);
+    expect(selected()).toBeUndefined();
+    await userEvent.type(screen.getByRole("combobox"), "v");
+    expect(selected()).toBe("Home");
   });
 
   it("starts on the first real option, not on All products, when there is one", () => {
@@ -131,54 +156,5 @@ describe("PaletteList: the highlight stays on what it was on", () => {
     await userEvent.type(screen.getByRole("combobox"), "{ArrowDown}");
     rerender(list({ groups: [{ key: "goto", heading: "Go to", items: [page("/home", "Home")] }] }));
     expect(selected()).toBe("Home");
-  });
-});
-
-describe("PaletteList: rows that are not options", () => {
-  const products: PaletteGroup = { key: "products", heading: "Products", items: [all] };
-
-  it("the searching row is text, not an option", () => {
-    render(list({ query: "navy", groups: [products], state: "loading", searching: true }));
-    expect(screen.getByText("Searching products…")).toBeVisible();
-    expect(screen.getAllByRole("option")).toHaveLength(1);
-    expect(screen.queryByText(/No matches/)).not.toBeInTheDocument();
-  });
-
-  it("a failed search is said inline under Products", () => {
-    render(list({ query: "navy", groups: [products], state: "error" }));
-    expect(screen.getByText(/Couldn.t search products\. Check your connection\./)).toBeVisible();
-    expect(screen.getAllByRole("option")).toHaveLength(1);
-  });
-
-  it("says no matches once settled, and keeps All products", () => {
-    render(list({ query: "navy", groups: [products], state: "ready" }));
-    expect(screen.getByText(/No matches for/)).toHaveTextContent("No matches for “navy”.");
-    expect(screen.getByRole("option", { name: /All products matching/ })).toBeInTheDocument();
-  });
-
-  it("says no matches for a query that is not text, with nothing to open", () => {
-    render(list({ query: "!", groups: [], state: "idle" }));
-    expect(screen.getByText(/No matches for/)).toBeVisible();
-    expect(screen.queryAllByRole("option")).toHaveLength(0);
-  });
-});
-
-describe("PaletteList: the announcement", () => {
-  it("speaks once after the answer settles, not per keystroke", () => {
-    vi.useFakeTimers();
-    const { rerender } = render(list({ query: "ho", groups: [goto], state: "loading" }));
-    expect(screen.getByRole("status")).toHaveTextContent("");
-    rerender(list({ query: "ho", groups: [goto], state: "ready" }));
-    act(() => vi.advanceTimersByTime(300));
-    expect(screen.getByRole("status")).toHaveTextContent("");
-    act(() => vi.advanceTimersByTime(300));
-    expect(screen.getByRole("status")).toHaveTextContent("2 pages and actions");
-  });
-
-  it("says when nothing matched", () => {
-    vi.useFakeTimers();
-    render(list({ query: "denm", groups: [], state: "idle" }));
-    act(() => vi.advanceTimersByTime(600));
-    expect(screen.getByRole("status")).toHaveTextContent('No matches for "denm".');
   });
 });

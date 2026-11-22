@@ -66,7 +66,11 @@ export function usePaletteData({ open, query, storeId, onUnauthorized }: Params)
       const found = await getJson(`/api/palette/products?${new URLSearchParams({ q })}`, productsSchema, abort.signal);
       if (abort.signal.aborted) return;
       if (found === "unauthorized") unauthorized.current();
-      else setAnswer({ key, products: found });
+      else {
+        setAnswer({ key, products: found });
+        // Asked for again later, the searching row waits its 300 ms afresh.
+        setSlowKey(null);
+      }
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(slow);

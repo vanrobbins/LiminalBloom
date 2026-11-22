@@ -74,6 +74,13 @@ describe("SearchScreen initialOpenId", () => {
     expect(here()).toBe("/products?q=p");
   });
 
+  it("opening another card drops the old open from the address", async () => {
+    renderScreen("p2");
+    await userEvent.setup().click(screen.getByRole("button", { name: /High-Rise Pant/ }));
+    expect(screen.getByRole("complementary", { name: /High-Rise Pant/ })).toBeInTheDocument();
+    expect(here()).toBe("/products?q=p");
+  });
+
   it("typing drops open from the address and never writes it", async () => {
     renderScreen("p2");
     await userEvent.setup().type(screen.getByRole("searchbox", { name: "Search products" }), "a");

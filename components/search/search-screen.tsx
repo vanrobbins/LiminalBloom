@@ -97,11 +97,20 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
   if (openId !== null && open === null) setOpenId(null);
   const clear = () => update({ categoryIds: [], colors: [], statuses: [], places: [] });
 
-  function close() {
-    setOpenId(null);
-    // The address no longer names an open product.
+  // The address no longer names an open product (it did only for the palette's entry link).
+  function dropOpenParam() {
     const clean = withoutParam(window.location.pathname + window.location.search + window.location.hash, "open", "n");
     if (clean !== null) window.history.replaceState(null, "", clean);
+  }
+
+  function openCard(id: string) {
+    setOpenId(id);
+    dropOpenParam();
+  }
+
+  function close() {
+    setOpenId(null);
+    dropOpenParam();
     // The phone's sheet is a dialog and gives focus back itself; the side panel
     // is not, so focus goes back to the card it came from.
     if (!isPhone && openId) document.querySelector<HTMLElement>(`[data-result-id="${openId}"]`)?.focus();
@@ -125,7 +134,7 @@ export function SearchScreen({ initial, initialResults, categories, colors, layo
           openId={open?.id ?? null}
           query={input.q}
           hasFilters={hasFilters(input)}
-          onOpen={setOpenId}
+          onOpen={openCard}
           onClear={clear}
           onDeleted={isDesktop && can(member, "products.edit") ? removeProduct : undefined}
           isCatalogEmpty={isCatalogEmpty && results.length === 0 && total === 0}

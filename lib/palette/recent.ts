@@ -16,7 +16,8 @@ const pickSchema = z.object({
   kind: z.enum(["planogram", "zone", "product", "page", "action"]),
   label: z.string().max(200),
   second: z.string().max(200).optional(),
-  href: z.string().max(300),
+  // Storage can be edited: only a path on this site is ever navigated to (not //host, a scheme or a bare word).
+  href: z.string().max(300).regex(/^\/(?!\/)/),
 });
 
 function browserStorage(): Storage | null {

@@ -20,11 +20,6 @@ import type { ProductsState } from "./use-palette-data";
 const ANNOUNCE_MS = 500;
 const MAX_QUERY = 80;
 
-/** The highlight: the pinned id if still listed. One nobody moved that sits on the "All products" row (it was all there was) gives way to the first real option once there is one. */
-function resolveActive(pinned: string | null, moved: boolean, options: readonly PaletteItem[]): string | null {
-  return pinned === ALL_PRODUCTS_ID && !moved ? keepActive(null, options) : keepActive(pinned, options);
-}
-
 type PaletteListProps = {
   query: string;
   onQueryChange: (query: string) => void;
@@ -34,20 +29,39 @@ type PaletteListProps = {
   onClose: () => void;
 };
 
+/**
+ * The highlight: the pinned id while it is listed, else the first option, skipping "All products" (typing "store" wants the
+ * Store page). While the product answer is on its way and "All products" is all there is, nothing is highlighted: it is
+ * never shown highlighted just to jump to the first product when the answer lands, so Enter can't open a row that
+ * slid in. Once settled it is highlighted and stays. A planogram, zone or page matched in the browser (the index can land
+ * late) is what the person typed for, so an unmoved highlight on "All products" gives way to the first of those.
+ */
+function resolveActive(pinned: string | null, moved: boolean, options: readonly PaletteItem[], waiting: boolean): string | null {
+  if (pinned === ALL_PRODUCTS_ID && !moved) {
+    const instant = options.find((o) => o.kind !== "all-products" && o.kind !== "product");
+    if (instant) return instant.id;
+  }
+  if (waiting && !moved && options.every((o) => o.kind === "all-products")) return null;
+  return keepActive(pinned, options);
+}
+
 export function PaletteList({ query, onQueryChange, groups, products, onPick, onClose }: PaletteListProps) {
   const base = useId();
   const options = groups.flatMap((g) => g.items);
   const [pinned, setPinned] = useState<string | null>(null);
   const [moved, setMoved] = useState(false);
-  const active = resolveActive(pinned, moved, options);
+  const active = resolveActive(pinned, moved, options, products.state === "loading");
   // Adjusting state while rendering is the pattern React documents for following changed data.
   if (active !== pinned) setPinned(active);
   const activeIndex = options.findIndex((o) => o.id === active);
-  const optionId = (i: number) => `${base}-option-${i}`;
+  // From the item, not its position: a different item at the same position is a different descendant.
+  const optionId = (item: PaletteItem) => `${base}-option-${encodeURIComponent(item.id)}`;
 
   useEffect(() => {
-    if (activeIndex >= 0) document.getElementById(`${base}-option-${activeIndex}`)?.scrollIntoView?.({ block: "nearest" });
-  }, [base, activeIndex]);
+    if (activeIndex >= 0) document.getElementById(optionId(options[activeIndex]))?.scrollIntoView?.({ block: "nearest" });
+    // optionId and options are rebuilt every render; the highlighted row (by id) is what matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, active]);
 
   const [spoken, say] = useAnnouncement();
   const message = products.state !== "loading" && query.trim() ? describeResults(groups, query) : "";
@@ -66,7 +80,8 @@ export function PaletteList({ query, onQueryChange, groups, products, onPick, on
 
   function onKeyDown(event: React.KeyboardEvent) {
     // Keys while an IME is composing belong to the IME (Enter confirms a candidate, arrows move through them).
-    if (event.nativeEvent.isComposing) return;
+    // Safari reports the Enter that confirms a candidate as keyCode 229 with isComposing already false.
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       moveTo(activeIndex + (event.key === "ArrowDown" ? 1 : -1));
@@ -80,8 +95,6 @@ export function PaletteList({ query, onQueryChange, groups, products, onPick, on
   }
 
   const noMatches = query.trim() !== "" && products.state !== "loading" && options.every((o) => o.kind === "all-products");
-  // Each group's first option sits after the options of the groups before it.
-  const starts = groups.map((_, g) => groups.slice(0, g).reduce((n, prev) => n + prev.items.length, 0));
   return (
     <>
       <div className="flex items-center gap-2 border-b border-line-subtle px-3 py-2">
@@ -92,7 +105,7 @@ export function PaletteList({ query, onQueryChange, groups, products, onPick, on
           aria-label="Search products, planograms, zones and pages"
           aria-expanded="true"
           aria-controls={`${base}-list`}
-          aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
+          aria-activedescendant={activeIndex >= 0 ? optionId(options[activeIndex]) : undefined}
           aria-autocomplete="list"
           value={query}
           onChange={(event) => {
@@ -101,7 +114,7 @@ export function PaletteList({ query, onQueryChange, groups, products, onPick, on
             setMoved(false);
           }}
           onKeyDown={onKeyDown}
-          placeholder="Find a product, planogram, zone or page"
+          placeholder="Find a product, zone or page"
           maxLength={MAX_QUERY}
           autoComplete="off"
           autoCapitalize="off"
@@ -116,22 +129,16 @@ export function PaletteList({ query, onQueryChange, groups, products, onPick, on
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
         {noMatches ? <p className="px-3 py-2 text-sm text-ink-muted">No matches for &ldquo;{query.trim()}&rdquo;.</p> : null}
         <div id={`${base}-list`} role="listbox" aria-label="Results" className="flex flex-col">
-          {groups.map((g, gi) => (
+          {groups.map((g) => (
             <div key={g.key} role="group" aria-labelledby={`${base}-${g.key}`}>
               <div id={`${base}-${g.key}`} role="presentation" className="px-3 pt-2 pb-1 text-xs font-medium text-ink-muted">
                 {g.heading}
               </div>
-              {g.key === "products" && products.searching ? (
-                <div role="presentation" className="px-3 py-2 text-sm text-ink-muted">Searching products…</div>
-              ) : null}
-              {g.key === "products" && products.state === "error" ? (
-                <div role="presentation" className="px-3 py-2 text-sm text-ink-muted">Couldn&rsquo;t search products. Check your connection.</div>
-              ) : null}
-              {g.items.map((item, i) => (
+              {g.items.map((item) => (
                 <PaletteRow
                   key={item.id}
                   item={item}
-                  id={optionId(starts[gi] + i)}
+                  id={optionId(item)}
                   active={item.id === active}
                   onPick={onPick}
                   onHover={() => {
@@ -143,6 +150,9 @@ export function PaletteList({ query, onQueryChange, groups, products, onPick, on
             </div>
           ))}
         </div>
+        {/* Status, not options: outside the listbox, after what is already there (products are appended last). */}
+        {products.searching ? <p className="px-3 py-2 text-sm text-ink-muted">Searching products…</p> : null}
+        {products.state === "error" ? <p className="px-3 py-2 text-sm text-ink-muted">Couldn&rsquo;t search products. Check your connection.</p> : null}
       </div>
       <p className="hidden border-t border-line-subtle px-4 py-2 text-xs text-ink-muted lg:block">↑ ↓ to move · Enter to open · Esc to close</p>
       <p role="status" aria-live="polite" className="sr-only">
