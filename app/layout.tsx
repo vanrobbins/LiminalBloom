@@ -1,16 +1,21 @@
 import type { Metadata } from "next";
-import { DM_Mono, DM_Sans } from "next/font/google";
+import { DM_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
-// Downloaded at build time and served from this app's own domain, so a
-// visitor's browser never contacts Google. DM Sans is a variable font and
-// ships every weight in one file; DM Mono is not, so it names its weights.
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
+// Allo (Josh Puckett, SIL OFL 1.1, license beside the file) is the app's typeface:
+// the variable "Friendly" cut, every weight in one file, its optical size following
+// the font size. Self-hosted, as every font here is: DM Mono is downloaded at build
+// time and served from this app's own domain, so a browser never contacts Google.
+// DM Mono is not variable, so it names its weights.
+const allo = localFont({
+  src: "./fonts/AlloVariableFriendly.woff2",
+  variable: "--font-allo",
+  weight: "100 900",
+  display: "swap",
 });
 
 const dmMono = DM_Mono({
@@ -33,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}
+      className={`${allo.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
