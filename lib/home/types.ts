@@ -11,7 +11,8 @@ export type SetupRow = { key: "layout" | "product" | "team"; label: string; href
 
 /** A planogram on card 2. `overdue` is a due date before the store's today. */
 export type PlanogramWorkRow = ListItem & { overdue: boolean };
-export type PlanogramWork = { rows: PlanogramWorkRow[]; total: number };
+/** `today` is the store's date the overdue flags were judged against; the card needs it for `DueBadge`. */
+export type PlanogramWork = { rows: PlanogramWorkRow[]; total: number; today: string };
 
 /** A pending invitation on card 3 (`id` is the invite link, so null unless the viewer may act on it, as on People). `state` carries the People card's words: Expires / Expired / Lapsed. */
 export type InvitationRow = { id: string | null; email: string; roleName: string; state: "pending" | "expired" | "lapsed"; expiresAt: Date };

@@ -74,7 +74,7 @@ describe("readsFor", () => {
 describe("shownCards", () => {
   const full: HomeData = {
     setup: [{ key: "layout", label: "Draw the store layout", href: "/layout/edit" }],
-    planograms: { rows: [{ fixtureId: "a", name: "A", typeLabel: "Rack", publishedVersion: null, publishedAt: null, hasDraft: true, dueDate: null, overdue: false }], total: 1 },
+    planograms: { rows: [{ fixtureId: "a", name: "A", typeLabel: "Rack", publishedVersion: null, publishedAt: null, hasDraft: true, dueDate: null, overdue: false }], total: 1, today: "2026-11-16" },
     invitations: [{ id: "i", email: "a@b.c", roleName: "VM Worker", state: "pending", expiresAt: new Date(0) }],
     notPlaced: { products: 2, fixtures: 0 },
     published: [{ fixtureId: "a", fixtureName: "A", version: 1, publisherName: "Pat", publishedAt: new Date(0) }],
@@ -86,7 +86,7 @@ describe("shownCards", () => {
     expect(shownCards(roleHolder("vm_worker"), full)).toEqual(["planograms", "notPlaced", "published"]);
   });
   it("hides empty cards and cards with no data", () => {
-    const data: HomeData = { ...full, setup: [], planograms: { rows: [], total: 0 }, invitations: undefined, notPlaced: { products: 0, fixtures: 0 }, changes: [] };
+    const data: HomeData = { ...full, setup: [], planograms: { rows: [], total: 0, today: "2026-11-16" }, invitations: undefined, notPlaced: { products: 0, fixtures: 0 }, changes: [] };
     expect(shownCards(roleHolder("store_manager"), data)).toEqual(["published"]);
   });
   it("shows Not placed when only one count is above zero", () => {

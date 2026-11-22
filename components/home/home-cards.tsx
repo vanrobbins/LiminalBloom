@@ -11,17 +11,22 @@ import { shownCards } from "@/lib/home/cards";
 import { loadHome } from "@/lib/home/load";
 import type { CardKey, HomeData } from "@/lib/home/types";
 
-// The cards that tasks 5 and 6 add read `data`; until then no case renders anything.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { NotPlacedCard } from "./not-placed-card";
+import { PlanogramWorkCard } from "./planogram-work-card";
+import { RecentPublishesCard } from "./recent-publishes-card";
+
 function Card({ cardKey, data }: { cardKey: CardKey; data: HomeData }) {
   switch (cardKey) {
     case "setup":
-    case "planograms":
     case "invitations":
-    case "notPlaced":
-    case "published":
     case "changes":
       return null;
+    case "planograms":
+      return data.planograms ? <PlanogramWorkCard work={data.planograms} /> : null;
+    case "notPlaced":
+      return data.notPlaced ? <NotPlacedCard notPlaced={data.notPlaced} /> : null;
+    case "published":
+      return data.published ? <RecentPublishesCard rows={data.published} /> : null;
   }
 }
 

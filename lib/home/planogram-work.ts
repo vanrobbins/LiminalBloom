@@ -24,7 +24,7 @@ export function planogramWork(groups: readonly ListGroup[], today: string, limit
     .filter((i) => i.dueDate !== null || i.hasDraft)
     .map((i): PlanogramWorkRow => ({ ...i, overdue: i.dueDate !== null && dueLabel(i.dueDate, today).overdue }))
     .sort(compareWork);
-  return { rows: work.slice(0, limit), total: work.length };
+  return { rows: work.slice(0, limit), total: work.length, today };
 }
 
 /** Fixtures that show product and have neither a published version nor a draft. */

@@ -77,7 +77,7 @@ describe("planogramWork", () => {
   });
 
   it("is empty with no groups", () => {
-    expect(planogramWork([], "2026-11-16")).toEqual({ rows: [], total: 0 });
+    expect(planogramWork([], "2026-11-16")).toEqual({ rows: [], total: 0, today: "2026-11-16" });
   });
 
   it("breaks date ties by name, naturally", () => {
