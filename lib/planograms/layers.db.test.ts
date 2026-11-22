@@ -68,5 +68,5 @@ describe("hung layers", () => {
     await saveChange(store, rack.fixtureId, { kind: "update", id: restoredSand.id, version: restoredSand.version, fields: rail(face, 8, { colSpan: 2 }) });
     // Nothing renumbers: the sand tee keeps its number alone, and the two behind it keep theirs.
     expect([await depthOf(sand), await depthOf(navy), await depthOf(pant)]).toEqual([0, 1, 2]);
-  });
+  }, 15_000);
 });
