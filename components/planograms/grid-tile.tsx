@@ -85,7 +85,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
   // Back to front: nearer the front paints over; the selected one above all (lifted tiles are z-10).
   const zIndex = layer && !movable ? (selected ? 10 : 9 - Math.min(layer.rank, 8)) : undefined;
   const self = useRef<HTMLButtonElement>(null);
-  const Tile: React.ElementType = readOnly ? "div" : "button";
+  const Tile = (readOnly ? "div" : "button") as React.ElementType;
   // A button's own props; a read-only tile is a div with a role and nothing to press.
   const control = readOnly ? { role: "img" } : { type: "button", "aria-pressed": selected };
   const mark = markOf(item);
@@ -111,7 +111,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
         data-status={mark ?? undefined}
         data-rank={layer ? layer.rank : undefined}
         aria-label={`${tileName(item, mark)}, ${words}, ${PRESENTATION_LABEL[item.presentation]} ${item.pieceCount}${issue ? `. ${issue}` : ""}`}
-        onClick={readOnly ? undefined : (e) => {
+        onClick={readOnly ? undefined : (e: React.MouseEvent) => {
           // A keyboard click (detail 0) is never the end of a drag, even one whose click went elsewhere.
           const wasDrag = gestures.consumeDrag();
           if (e.detail !== 0 && wasDrag) return;
@@ -119,7 +119,7 @@ export function GridTile({ item, layer = null, block, rect, words, selected, hig
           if (selected && movable && corners) corners.onEdit();
           else onSelect(item.id, e.detail === 0);
         }}
-        onKeyDown={(e) => {
+        onKeyDown={(e: React.KeyboardEvent) => {
           if (!movable) return;
           if (e.key === "Escape") return onEscape?.();
           // Alt+Up / Alt+Down: Move forward / Move back on a shared rail.
