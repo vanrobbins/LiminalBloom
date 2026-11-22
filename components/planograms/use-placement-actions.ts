@@ -7,6 +7,7 @@
 import { useLayoutEffect, useRef } from "react";
 
 import type { Verb } from "@/lib/planograms/builder/fields";
+import { spotKey } from "@/lib/planograms/adjust";
 import { keyTarget } from "@/lib/planograms/builder/keys";
 import { reorderTarget } from "@/lib/planograms/layers";
 import { checkPlacement } from "@/lib/planograms/rules";
@@ -32,6 +33,8 @@ type Options = {
   layout: GridLayout;
   placements: readonly PlacementView[];
   items: readonly GridItem[];
+  /** The Published view with a Quick Adjust on it: the plain version's tiles, which a move is checked against (a draft starts from them). */
+  plainItems?: readonly GridItem[];
   isEditing: boolean;
   canMove: boolean;
   /** The selected id, kept even once its placement is gone. */
@@ -47,7 +50,7 @@ type Options = {
   onAdd: (cell?: Cell) => void;
 };
 
-export function usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers, onAdd }: Options) {
+export function usePlacementActions({ scope, face, layout, placements, items, plainItems, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers, onAdd }: Options) {
   // What is selected now, for a removal that lands after the person has moved on.
   const current = useRef(selectedId);
   // A layout effect, so it is current before any later task (a save landing) can read it.
@@ -57,11 +60,13 @@ export function usePlacementActions({ scope, face, layout, placements, items, is
 
   function check(item: GridItem, fields: PlacementFields): string | null {
     // In the draft, its rows; on the published version, its tiles.
-    const others = isEditing ? placements : items;
+    const others = isEditing ? placements : (plainItems ?? items);
+    // The plain version's tile at this spot is the same tile (a replaced one can't be moved from here), and its id is the one to leave out.
+    const self = isEditing || !plainItems ? item.id : (plainItems.find((p) => spotKey(p) === spotKey(item))?.id ?? item.id);
     // Folded product moved onto a frame rack hangs there (the server sets its hung width; frame racks spec §3).
     const rail = scope.faces.find((f) => f.faceId === fields.faceId)?.fixtureType === "frame_rack";
     const checked = rail && fields.presentation === "folded" ? { ...fields, presentation: "hung" as const, row: 0, rowSpan: 1 } : fields;
-    return checkPlacement({ ...checked, id: item.id }, others, scope.faces)?.message ?? null;
+    return checkPlacement({ ...checked, id: self }, others, scope.faces)?.message ?? null;
   }
 
   async function change(item: GridItem, fields: PlacementFields, verb: Verb, onFound?: (id: string) => void): Promise<string | null> {

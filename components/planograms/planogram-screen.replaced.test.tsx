@@ -1,6 +1,7 @@
 // A tile a published Quick Adjust put on the floor is not in the monthly version a draft starts from, so it can't be
 // moved from the Published view: the move would start a draft and then fail to find the tile in it ("Changed on
-// another device"). Tiles the adjustment left alone move as before.
+// another device"). Tiles the adjustment left alone move as before, and are checked against the version a draft starts
+// from (the plain one), so a move onto where the adjustment cleared a tile is refused here, in the usual words, and not by the server.
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -32,6 +33,10 @@ const entry = (productId: string, productName: string, row: number) => ({
 const floor: PublishedVersion = { number: 3, publishedAt: new Date("2026-10-08T12:00:00Z"), publishedByName: "Van", summary: null, placements: [entry("slim", "Slim jean", 0), entry("tee", "Tee", 3)] };
 const replaced = new Set([`${front.faceId}|0|0|0`]);
 
+// The plain version: a Straight jean at row 2 that the adjustment left empty, so the floor has the Tee alone.
+const plain: PublishedVersion = { ...floor, placements: [entry("straight", "Straight jean", 2), entry("tee", "Tee", 3)] };
+const cleared = { ...floor, placements: [entry("tee", "Tee", 3)] };
+
 describe("PlanogramScreen with a published Quick Adjust", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,6 +52,23 @@ describe("PlanogramScreen with a published Quick Adjust", () => {
 
   it("a tile the adjustment left alone moves: the first move starts a draft", async () => {
     await nudge(/^Tee, /);
+    await waitFor(() => expect(actions.beginDraftAction).toHaveBeenCalledTimes(1));
+  });
+
+  it("a move onto a tile the adjustment cleared is refused against the plain version, with the usual words, and starts no draft", async () => {
+    const user = userEvent.setup();
+    render(<PlanogramScreen member={EVERYTHING} scope={scope} row={null} latest={cleared} plain={plain} draft={null} viewing={null} looks={{}} highlightProductId={null} dueDate={null} today="2026-10-11" replacedSpots={new Set()} />);
+    await user.click(screen.getByRole("button", { name: /^Tee, / }));
+    await user.keyboard("{ArrowUp}");
+    expect(await screen.findByText("Blocked by Straight jean")).toBeInTheDocument();
+    expect(actions.beginDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("a move to a spot free in the plain version goes through", async () => {
+    const user = userEvent.setup();
+    render(<PlanogramScreen member={EVERYTHING} scope={scope} row={null} latest={cleared} plain={plain} draft={null} viewing={null} looks={{}} highlightProductId={null} dueDate={null} today="2026-10-11" replacedSpots={new Set()} />);
+    await user.click(screen.getByRole("button", { name: /^Tee, / }));
+    await user.keyboard("{ArrowRight}");
     await waitFor(() => expect(actions.beginDraftAction).toHaveBeenCalledTimes(1));
   });
 

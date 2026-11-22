@@ -81,6 +81,7 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         scope={scope}
         row={state.row}
         latest={adjusted}
+        plain={state.latest}
         draft={state.draft}
         viewing={viewing}
         looks={looks}
