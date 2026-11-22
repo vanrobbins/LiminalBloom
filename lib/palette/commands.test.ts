@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { BUILTIN_ROLES, type BuiltinRoleKey } from "@/lib/access/roles";
 
-import { commandsFor } from "./commands";
+import { adjustCommands, commandsFor } from "./commands";
+import type { PaletteIndex, PaletteProducts } from "./types";
 
 const stores = [{ id: "s1", name: "Main St" }];
 const labels = (switches: readonly string[], opts: { stores?: typeof stores; theme?: "light" | "dark" } = {}) =>
@@ -73,5 +74,51 @@ describe("commandsFor, the rest", () => {
     const out = commandsFor({ switches: BUILTIN_ROLES[0].switches }, stores, "s1", "light");
     expect(out.filter((c) => c.kind === "page").map((c) => c.label)).toEqual(GO_TO);
     expect(out.filter((c) => c.kind === "action").length).toBeGreaterThan(0);
+  });
+});
+
+// 0.7.0.9 (DECISIONS 11-17, Q7): Quick Adjust <fixture> and Adjust <product> extend spec §3.3 on purpose.
+describe("adjustCommands", () => {
+  const index: PaletteIndex = {
+    planograms: [
+      { fixtureId: "f1", name: "Front table", typeHint: "Table", zoneName: "Entry", state: "Version 3", published: true },
+      { fixtureId: "f2", name: "Wall A", zoneName: "Denim", state: "Draft" },
+    ],
+    zones: [],
+  };
+  const found: PaletteProducts = {
+    products: [
+      { id: "p1", name: "Navy Tee", styleNumber: "NT-1", status: "sold_out", place: "Front table", more: 0, adjustFixtureId: "f1" },
+      { id: "p2", name: "Black Pant", styleNumber: "BP-1", status: "in_stock", place: "Wall A", more: 0 },
+    ],
+    total: 2,
+  };
+  const drafter = { switches: ["view", "planograms.draft"] as never };
+  const labels = (holder: { switches: never }, i: PaletteIndex | null = index, p: PaletteProducts | null = found) => adjustCommands(holder, i, p).map((c) => c.label);
+
+  it("offers Quick Adjust for a planogram with a published version, and Adjust for a product the answer names a fixture for", () => {
+    expect(labels(drafter)).toEqual(["Quick Adjust Front table", "Adjust Navy Tee"]);
+  });
+
+  it("points them at the adjust page, the product one with ?product=, as actions", () => {
+    const [fixture, product] = adjustCommands(drafter, index, found);
+    expect(fixture).toMatchObject({ kind: "action", id: "action:adjust:planogram:f1", target: { href: "/planograms/f1/adjust" } });
+    expect(product).toMatchObject({ kind: "action", id: "action:adjust:product:p1", target: { href: "/planograms/f1/adjust?product=p1" } });
+  });
+
+  it("needs planograms.draft: nothing for publish alone, for view, or for the built-in roles without it", () => {
+    expect(labels({ switches: ["view", "planograms.publish"] as never })).toEqual([]);
+    expect(labels({ switches: ["view", "products.stock"] as never })).toEqual([]);
+    expect(labels({ switches: BUILTIN_ROLES.find((r) => r.key === "sales_associate")!.switches as never })).toEqual([]);
+    expect(labels({ switches: BUILTIN_ROLES.find((r) => r.key === "vm_worker")!.switches as never }).length).toBe(2);
+  });
+
+  it("is empty until the answers arrive", () => {
+    expect(labels(drafter, null, null)).toEqual([]);
+    expect(labels(drafter, index, null)).toEqual(["Quick Adjust Front table"]);
+  });
+
+  it("is a separate list: commandsFor never carries them, so the empty-query Actions stay as the spec's table", () => {
+    expect(commandsFor(drafter, stores, "s1", "light").some((c) => c.label.includes("Adjust"))).toBe(false);
   });
 });

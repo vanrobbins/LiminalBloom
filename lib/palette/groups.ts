@@ -10,7 +10,7 @@ import { RECENT_MAX } from "./recent";
 import type { GroupKey, PaletteGroup, PaletteIndex, PaletteItem, PaletteProducts, RecentPick } from "./types";
 
 export const ALL_PRODUCTS_ID = "all-products";
-export const CAPS = { planograms: 5, zones: 3, products: 5 } as const;
+export const CAPS = { planograms: 5, zones: 3, products: 5, adjust: 5 } as const;
 const HEADINGS: Record<GroupKey, string> = { recent: "Recent", planograms: "Planograms", zones: "Zones", products: "Products", goto: "Go to", actions: "Actions" };
 
 const group = (key: GroupKey, items: PaletteItem[]): PaletteGroup[] => (items.length > 0 ? [{ key, heading: HEADINGS[key], items }] : []);
@@ -49,13 +49,14 @@ function productItems(q: string, found: PaletteProducts | null): PaletteItem[] {
   return [...rows, all];
 }
 
-/** `query` as typed; `index` and `products` are null until their answers arrive. */
+/** `query` as typed; `index` and `products` are null until their answers arrive. `adjust` (adjustCommands) joins Actions only while something is typed, after the plain ones, at most 5. */
 export function paletteGroups(
   query: string,
   commands: readonly PaletteItem[],
   index: PaletteIndex | null,
   products: PaletteProducts | null,
   recent: readonly RecentPick[],
+  adjust: readonly PaletteItem[] = [],
 ): PaletteGroup[] {
   const q = normalizeQuery(query);
   const pages = commands.filter((c) => c.kind === "page");
@@ -83,7 +84,7 @@ export function paletteGroups(
     ...group("zones", matchAndSort(zones, q).slice(0, CAPS.zones)),
     ...group("products", isTextQuery(q) ? productItems(query.trim().replace(/\s+/g, " "), products) : []),
     ...group("goto", matchAndSort(pages, q)),
-    ...group("actions", matchAndSort(actions, q)),
+    ...group("actions", [...matchAndSort(actions, q), ...matchAndSort(adjust, q).slice(0, CAPS.adjust)]),
   ];
 }
 

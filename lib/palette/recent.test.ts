@@ -111,4 +111,9 @@ describe("toPick, a recent row picked again", () => {
     const row: PaletteItem = { id: "recent:page:/store", label: "Store", keywords: "", kind: "recent", of: "page", href: "/store" };
     expect(toPick(row)).toEqual({ id: "page:/store", kind: "page", label: "Store", href: "/store" });
   });
+
+  it("does not remember a Quick Adjust command: it comes from what the palette loaded, so it would be dropped from Recent anyway", () => {
+    const adjust = { kind: "action" as const, id: "action:adjust:planogram:f1", label: "Quick Adjust Front table", keywords: "", icon: (() => null) as never, target: { href: "/planograms/f1/adjust" } };
+    expect(toPick(adjust)).toBeNull();
+  });
 });

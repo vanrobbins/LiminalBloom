@@ -69,4 +69,16 @@ describe("GET /api/palette/products", () => {
     expect((await call("navy")).headers.get("cache-control")).toBe("private, no-store");
     expect((await call("a")).headers.get("cache-control")).toBe("private, no-store");
   });
+
+  it("names the fixture to Quick Adjust only for a member with planograms.draft (nothing a viewer lacks the switch for is sent)", async () => {
+    queries.search.mockResolvedValue({
+      results: [{ id: "p1", name: "Navy Tee", styleNumber: "NT-1", status: "sold_out", locations: [{ label: "Front table", floor: { fixtureId: "fx1" } }] }],
+      total: 1,
+    });
+    expect((await (await call("navy")).json()).products[0]).not.toHaveProperty("adjustFixtureId");
+    member.current = { kind: "member", activeStoreId: "store-a", switches: ["view", "planograms.publish"] };
+    expect((await (await call("navy")).json()).products[0]).not.toHaveProperty("adjustFixtureId");
+    member.current = { kind: "member", activeStoreId: "store-a", switches: ["view", "planograms.draft"] };
+    expect((await (await call("navy")).json()).products[0]).toMatchObject({ adjustFixtureId: "fx1" });
+  });
 });

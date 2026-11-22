@@ -13,7 +13,7 @@ import { useShell, useShellSheet } from "@/components/shell/shell-context";
 import { useSwitchStore } from "@/components/shell/use-switch-store";
 import { useThemeSwitch } from "@/components/shell/use-theme-switch";
 import { CommandDialog } from "@/components/ui/command-dialog";
-import { commandsFor } from "@/lib/palette/commands";
+import { adjustCommands, commandsFor } from "@/lib/palette/commands";
 import { paletteGroups } from "@/lib/palette/groups";
 import { pushRecent, readRecent, toPick } from "@/lib/palette/recent";
 import type { PaletteItem } from "@/lib/palette/types";
@@ -55,7 +55,8 @@ export function CommandPalette() {
     [shell, target],
   );
   const recent = useMemo(() => (open ? readRecent(userId, storeId) : []), [open, userId, storeId]);
-  const groups = paletteGroups(query, commands, data.index, data.products, recent);
+  const adjust = useMemo(() => (shell ? adjustCommands({ switches: shell.switches }, data.index, data.products) : []), [shell, data.index, data.products]);
+  const groups = paletteGroups(query, commands, data.index, data.products, recent, adjust);
 
   function pick(item: PaletteItem) {
     const saved = toPick(item);

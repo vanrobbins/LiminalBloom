@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { BUILTIN_ROLES } from "@/lib/access/roles";
 
-import { commandsFor } from "./commands";
+import { adjustCommands, commandsFor } from "./commands";
 import { describeResults, keepActive, paletteGroups } from "./groups";
-import type { PaletteIndex, PaletteProducts, RecentPick } from "./types";
+import type { PaletteIndex, PaletteItem, PaletteProducts, RecentPick } from "./types";
 
 const commands = commandsFor({ switches: BUILTIN_ROLES[0].switches }, [{ id: "s1", name: "Main" }], "s1", "light");
 const planograms = Array.from({ length: 7 }, (_, i) => ({ fixtureId: `f${i}`, name: `Rack ${i + 1}`, zoneName: "Denim", state: "Draft" }));
@@ -15,8 +15,8 @@ const index: PaletteIndex = {
 const product = (n: number) => ({ id: `p${n}`, name: `Navy Tee ${n}`, styleNumber: `NT-${n}`, status: "in_stock" as const, place: "Front table", more: 0 });
 const products: PaletteProducts = { products: [1, 2, 3, 4, 5].map(product), total: 12 };
 const keys = (g: ReturnType<typeof paletteGroups>) => g.map((x) => x.key);
-const run = (q: string, o: { index?: PaletteIndex | null; products?: PaletteProducts | null; recent?: RecentPick[] } = {}) =>
-  paletteGroups(q, commands, o.index === undefined ? index : o.index, o.products === undefined ? products : o.products, o.recent ?? []);
+const run = (q: string, o: { index?: PaletteIndex | null; products?: PaletteProducts | null; recent?: RecentPick[]; adjust?: PaletteItem[] } = {}) =>
+  paletteGroups(q, commands, o.index === undefined ? index : o.index, o.products === undefined ? products : o.products, o.recent ?? [], o.adjust);
 
 describe("paletteGroups, empty query", () => {
   it("lists Go to then Actions, and no products", () => {
@@ -125,5 +125,29 @@ describe("describeResults", () => {
   it("counts pages and actions, and says so when nothing matched", () => {
     expect(describeResults(run("account", { products: null }), "account")).toBe("1 page or action");
     expect(describeResults(run("zzzz", { products: null }), " zzzz ")).toBe('No matches for "zzzz".');
+  });
+});
+
+describe("paletteGroups, Quick Adjust commands (0.7.0.9)", () => {
+  const holder = { switches: ["view", "planograms.draft"] as never };
+  const published: PaletteIndex = { planograms: [1, 2, 3, 4, 5, 6, 7].map((n) => ({ fixtureId: `f${n}`, name: `Rack ${n}`, zoneName: "Denim", state: "Version 1", published: true as const })), zones: [] };
+  const adjust = adjustCommands(holder, published, null);
+  const actionLabels = (g: ReturnType<typeof paletteGroups>) => g.find((x) => x.key === "actions")?.items.map((i) => i.label) ?? [];
+
+  it("adds them to Actions when something is typed, capped at 5, after the plain actions", () => {
+    const labels = actionLabels(run("adjust", { adjust }));
+    expect(labels).toEqual(["Quick Adjust Rack 1", "Quick Adjust Rack 2", "Quick Adjust Rack 3", "Quick Adjust Rack 4", "Quick Adjust Rack 5"]);
+  });
+
+  it("finds one by its fixture's name", () => {
+    expect(actionLabels(run("quick rack 3", { adjust }))).toEqual(["Quick Adjust Rack 3"]);
+  });
+
+  it("leaves them out of the empty query, so Actions stay the spec's table", () => {
+    expect(actionLabels(run("", { adjust }))).toEqual(actionLabels(run("")));
+  });
+
+  it("leaves them out when there are none (no switch, nothing loaded)", () => {
+    expect(actionLabels(run("adjust"))).toEqual([]);
   });
 });
