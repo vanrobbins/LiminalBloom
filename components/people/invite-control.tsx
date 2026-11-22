@@ -1,4 +1,4 @@
-// The Invite button on the People title row and the dialog it opens (spec 0.7, 4.8
+// The Invite button on the Store panel's title row and the dialog it opens (spec 0.7, 4.8
 // part 1). On a phone a 44 px icon (UserPlus, named "Invite someone"), as Add product
 // does; from 768 px a labelled button. Shown only to someone who may invite into at
 // least one role: the page decides, and the server checks again.

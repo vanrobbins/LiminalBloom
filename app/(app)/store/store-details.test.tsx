@@ -16,6 +16,8 @@ describe("StoreDetails", () => {
     expect(screen.getByRole("button", { name: /^Time zone/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Save/ })).toBeNull();
     expect(screen.queryByText("Your role can't change these.")).toBeNull();
+    // The time zone keeps its whole hint (spec: the forms keep their existing hints).
+    expect(screen.getByText(/show in your own device.s time/)).toBeInTheDocument();
   });
 
   it("is a name and zone list and one reason for someone who cannot", () => {

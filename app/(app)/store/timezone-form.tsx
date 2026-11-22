@@ -1,4 +1,4 @@
-// The time zone's form on Store settings: the picker saves the moment a zone is picked,
+// The time zone's form on the Store panel: the picker saves the moment a zone is picked,
 // with the save indicator beside it and no Save button (R3, 0.7.0.5). The page reloads
 // after a save so every "today" on it follows the new zone.
 

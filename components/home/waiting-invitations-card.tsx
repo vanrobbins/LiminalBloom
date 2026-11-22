@@ -1,6 +1,6 @@
-// Card 3, "Invitations waiting" (0.7.0.6 spec section 4): pending invitations in the People card's
+// Card 3, "Invitations waiting" (0.7.0.6 spec section 4): pending invitations in the Store panel's
 // words, "Expires <moment>", "Expired <moment>" or "Lapsed". Rows are not links, because the actions
-// live on People. It draws the emails it is given and nothing more: the loader sends rows only to
+// live on the Store panel. It draws the emails it is given and nothing more: the loader sends rows only to
 // someone who may manage people.
 
 import { MailPlus } from "lucide-react";

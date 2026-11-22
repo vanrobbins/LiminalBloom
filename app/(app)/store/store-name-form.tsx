@@ -1,4 +1,4 @@
-// The store's name on Store settings: a field that saves on blur or Enter once it is
+// The store's name on the Store panel: a field that saves on blur or Enter once it is
 // a valid name (2 to 60 characters), with the save indicator beside it and no Save
 // button (R3, 0.7.0.5). The page reloads after a save so the header and the store
 // switcher show the new name.

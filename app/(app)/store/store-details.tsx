@@ -27,7 +27,7 @@ export function StoreDetails({ name, zone, version, canManage }: StoreDetailsPro
             {/* Version 0 = no settings row yet; saving makes it. */}
             <TimezoneForm zone={zone} version={version} />
             <p className="inline-flex items-center gap-1 text-sm text-ink-muted">
-              Due dates turn overdue at midnight here, wherever you are.
+              Due dates turn overdue at midnight here, wherever you are. Times like &ldquo;published at&rdquo; show in your own device&apos;s time.
               <InfoPopover term="storeTime" />
             </p>
           </div>

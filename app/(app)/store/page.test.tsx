@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invitationRow, person, ROLES, viewOf } from "@/components/people/test-view";
 import type { PeopleView } from "@/lib/access/people-view";
 
-const mocks = vi.hoisted(() => ({ switches: ["view", "store.settings"] as string[], view: null as PeopleView | null }));
+const mocks = vi.hoisted(() => ({ switches: ["view", "store.settings"] as string[], view: null as PeopleView | null, viewFor: vi.fn() }));
 
 vi.mock("@/lib/current-member", () => ({
   requireMember: async () => ({ kind: "member", user: { id: "u", name: "Van", email: "v@x.co" }, stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Other" }], activeStoreId: "a", switches: mocks.switches }),
   can: (member: { switches: string[] }, wanted: string) => member.switches.includes(wanted),
 }));
 vi.mock("@/lib/store-settings", () => ({ storeSettingsFor: async () => ({ timezone: "America/Los_Angeles", version: 1 }) }));
-vi.mock("@/lib/access/people", () => ({ peopleViewFor: async () => mocks.view }));
+vi.mock("@/lib/access/people", () => ({ peopleViewFor: async (...args: unknown[]) => (mocks.viewFor(...args), mocks.view) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock("./actions", () => ({ renameStoreAction: vi.fn(), saveTimezoneAction: vi.fn() }));
 vi.mock("./people-actions", () => ({ cancelInvitationAction: vi.fn(), changeRoleAction: vi.fn(), createInvitationAction: vi.fn(), removePersonAction: vi.fn() }));
@@ -89,6 +89,8 @@ describe("StorePage", () => {
 
   it("renders no address from a view without people.manage", async () => {
     await show(["view"], STAFF);
+    // The gate itself is peopleViewFor's (lib/access): the page must ask it for the signed-in member's view.
+    expect(mocks.viewFor).toHaveBeenCalledWith(expect.objectContaining({ kind: "member", activeStoreId: "a", switches: ["view"] }));
     expect(document.body.textContent).not.toContain("@");
   });
 

@@ -1,6 +1,6 @@
 "use server";
 
-// Store settings (DECISIONS "Time", 10-12). The store comes from the session
+// The Store panel's store details (DECISIONS "Time", 10-12). The store comes from the session
 // (CODESTYLE rule 8); who may change it is the store.settings switch, checked here
 // and again against the database in lib/store-settings.ts.
 
