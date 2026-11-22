@@ -68,4 +68,22 @@ describe("PlanogramWorkCard", () => {
     render(<PlanogramWorkCard work={work([row("A", { hasDraft: true })])} />);
     expect(screen.getByRole("link", { name: "All planograms" })).toBeInTheDocument();
   });
+
+  it("shows a Quick Adjust draft with its own word and a link to the adjust page", () => {
+    render(<PlanogramWorkCard work={work([row("Wall 2", { publishedVersion: 3, adjustment: "draft" })])} />);
+    const link = screen.getByRole("link", { name: "Wall 2, Rack, Adjusting" });
+    expect(link).toHaveAttribute("href", "/planograms/wall-2/adjust");
+    expect(within(link).getByText("Adjusting")).toBeInTheDocument();
+  });
+
+  it("a planogram with a monthly draft too keeps its monthly link and the Draft word, and adds Adjusting", () => {
+    render(<PlanogramWorkCard work={work([row("Wall 2", { hasDraft: true, adjustment: "draft" })])} />);
+    const link = screen.getByRole("link", { name: "Wall 2, Rack, Draft, Adjusting" });
+    expect(link).toHaveAttribute("href", "/planograms/wall-2");
+  });
+
+  it("an adjustment on the floor adds no word and no change of link", () => {
+    render(<PlanogramWorkCard work={work([row("Wall 2", { hasDraft: true, adjustment: "published" })])} />);
+    expect(screen.getByRole("link", { name: "Wall 2, Rack, Draft" })).toHaveAttribute("href", "/planograms/wall-2");
+  });
 });

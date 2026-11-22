@@ -124,3 +124,15 @@ describe("fixturesWithoutPlanogram", () => {
     expect(fixturesWithoutPlanogram([])).toBe(0);
   });
 });
+
+describe("planogramWork with Quick Adjust drafts (0.7.0.9)", () => {
+  it("lists a planogram whose only work is a Quick Adjust draft, after the dated ones", () => {
+    const g = [group(item("Adjusting", { adjustment: "draft" }), item("Dated", { dueDate: "2026-11-20" }), item("Plain"), item("Adjusted", { adjustment: "published" }))];
+    expect(names(g)).toEqual(["Dated", "Adjusting"]);
+  });
+  it("keeps the adjustment word on the row", () => {
+    const w = planogramWork([group(item("Adjusting", { adjustment: "draft" }))], "2026-11-16");
+    expect(w.rows[0].adjustment).toBe("draft");
+    expect(w.total).toBe(1);
+  });
+});

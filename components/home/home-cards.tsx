@@ -16,6 +16,7 @@ import { PlanogramWorkCard } from "./planogram-work-card";
 import { RecentChangesCard } from "./recent-changes-card";
 import { RecentPublishesCard } from "./recent-publishes-card";
 import { SetupCard } from "./setup-card";
+import { SoldOutCard } from "./sold-out-card";
 import { WaitingInvitationsCard } from "./waiting-invitations-card";
 
 function Card({ cardKey, data }: { cardKey: CardKey; data: HomeData }) {
@@ -28,6 +29,8 @@ function Card({ cardKey, data }: { cardKey: CardKey; data: HomeData }) {
       return data.changes ? <RecentChangesCard rows={data.changes} /> : null;
     case "planograms":
       return data.planograms ? <PlanogramWorkCard work={data.planograms} /> : null;
+    case "soldOut":
+      return data.soldOut ? <SoldOutCard soldOut={data.soldOut} /> : null;
     case "notPlaced":
       return data.notPlaced ? <NotPlacedCard notPlaced={data.notPlaced} /> : null;
     case "published":

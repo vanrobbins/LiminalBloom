@@ -40,6 +40,17 @@ describe("HomeCards", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Planograms to finish", "Not placed yet", "Recently published"]);
   });
 
+  it("renders Sold out on display from its slice, between Planograms to finish and Not placed yet", async () => {
+    mocks.data = {
+      planograms: { rows: [{ fixtureId: "f1", name: "Front", typeLabel: "Rack", publishedVersion: null, publishedAt: null, hasDraft: true, dueDate: null, overdue: false }], total: 1, today: "2026-11-16" },
+      soldOut: { products: 2 },
+      notPlaced: { products: 2, fixtures: 0 },
+    };
+    mocks.shown = ["planograms", "soldOut", "notPlaced"];
+    render(await HomeCards());
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Planograms to finish", "Sold out on display", "Not placed yet"]);
+  });
+
   it("renders the store and team cards from their slices", async () => {
     mocks.data = {
       setup: [{ key: "team", label: "Invite your team", href: "/store" }],

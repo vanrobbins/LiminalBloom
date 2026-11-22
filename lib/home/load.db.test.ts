@@ -3,10 +3,11 @@
 
 import { randomUUID } from "node:crypto";
 
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
-import { accessEvents, planogramVersions, planograms } from "@/db/schema";
+import { accessEvents, planogramAdjustments, planogramVersions, planograms, products } from "@/db/schema";
 import { BUILTIN_ROLES, type BuiltinRoleKey } from "@/lib/access/roles";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import type { Switch } from "@/lib/access/switches";
@@ -128,5 +129,18 @@ describe("loadHome", () => {
     const later = await loadHome(lone, new Date(NOW.getTime() + 30 * 86_400_000));
     expect(later.invitations?.[0].state).toBe("expired");
     expect(later.setup?.map((r) => r.key)).toContain("team");
+  });
+
+  it("sends Sold out on display (with its count) to a drafter only, and a Quick Adjust draft in the planogram rows", async () => {
+    const { store, roles, fixtureId } = await busyStore("home-sold");
+    const fx = await seedStoreFixtures(store);
+    await db.update(products).set({ status: "sold_out" }).where(eq(products.id, fx.productId));
+    const [plan] = await db.select({ id: planograms.id }).from(planograms).where(eq(planograms.fixtureId, fixtureId));
+    await db.insert(planogramAdjustments).values({ storeId: store, planogramId: plan.id, state: "draft", basedOnVersion: 1, createdByName: "Pat" });
+    const worker = await loadHome(viewer(store, roles, "vm_worker"), NOW);
+    expect(worker.soldOut).toEqual({ products: 1 });
+    expect(worker.planograms?.rows.map((r) => [r.fixtureId, r.adjustment])).toEqual([[fixtureId, "draft"]]);
+    expect((await loadHome(viewer(store, roles, "sales_associate"), NOW)).soldOut).toBeUndefined();
+    expect((await loadHome(viewer(store, roles, "sales_associate", ["view", "planograms.publish"]), NOW)).soldOut).toBeUndefined();
   });
 });

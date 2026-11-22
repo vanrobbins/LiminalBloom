@@ -3,10 +3,11 @@
 
 import { randomUUID } from "node:crypto";
 
+import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
-import { planogramVersions, planograms, productLocations } from "@/db/schema";
+import { planogramVersions, planograms, productLocations, products } from "@/db/schema";
 import { addFixture, addProduct } from "@/lib/planograms/test-planograms";
 import { dropStores, makeStore, seedStoreFixtures } from "@/lib/products/test-stores";
 
@@ -75,5 +76,38 @@ describe("homeReads counts", () => {
     await addProduct(other, categoryId, "Theirs");
     expect(await homeReads(store)).toMatchObject({ productCount: 0, unplacedCount: 0 });
     expect(await homeReads(other)).toMatchObject({ productCount: 2, unplacedCount: 1 });
+  });
+});
+
+describe("homeReads soldOutCount (0.7.0.9)", () => {
+  const status = (id: string, value: "sold_out" | "on_sale") => db.update(products).set({ status: value }).where(eq(products.id, id));
+  const floor = (store: string, productId: string, faceId: string, col: number) =>
+    db.insert(productLocations).values({ storeId: store, productId, presentation: "folded", faceId, col, row: 0, colSpan: 1, rowSpan: 1 });
+
+  it("counts sold-out products with a floor location once each, not bins, not unplaced, not other statuses", async () => {
+    const store = await makeStore("home-sold");
+    const { categoryId, faceId, binId } = await seedStoreFixtures(store); // In stock, on a table top
+    const soldFloor = await addProduct(store, categoryId, "Sold Floor");
+    await status(soldFloor, "sold_out");
+    await floor(store, soldFloor, faceId, 2);
+    await floor(store, soldFloor, faceId, 3); // two floor places, one product
+    const soldBin = await addProduct(store, categoryId, "Sold Bin");
+    await status(soldBin, "sold_out");
+    await db.insert(productLocations).values({ storeId: store, productId: soldBin, presentation: "folded", binId });
+    await status(await addProduct(store, categoryId, "Sold Loose"), "sold_out");
+    const sale = await addProduct(store, categoryId, "Sale Floor");
+    await status(sale, "on_sale");
+    await floor(store, sale, faceId, 4);
+    expect((await homeReads(store, { soldOut: true })).soldOutCount).toBe(1);
+  });
+
+  it("is never another store's, and is not read (null) unless asked", async () => {
+    const store = await makeStore("home-sold-a");
+    const other = await makeStore("home-sold-b");
+    const theirs = await seedStoreFixtures(other);
+    await status(theirs.productId, "sold_out");
+    expect((await homeReads(store, { soldOut: true })).soldOutCount).toBe(0);
+    expect((await homeReads(other, { soldOut: true })).soldOutCount).toBe(1);
+    expect((await homeReads(other)).soldOutCount).toBeNull();
   });
 });
