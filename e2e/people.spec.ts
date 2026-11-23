@@ -16,8 +16,8 @@ test.afterEach(async () => {
 });
 
 const mainNav = (page: Page) => page.locator("nav[data-nav]").filter({ visible: true });
-// The role groups only: the panel also has a "Store details" heading.
-const groups = async (page: Page) => (await page.locator("main h2").allTextContents()).filter((h) => h.includes(" · "));
+// Each person's role, in list order.
+const roles = (page: Page) => page.locator("main [data-person-role]").allTextContents();
 
 async function openPeople(page: Page) {
   await page.goto("/store");
@@ -25,16 +25,19 @@ async function openPeople(page: Page) {
   await expect(page.getByRole("heading", { level: 1, name: "Store" })).toBeVisible();
 }
 
-test("is the Store tab for this width, as the current page, and the groups run highest rank first", async ({ page }) => {
+test("is the Store tab for this width, as the current page, and one list runs you first, then highest rank first", async ({ page }) => {
   await openPeople(page);
   await expect(mainNav(page).getByRole("link", { name: "Store" })).toHaveAttribute("aria-current", "page");
-  expect(await groups(page)).toEqual([
-    "Store Manager · 2",
-    "Assistant Manager · 1",
-    "Visual Merchandising Manager · 1",
-    "Visual Merchandising Worker · 1",
-    "Sales Associate · 2",
+  expect(await roles(page)).toEqual([
+    "Store Manager",
+    "Store Manager",
+    "Assistant Manager",
+    "Visual Merchandising Manager",
+    "Visual Merchandising Worker",
+    "Sales Associate",
+    "Sales Associate",
   ]);
+  await expect(page.getByRole("listitem").filter({ has: page.locator("[data-person-role]") }).first()).toContainText("(you)");
   const sales = page.getByRole("listitem").filter({ hasText: /Sales/ });
   await expect(sales.first()).toContainText("Abe Sales");
   await expect(sales.last()).toContainText("Zoe Sales");
@@ -86,10 +89,10 @@ test("changes a role: only lower roles are offered, the person moves group, the 
   await expect(dialog.getByRole("button", { name: "Save role" })).toBeDisabled();
   await select.selectOption({ label: "Visual Merchandising Worker" });
   await dialog.getByRole("button", { name: "Save role" }).click();
-  // No toast: the row moves to its new group, and a screen reader hears the change.
+  // No toast: the row moves to its new place, and a screen reader hears the change.
   await expect(page.getByRole("status").filter({ hasText: "Changed Zoe Sales to Visual Merchandising Worker" })).toBeAttached();
-  await expect(page.getByRole("heading", { name: "Visual Merchandising Worker · 2" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sales Associate · 1" })).toBeVisible();
+  await expect(page.locator("main [data-person-role]").filter({ hasText: /^Visual Merchandising Worker$/ })).toHaveCount(2);
+  await expect(page.locator("main [data-person-role]").filter({ hasText: /^Sales Associate$/ })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Change role for Zoe Sales" })).toBeFocused();
   expect((await loggedEvents())[0]).toBe("member_role_changed");
 });
@@ -104,7 +107,7 @@ test("says a role changed meanwhile, turns Save off, and shows the new list on c
   await expect(dialog.getByRole("status")).toHaveText("Zoe Sales's role changed meanwhile. Close and look again.");
   await expect(dialog.getByRole("button", { name: "Save role" })).toBeDisabled();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("heading", { name: "Visual Merchandising Manager · 2" })).toBeVisible();
+  await expect(page.locator("main [data-person-role]").filter({ hasText: /^Visual Merchandising Manager$/ })).toHaveCount(2);
   expect(await loggedEvents()).toEqual([]);
 });
 

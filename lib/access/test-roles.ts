@@ -30,7 +30,11 @@ export async function makeStoreWithRoles(label: string): Promise<{ store: string
 
 const people: string[] = [];
 
-/** A person in a store. `betterAuthRole` is Better Auth's own `member.role`, which can hold a comma-separated list. */
+/**
+ * A person in a store, with two-factor on: the built-in managers' roles require it (0.7.1a), and the tests that
+ * go through the real guards are not about that. A test of the requirement itself turns it off for the person.
+ * `betterAuthRole` is Better Auth's own `member.role`, which can hold a comma-separated list.
+ */
 export async function makePerson(
   storeId: string,
   roleId: string | null,
@@ -39,7 +43,7 @@ export async function makePerson(
   const userId = `test_acc_${randomUUID().slice(0, 8)}`;
   const memberId = randomUUID();
   people.push(userId);
-  await db.insert(user).values({ id: userId, name: "Test person", email: `${userId}@example.com` });
+  await db.insert(user).values({ id: userId, name: "Test person", email: `${userId}@example.com`, twoFactorEnabled: true });
   await db.insert(member).values({ id: memberId, organizationId: storeId, userId, role: betterAuthRole, roleId, createdAt: new Date() });
   return { userId, memberId };
 }

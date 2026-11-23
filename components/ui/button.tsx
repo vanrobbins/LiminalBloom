@@ -14,7 +14,11 @@ import { Tooltip } from "./tooltip";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "quiet-danger";
 
 const BASE =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+
+// Dimming a disabled button; the filled danger button skips it, because dimmed rose under its light label falls below
+// 4.5:1, and shows a tint with danger text instead (A11 audit).
+const DIMMED = "disabled:opacity-60";
 
 // Classes are added, never merged, so a caller cannot undo px-4 with px-0;
 // the shape is chosen here instead.
@@ -26,7 +30,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   secondary: "border border-line bg-raised text-ink",
   // Ink, not gold: gold underline read as decoration (UX audit U2).
   ghost: "text-ink underline underline-offset-4",
-  danger: "bg-danger font-medium text-raised",
+  danger: "bg-danger font-medium text-raised disabled:bg-danger-tint disabled:text-danger disabled:border disabled:border-line",
   // A destructive action that isn't the page's main one, e.g. Delete beside Edit.
   "quiet-danger": "border border-line bg-raised text-danger",
 };
@@ -54,7 +58,8 @@ export function Button({
   ...props
 }: ButtonProps) {
   const shape = icon ? ICON_ONLY : LABELLED;
-  const classes = `${BASE} ${shape} ${VARIANT_CLASSES[variant]} ${className}`.trim();
+  const dim = variant === "danger" ? "" : DIMMED;
+  const classes = `${BASE} ${shape} ${dim} ${VARIANT_CLASSES[variant]} ${className}`.replace(/ +/g, " ").trim();
   // An icon-only button shows its name as a tooltip (Week 6.5 spec §5.1), read
   // from the same aria-label, so the two can't drift. With asChild the label
   // may sit on the child (a link).

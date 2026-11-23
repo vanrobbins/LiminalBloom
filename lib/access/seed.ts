@@ -8,7 +8,7 @@ import { sql } from "drizzle-orm";
 
 import { db } from "@/db";
 
-import { BUILTIN_ROLES } from "./roles";
+import { BUILTIN_ROLES, requiresTwoFactorByDefault } from "./roles";
 
 /**
  * Give a store the built-in roles it is missing, then a role to every member
@@ -16,6 +16,7 @@ import { BUILTIN_ROLES } from "./roles";
  *
  * - A built-in the store already has is left exactly as it is: a store may have
  *   renamed it or changed its switches.
+ * - A new role is given "Requires two-factor" when it holds people.manage or roles.manage (requiresTwoFactorByDefault).
  * - A built-in is also left out, without an error, when the store has since taken
  *   its default rank or name for another role. Its members keep a null role_id
  *   until a person gives them one; failing here would remove a store over a rank.
@@ -41,15 +42,15 @@ export async function giveStoreItsRoles(storeId: string): Promise<void> {
       sql`(${r.key}::text, ${r.name}::text, ${r.rank}::int, ARRAY[${sql.join(
         r.switches.map((s) => sql`${s}`),
         sql`, `,
-      )}]::text[])`,
+      )}]::text[], ${requiresTwoFactorByDefault(r.switches)}::boolean)`,
   );
 
   const [, , managers] = await db.batch([
     // Not ON CONFLICT: the rank constraint is deferrable, which ON CONFLICT cannot arbitrate.
     db.execute(sql`
-      insert into role_definitions (store_id, builtin, name, rank, switches)
-      select ${storeId}, b.builtin, b.name, b.rank, b.switches
-      from (values ${sql.join(wanted, sql`, `)}) as b(builtin, name, rank, switches)
+      insert into role_definitions (store_id, builtin, name, rank, switches, requires_two_factor)
+      select ${storeId}, b.builtin, b.name, b.rank, b.switches, b.requires_two_factor
+      from (values ${sql.join(wanted, sql`, `)}) as b(builtin, name, rank, switches, requires_two_factor)
       where not exists (
         select 1 from role_definitions r
         where r.store_id = ${storeId}

@@ -11,7 +11,7 @@ test("a wrong password shows the error next to the form", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Work email").fill(TEST_ACCOUNT.email);
   await page.getByLabel("Password", { exact: true }).fill("not-the-password");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
   await expect(page.getByText("That email and password do not match.")).toBeVisible();
   await expect(page).toHaveURL(/\/sign-in$/);
@@ -21,7 +21,7 @@ test("signing in lands on Home, with no \"Opened <store>\" toast", async ({ page
   await page.goto("/sign-in");
   await page.getByLabel("Work email").fill(TEST_ACCOUNT.email);
   await page.getByLabel("Password", { exact: true }).fill(TEST_ACCOUNT.password);
-  await page.getByRole("button", { name: /Sign in/ }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByText(/^Opened /)).toHaveCount(0);

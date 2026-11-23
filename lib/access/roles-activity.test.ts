@@ -7,6 +7,8 @@ describe("activityText", () => {
 
   it("reads each role event as a sentence", () => {
     expect(line("role_created", { role: "Educator" })).toBe("Van Robbins added the role Educator");
+    expect(line("role_two_factor_changed", { role: "Educator", on: true })).toBe("Van Robbins made Educator require two-factor sign-in");
+    expect(line("role_two_factor_changed", { role: "Educator", on: false })).toBe("Van Robbins stopped Educator requiring two-factor sign-in");
     expect(line("role_renamed", { from: "Sales Associate", to: "Educator" })).toBe("Van Robbins renamed Sales Associate to Educator");
     expect(line("role_reordered", { role: "Educator", past: "Sales Associate", direction: "up" })).toBe("Van Robbins moved Educator above Sales Associate");
     expect(line("role_reordered", { role: "Educator", past: "Sales Associate", direction: "down" })).toBe("Van Robbins moved Educator below Sales Associate");
@@ -27,6 +29,11 @@ describe("activityText", () => {
     expect(line("member_removed", { person: "Jane Park" })).toBe("Van Robbins removed Jane Park");
     expect(line("invitation_accepted", { role: "Sales Associate" })).toBe("Van Robbins joined as Sales Associate");
     expect(line("store_renamed", { from: "Pioneer Place", to: "Riverside" })).toBe("Van Robbins renamed the store from Pioneer Place to Riverside");
+  });
+
+  it("reads Liminal Bloom's pause and restore without a reason", () => {
+    expect(line("store_paused", {})).toBe("Van Robbins paused the store");
+    expect(line("store_restored", {})).toBe("Van Robbins restored the store");
   });
 
   it("shows an invitation's email only to someone who may manage people", () => {

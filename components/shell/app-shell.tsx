@@ -8,18 +8,19 @@
 import type { Member } from "@/lib/current-member";
 
 import { CommandPalette } from "@/components/palette/command-palette";
+
 import { PaletteTrigger } from "@/components/palette/palette-trigger";
 
 import { NavLinks } from "./nav-links";
 import { ShellProvider } from "./shell-context";
-import { StoreMenu } from "./store-menu";
+import { StoreName } from "./store-menu";
 import { UserMenu } from "./user-menu";
 
 export function AppShell({ member, children }: { member: Member; children: React.ReactNode }) {
-  const { user, stores, activeStoreId, switches } = member;
+  const { user, stores, activeStoreId, switches, isPlatformAdmin, helpReplies } = member;
 
   return (
-    <ShellProvider value={{ stores, activeStoreId, user: { id: user.id, name: user.name, email: user.email }, switches }}>
+    <ShellProvider value={{ stores, activeStoreId, user: { id: user.id, name: user.name, email: user.email }, switches, isPlatformAdmin, helpReplies }}>
       <div className="flex flex-1 flex-col bg-surface md:flex-row">
         <a
           href="#content"
@@ -30,11 +31,11 @@ export function AppShell({ member, children }: { member: Member; children: React
 
         {/* Tablet: a rail with labelled icons. */}
         <aside className="sticky top-0 hidden h-dvh w-20 shrink-0 flex-col items-center gap-4 border-r border-line-subtle bg-raised py-4 md:flex lg:hidden">
-          <StoreMenu variant="initials" stores={stores} activeStoreId={activeStoreId} />
-          <PaletteTrigger variant="rail" />
+          <StoreName variant="initials" stores={stores} activeStoreId={activeStoreId} />
+          <PaletteTrigger />
           <NavLinks variant="rail" />
           <div className="mt-auto">
-            <UserMenu variant="rail" user={user} />
+            <UserMenu variant="rail" user={user} stores={stores} activeStoreId={activeStoreId} isPlatformAdmin={isPlatformAdmin} helpReplies={helpReplies} />
           </div>
         </aside>
 
@@ -46,11 +47,16 @@ export function AppShell({ member, children }: { member: Member; children: React
             </span>
             liminal bloom
           </p>
-          <StoreMenu variant="name" stores={stores} activeStoreId={activeStoreId} />
-          <PaletteTrigger variant="sidebar" />
+          {/* Search sits beside the store it searches (11-22, Van). */}
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <StoreName variant="name" stores={stores} activeStoreId={activeStoreId} />
+            </div>
+            <PaletteTrigger />
+          </div>
           <NavLinks variant="sidebar" />
           <div className="mt-auto">
-            <UserMenu variant="sidebar" user={user} />
+            <UserMenu variant="sidebar" user={user} stores={stores} activeStoreId={activeStoreId} isPlatformAdmin={isPlatformAdmin} helpReplies={helpReplies} />
           </div>
         </aside>
 

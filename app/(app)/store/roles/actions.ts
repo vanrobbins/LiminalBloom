@@ -11,6 +11,7 @@ import { z } from "zod";
 import { actorOf } from "@/lib/access/people";
 import { deleteRole, type DeleteOutcome } from "@/lib/access/roles-delete";
 import { createRole, moveRole, renameRole, type CreateOutcome, type MoveOutcome, type RenameOutcome } from "@/lib/access/roles-structure";
+import { setRequiresTwoFactor, type RequireTwoFactorOutcome } from "@/lib/access/roles-two-factor";
 import { resetRole, saveSwitches, type ResetOutcome, type SaveOutcome } from "@/lib/access/roles-switches";
 import type { RolesActor } from "@/lib/access/roles-write";
 import { SWITCHES } from "@/lib/access/switches";
@@ -34,6 +35,14 @@ export async function saveSwitchesAction(edits: unknown): Promise<SaveOutcome> {
   const parsed = z.array(z.object({ roleId: id, version, switches })).min(1).max(100).safeParse(edits);
   if (!parsed.success) return INVALID;
   return saveSwitches(check.member.activeStoreId, actorFor(check.member), parsed.data);
+}
+
+export async function requireTwoFactorAction(roleId: unknown, expectedVersion: unknown, on: unknown): Promise<RequireTwoFactorOutcome> {
+  const check = await requireSwitchForAction("roles.manage");
+  if (check.status === "forbidden") return FORBIDDEN;
+  const parsed = z.tuple([id, version, z.boolean()]).safeParse([roleId, expectedVersion, on]);
+  if (!parsed.success) return INVALID;
+  return setRequiresTwoFactor(check.member.activeStoreId, actorFor(check.member), ...parsed.data);
 }
 
 export async function createRoleAction(name: unknown, belowId: unknown, chosen: unknown): Promise<CreateOutcome> {

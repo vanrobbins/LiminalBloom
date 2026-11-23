@@ -13,7 +13,7 @@ describe("NoAccessPage", () => {
   it("says plainly that the person has no access, and links back to Home", async () => {
     render(await NoAccessPage());
     expect(screen.getByRole("heading", { level: 1, name: "You don't have access to this" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Back to Home" })).toHaveAttribute("href", "/home");
+    expect(screen.getByRole("link", { name: "Back to Hub" })).toHaveAttribute("href", "/home");
   });
 
   it("is a page for any signed-in member, so it cannot loop", async () => {

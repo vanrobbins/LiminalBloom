@@ -109,7 +109,7 @@ describe("back to back (run joins spec §1.2)", () => {
   it("Add rack behind puts a new rack back to back, one run", () => {
     const next = apply(layoutWith(frame("a", 100)), { type: "addRackToRun", rackId: "a", side: "right", behind: true }, newId);
     const added = next.fixtures.find((f) => f.id !== "a")!;
-    expect([added.x, added.y, added.rotation]).toEqual([100, 96, 180]);
+    expect([added.x, added.y, added.rotation]).toEqual([100, 102, 180]);
     expect(validate(next)).toEqual([]);
   });
 });

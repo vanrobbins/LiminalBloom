@@ -51,7 +51,7 @@ export function CommandPalette() {
     },
   });
   const commands = useMemo(
-    () => (shell ? commandsFor({ switches: shell.switches }, shell.stores, shell.activeStoreId, target === "dark" ? "light" : "dark") : []),
+    () => (shell ? commandsFor({ switches: shell.switches }, shell.stores, shell.activeStoreId, target === "dark" ? "light" : "dark", shell.isPlatformAdmin) : []),
     [shell, target],
   );
   const recent = useMemo(() => (open ? readRecent(userId, storeId) : []), [open, userId, storeId]);

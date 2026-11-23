@@ -9,12 +9,15 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PageShell } from "@/components/invite/page-shell";
+import { AskButton } from "@/components/help/ask-button";
+import { ReplyBanner } from "@/components/help/reply-banner";
 import { PasteLinkForm } from "@/components/invite/paste-link-form";
 import { WaitingList } from "@/components/invite/waiting-list";
 import { Button } from "@/components/ui/button";
 import { pendingInvitationsFor } from "@/lib/access/invitation-look";
 import { auth } from "@/lib/auth";
 import { getCurrentMember } from "@/lib/current-member";
+import { helpRepliesFor } from "@/lib/help/badge";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +25,19 @@ export default async function WelcomePage() {
   const current = await getCurrentMember();
   if (current.kind === "signed-out") redirect("/sign-in");
   if (current.kind === "member") redirect("/home");
+  // A role in the store they belong to asks for two-step sign-in first; Account is where it is set up.
+  if (current.kind === "needs-two-factor") redirect("/account");
+  // Every store they belong to is paused: they are not "without a store", so say what happened.
+  if (current.kind === "paused") redirect("/paused");
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
-  const waiting = await pendingInvitationsFor({ id: session.user.id, email: session.user.email });
+  const [waiting, helpReplies] = await Promise.all([pendingInvitationsFor({ id: session.user.id, email: session.user.email }), helpRepliesFor(session.user.id)]);
 
   return (
     <PageShell>
       <h1 className="text-3xl font-semibold tracking-tight text-ink">Welcome</h1>
+      <ReplyBanner replies={helpReplies} />
       <p className="text-ink-muted">You&apos;re not in a store yet.</p>
       {waiting.length > 0 ? (
         <WaitingList invitations={waiting} />
@@ -40,6 +48,7 @@ export default async function WelcomePage() {
       <Button asChild variant="secondary">
         <Link href="/create-store">Create a store</Link>
       </Button>
+      <AskButton kind="account" from="/welcome" />
     </PageShell>
   );
 }

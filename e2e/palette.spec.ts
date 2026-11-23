@@ -2,7 +2,7 @@
 // store: how it opens at each size, what it finds, where a pick goes, and what it refuses to cover.
 // The per-role actions are in palette-roles.spec.ts.
 
-import { expect, hydrated, sizeOf, storeTrigger, switchStore, test } from "./fixtures";
+import { expect, hydrated, sizeOf, currentStore, switchStore, test } from "./fixtures";
 import { seedLayout } from "./map-store";
 import { optionLabels, hasGroup, openPalette, paletteDialog, paletteField, searchTrigger } from "./palette-page";
 import { seedCatalog } from "./product-store";
@@ -47,7 +47,7 @@ test("Ctrl+K toggles it and Escape lands on the page, and / opens it outside a f
 test("with no query it lists Go to and Actions", async ({ page }) => {
   await page.goto("/account");
   await openPalette(page);
-  expect(await optionLabels(page, "Go to")).toEqual(["Home", "Products", "Layout", "Planograms", "Store", "Account", "Products not placed", "Sold out products"]);
+  expect(await optionLabels(page, "Go to")).toEqual(["Hub", "Products", "Layout", "Planograms", "Store", "Account", "Two-step sign-in", "Help", "Products not placed", "Sold out products"]);
   expect(await optionLabels(page, "Actions")).toEqual(expect.arrayContaining(["Add product", "Edit the store map", "Roles and permissions", "Create a store"]));
 });
 
@@ -118,7 +118,7 @@ test("a Switch to command changes the store in the header", async ({ page }) => 
   await openPalette(page);
   await paletteField(page).fill("second");
   await page.keyboard.press("Enter");
-  await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", SECOND_STORE);
+  await expect(currentStore(page)).toHaveAttribute("data-store-current", SECOND_STORE);
   await switchStore(page, HOME_STORE);
 });
 

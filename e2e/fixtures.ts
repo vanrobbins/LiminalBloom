@@ -68,12 +68,18 @@ export function sizeOf(testInfo: TestInfo): Size {
   return size === "phone" || size === "tablet" ? size : "desktop";
 }
 
-/** The store button in whichever shell form is showing. */
-export function storeTrigger(page: Page) {
-  return page.locator("[data-store-trigger]").filter({ visible: true });
+/** The current store's name in whichever shell form is showing (plain text; on a phone, only for people in two or more stores). */
+export function currentStore(page: Page) {
+  return page.locator("[data-store-current]").filter({ visible: true });
 }
 
-/** A store in the open store menu: the phone's sheet or the dropdown. */
+/** Opens the account menu and its "Switch store" step (a submenu, or on a phone the sheet's second step). */
+export async function openStoreChoices(page: Page) {
+  await userMenuButton(page).click();
+  await page.locator("[data-store-switch]").filter({ visible: true }).click();
+}
+
+/** A store in the open account menu: the phone's sheet or the dropdown. */
 export function storeChoice(page: Page, name: string) {
   return page.locator(`[data-store-name="${name}"]`).filter({ visible: true });
 }
@@ -96,9 +102,9 @@ export async function hydrated(page: Page, selector = "main") {
 /** Switch stores through the shell and wait until the page shows the new one. */
 export async function switchStore(page: Page, name: string) {
   await hydrated(page);
-  await storeTrigger(page).click();
+  await openStoreChoices(page);
   await storeChoice(page, name).click();
-  await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", name);
+  await expect(currentStore(page)).toHaveAttribute("data-store-current", name);
 }
 
 /** The account button in whichever shell form is showing. */

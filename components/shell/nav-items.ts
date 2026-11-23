@@ -2,17 +2,17 @@
 // listed (docs/DECISIONS.md, 2026-09-29): each feature adds its own line here
 // when it lands, and all three navigation forms pick it up.
 
-import { House, LayoutPanelTop, MapIcon, Search, Store, type LucideIcon } from "lucide-react";
+import { House, LayoutPanelTop, MapIcon, Shirt, Store, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
 export const NAV_ITEMS: NavItem[] = [
-  // Home is first and where sign-in lands (0.7.0.6). Next comes finding a product, which every
-  // role does (§3.2): Products, which merged with Search (Week 6.5), takes the search icon.
+  // Hub (the /home page; renamed from Home 11-22) is first and where sign-in lands (0.7.0.6). Next comes finding a product, which every
+  // role does (§3.2): Products takes a shirt, leaving the magnifying glass to the search trigger.
   // Store (0.7.0.7) is where the people, the roles and the store details live. Account is not
   // here: five tabs fit a 360 px phone, and the avatar menu has it at every size.
-  { href: "/home", label: "Home", icon: House },
-  { href: "/products", label: "Products", icon: Search },
+  { href: "/home", label: "Hub", icon: House },
+  { href: "/products", label: "Products", icon: Shirt },
   { href: "/layout", label: "Layout", icon: MapIcon },
   { href: "/planograms", label: "Planograms", icon: LayoutPanelTop },
   { href: "/store", label: "Store", icon: Store },

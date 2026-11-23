@@ -9,6 +9,7 @@ const face = (faceId: string, columns: number, rows: number): PlanogramFace => (
   faceId, fixtureId: "r", fixtureName: "Rack 1", fixtureType: "rack", side: "front", setSide: null, label: faceId, columns, rows,
 });
 const front = face("front", 8, 3);
+const tableFace: PlanogramFace = { ...face("top", 8, 3), fixtureType: "table" };
 const back = face("back", 8, 3);
 const blocker = (faceId: string, col: number, colSpan: number, rowSpan = 3): Neighbour => ({ id: `${faceId}-${col}`, faceId, productName: "X", col, row: 0, colSpan, rowSpan });
 const tee: ProductFit = { id: "tee", name: "Pocket Tee", styleNumber: "T", footprints: { folded: { columns: 4, rows: 2 }, hung: { columns: 2, rows: 3 } } };
@@ -29,11 +30,15 @@ describe("firstOpenSpot", () => {
 });
 
 describe("placeNew", () => {
-  it("places folded where it fits, else hung, one piece", () => {
-    expect(placeNew([front], [], tee)).toEqual({ faceId: "front", presentation: "folded", col: 0, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 1 });
-    // Only a 2-column, full-height gap is left: folded (4 wide) can't fit, hung (2 × 3) can.
-    expect(placeNew([front], [blocker("front", 0, 6)], tee)).toEqual({ faceId: "front", presentation: "hung", col: 6, row: 0, colSpan: 2, rowSpan: 3, pieceCount: 1 });
+  it("on a rack hangs first when both fit, else folded, one piece", () => {
+    expect(placeNew([front], [], tee)).toEqual({ faceId: "front", presentation: "hung", col: 0, row: 0, colSpan: 2, rowSpan: 3, pieceCount: 1 });
+    // The bottom row is taken, so only 2 rows are free: hung (3 tall) can't fit, folded (4 x 2) can.
+    expect(placeNew([front], [{ ...blocker("front", 0, 8, 1), row: 2 }], tee)).toEqual({ faceId: "front", presentation: "folded", col: 0, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 1 });
     expect(placeNew([front], [blocker("front", 0, 8)], tee)).toBeNull();
+  });
+
+  it("on a table folds first when both fit", () => {
+    expect(placeNew([tableFace], [], tee)).toEqual({ faceId: "top", presentation: "folded", col: 0, row: 0, colSpan: 4, rowSpan: 2, pieceCount: 1 });
   });
 });
 
@@ -47,9 +52,14 @@ describe("placeNew on a frame rack", () => {
 });
 
 describe("placeAt", () => {
-  it("puts the product's corner on the tapped cell, folded first", async () => {
+  it("puts the product's corner on the tapped cell, folded first on a table", async () => {
     const { placeAt } = await import("./place");
-    expect(placeAt([front], [], tee, { faceId: "front", col: 3, row: 1 })).toEqual({ faceId: "front", presentation: "folded", col: 3, row: 1, colSpan: 4, rowSpan: 2, pieceCount: 1 });
+    expect(placeAt([tableFace], [], tee, { faceId: "top", col: 3, row: 1 })).toEqual({ faceId: "top", presentation: "folded", col: 3, row: 1, colSpan: 4, rowSpan: 2, pieceCount: 1 });
+  });
+
+  it("hangs first on a rack", async () => {
+    const { placeAt } = await import("./place");
+    expect(placeAt([front], [], tee, { faceId: "front", col: 3, row: 0 })).toEqual({ faceId: "front", presentation: "hung", col: 3, row: 0, colSpan: 2, rowSpan: 3, pieceCount: 1 });
   });
 
   it("hangs it when the folded size will not go there but the hung size will", async () => {

@@ -1,12 +1,26 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/current-member", () => ({
-  requireMember: async () => ({ kind: "member", user: { id: "u", name: "Van", email: "v@x.co" }, stores: [{ id: "a", name: "Pioneer Place" }], activeStoreId: "a" }),
-}));
+const mocks = vi.hoisted(() => ({ person: vi.fn(), status: vi.fn() }));
+
+vi.mock("@/lib/current-member", () => ({ requireAccountPerson: mocks.person }));
+vi.mock("@/lib/two-factor/status", () => ({ twoFactorStatus: mocks.status }));
+vi.mock("./two-factor-actions", () => ({ startTwoFactorAction: vi.fn(), confirmTwoFactorAction: vi.fn(), newBackupCodesAction: vi.fn(), disableTwoFactorAction: vi.fn() }));
+vi.mock("./passkey-actions", () => ({ allowPasskeyAddAction: vi.fn(), renamePasskeyAction: vi.fn(), removePasskeyAction: vi.fn() }));
+vi.mock("./actions", () => ({ changePasswordAction: vi.fn() }));
+vi.mock("@/components/shell/use-sign-out", () => ({ useSignOut: () => ({ signOut: vi.fn(), isSigningOut: false }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 
 import AccountPage from "./page";
+
+const USER = { id: "u", name: "Van", email: "v@x.co" };
+const MEMBER = { kind: "member", user: USER, stores: [{ id: "a", name: "Pioneer Place" }], activeStoreId: "a" };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.person.mockResolvedValue(MEMBER);
+  mocks.status.mockResolvedValue({ on: false, codesLeft: 0, isAdmin: false, requiredBy: null, passkeys: [] });
+});
 
 describe("AccountPage", () => {
   it("offers Create a store to someone in one store", async () => {
@@ -24,5 +38,47 @@ describe("AccountPage", () => {
     render(await AccountPage());
     expect(screen.getByRole("heading", { name: "Change password" })).toBeInTheDocument();
     expect(screen.getByLabelText("Current password")).toBeInTheDocument();
+  });
+
+  it("has the Two-step sign-in card, off, with Turn on; its status is read for the signed-in person", async () => {
+    render(await AccountPage());
+    expect(screen.getByRole("heading", { name: /Two-step sign-in/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Turn on" })).toBeInTheDocument();
+    expect(mocks.status).toHaveBeenCalledWith("u");
+  });
+
+  it("shows only the setup and Sign out to a person whose role needs two-step sign-in and who has none (no redirect to itself)", async () => {
+    mocks.person.mockResolvedValue({ kind: "needs-two-factor", user: USER, roleName: "Store Manager" });
+    render(await AccountPage());
+    expect(screen.getByText(/Your role, Store Manager, needs two-step sign-in/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Password", { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Change password" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Create a store" })).toBeNull();
+    expect(mocks.status).not.toHaveBeenCalled();
+  });
+
+  it("has the Passkeys card, with Add a passkey", async () => {
+    render(await AccountPage());
+    expect(screen.getByRole("heading", { name: /Passkeys/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add a passkey" })).toBeInTheDocument();
+  });
+
+  it("shows a person whose stores are all paused their account in a bare frame: no store list, a way back and Sign out", async () => {
+    mocks.person.mockResolvedValue({ kind: "paused", user: USER, stores: [{ id: "a", name: "Pioneer Place" }] });
+    render(await AccountPage());
+    expect(screen.getByRole("heading", { name: "Change password" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Passkeys/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Two-step sign-in/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Back/ })).toHaveAttribute("href", "/paused");
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Store" })).toBeNull();
+    expect(screen.queryByText("Pioneer Place")).toBeNull();
+  });
+
+  it("a person who must set up two-factor can add a passkey instead of an authenticator app", async () => {
+    mocks.person.mockResolvedValue({ kind: "needs-two-factor", user: USER, roleName: "Store Manager" });
+    render(await AccountPage());
+    expect(screen.getByRole("button", { name: "Add a passkey" })).toBeInTheDocument();
   });
 });

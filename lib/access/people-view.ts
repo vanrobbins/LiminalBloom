@@ -63,3 +63,9 @@ export function groupByRole(rows: readonly PersonRow[]): RoleGroup[] {
   }
   return [...groups.values()].sort((a, b) => a.rank - b.rank).map((g) => ({ ...g, people: byName(g.people) }));
 }
+
+/** The Store panel's one list (11-22, Van): the viewer first, then everyone else in the groups' order (rank, then A to Z). */
+export function peopleInOrder(groups: readonly RoleGroup[]): PersonRow[] {
+  const everyone = groups.flatMap((g) => g.people);
+  return [...everyone.filter((p) => p.isYou), ...everyone.filter((p) => !p.isYou)];
+}

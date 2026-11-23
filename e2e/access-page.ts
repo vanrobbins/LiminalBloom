@@ -24,10 +24,12 @@ export async function peopleWith(page: Page, button: "Change role for" | "Remove
   return labels.map((label) => label.slice(button.length + 1));
 }
 
-/** Every role's person is in the list, whatever the role is, and the groups run from the top rank down. */
+/** Every role's person is in the list, whatever the role is: the viewer first, then the rest from the top rank down. */
 export async function expectEveryoneListed(page: Page) {
-  const headings = await page.locator("main h2").allTextContents();
-  expect(headings.filter((h) => h.includes(" · "))).toEqual(["Store Manager · 1", "Assistant Manager · 1", "Visual Merchandising Manager · 1", "Visual Merchandising Worker · 1", "Sales Associate · 1"]);
+  const ranked = ["Store Manager", "Assistant Manager", "Visual Merchandising Manager", "Visual Merchandising Worker", "Sales Associate"];
+  const [mine, ...rest] = await page.locator("main [data-person-role]").allTextContents();
+  await expect(page.getByRole("listitem").filter({ has: page.locator("[data-person-role]") }).first()).toContainText("(you)");
+  expect(rest).toEqual(ranked.filter((role) => role !== mine));
   for (const name of Object.values(ROLE_PEOPLE)) await expect(page.getByRole("listitem").filter({ hasText: name }).first()).toBeVisible();
 }
 
@@ -48,11 +50,11 @@ export async function expectRefused(page: Page, path: string) {
   await page.goto(path);
   await expect(page).toHaveURL(/\/no-access$/);
   await expect(page.getByRole("heading", { level: 1, name: "You don't have access to this" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to Home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to Hub" })).toBeVisible();
 }
 
 export const navLabels = (page: Page) => mainNav(page).getByRole("link").allTextContents();
-export const NAV = ["Home", "Products", "Layout", "Planograms", "Store"];
+export const NAV = ["Hub", "Products", "Layout", "Planograms", "Store"];
 
 /** Opens this worker's own product, so workers sharing the store never change the same one. */
 export async function openMyProduct(page: Page, testInfo: TestInfo) {

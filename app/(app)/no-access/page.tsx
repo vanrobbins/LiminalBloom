@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 
+import { AskButton } from "@/components/help/ask-button";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,8 +22,9 @@ export default async function NoAccessPage() {
       <Card className="flex flex-col items-start gap-3">
         <p className="text-ink">Your role in this store doesn&apos;t include this page. A manager can change what a role allows.</p>
         <Button asChild variant="secondary">
-          <Link href="/home">Back to Home</Link>
+          <Link href="/home">Back to Hub</Link>
         </Button>
+        <AskButton kind="account" from="/no-access" />
       </Card>
     </div>
   );

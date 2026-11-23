@@ -8,49 +8,24 @@
 // signing secret and a direct database connection. See proposal section 8.4.
 
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
-import { organization } from "better-auth/plugins";
+import { organization, twoFactor } from "better-auth/plugins";
 
 import * as authSchema from "@/db/auth-schema";
 import { db } from "@/db";
 
 import { rememberSwitch, storeForNewSession } from "./active-store";
+import { CLOSED_PATHS } from "./auth-closed-paths";
+import { beforeAuth } from "./auth-before";
+import { passkeyRelyingParty, twoFactorAtFor } from "./auth-factors";
 import { optionalEnv } from "./env";
-
-// Better Auth's organization endpoints that read or change people. Its own checks
-// know only owner / admin / member, not our roles or the rank rule, and three of them
-// list emails and invitation ids to any member. So the browser cannot reach them: the
-// router answers 404 before anything runs. People, roles and invitations go through the
-// app's own server actions (lib/access/people-write.ts, invite.ts, invitation-accept.ts
-// and roles-*.ts). `auth.api.*` calls from server
-// code are not affected. Not here: `/organization/set-active` (the store switcher).
-// `/change-password` is closed too, below: the browser's own call would not revoke the
-// person's other sessions, so the Account page's server action calls
-// `auth.api.changePassword` with `revokeOtherSessions: true` instead (lib/change-password.db.test.ts
-// proves the server call still works). Spec 0.7, 4.5, "Spike findings";
-// e2e/auth-routes.spec.ts proves each path and its spellings.
-const CLOSED_ORGANIZATION_PATHS = [
-  "invite-member",
-  "cancel-invitation",
-  "accept-invitation",
-  "reject-invitation",
-  "update-member-role",
-  "remove-member",
-  "leave",
-  "update",
-  "delete",
-  "create",
-  "list-invitations",
-  "get-full-organization",
-  "list-members",
-  "get-invitation",
-  "list-user-invitations",
-].map((name) => `/organization/${name}`);
-
-const CLOSED_PATHS = [...CLOSED_ORGANIZATION_PATHS, "/change-password"];
 
 export const auth = betterAuth({
   disabledPaths: CLOSED_PATHS,
+  // The two sign-in verify routes answer 404 to a request that has a session (lib/auth-sign-in-only.ts);
+  // adding a passkey needs the password just before (lib/passkeys/add-gate.ts). Both are in lib/auth-before.ts.
+  hooks: { before: beforeAuth },
   // Read through optionalEnv so a value pasted into a dashboard with a
   // trailing newline cannot produce an "Invalid URL" build failure.
   baseURL: optionalEnv("BETTER_AUTH_URL"),
@@ -67,16 +42,27 @@ export const auth = betterAuth({
     },
   },
 
+  session: {
+    additionalFields: {
+      // When this session last passed a second factor (an authenticator code, a backup code or a
+      // passkey), set only by the hook below from the endpoint that made the session; `input: false`
+      // so no request can write it. Null otherwise. Spec 0.7.1, 8.2.
+      twoFactorAt: { type: "date", required: false, input: false },
+    },
+  },
+
   databaseHooks: {
     session: {
       create: {
         // Better Auth starts every session with no active store. Pick one,
         // or /products and /welcome send a returning member back and
         // forth forever. This is the pattern the organization plugin docs give.
-        before: async (session) => ({
+        // `context.path` is the endpoint that made the session (proved in A0).
+        before: async (session, context) => ({
           data: {
             ...session,
             activeOrganizationId: await storeForNewSession(session.userId),
+            twoFactorAt: twoFactorAtFor(context?.path),
           },
         }),
       },
@@ -111,6 +97,30 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    // Authenticator-app codes and backup codes. Setup runs through the app's own server actions
+    // (lib/two-factor/), so its browser endpoints are closed (lib/auth-closed-paths.ts); only
+    // verify-totp and verify-backup-code stay open for sign-in. Email codes need Resend, so they stay unused.
+    twoFactor({ issuer: "Liminal Bloom", backupCodeOptions: { amount: 10 } }),
+    // A passkey sign-in counts as a second factor only because the server demands user
+    // verification (`userVerification: "required"`; the default "preferred" is one factor).
+    passkey({
+      rpName: "Liminal Bloom",
+      ...passkeyRelyingParty(optionalEnv("BETTER_AUTH_URL")),
+      authenticatorSelection: { userVerification: "required" },
+      // When it last signed someone in, for Account (its table is db/schema/passkey-uses.ts). Imported inside
+      // the hook: the Better Auth CLI loads this file outside Next.js, where the server-only chain throws.
+      authentication: {
+        afterVerification: async ({ clientData }) => {
+          // A failure here only loses the "last used" time: it must not fail the sign-in.
+          try {
+            const { recordPasskeyUse } = await import("./passkeys/list");
+            await recordPasskeyUse(String(clientData.id));
+          } catch (error) {
+            console.error("passkey last used not recorded", error);
+          }
+        },
+      },
+    }),
     // Each retail store is an organization: its own workspace, its own
     // members, its own data. This plugin owns the organization, member and
     // invitation tables from section 7, which is why products.store_id was

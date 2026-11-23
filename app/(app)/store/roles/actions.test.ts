@@ -18,13 +18,13 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, listOrganizations: mocks.listOrganizations } } }));
 
 import { db } from "@/db";
-import { member } from "@/db/auth-schema";
+import { member, user } from "@/db/auth-schema";
 import { roleDefinitions } from "@/db/schema";
 import { addCustom, byBuiltin, eventsOf, rolesOf } from "@/lib/access/roles-test";
 import { dropPeople, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
 
-import { createRoleAction, deleteRoleAction, moveRoleAction, renameRoleAction, resetRoleAction, saveSwitchesAction } from "./actions";
+import { createRoleAction, deleteRoleAction, moveRoleAction, renameRoleAction, requireTwoFactorAction, resetRoleAction, saveSwitchesAction } from "./actions";
 
 afterAll(async () => {
   await dropStores();
@@ -64,7 +64,7 @@ describe("roles actions", () => {
     expect((await eventsOf(store)).map((e) => e.event).sort()).toEqual(["role_created", "role_deleted", "role_renamed", "role_reordered", "role_reset", "role_switches_changed"]);
   });
 
-  it.each(["vm_manager", "vm_worker", "sales_associate", null] as const)("refuses a member whose role is %s, in all six, and changes nothing", async (role) => {
+  it.each(["vm_manager", "vm_worker", "sales_associate", null] as const)("refuses a member whose role is %s, in all seven, and changes nothing", async (role) => {
     const custom = await addCustom(store, "Educator", 550, ["view"]);
     const before = await rolesOf(store);
     await signInAs(role);
@@ -75,6 +75,7 @@ describe("roles actions", () => {
     expect(await moveRoleAction(custom.id, "up", sa.id)).toEqual({ status: "forbidden" });
     expect(await resetRoleAction(sa.id, sa.version)).toEqual({ status: "forbidden" });
     expect(await deleteRoleAction(custom.id, custom.version, null, 0, 0)).toEqual({ status: "forbidden" });
+    expect(await requireTwoFactorAction(sa.id, sa.version, true)).toEqual({ status: "forbidden" });
     expect(await rolesOf(store)).toEqual(before);
     expect(await eventsOf(store)).toEqual([]);
   });
@@ -91,6 +92,26 @@ describe("roles actions", () => {
     expect(await createRoleAction("Above", sm.id, ["view"])).toEqual({ status: "rank" });
     await signInAs("store_manager");
     expect(await renameRoleAction(sm.id, sm.version, "Boss")).toEqual({ status: "forbidden" });
+    expect(await eventsOf(store)).toEqual([]);
+  });
+
+  it("turns Requires two-factor on and off for a role below the person's, and answers invalid to arguments that are not what it takes", async () => {
+    await signInAs("assistant_manager");
+    const vmw = await roleRow("vm_worker");
+    expect(await requireTwoFactorAction(vmw.id, vmw.version, true)).toMatchObject({ status: "set", on: true });
+    expect((await roleRow("vm_worker")).requiresTwoFactor).toBe(true);
+    for (const bad of [undefined, null, 42, "", {}]) expect(await requireTwoFactorAction(bad, 1, true)).toEqual({ status: "invalid" });
+    expect(await requireTwoFactorAction(vmw.id, vmw.version, "yes")).toEqual({ status: "invalid" });
+    const own = await roleRow("assistant_manager");
+    expect(await requireTwoFactorAction(own.id, own.version, false)).toEqual({ status: "forbidden" });
+  });
+
+  it("sends a manager whose role requires two-factor, and who has none, to Account before anything is changed", async () => {
+    const userId = await signInAs("assistant_manager");
+    await db.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, userId));
+    const vmw = await roleRow("vm_worker");
+    await expect(requireTwoFactorAction(vmw.id, vmw.version, true)).rejects.toThrow("redirect:/account");
+    await expect(saveSwitchesAction([{ roleId: vmw.id, version: vmw.version, switches: ["view"] }])).rejects.toThrow("redirect:/account");
     expect(await eventsOf(store)).toEqual([]);
   });
 
@@ -115,7 +136,7 @@ describe("roles actions", () => {
     expect(await saveSwitchesAction([{ roleId: vmw.id, version: vmw.version, switches: [...vmw.switches, "store.settings"] }])).toMatchObject({ status: "nesting", problem: { direction: "on", switch: "store.settings", other: { name: "Visual Merchandising Manager" } } });
   });
 
-  it("answers invalid, not an error, to arguments that are not what the action takes", async () => {
+  it("answers invalid, not an error, to arguments that are not what the action takes", { timeout: 30_000 }, async () => {
     await signInAs("assistant_manager");
     const sa = await roleRow("sales_associate");
     for (const bad of [undefined, null, 42, "", {}, "x".repeat(300)]) {

@@ -28,11 +28,13 @@ function renderScreen(view: ReturnType<typeof viewOf>) {
 }
 
 describe("PeopleScreen, read-only", () => {
-  it("shows role groups with counts, names, (you), and the read-only line; no buttons, no invitations, no addresses", () => {
+  it("shows one list with a count, you first and then by rank, each row naming its role, and the read-only line; no buttons, no invitations, no addresses", () => {
     renderScreen(viewOf([sm(), am(), sa("Zoe Sales"), sa("Abe Me", { isYou: true })]));
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Store Manager · 1", "Assistant Manager · 1", "Sales Associate · 2"]);
-    const sales = screen.getByRole("heading", { name: "Sales Associate · 2" }).closest("section")!;
-    expect(within(sales).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Abe Me (you)", "Zoe Sales"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["People · 4"]);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows.map((li) => li.querySelector("[data-person-role]")?.textContent)).toEqual(["Sales Associate", "Store Manager", "Assistant Manager", "Sales Associate"]);
+    expect(rows[0]).toHaveTextContent("Abe Me (you)");
+    expect(rows[3]).toHaveTextContent("Zoe Sales");
     expect(screen.getByText(/Everyone in the store can see who's here/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Change role|Remove|Cancel/ })).toBeNull();
     expect(screen.queryByText("Invitations waiting")).toBeNull();
@@ -57,7 +59,7 @@ describe("PeopleScreen, for someone who manages people", () => {
     expect(screen.getAllByRole("button", { name: /Change role for|Remove / }).map((b) => b.getAttribute("aria-label"))).toEqual(["Change role for Zoe Sales", "Remove Zoe Sales"]);
   });
 
-  it("says a store always keeps one Store Manager, under the sole manager's own group only", () => {
+  it("says a store always keeps one Store Manager, once, under the list, to the sole manager", () => {
     renderScreen(managing([sm({ isYou: true }), sa("Zoe Sales")], { isSoleManager: true }));
     expect(screen.getAllByText("A store always keeps one Store Manager.")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "What's store manager?" })).toBeInTheDocument();
@@ -89,7 +91,7 @@ describe("PeopleScreen, for someone who manages people", () => {
     expect(screen.getByRole("button", { name: "Change role for Zoe Sales" })).toHaveFocus();
   });
 
-  it("removes: confirm copy, no toast, the row folds shut and then the list refreshes, focus on the page title", async () => {
+  it("removes: confirm copy, no toast, the row folds shut and then the list refreshes, focus on the list's heading when no row has a control", async () => {
     const user = userEvent.setup();
     actions.removePersonAction.mockResolvedValue({ status: "removed", name: "Zoe Sales" });
     renderScreen(managing());
@@ -107,7 +109,7 @@ describe("PeopleScreen, for someone who manages people", () => {
     expect(routerMock.refresh).not.toHaveBeenCalled();
     expect(screen.getByRole("status")).toHaveTextContent("Removed Zoe Sales");
     await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "People · 3" })).toHaveFocus());
   });
 
   it("a removed row's neighbour gets focus (the next row's control, else the previous), not the page title", async () => {

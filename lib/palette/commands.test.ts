@@ -10,7 +10,7 @@ const labels = (switches: readonly string[], opts: { stores?: typeof stores; the
   commandsFor({ switches: switches as never }, opts.stores ?? stores, "s1", opts.theme ?? "light").map((c) => c.label);
 const forRole = (key: BuiltinRoleKey) => labels(BUILTIN_ROLES.find((r) => r.key === key)!.switches);
 
-const GO_TO = ["Home", "Products", "Layout", "Planograms", "Store", "Account", "Products not placed", "Sold out products"];
+const GO_TO = ["Hub", "Products", "Layout", "Planograms", "Store", "Account", "Two-step sign-in", "Help", "Products not placed", "Sold out products"];
 const EVERYONE = [...GO_TO, "Switch to dark theme", "Create a store"];
 const EDITOR = ["Add product", "Categories", "Edit the store map"];
 

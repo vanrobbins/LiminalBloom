@@ -12,16 +12,19 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { member, user } from "@/db/auth-schema";
+import { pausedAmong } from "@/lib/paused";
 
-/** The store to make active for this person, or null if they have none. */
+/** The store to make active for this person, or null if they have none. A paused store is never chosen (spec 0.7.1 7.4). */
 export async function chooseActiveStore(
   userId: string,
 ): Promise<string | null> {
-  const memberships = await db
+  const joined = await db
     .select({ storeId: member.organizationId })
     .from(member)
     .where(eq(member.userId, userId))
     .orderBy(asc(member.createdAt));
+  const paused = await pausedAmong(joined.map((m) => m.storeId));
+  const memberships = joined.filter((m) => !paused.has(m.storeId));
 
   if (memberships.length === 0) {
     return null;
@@ -63,7 +66,8 @@ export async function resolveActiveStore(
         and(eq(member.userId, userId), eq(member.organizationId, sessionStoreId)),
       );
 
-    if (membership) {
+    // A paused store is not honoured even while the person still belongs to it.
+    if (membership && !(await pausedAmong([sessionStoreId])).has(sessionStoreId)) {
       return sessionStoreId;
     }
   }

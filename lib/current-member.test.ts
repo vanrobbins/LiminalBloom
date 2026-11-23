@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   listOrganizations: vi.fn(),
   resolveAccess: vi.fn(),
+  isPlatformAdmin: vi.fn(),
+  helpReplies: vi.fn(),
   // Next's redirect() throws to stop rendering; so does this stand-in.
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
@@ -28,8 +30,13 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/access/resolve", () => ({
   resolveAccess: mocks.resolveAccess,
 }));
+vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: async () => true }));
+vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: mocks.isPlatformAdmin }));
+vi.mock("@/lib/help/badge", () => ({ helpRepliesFor: mocks.helpReplies }));
+// Paused stores are tested in current-member.paused.test.ts; here nothing is paused.
+vi.mock("@/lib/paused", () => ({ pausedAmong: async () => new Set<string>(), pausedStoresOf: async () => [] }));
 
-import { can, getCurrentMember, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";
+import { can, getCurrentMember, requireMember, requireSignedIn, requireSwitch, requireSwitchForAction } from "./current-member";
 
 const SESSION = {
   user: { id: "user-1", name: "Van", email: "van@example.com", image: null },
@@ -58,6 +65,8 @@ function signedIn(store: string, role: typeof MANAGER | null, switches: string[]
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.isPlatformAdmin.mockResolvedValue(false);
+  mocks.helpReplies.mockResolvedValue(0);
 });
 
 describe("getCurrentMember", () => {
@@ -73,7 +82,7 @@ describe("getCurrentMember", () => {
     mocks.getSession.mockResolvedValue(SESSION);
     access(null, null, []);
 
-    expect(await getCurrentMember()).toEqual({ kind: "no-store" });
+    expect(await getCurrentMember()).toEqual({ kind: "no-store", user: { id: "user-1", name: "Van", email: "van@example.com" } });
     expect(mocks.resolveAccess).toHaveBeenCalledWith("user-1", "store-b");
     expect(mocks.listOrganizations).not.toHaveBeenCalled();
   });
@@ -96,7 +105,31 @@ describe("getCurrentMember", () => {
       // Plain values for client components: no `builtin`, switches as an array.
       role: { id: "role-1", name: "Store Manager", rank: 100 },
       switches: ["view", "store.settings"],
+      isPlatformAdmin: false,
+      helpReplies: 0,
     });
+  });
+
+  it("says whether the person is a Liminal Bloom admin, read from the admin table for this person (menu link only)", async () => {
+    signedIn("store-a", SALES, ["view"]);
+    mocks.isPlatformAdmin.mockResolvedValue(true);
+
+    expect(await getCurrentMember()).toMatchObject({ kind: "member", isPlatformAdmin: true });
+    expect(mocks.isPlatformAdmin).toHaveBeenCalledWith("user-1");
+  });
+
+  it("carries the count of help replies the person has not opened, asked for this person only", async () => {
+    signedIn("store-a", SALES, ["view"]);
+    mocks.helpReplies.mockResolvedValue(2);
+
+    expect(await getCurrentMember()).toMatchObject({ kind: "member", helpReplies: 2 });
+    expect(mocks.helpReplies).toHaveBeenCalledWith("user-1");
+  });
+
+  it("does not ask the admin table of a visitor with no session or no store", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    await getCurrentMember();
+    expect(mocks.isPlatformAdmin).not.toHaveBeenCalled();
   });
 
   it("carries no role and view only for a member with no role", async () => {
@@ -139,57 +172,23 @@ describe("requireMember", () => {
   });
 });
 
-describe("requireSwitch", () => {
-  it("sends a signed-out visitor to sign in", async () => {
+describe("requireSignedIn", () => {
+  it("sends only a signed-out visitor away", async () => {
     mocks.getSession.mockResolvedValue(null);
-    await expect(requireSwitch("products.edit")).rejects.toThrow("redirect:/sign-in");
+    await expect(requireSignedIn()).rejects.toThrow("redirect:/sign-in");
   });
 
-  it("sends a person with no store to the welcome page (accept an invitation or create a store)", async () => {
+  it("keeps the page it was asked from as ?next=, and drops one that is not on this site", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    await expect(requireSignedIn("/help/new?kind=account&from=/invite")).rejects.toThrow("redirect:/sign-in?next=%2Fhelp%2Fnew%3Fkind%3Daccount%26from%3D%2Finvite");
+    await expect(requireSignedIn("//evil.example")).rejects.toThrow("redirect:/sign-in");
+  });
+
+  it("lets a member through, and a person with no store, who has an account to name", async () => {
+    signedIn("store-a", SALES, ["view"]);
+    expect(await requireSignedIn()).toMatchObject({ kind: "member" });
     mocks.getSession.mockResolvedValue(SESSION);
     access(null, null, []);
-    await expect(requireSwitch("products.edit")).rejects.toThrow("redirect:/welcome");
-  });
-
-  it("returns the member who holds the switch", async () => {
-    signedIn("store-b", MANAGER, ["view", "products.edit"]);
-
-    const member = await requireSwitch("products.edit");
-
-    expect(member.activeStoreId).toBe("store-b");
-    expect(mocks.redirect).not.toHaveBeenCalled();
-  });
-
-  it("sends a member without the switch to the no-access page, once", async () => {
-    signedIn("store-b", SALES, ["view", "products.stock"]);
-
-    await expect(requireSwitch("products.edit")).rejects.toThrow("redirect:/no-access");
-    expect(mocks.redirect).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("requireSwitchForAction", () => {
-  it("still sends a signed-out visitor to sign in, and a person with no store to create one", async () => {
-    mocks.getSession.mockResolvedValue(null);
-    await expect(requireSwitchForAction("products.edit")).rejects.toThrow("redirect:/sign-in");
-
-    mocks.getSession.mockResolvedValue(SESSION);
-    access(null, null, []);
-    await expect(requireSwitchForAction("products.edit")).rejects.toThrow("redirect:/welcome");
-  });
-
-  it("returns the member who holds the switch", async () => {
-    signedIn("store-b", MANAGER, ["view", "store.settings"]);
-
-    const result = await requireSwitchForAction("store.settings");
-
-    expect(result).toMatchObject({ status: "ok", member: { kind: "member", activeStoreId: "store-b" } });
-  });
-
-  it("returns a forbidden signal, and redirects nowhere, for a member without it", async () => {
-    signedIn("store-b", SALES, ["view"]);
-
-    expect(await requireSwitchForAction("store.settings")).toEqual({ status: "forbidden" });
-    expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(await requireSignedIn()).toEqual({ kind: "no-store", user: { id: "user-1", name: "Van", email: "van@example.com" } });
   });
 });

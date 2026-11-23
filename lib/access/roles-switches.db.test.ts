@@ -20,6 +20,26 @@ afterAll(async () => {
 const editor = async (s: Awaited<ReturnType<typeof makeStoreWithRoles>>, ...held: Switch[]) => withOnly(await highRankIn(s), "roles.manage", ...held);
 const edit = (r: { id: string; version: number }, switches: Switch[]) => ({ roleId: r.id, version: r.version, switches });
 
+describe("saveSwitches and Requires two-factor", () => {
+  it("turns it on for a role that newly gains people.manage or roles.manage, in the same save, and never turns it off", async () => {
+    const s = await makeStoreWithRoles("rs-2fa");
+    const actor = await editor(s, "people.manage", "products.sale");
+    const vmw = await byBuiltin(s.store, "vm_worker");
+    const sa = await byBuiltin(s.store, "sales_associate");
+    expect([vmw.requiresTwoFactor, sa.requiresTwoFactor]).toEqual([false, false]);
+    // A save that gains nothing of the two leaves it off; one that gains people.manage turns it on.
+    expect((await saveSwitches(s.store, actor, [edit(vmw, (vmw.switches as Switch[]).filter((x) => x !== "products.sale"))])).status).toBe("saved");
+    expect((await byBuiltin(s.store, "vm_worker")).requiresTwoFactor).toBe(false);
+    const w = await byBuiltin(s.store, "vm_worker");
+    expect((await saveSwitches(s.store, actor, [edit(w, [...(w.switches as Switch[]), "people.manage"])])).status).toBe("saved");
+    const on = await byBuiltin(s.store, "vm_worker");
+    expect(on.requiresTwoFactor).toBe(true);
+    // Taking people.manage away again leaves the requirement on.
+    expect((await saveSwitches(s.store, actor, [edit(on, (on.switches as Switch[]).filter((x) => x !== "people.manage"))])).status).toBe("saved");
+    expect((await byBuiltin(s.store, "vm_worker")).requiresTwoFactor).toBe(true);
+  });
+});
+
 describe("saveSwitches", () => {
   it("saves a batch of two roles as one write: new switches, versions up, one event each saying what was added and removed", async () => {
     const s = await makeStoreWithRoles("rs-batch");

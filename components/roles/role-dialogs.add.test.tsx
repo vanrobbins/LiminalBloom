@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const actions = vi.hoisted(() => ({ saveSwitchesAction: vi.fn(), moveRoleAction: vi.fn(), renameRoleAction: vi.fn(), resetRoleAction: vi.fn(), deleteRoleAction: vi.fn(), createRoleAction: vi.fn() }));
+const actions = vi.hoisted(() => ({ saveSwitchesAction: vi.fn(), moveRoleAction: vi.fn(), renameRoleAction: vi.fn(), resetRoleAction: vi.fn(), deleteRoleAction: vi.fn(), createRoleAction: vi.fn(), requireTwoFactorAction: vi.fn() }));
 vi.mock("@/app/(app)/store/roles/actions", () => actions);
 const routerMock = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => routerMock }));
@@ -65,7 +65,7 @@ describe("the ⋯ menu", () => {
     const user = userEvent.setup();
     render(<RolesScreen view={storeManagerView([customRole("edu", 550, ["view", "products.stock"])])} />);
     await user.click(menuOf().getByRole("button", { name: "More for edu" }));
-    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Rename", "Move up", "Delete"]);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Rename", "Require two-factor", "Move up", "Delete"]);
     await user.click(screen.getByRole("menuitem", { name: "Rename" }));
     expect(screen.getByRole("dialog", { name: "Rename edu" })).toBeInTheDocument();
   });
@@ -105,5 +105,31 @@ describe("the ⋯ menu", () => {
     actions.moveRoleAction.mockRejectedValueOnce(new Error("offline"));
     await chooseMoveUp(user);
     await waitFor(() => expect(toastMock.toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "error" })));
+  });
+
+  it("turns Requires two-factor on from the menu with the version it saw: no toast, the outcome is said, and a refusal shows under the row", async () => {
+    const user = userEvent.setup();
+    render(<RolesScreen view={storeManagerView([customRole("edu", 550, ["view", "products.stock"])])} />);
+    actions.requireTwoFactorAction.mockResolvedValueOnce({ status: "set", name: "edu", on: true });
+    await user.click(menuOf().getByRole("button", { name: "More for edu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Require two-factor" }));
+    expect(actions.requireTwoFactorAction).toHaveBeenCalledWith("edu", 1, true);
+    await waitFor(() => expect(routerMock.refresh).toHaveBeenCalled());
+    expect(screen.getAllByRole("status").map((x) => x.textContent)).toContain("edu now requires two-factor sign-in");
+    expect(toastMock.toast).not.toHaveBeenCalled();
+    actions.requireTwoFactorAction.mockResolvedValueOnce({ status: "stale" });
+    await user.click(menuOf().getByRole("button", { name: "More for edu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Require two-factor" }));
+    expect(await menuOf().findByText("edu changed meanwhile, so nothing was saved. Close and look again.")).toBeInTheDocument();
+  });
+
+  it("shows a role that requires two-factor, and offers to stop", async () => {
+    const user = userEvent.setup();
+    render(<RolesScreen view={storeManagerView([{ ...customRole("edu", 550, ["view", "products.stock"]), requiresTwoFactor: true }])} />);
+    expect(menuOf().getAllByText("Requires two-factor")).toHaveLength(1);
+    await user.click(menuOf().getByRole("button", { name: "More for edu" }));
+    actions.requireTwoFactorAction.mockResolvedValueOnce({ status: "set", name: "edu", on: false });
+    await user.click(screen.getByRole("menuitem", { name: "Stop requiring two-factor" }));
+    expect(actions.requireTwoFactorAction).toHaveBeenCalledWith("edu", 1, false);
   });
 });

@@ -16,17 +16,17 @@ test.afterAll(() => clearHomeWork());
 
 async function openHome(page: Page) {
   await page.goto("/home");
-  await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Hub" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Planograms to finish" })).toBeVisible();
   await hydrated(page);
 }
 
 const card = (page: Page, title: string) => page.getByRole("region", { name: title });
 
-test("Home is the first tab and the current one, and the search sits above the cards", async ({ page }) => {
+test("Hub is the first tab and the current one, and the search sits above the cards", async ({ page }) => {
   await openHome(page);
   const first = mainNav(page).getByRole("link").first();
-  await expect(first).toHaveText("Home");
+  await expect(first).toHaveText("Hub");
   await expect(first).toHaveAttribute("aria-current", "page");
   const search = page.getByRole("search");
   await expect(search.getByRole("searchbox", { name: "Search products" })).not.toBeFocused();

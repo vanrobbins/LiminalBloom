@@ -67,6 +67,25 @@ describe("SignInForm", () => {
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
   });
 
+  it("an account with two-factor on is sent to the code page, not Home, and no session refresh is needed", async () => {
+    mocks.email.mockResolvedValue({ data: { twoFactorRedirect: true, twoFactorMethods: ["totp"] }, error: null });
+    await submit();
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/sign-in/two-factor"));
+    expect(mocks.push).not.toHaveBeenCalledWith("/home");
+  });
+
+  it("keeps the return path on the way to the code page", async () => {
+    mocks.email.mockResolvedValue({ data: { twoFactorRedirect: true }, error: null });
+    await submit("/invite/abc123");
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/sign-in/two-factor?next=%2Finvite%2Fabc123"));
+  });
+
+  it("a reply with data but no redirect is an ordinary sign-in", async () => {
+    mocks.email.mockResolvedValue({ data: { redirect: false, token: "t" }, error: null });
+    await submit();
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
+  });
+
   it("offers Keep me signed in, off until ticked", () => {
     render(<SignInForm next={null} />);
     expect(screen.getByRole("checkbox", { name: "Keep me signed in" })).not.toBeChecked();

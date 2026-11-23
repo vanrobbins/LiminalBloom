@@ -7,7 +7,8 @@ import {
   hydrated,
   sizeOf,
   storeChoice,
-  storeTrigger,
+  currentStore,
+  openStoreChoices,
   switchStore,
   test,
 } from "./fixtures";
@@ -44,13 +45,13 @@ test("moves between Products and Account, which lives in the avatar menu, not th
 
 test("Home is the first tab, current on /home", async ({ page }) => {
   await page.goto("/home");
-  await expect(mainNav(page).getByRole("link").first()).toHaveAccessibleName("Home");
-  await expect(mainNav(page).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  await expect(mainNav(page).getByRole("link").first()).toHaveAccessibleName("Hub");
+  await expect(mainNav(page).getByRole("link", { name: "Hub" })).toHaveAttribute("aria-current", "page");
 });
 
 test("switches stores from the shell, there and back", async ({ page }) => {
   await page.goto("/products");
-  await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", HOME_STORE);
+  await expect(currentStore(page)).toHaveAttribute("data-store-current", HOME_STORE);
 
   await switchStore(page, SECOND_STORE);
   // No toast: the header's store name is the confirmation (switchStore waited for it).
@@ -63,13 +64,14 @@ test("switches stores from the shell, there and back", async ({ page }) => {
   await expect(page.locator("[data-status]").first()).toBeVisible();
 });
 
-test("the sidebar offers Search with its shortcut hint, and the other widths an icon", async ({ page }, testInfo) => {
+test("every width offers Search as one icon: in the phone's header, else beside the store name", async ({ page }, testInfo) => {
   await page.goto("/products");
   await hydrated(page);
   const search = page.locator("button[aria-keyshortcuts]").filter({ visible: true });
   await expect(search).toHaveCount(1);
-  if (sizeOf(testInfo) === "desktop") await expect(search).toHaveText(/Search\s*(Ctrl K|⌘K)/);
-  else await expect(search).toHaveAccessibleName("Search");
+  await expect(search).toHaveAccessibleName("Search");
+  const home = sizeOf(testInfo) === "phone" ? page.locator("[data-page-header]") : page.locator("aside").filter({ visible: true });
+  await expect(home.getByRole("button", { name: "Search" })).toBeVisible();
 });
 
 test("the first Tab reaches a skip link that jumps to the page", async ({ page }, testInfo) => {
@@ -88,6 +90,8 @@ test("the first Tab reaches a skip link that jumps to the page", async ({ page }
 test("the bottom tabs never cover the last product", async ({ page }, testInfo) => {
   test.skip(sizeOf(testInfo) !== "phone", "Only phones have bottom tabs.");
   await page.goto("/products");
+  // On a touch screen Products focuses its search box once hydrated, which scrolls back to the top.
+  await hydrated(page);
 
   const last = page.getByRole("main").getByRole("listitem").last();
   await expect(last).toBeVisible();
@@ -108,7 +112,7 @@ test.describe("toast position", () => {
     await hydrated(page);
     await page.route("**/set-active", (route) => route.abort());
 
-    await storeTrigger(page).click();
+    await openStoreChoices(page);
     await storeChoice(page, SECOND_STORE).click();
     const toast = page.getByText("Couldn't switch stores.").first();
     await expect(toast).toBeVisible();
@@ -121,7 +125,7 @@ test.describe("toast position", () => {
 
 test("create-store offers a way back to members", async ({ page }) => {
   await page.goto("/create-store");
-  await expect(page.getByRole("link", { name: "Back to Home" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Back to Hub" })).toHaveAttribute(
     "href",
     "/home",
   );
@@ -133,6 +137,6 @@ test("a phone page has one header and names the store once", async ({ page }, te
     await page.goto(path);
     await expect(page.locator("[data-page-header]").filter({ visible: true })).toHaveCount(1);
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(storeTrigger(page)).toHaveCount(1);
+    await expect(currentStore(page)).toHaveCount(1);
   }
 });

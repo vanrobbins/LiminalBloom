@@ -36,6 +36,16 @@ export async function findDemoStore(): Promise<{ storeId: string; productCount: 
   return { storeId, productCount: count.n };
 }
 
+/**
+ * The demo accounts share one password, so no role in this store may require two-factor: the first person in would
+ * bind their phone and lock out everyone else. The creation hook turns it on for manager roles, so the seed turns it off.
+ */
+export async function turnOffDemoTwoFactor(storeId: string): Promise<void> {
+  const { db } = await import("@/db");
+  const { roleDefinitions } = await import("@/db/schema");
+  await db.update(roleDefinitions).set({ requiresTwoFactor: false }).where(eq(roleDefinitions.storeId, storeId));
+}
+
 /** Dev only: production's account and store are made on the live site (spec §6.2). */
 export async function createDemoStore(): Promise<string> {
   const { auth } = await import("@/lib/auth");

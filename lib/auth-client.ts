@@ -1,7 +1,8 @@
 // The browser side of Better Auth. Safe to import into client components:
 // it only ever talks to /api/auth, and holds no secrets.
 
-import { organizationClient } from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
+import { organizationClient, twoFactorClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 import { optionalEnv } from "./env";
@@ -17,7 +18,11 @@ const baseURL =
 
 export const authClient = createAuthClient({
   baseURL,
-  plugins: [organizationClient()],
+  // twoFactorClient makes signIn.email answer { twoFactorRedirect: true } for an account with two-factor on,
+  // and gives the sign-in code page twoFactor.verifyTotp / verifyBackupCode.
+  // passkeyClient: signIn.passkey (with browser autofill) and passkey.addPasskey; the rest of a passkey's
+  // management goes through Account's server actions (lib/passkeys/change.ts).
+  plugins: [organizationClient(), twoFactorClient(), passkeyClient()],
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;

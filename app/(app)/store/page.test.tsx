@@ -35,12 +35,13 @@ describe("StorePage", () => {
     mocks.view = STAFF;
   });
 
-  it("gives everyone the Store title, the details and the people, in that order, with no back link", async () => {
+  it("gives everyone the Store title, the details and one People list, in that order, with no back link", async () => {
     await show(["view"], STAFF);
     expect(screen.getByRole("heading", { level: 1, name: "Store" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Back to/ })).toBeNull();
-    expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual(["Store", "Store details", "Sales Associate · 2"]);
+    expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual(["Store", "Store details", "People · 2"]);
     expect(screen.getByText("Zoe Sales")).toBeInTheDocument();
+    expect(screen.getAllByText("Sales Associate")).toHaveLength(2);
   });
 
   it("offers Invite when the viewer may grant a role", async () => {
@@ -67,7 +68,7 @@ describe("StorePage", () => {
     await show(["view", "roles.manage"], STAFF);
     const details = screen.getByRole("region", { name: "Store details" });
     const link = screen.getByRole("link", { name: "Roles and permissions" });
-    const group = screen.getByRole("heading", { name: "Sales Associate · 2" });
+    const group = screen.getByRole("heading", { name: "People · 2" });
     expect(details.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(link.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

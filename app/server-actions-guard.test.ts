@@ -13,13 +13,25 @@ import { exportsOf, guardProblem, hasUseServerDirective, isUseServerFile, source
 // comes before it, so nothing can be written or read first.
 
 const GUARD = "requireSwitchForAction";
+// Liminal Bloom admin actions (spec 0.7.1 7.2): everything under app/admin awaits the admin guard, whose
+// "forbidden" answer is branched on like the switch guard's. The setup and step-up actions are how an admin
+// gets a fresh second factor, so they hold the account-level guard (an admin, factor state not asked).
+const ADMIN_GUARD = "requirePlatformAdminForAction";
+const ACCOUNT_GUARD = "requirePlatformAdminAccountForAction";
+const FORBIDDEN_GUARDS = [GUARD, ADMIN_GUARD, ACCOUNT_GUARD];
+const guardFor = (file: string) => (file.startsWith("app/admin/") ? ADMIN_GUARD : GUARD);
 
 // Files off the plain rule, with reasons: `guard` is awaited instead; `first` lists the only awaits before it, in order.
 type Exception = { guard: string; first: string[]; why: string };
 const ALLOWED: Record<string, Exception> = {
-  "app/create-store/actions.ts": { guard: "getSession", first: ["headers"], why: "store creation happens before the person has a store or a role; the session needs the request headers" },
-  "app/invite/[id]/actions.ts": { guard: "getSession", first: ["headers"], why: "accepting is how a person with no store or role gets one; the session (its person and email) is the check, and the invitation must name that email" },
-  "app/(app)/account/actions.ts": { guard: "requireMember", first: [], why: "changing your own password is for any signed-in member whatever their role, so there is no switch to hold; requireMember redirects a signed-out visitor before anything is read" },
+  "app/create-store/actions.ts": { guard: "getCurrentMember", first: [], why: "store creation happens before the person has a store or a role, so there is no switch to hold; getCurrentMember is read first so a person whose role requires two-factor and who has none yet is refused (A3b)" },
+  "app/invite/[id]/actions.ts": { guard: "getSession", first: ["headers"], why: "accepting is how a person with no store or role gets one; the session (its person and email) is the check, and the invitation must name that email. A person who still needs two-factor (needs-two-factor) may accept on purpose: the requirement is per store and role, so joining a store whose role does not require it is fine, and the new store's own requirement is enforced the next time that store is active" },
+  "app/(app)/account/actions.ts": { guard: "requireAccountPerson", first: [], why: "changing your own password is for any signed-in member whatever their role, so there is no switch to hold; a person whose stores are all paused keeps their password (DECISIONS 11-23), so requireMember would send them away. requireAccountPerson redirects a signed-out visitor before anything is read" },
+  "app/(app)/account/two-factor-actions.ts": { guard: "requireAccountPerson", first: [], why: "two-step sign-in is for any signed-in account whatever its role, and a person whose role requires it but who has none yet is who calls these: requireMember would send exactly them away. requireAccountPerson redirects a signed-out visitor before anything is read" },
+  "app/(app)/account/passkey-actions.ts": { guard: "requireAccountPerson", first: [], why: "passkeys are for any signed-in account whatever its role, and a person whose role requires two-factor and who has none yet is who adds one (a passkey counts): requireMember would send exactly them away. requireAccountPerson redirects a signed-out visitor before anything is read" },
+  "app/(app)/help/actions.ts": { guard: "requireSignedIn", first: [], why: "Help is for any signed-in account, and the people who most need it have no store, no role or only paused stores (spec 0.7.1 9.3), so there is no switch to hold. requireSignedIn redirects a signed-out visitor before anything is read; every statement then filters by the session's own person, and the context is built on the server" },
+  "app/admin/two-factor/actions.ts": { guard: ACCOUNT_GUARD, first: [], why: "setting up two-step sign-in is for an admin who does not have it yet, so the full admin guard (which wants a fresh factor) would refuse the one person who needs these" },
+  "app/admin/verify/actions.ts": { guard: ACCOUNT_GUARD, first: [], why: "the step-up is how an admin with a missing or stale factor gets a fresh one, so the full admin guard would refuse the one person who needs it" },
   "app/(editor)/layout/edit/actions.ts": { guard: GUARD, first: ["getCurrentMember"], why: "the editor answers signed-out itself (its last change was not saved; the guard would redirect), so one getCurrentMember() comes first" },
 };
 
@@ -29,7 +41,7 @@ describe("server actions are guarded (spec 0.7 §4.7)", () => {
 
   it("finds the action files, so the scan cannot pass by looking at nothing", () => {
     const names = files.map((f) => f.file);
-    for (const expected of ["app/(app)/store/actions.ts", "app/(app)/store/people-actions.ts", "app/(app)/store/roles/actions.ts", "app/(app)/products/status-actions.ts", "app/(app)/planograms/actions.ts", "app/(app)/planograms/adjust-actions.ts", "app/(editor)/layout/edit/actions.ts", "app/create-store/actions.ts"]) {
+    for (const expected of ["app/(app)/store/actions.ts", "app/(app)/store/people-actions.ts", "app/(app)/store/roles/actions.ts", "app/(app)/products/status-actions.ts", "app/(app)/planograms/actions.ts", "app/(app)/planograms/adjust-actions.ts", "app/(editor)/layout/edit/actions.ts", "app/create-store/actions.ts", "app/admin/two-factor/actions.ts", "app/admin/two-factor/codes-actions.ts", "app/admin/verify/actions.ts", "app/(app)/help/actions.ts"]) {
       expect(names).toContain(expected);
     }
   });
@@ -37,10 +49,10 @@ describe("server actions are guarded (spec 0.7 §4.7)", () => {
   it("every exported action awaits requireSwitchForAction first (the allow-list is named, with its reason)", () => {
     const offenders = files.flatMap(({ file, source }) =>
       exportsOf(source).flatMap(({ name, fn, problem }) => {
-        const { guard, first } = ALLOWED[file] ?? { guard: GUARD, first: [] };
+        const { guard, first } = ALLOWED[file] ?? { guard: guardFor(file), first: [] };
         if (fn === null) return [`${file}: ${name} ${problem ?? "is not an async function the scan can check"}`];
         // Every awaited switch guard, not only the first, must be branched on (a second guard that depends on the data is the easy one to leave open).
-        const why = guardProblem(fn, guard, first) ?? forbiddenProblem(fn, GUARD);
+        const why = guardProblem(fn, guard, first) ?? FORBIDDEN_GUARDS.map((g) => forbiddenProblem(fn, g)).find((p) => p !== null) ?? null;
         return why ? [`${file}: ${name} ${why}`] : [];
       }),
     );

@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { invitation, member, organization, user } from "@/db/auth-schema";
+import { storeSuspensions } from "@/db/schema";
 import { dropStores } from "@/lib/products/test-stores";
 
 import { lookInvitation, pendingInvitationsFor } from "./invitation-look";
@@ -43,6 +44,15 @@ describe("lookInvitation", () => {
     const v = await viewer("Val.Viewer@Example.Test");
     const id = await invite(s, "val.viewer@example.test");
     expect(await lookInvitation(id, v)).toEqual({ state: "ready", storeName: await storeName(s.store), roleName: "Visual Merchandising Manager" });
+  });
+
+  it("marks a ready invitation to a paused store, and only then", async () => {
+    const s = await makeStoreWithRoles("look-paused");
+    const v = await viewer();
+    const id = await invite(s, v.email);
+    expect(await lookInvitation(id, v)).not.toHaveProperty("paused");
+    await db.insert(storeSuspensions).values({ storeId: s.store, reason: "db test", suspendedByName: "Test" });
+    expect(await lookInvitation(id, v)).toMatchObject({ state: "ready", paused: true });
   });
 
   it("shows a signed-out visitor the store and role, and never the invited address", async () => {

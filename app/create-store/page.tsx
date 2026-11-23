@@ -21,6 +21,9 @@ export default async function CreateStorePage() {
   if (member.kind === "signed-out") {
     redirect("/sign-in");
   }
+  if (member.kind === "needs-two-factor") {
+    redirect("/account");
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface px-4 py-16">
@@ -38,7 +41,7 @@ export default async function CreateStorePage() {
             no store has nowhere to go back to. */}
         {member.kind === "member" ? (
           <Button asChild variant="ghost">
-            <Link href="/home">Back to Home</Link>
+            <Link href="/home">Back to Hub</Link>
           </Button>
         ) : null}
       </Card>

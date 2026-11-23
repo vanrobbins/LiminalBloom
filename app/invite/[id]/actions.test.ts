@@ -65,6 +65,18 @@ describe("acceptInvitationAction", () => {
     expect(mocks.setActiveOrganization.mock.calls[0][0].body).toEqual({ organizationId: store });
   });
 
+  it("lets a person who still needs two-factor in their own store accept into one whose role does not require it (the requirement is per store and role)", async () => {
+    const { store: home, roles: homeRoles } = await makeStoreWithRoles("accept-needs-2fa");
+    const { userId } = await makePerson(home, homeRoles.store_manager);
+    // Their Store Manager role requires two-factor and they have none: getCurrentMember would say needs-two-factor.
+    await db.update(user).set({ twoFactorEnabled: false, email: address }).where(eq(user.id, userId));
+    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Test person", email: address }, session: { activeOrganizationId: home } });
+    expect(await acceptInvitationAction(inviteId)).toMatchObject({ status: "accepted", roleName: "Visual Merchandising Worker" });
+    const stores = (await db.select().from(member).where(eq(member.userId, userId))).map((m) => m.organizationId);
+    expect(stores.sort()).toEqual([home, store].sort());
+    expect(mocks.setActiveOrganization.mock.calls[0][0].body).toEqual({ organizationId: store });
+  });
+
   it("refuses someone signed in with another email, and never sets a store active", async () => {
     const userId = await signInWithEmail("someone.else@example.test");
     expect(await acceptInvitationAction(inviteId)).toEqual({ status: "wrong-email" });

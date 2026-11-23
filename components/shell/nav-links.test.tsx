@@ -26,8 +26,8 @@ describe("NavLinks", () => {
   it("puts Home first, then Products, and has no separate Search or Account entry", () => {
     render(<NavLinks variant="tabs" />);
     const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
-    expect(links[0]).toHaveAccessibleName("Home");
-    expect(links.map((l) => l.textContent)).toEqual(["Home", "Products", "Layout", "Planograms", "Store"]);
+    expect(links[0]).toHaveAccessibleName("Hub");
+    expect(links.map((l) => l.textContent)).toEqual(["Hub", "Products", "Layout", "Planograms", "Store"]);
   });
 
   it("leaves Account to the avatar menu, so five tabs fit a 360 px phone", () => {
@@ -38,8 +38,8 @@ describe("NavLinks", () => {
   it("is current on /home", () => {
     mocks.pathname = "/home";
     render(<NavLinks variant="sidebar" />);
-    expect(link("Home")).toHaveAttribute("href", "/home");
-    expect(link("Home")).toHaveAttribute("aria-current", "page");
+    expect(link("Hub")).toHaveAttribute("href", "/home");
+    expect(link("Hub")).toHaveAttribute("aria-current", "page");
     expect(link("Products")).not.toHaveAttribute("aria-current");
   });
 
@@ -109,7 +109,7 @@ describe("NavLinks", () => {
   it("makes every entry a touch target of at least 44 px", () => {
     for (const variant of ["tabs", "rail", "sidebar"] as const) {
       const { unmount } = render(<NavLinks variant={variant} />);
-      expect(link("Home").className).toMatch(/\bmin-h-(11|14)\b/);
+      expect(link("Hub").className).toMatch(/\bmin-h-(11|14)\b/);
       unmount();
     }
   });

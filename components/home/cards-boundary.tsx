@@ -7,9 +7,10 @@
 import { catchError, type ErrorInfo } from "next/error";
 import { useEffect } from "react";
 
+import { AskButton } from "@/components/help/ask-button";
 import { Button } from "@/components/ui/button";
 
-function CardsFallback(_props: object, { error, retry }: ErrorInfo) {
+export function CardsFallback(_props: object, { error, retry }: ErrorInfo) {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -20,6 +21,7 @@ function CardsFallback(_props: object, { error, retry }: ErrorInfo) {
       <Button variant="secondary" onClick={() => retry()}>
         Try again
       </Button>
+      <AskButton kind="broken" />
     </div>
   );
 }

@@ -12,21 +12,24 @@ import { Plus, Store } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { requireMember } from "@/lib/current-member";
+import { PasskeyCard } from "@/components/passkeys/passkey-card";
+import { SignOutButton } from "@/components/paused/sign-out-button";
+import { RequiredTwoFactor } from "@/components/two-factor/required-setup";
+import { TwoFactorCard } from "@/components/two-factor/account-card";
+import { requireAccountPerson } from "@/lib/current-member";
+import { twoFactorStatus } from "@/lib/two-factor/status";
 
 import { ChangePasswordForm } from "./change-password-form";
+import { allowPasskeyAddAction, removePasskeyAction, renamePasskeyAction } from "./passkey-actions";
+import { confirmTwoFactorAction, disableTwoFactorAction, newBackupCodesAction, startTwoFactorAction } from "./two-factor-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountPage() {
-  // Membership-checked, so a store this person was removed from is never
-  // shown as theirs.
-  const { user, stores, activeStoreId } = await requireMember();
+const PASSKEY_ACTIONS = { allow: allowPasskeyAddAction, rename: renamePasskeyAction, remove: removePasskeyAction };
 
+function AccountCards({ user, two }: { user: { name: string; email: string }; two: Awaited<ReturnType<typeof twoFactorStatus>> }) {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <PageHeader title="Account" />
-
+    <>
       <Card compact>
         <dl className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between gap-4">
@@ -41,6 +44,46 @@ export default async function AccountPage() {
       </Card>
 
       <ChangePasswordForm />
+
+      <PasskeyCard passkeys={two.passkeys} needsCode={two.on} {...PASSKEY_ACTIONS} />
+
+      <TwoFactorCard status={two} start={startTwoFactorAction} confirm={confirmTwoFactorAction} makeCodes={newBackupCodesAction} disable={disableTwoFactorAction} />
+    </>
+  );
+}
+
+export default async function AccountPage() {
+  // Membership-checked, so a store this person was removed from is never
+  // shown as theirs. A person whose role asks for two-step sign-in and who has
+  // none is not let into the app, so this page is where they set it up: it shows
+  // only that (and Sign out), never a redirect back to itself.
+  const person = await requireAccountPerson();
+  if (person.kind === "needs-two-factor") {
+    return <RequiredTwoFactor roleName={person.roleName} start={startTwoFactorAction} confirm={confirmTwoFactorAction} allow={allowPasskeyAddAction} rename={renamePasskeyAction} />;
+  }
+  const { user } = person;
+  const two = await twoFactorStatus(user.id);
+  if (person.kind === "paused") {
+    // Every store is paused, so there is no app shell: the account on its own, with a way back and out (DECISIONS 11-23).
+    return (
+      <main className="flex min-h-screen justify-center bg-surface px-4 py-16">
+        <div className="flex w-full max-w-2xl flex-col gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">Account</h1>
+          <Link href="/paused" className="self-start text-sm text-ink-muted underline-offset-4 hover:underline">
+            ← Back
+          </Link>
+          <AccountCards user={user} two={two} />
+          <SignOutButton />
+        </div>
+      </main>
+    );
+  }
+  const { stores, activeStoreId } = person;
+
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <PageHeader title="Account" />
+      <AccountCards user={user} two={two} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-ink">

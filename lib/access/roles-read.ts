@@ -57,6 +57,7 @@ export async function rolesViewFor(viewer: Member): Promise<RolesView> {
     builtin: r.builtin,
     version: r.version,
     switches: r.switches,
+    requiresTwoFactor: r.requiresTwoFactor,
     people: { names: byName(named.filter((p) => p.roleId === r.id).map((p) => ({ name: p.name }))).map((p) => p.name), invitations: pending.find((p) => p.roleId === r.id)?.n ?? 0 },
   }));
   const placements = roles.filter((r) => r.rank >= actor.rank).map((r) => ({ id: r.id, name: r.name }));

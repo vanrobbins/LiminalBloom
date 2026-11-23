@@ -24,7 +24,7 @@ const CALM = "Nothing needs you right now.";
 
 async function openHome(page: Page, key: BuiltinRoleKey) {
   await page.goto("/home");
-  await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Hub" })).toBeVisible();
   // The cards stream in behind a loader: wait for the first card, or the calm line.
   await expect(CARDS[key].length > 0 ? page.getByRole("heading", { level: 2 }).first() : page.getByText(CALM)).toBeVisible();
   await hydrated(page);

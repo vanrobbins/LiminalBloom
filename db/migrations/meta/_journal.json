@@ -141,6 +141,13 @@
       "when": 1795381630503,
       "tag": "0019_quick_adjust",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795411625016,
+      "tag": "0020_platform_help",
+      "breakpoints": true
     }
   ]
 }

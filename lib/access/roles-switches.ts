@@ -57,7 +57,10 @@ export async function applyChanges(storeId: string, actor: RolesActor, snapshot:
       from locked l left join changes c on c.id = l.id),
     ${nestingBad},
     updated as (
-      update role_definitions r set switches = c.switches, name = c.name, version = r.version + 1, updated_at = now()
+      update role_definitions r set switches = c.switches, name = c.name, version = r.version + 1, updated_at = now(),
+        -- A role that newly gains a people or roles permission starts requiring two-factor (security first); a save never turns it off.
+        requires_two_factor = r.requires_two_factor or exists (
+          select 1 from unnest(c.switches) x where x in ('people.manage', 'roles.manage') and x <> all (l.switches))
       from changes c join locked l on l.id = c.id and l.version = c.version
       where r.store_id = ${storeId} and r.id = c.id
         and (select ok from pins)

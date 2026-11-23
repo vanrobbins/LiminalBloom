@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   current: vi.fn(),
   getSession: vi.fn(),
   waiting: vi.fn(),
+  replies: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
   }),
@@ -13,6 +14,7 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/lib/current-member", () => ({ getCurrentMember: mocks.current }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
+vi.mock("@/lib/help/badge", () => ({ helpRepliesFor: mocks.replies }));
 vi.mock("@/lib/access/invitation-look", () => ({ pendingInvitationsFor: mocks.waiting }));
 vi.mock("@/app/invite/[id]/actions", () => ({ acceptInvitationAction: vi.fn() }));
 
@@ -23,6 +25,7 @@ beforeEach(() => {
   mocks.current.mockResolvedValue({ kind: "no-store" });
   mocks.getSession.mockResolvedValue({ user: { id: "u1", name: "Nia", email: "nia@example.test" } });
   mocks.waiting.mockResolvedValue([]);
+  mocks.replies.mockResolvedValue(0);
 });
 
 describe("WelcomePage", () => {
@@ -31,6 +34,31 @@ describe("WelcomePage", () => {
     await expect(WelcomePage()).rejects.toThrow("redirect:/sign-in");
     mocks.current.mockResolvedValue({ kind: "member" });
     await expect(WelcomePage()).rejects.toThrow("redirect:/home");
+  });
+
+  it("sends a person whose role needs two-step sign-in to Account, which does not send them back here", async () => {
+    mocks.current.mockResolvedValue({ kind: "needs-two-factor" });
+    await expect(WelcomePage()).rejects.toThrow("redirect:/account");
+  });
+
+  it("sends a person whose stores are all paused to /paused, not to a welcome for people with no store", async () => {
+    mocks.current.mockResolvedValue({ kind: "paused" });
+    await expect(WelcomePage()).rejects.toThrow("redirect:/paused");
+  });
+
+  it("says Liminal Bloom replied, linking to Help, only when there is a reply for this person", async () => {
+    const { unmount } = render(await WelcomePage());
+    expect(screen.queryByText("Liminal Bloom replied.")).toBeNull();
+    unmount();
+    mocks.replies.mockResolvedValue(2);
+    render(await WelcomePage());
+    expect(mocks.replies).toHaveBeenCalledWith("u1");
+    expect(screen.getByRole("link", { name: "Read the replies" })).toHaveAttribute("href", "/help");
+  });
+
+  it("offers Ask Liminal Bloom, from /welcome", async () => {
+    render(await WelcomePage());
+    expect(screen.getByRole("link", { name: "Ask Liminal Bloom" })).toHaveAttribute("href", "/help/new?kind=account&from=%2Fwelcome");
   });
 
   it("lists the invitations waiting for their email by store, role and expiry, and tells them to paste their link", async () => {
@@ -49,7 +77,7 @@ describe("WelcomePage", () => {
     // The only Accept is the paste form's, which takes a link and never carries an id.
     expect(screen.getAllByRole("button", { name: /accept/i })).toHaveLength(1);
     expect(screen.getByLabelText("Invite link or code")).toHaveValue("");
-    expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store"]);
+    expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store", "/help/new?kind=account&from=%2Fwelcome"]);
   });
 
   it("says nothing is waiting, and still offers Create a store, when there are no invitations", async () => {

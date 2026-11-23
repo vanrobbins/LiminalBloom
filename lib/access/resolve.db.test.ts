@@ -95,7 +95,7 @@ describe("resolveAccess", () => {
     const { store, roles } = await makeStoreWithRoles("res-removed");
     const { userId } = await makePerson(store, roles.store_manager);
     await db.delete(member).where(and(eq(member.userId, userId), eq(member.organizationId, store)));
-    expect(await resolveAccess(userId, store)).toEqual({ activeStoreId: null, role: null, switches: new Set() });
+    expect(await resolveAccess(userId, store)).toEqual({ activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: false });
   });
 
   it("gives a store with no roles at all its roles, and its Better Auth owner the Store Manager role", async () => {

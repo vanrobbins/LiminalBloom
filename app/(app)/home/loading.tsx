@@ -9,7 +9,7 @@ import { Loader } from "@/components/ui/loader";
 export default function Loading() {
   return (
     <div className="mx-auto w-full max-w-2xl md:max-w-5xl">
-      <PageHeader title="Home" />
+      <PageHeader title="Hub" />
       <HomeSearch />
       <div className="min-h-64">
         <Loader label="Loading your store…" />

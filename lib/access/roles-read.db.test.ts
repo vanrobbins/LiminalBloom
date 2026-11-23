@@ -22,7 +22,7 @@ afterAll(async () => {
 
 function viewer(store: string, key: string, roleId: string, extra: Partial<Member> = {}): Member {
   const def = BUILTIN_ROLES.find((r) => r.key === key)!;
-  return { kind: "member", user: { id: "u", name: "Van", email: "v@example.com" }, stores: [{ id: store, name: "Test" }], activeStoreId: store, role: { id: roleId, name: def.name, rank: def.rank }, switches: [...def.switches], ...extra };
+  return { kind: "member", user: { id: "u", name: "Van", email: "v@example.com" }, stores: [{ id: store, name: "Test" }], activeStoreId: store, role: { id: roleId, name: def.name, rank: def.rank }, switches: [...def.switches], isPlatformAdmin: false, helpReplies: 0, ...extra };
 }
 
 describe("rolesViewFor", () => {

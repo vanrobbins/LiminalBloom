@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 
+import { AskButton } from "@/components/help/ask-button";
 import { Button } from "@/components/ui/button";
 import type { InvitationState } from "@/lib/access/invitation-look";
 import { authHref } from "@/lib/return-path";
@@ -12,6 +13,9 @@ import { authHref } from "@/lib/return-path";
 import { AcceptButton } from "./accept-button";
 import { unusableText } from "./invite-text";
 import { PageShell } from "./page-shell";
+
+// The refusals that end in a status line; all but already-member (who has Home to go to) also offer Ask.
+const UNUSABLE = new Set<InvitationState["state"]>(["expired", "lapsed", "already-member", "full", "wrong-email"]);
 
 type InviteViewProps = {
   id: string;
@@ -22,6 +26,7 @@ type InviteViewProps = {
 
 export function InviteView({ id, look, signedInAs }: InviteViewProps) {
   const here = `/invite/${id}`;
+  const signedOut = signedInAs === null;
   if (look.state === "missing" || look.state === "used" || look.state === "cancelled") {
     return (
       <PageShell>
@@ -29,6 +34,7 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
         <p role="status" className="text-ink">
           {unusableText(look.state)}
         </p>
+        <AskButton kind="account" from="/invite" signedOut={signedOut} />
       </PageShell>
     );
   }
@@ -53,13 +59,18 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
       ) : null}
       {look.state === "ready" ? (
         <>
+          {look.paused ? (
+            <p role="status" className="text-sm text-ink">
+              {storeName} is paused right now. You can accept, but you won&apos;t see it until Liminal Bloom restores it.
+            </p>
+          ) : null}
           {signedInAs ? <p className="text-sm text-ink-muted">You&apos;re signed in as {signedInAs}.</p> : null}
           <AcceptButton invitationId={id} storeName={storeName} />
         </>
       ) : null}
-      {look.state === "expired" || look.state === "lapsed" || look.state === "already-member" || look.state === "full" || look.state === "wrong-email" ? (
+      {UNUSABLE.has(look.state) ? (
         <p role="status" className="text-ink">
-          {unusableText(look.state, storeName)}
+          {unusableText(look.state as Parameters<typeof unusableText>[0], storeName)}
         </p>
       ) : null}
       {look.state === "wrong-email" ? (
@@ -67,6 +78,7 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
           <Link href={authHref("/sign-in", here)}>Sign in with another account</Link>
         </Button>
       ) : null}
+      {UNUSABLE.has(look.state) && look.state !== "already-member" ? <AskButton kind="account" from="/invite" signedOut={signedOut} /> : null}
       {look.state === "already-member" ? (
         <Button asChild variant="secondary">
           <Link href="/home">Go to Home</Link>

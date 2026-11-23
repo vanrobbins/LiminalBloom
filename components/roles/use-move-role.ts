@@ -41,5 +41,5 @@ export function useMoveRole({ refresh, focusAfter }: { refresh: () => void; focu
     }
   }
 
-  return { move, said };
+  return { move, said, setSaid };
 }

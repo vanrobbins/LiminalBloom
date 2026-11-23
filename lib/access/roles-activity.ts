@@ -28,6 +28,8 @@ export function activityText(event: string, actor: string, detail: Detail, canSe
       const parts = [on ? `turned on ${on}` : "", off ? `turned off ${off}` : ""].filter(Boolean);
       return `${actor} changed ${role}${parts.length ? `: ${parts.join("; ")}` : ""}`;
     }
+    case "role_two_factor_changed":
+      return detail.on === true ? `${actor} made ${role} require two-factor sign-in` : `${actor} stopped ${role} requiring two-factor sign-in`;
     case "role_reordered":
       return `${actor} moved ${role} ${detail.direction === "up" ? "above" : "below"} ${text(detail, "past", "another role")}`;
     case "role_reset":
@@ -46,6 +48,11 @@ export function activityText(event: string, actor: string, detail: Detail, canSe
       return canSeeEmails ? `${actor} cancelled the invitation for ${email}` : `${actor} cancelled an invitation`;
     case "store_renamed":
       return `${actor} renamed the store from ${text(detail, "from", "its old name")} to ${text(detail, "to", "a new name")}`;
+    // Liminal Bloom's help actions (spec 0.7.1 7.4): the actor is the product, never the admin, and the reason stays in the admin log.
+    case "store_paused":
+      return `${actor} paused the store`;
+    case "store_restored":
+      return `${actor} restored the store`;
     case "invitation_accepted":
       return `${actor} joined as ${role}`;
     default:

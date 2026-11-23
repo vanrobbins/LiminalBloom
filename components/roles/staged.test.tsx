@@ -8,7 +8,7 @@ import { SWITCHES, type Switch } from "@/lib/access/switches";
 import { cellNote, changedRows, stagedProblem, switchesOf, toggled, type Staged } from "./staged";
 
 const rows: RoleRow[] = buildRoleRows(
-  BUILTIN_ROLES.map((r) => ({ id: r.key, name: r.name, rank: r.rank, builtin: r.key, version: 1, switches: [...r.switches], people: { names: [], invitations: 0 } })),
+  BUILTIN_ROLES.map((r) => ({ id: r.key, name: r.name, rank: r.rank, builtin: r.key, version: 1, switches: [...r.switches], requiresTwoFactor: false, people: { names: [], invitations: 0 } })),
   { rank: 100, switches: new Set(SWITCHES) },
   "store_manager",
 );

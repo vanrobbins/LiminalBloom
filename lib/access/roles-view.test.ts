@@ -5,8 +5,8 @@ import { buildRoleRows, cellEnabled, changeSummary, differsFromDefault, EDITABLE
 import { SWITCHES, SWITCH_TEXT, type Switch } from "./switches";
 
 const input = (): RoleInput[] =>
-  BUILTIN_ROLES.map((r) => ({ id: r.key, name: r.name, rank: r.rank, builtin: r.key, version: 1, switches: [...r.switches], people: { names: [], invitations: 0 } }));
-const custom = (id: string, rank: number, switches: Switch[]): RoleInput => ({ id, name: id, rank, builtin: null, version: 1, switches, people: { names: ["Dee"], invitations: 1 } });
+  BUILTIN_ROLES.map((r) => ({ id: r.key, name: r.name, rank: r.rank, builtin: r.key, version: 1, switches: [...r.switches], requiresTwoFactor: false, people: { names: [], invitations: 0 } }));
+const custom = (id: string, rank: number, switches: Switch[]): RoleInput => ({ id, name: id, rank, builtin: null, version: 1, switches, requiresTwoFactor: false, people: { names: ["Dee"], invitations: 1 } });
 const actor = (key: string, ...extra: Switch[]) => {
   const role = BUILTIN_ROLES.find((r) => r.key === key)!;
   return { rank: role.rank, switches: new Set<Switch>([...role.switches, ...extra]) };
@@ -93,14 +93,21 @@ describe("roleActions and differsFromDefault", () => {
   it("offers a built-in Rename, and Reset only when it differs from its default; never Delete", () => {
     const row = by(rowsFor("store_manager"), "vm_worker");
     expect(differsFromDefault(row)).toBe(false);
-    expect(roleActions(row).map((a) => a.key)).toEqual(["rename"]);
-    expect(roleActions({ ...row, name: "Floor" }).map((a) => a.key)).toEqual(["rename", "reset"]);
+    expect(roleActions(row).map((a) => a.key)).toEqual(["rename", "two-factor"]);
+    expect(roleActions({ ...row, name: "Floor" }).map((a) => a.key)).toEqual(["rename", "two-factor", "reset"]);
     expect(roleActions({ ...row, switches: ["view"] }).map((a) => a.key)).toContain("reset");
   });
 
   it("offers a custom role Rename, the moves that apply, and Delete; and nothing on a read-only row", () => {
     const rows = rowsFor("store_manager", [custom("mid", 450, ["view"])]);
-    expect(roleActions(by(rows, "mid")).map((a) => a.key)).toEqual(["rename", "up", "down", "delete"]);
+    expect(roleActions(by(rows, "mid")).map((a) => a.key)).toEqual(["rename", "two-factor", "up", "down", "delete"]);
     expect(roleActions(by(rows, "store_manager"))).toEqual([]);
+  });
+
+  it("words the two-factor item by what it would do, and carries the saved setting on the row", () => {
+    const row = by(rowsFor("store_manager", [{ ...custom("mid", 450, ["view"]), requiresTwoFactor: true }]), "mid");
+    expect(row.requiresTwoFactor).toBe(true);
+    expect(roleActions(row).find((a) => a.key === "two-factor")?.label).toBe("Stop requiring two-factor");
+    expect(roleActions({ ...row, requiresTwoFactor: false }).find((a) => a.key === "two-factor")?.label).toBe("Require two-factor");
   });
 });

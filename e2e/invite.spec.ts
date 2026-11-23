@@ -37,7 +37,7 @@ test("invite, sign up from the link, accept: lands in the store with that role a
   await guest.page.waitForURL("**/home");
 
   await openPeople(guest.page);
-  await expect(guest.page.getByRole("heading", { name: "Visual Merchandising Worker · 2" })).toBeVisible();
+  await expect(guest.page.locator("main [data-person-role]").filter({ hasText: /^Visual Merchandising Worker$/ })).toHaveCount(2);
   await expect(guest.page.getByRole("listitem").filter({ hasText: "Nia Invitee" })).toContainText("(you)");
   // A Visual Merchandising Worker sees names and roles only, and cannot invite.
   await expect(inviteButton(guest.page)).toHaveCount(0);
@@ -148,7 +148,7 @@ test("/welcome: a new account sees the invitation waiting for its email by name 
   await guest.page.getByRole("button", { name: "Accept invitation" }).click();
   await guest.page.waitForURL("**/home");
   await openPeople(guest.page);
-  await expect(guest.page.getByRole("heading", { name: "Sales Associate · 3" })).toBeVisible();
+  await expect(guest.page.locator("main [data-person-role]").filter({ hasText: /^Sales Associate$/ })).toHaveCount(3);
   // With a store, /welcome has nothing for them.
   await guest.page.goto("/welcome");
   await expect(guest.page).toHaveURL(/\/home$/);
@@ -186,7 +186,7 @@ test("/welcome: paste the invite link and Accept opens the invitation; accepting
   await guest.page.waitForURL("**/home");
 
   await openPeople(guest.page);
-  await expect(guest.page.getByRole("heading", { name: "Visual Merchandising Worker · 2" })).toBeVisible();
+  await expect(guest.page.locator("main [data-person-role]").filter({ hasText: /^Visual Merchandising Worker$/ })).toHaveCount(2);
   await expect(guest.page.getByRole("listitem").filter({ hasText: "Pat Paste" })).toContainText("(you)");
   await guest.context.close();
 });

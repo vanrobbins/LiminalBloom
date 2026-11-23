@@ -11,6 +11,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
+import { getCurrentMember } from "@/lib/current-member";
 import { isSlugTaken } from "@/lib/store-errors";
 import { setStoreTimezone } from "@/lib/store-settings";
 import { isTimezone } from "@/lib/time/zones";
@@ -28,8 +29,14 @@ export async function createStore(
   _previous: { error: string } | null,
   formData: FormData,
 ): Promise<{ error: string } | null> {
-  const requestHeaders = await headers();
+  // First, before anything is read: someone whose role requires two-factor and who has none yet may only
+  // set it up on Account, so they can't make a store (a store they'd own) by calling this directly (A3b).
+  // A person with no store yet is who this is for, so only these two kinds are turned away.
+  const current = await getCurrentMember();
+  if (current.kind === "signed-out") redirect("/sign-in");
+  if (current.kind === "needs-two-factor") return { error: "Set up two-step sign-in on Account first." };
 
+  const requestHeaders = await headers();
   const session = await auth.api.getSession({ headers: requestHeaders });
   if (!session) {
     redirect("/sign-in");

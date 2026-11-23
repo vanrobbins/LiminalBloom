@@ -28,6 +28,9 @@ export function PersonListItem({ person, onChangeRole, onRemove, leaving = false
         </span>
         {person.email ? <span className="text-sm text-ink-muted wrap-break-word">{person.email}</span> : null}
       </span>
+      <span data-person-role className="shrink-0 text-sm text-ink-muted">
+        {person.roleName}
+      </span>
       {person.canAct ? (
         <>
           <Button icon variant="secondary" data-change-role={person.memberId} onClick={(event) => onChangeRole(person, event.currentTarget)} aria-label={`Change role for ${person.name}`}>
