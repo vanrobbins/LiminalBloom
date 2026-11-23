@@ -11,7 +11,8 @@ import { db } from "@/db";
 import { logCompanyEvent, type CompanyActor } from "./events";
 import { cleanRegionName } from "./limits";
 
-const isUnique = (error: unknown): boolean => typeof error === "object" && error !== null && (("code" in error && error.code === "23505") || ("cause" in error && isUnique(error.cause)));
+const hasCode = (error: unknown, code: string): boolean => typeof error === "object" && error !== null && (("code" in error && error.code === code) || ("cause" in error && hasCode(error.cause, code)));
+const isUnique = (error: unknown): boolean => hasCode(error, "23505");
 
 export type RegionOutcome = { status: "added" | "renamed" | "deleted" | "unchanged" | "invalid" | "taken" | "stale" | "used" | "gone" };
 
@@ -30,17 +31,17 @@ export async function addRegion(companyId: string, actor: CompanyActor, rawName:
   }
 }
 
-/** Pinned to the name the page showed, so a rename made elsewhere meanwhile is "stale", never overwritten. */
-export async function renameRegion(companyId: string, actor: CompanyActor, regionId: string, seenName: string, rawName: string): Promise<RegionOutcome> {
+/** Pinned to the version the page showed, so a rename made elsewhere meanwhile is "stale", never overwritten. */
+export async function renameRegion(companyId: string, actor: CompanyActor, regionId: string, seen: { name: string; version: number }, rawName: string): Promise<RegionOutcome> {
   const name = cleanRegionName(rawName);
   if (name === null) return { status: "invalid" };
-  if (name === seenName) return { status: "unchanged" };
+  if (name === seen.name) return { status: "unchanged" };
   try {
     const done = await db.execute(sql`
       with renamed as (
         update regions g set name = ${name}, version = g.version + 1, updated_at = now()
         from regions old
-        where g.id = ${regionId} and g.company_id = ${companyId} and old.id = g.id and g.name = ${seenName}
+        where g.id = ${regionId} and g.company_id = ${companyId} and old.id = g.id and g.version = ${seen.version}
         returning old.name as old_name, g.name as new_name),
       logged as (${logCompanyEvent(companyId, actor, "region_renamed", "renamed", sql`jsonb_build_object('from', r.old_name, 'to', r.new_name)`)})
       select id from logged`);
@@ -84,7 +85,9 @@ export type MoveOutcome = { status: "moved" | "unchanged" | "gone" };
 /** Moves a store of this company to a region of this company, or to none (`regionId` null). */
 export async function moveStore(companyId: string, actor: CompanyActor, storeId: string, regionId: string | null): Promise<MoveOutcome> {
   const target = regionId === null ? sql`true` : sql`exists (select 1 from regions where id = ${regionId} and company_id = ${companyId})`;
-  const done = await db.execute(sql`
+  let done;
+  try {
+    done = await db.execute(sql`
     with moved as (
       update store_profiles sp set region_id = ${regionId}::text, version = sp.version + 1, updated_at = now()
       from store_profiles old
@@ -99,6 +102,11 @@ export async function moveStore(companyId: string, actor: CompanyActor, storeId:
       sql`jsonb_build_object('store', (select name from organization where id = r.store_id), 'from', (select name from regions where id = r.old_region), 'to', (select name from regions where id = r.new_region))`,
     )})
     select id from logged`);
+  } catch (error) {
+    // The region was deleted between the existence check and the update (store_profiles.region_id's foreign key).
+    if (hasCode(error, "23503")) return { status: "gone" };
+    throw error;
+  }
   if (done.rows.length === 1) return { status: "moved" };
   const there = await db.execute(sql`select 1 from store_profiles where store_id = ${storeId} and company_id = ${companyId}`);
   return { status: there.rows.length === 1 ? "unchanged" : "gone" };

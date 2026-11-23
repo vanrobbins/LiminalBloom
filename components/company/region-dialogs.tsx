@@ -34,7 +34,7 @@ export function RenameRegionDialog({ region, ...shared }: Shared & { region: Reg
       confirm="Save name"
       loadingText="Saving…"
       ready={name.trim() !== "" && name.trim() !== region.name}
-      run={async () => problem(await renameRegionAction(region.id, name, region.name))}
+      run={async () => problem(await renameRegionAction(region.id, name, region.name, region.version))}
     >
       <Input label="Name" value={name} maxLength={MAX_REGION_NAME} autoFocus autoComplete="off" onChange={(event) => setName(event.target.value)} />
     </ActionDialog>

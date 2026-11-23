@@ -52,7 +52,7 @@ describe("a corporate admin", { timeout: 30_000 }, () => {
     signedInAs(admin);
     expect(await renameCompanyAction("Acme West", await nameOf(company.id))).toMatchObject({ status: "saved" });
     expect(await addRegionAction("South")).toMatchObject({ status: "saved" });
-    expect(await renameRegionAction(north, "Northeast", "North")).toMatchObject({ status: "saved" });
+    expect(await renameRegionAction(north, "Northeast", "North", 1)).toMatchObject({ status: "saved" });
     expect(await moveStoreAction(store.store, null)).toMatchObject({ status: "saved" });
     expect(await deleteRegionAction(north)).toMatchObject({ status: "saved" });
     expect(await nameOf(company.id)).toBe("Acme West");
@@ -76,7 +76,7 @@ describe("a corporate admin", { timeout: 30_000 }, () => {
     const admin = await makeBareAccount("act-own-admin");
     await assignCompanyRole(mine.company.id, admin, "corporate_admin");
     signedInAs(admin);
-    expect((await renameRegionAction(theirs.north, "Mine", "North")).status).toBe("refused");
+    expect((await renameRegionAction(theirs.north, "Mine", "North", 1)).status).toBe("refused");
     expect((await deleteRegionAction(theirs.north)).status).toBe("refused");
     expect((await moveStoreAction(theirs.store.store, null)).status).toBe("refused");
     expect(await regionsOf(theirs.company.id)).toEqual(["North"]);
@@ -93,7 +93,7 @@ describe("a person without the switch", { timeout: 30_000 }, () => {
     const refused = { status: "refused" };
     expect(await renameCompanyAction("Hijacked", await nameOf(company.id))).toMatchObject(refused);
     expect(await addRegionAction("South")).toMatchObject(refused);
-    expect(await renameRegionAction(north, "Elsewhere", "North")).toMatchObject(refused);
+    expect(await renameRegionAction(north, "Elsewhere", "North", 1)).toMatchObject(refused);
     expect(await moveStoreAction(store.store, null)).toMatchObject(refused);
     expect(await deleteRegionAction(north)).toMatchObject(refused);
     expect(await nameOf(company.id)).toBe("Test company act-rm");

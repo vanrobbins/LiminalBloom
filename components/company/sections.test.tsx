@@ -20,8 +20,8 @@ import { RegionsSection } from "./regions-section";
 import { StoresSection } from "./stores-section";
 
 const REGIONS: RegionRow[] = [
-  { id: "r1", name: "North", stores: 2, managers: 1 },
-  { id: "r2", name: "South", stores: 0, managers: 0 },
+  { id: "r1", name: "North", version: 1, stores: 2, managers: 1 },
+  { id: "r2", name: "South", version: 1, stores: 0, managers: 0 },
 ];
 const STORES: CompanyStoreRow[] = [
   { id: "s1", name: "Pioneer Place", regionId: "r1", regionName: "North", paused: false },

@@ -30,7 +30,7 @@ const company = (role: string, switches: string[], regionName: string | null = n
 const VIEW = {
   name: "Acme",
   ownerName: "Ana Owner",
-  regions: [{ id: "r1", name: "North", stores: 1, managers: 0 }],
+  regions: [{ id: "r1", name: "North", version: 1, stores: 1, managers: 0 }],
   stores: [{ id: "s1", name: "Pioneer Place", regionId: "r1", regionName: "North", paused: false }],
 };
 

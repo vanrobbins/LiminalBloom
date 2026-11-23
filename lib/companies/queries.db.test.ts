@@ -35,8 +35,8 @@ describe("companyView", { timeout: 30_000 }, () => {
     const view = await companyView(access(c.id, "x", "owner"));
     expect(view.ownerName).toBe("Test q-owner");
     expect(view.regions).toEqual([
-      { id: north, name: "North", stores: 1, managers: 1 },
-      { id: south, name: "South", stores: 0, managers: 0 },
+      { id: north, name: "North", version: 1, stores: 1, managers: 1 },
+      { id: south, name: "South", version: 1, stores: 0, managers: 0 },
     ]);
     expect(view.stores).toEqual([
       expect.objectContaining({ regionId: north, regionName: "North", paused: true }),

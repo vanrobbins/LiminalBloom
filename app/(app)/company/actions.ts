@@ -71,14 +71,14 @@ export async function addRegionAction(name: unknown): Promise<CompanyReply> {
   return regionReply(await addRegion(company.id, { userId: user.id, name: user.name }, parsed.data), parsed.data.trim());
 }
 
-export async function renameRegionAction(regionId: unknown, name: unknown, seenName: unknown): Promise<CompanyReply> {
+export async function renameRegionAction(regionId: unknown, name: unknown, seenName: unknown, seenVersion: unknown): Promise<CompanyReply> {
   const check = await requireCompanyForAction("company.structure");
   if (check.status === "forbidden") return { status: "refused", message: NOT_STRUCTURE };
   const { user, company } = check.person;
-  const parsed = z.tuple([id, text, text]).safeParse([regionId, name, seenName]);
+  const parsed = z.tuple([id, text, text, z.number().int().min(0).max(2_000_000_000)]).safeParse([regionId, name, seenName, seenVersion]);
   if (!parsed.success) return { status: "refused", message: REGION_LENGTH };
-  const [region, to, seen] = parsed.data;
-  return regionReply(await renameRegion(company.id, { userId: user.id, name: user.name }, region, seen, to), to.trim());
+  const [region, to, seenNameText, version] = parsed.data;
+  return regionReply(await renameRegion(company.id, { userId: user.id, name: user.name }, region, { name: seenNameText, version }, to), to.trim());
 }
 
 export async function deleteRegionAction(regionId: unknown): Promise<CompanyReply> {

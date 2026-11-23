@@ -36,22 +36,28 @@ describe("regions", { timeout: 30_000 }, () => {
     expect(await events(a.id)).toEqual([{ event: "region_added", detail: { name: "North" } }]);
   });
 
-  it("renames pinned to the name seen: a changed name is stale, a taken one is refused", async () => {
+  it("renames pinned to the version seen: a rename made meanwhile is stale even if the name came back, a taken one is refused", async () => {
     const c = await makeCompany("rg-ren");
     const north = await makeRegion(c.id, "North");
     await makeRegion(c.id, "South");
-    expect(await renameRegion(c.id, actor(c.ownerId), north, "North", "Northeast")).toEqual({ status: "renamed" });
-    expect(await renameRegion(c.id, actor(c.ownerId), north, "North", "Elsewhere")).toEqual({ status: "stale" });
-    expect(await renameRegion(c.id, actor(c.ownerId), north, "Northeast", "south")).toEqual({ status: "taken" });
-    expect(await renameRegion(c.id, actor(c.ownerId), north, "Northeast", "Northeast")).toEqual({ status: "unchanged" });
-    expect(await events(c.id)).toEqual([{ event: "region_renamed", detail: { from: "North", to: "Northeast" } }]);
+    expect(await renameRegion(c.id, actor(c.ownerId), north, { name: "North", version: 1 }, "Northeast")).toEqual({ status: "renamed" });
+    expect(await renameRegion(c.id, actor(c.ownerId), north, { name: "North", version: 1 }, "Elsewhere")).toEqual({ status: "stale" });
+    expect(await renameRegion(c.id, actor(c.ownerId), north, { name: "Northeast", version: 2 }, "south")).toEqual({ status: "taken" });
+    expect(await renameRegion(c.id, actor(c.ownerId), north, { name: "Northeast", version: 2 }, "Northeast")).toEqual({ status: "unchanged" });
+    // Renamed away and back by someone else: the name the page saw is the name now, but the version moved on.
+    expect(await renameRegion(c.id, actor(c.ownerId), north, { name: "Northeast", version: 2 }, "North")).toEqual({ status: "renamed" });
+    expect(await renameRegion(c.id, actor(c.ownerId), north, { name: "North", version: 1 }, "Elsewhere")).toEqual({ status: "stale" });
+    expect(await events(c.id)).toEqual([
+      { event: "region_renamed", detail: { from: "North", to: "Northeast" } },
+      { event: "region_renamed", detail: { from: "Northeast", to: "North" } },
+    ]);
   });
 
   it("cannot be renamed or deleted through another company's id", async () => {
     const a = await makeCompany("rg-x-a");
     const b = await makeCompany("rg-x-b");
     const theirs = await makeRegion(b.id, "Theirs");
-    expect(await renameRegion(a.id, actor(a.ownerId), theirs, "Theirs", "Mine")).toEqual({ status: "stale" });
+    expect(await renameRegion(a.id, actor(a.ownerId), theirs, { name: "Theirs", version: 1 }, "Mine")).toEqual({ status: "stale" });
     expect(await deleteRegion(a.id, actor(a.ownerId), theirs)).toEqual({ status: "gone" });
     expect(await regionNames(b.id)).toEqual(["Theirs"]);
   });

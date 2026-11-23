@@ -11,7 +11,8 @@ import { organization, user } from "@/db/auth-schema";
 import { companies, regions, storeProfiles, storeSuspensions } from "@/db/schema";
 import type { CompanyAccess } from "@/lib/access/resolve-merge";
 
-export type RegionRow = { id: string; name: string; stores: number; managers: number };
+/** `version` is what a rename is pinned to. */
+export type RegionRow = { id: string; name: string; version: number; stores: number; managers: number };
 export type CompanyStoreRow = { id: string; name: string; regionId: string | null; regionName: string | null; paused: boolean };
 export type CompanyView = { name: string; ownerName: string; regions: RegionRow[]; stores: CompanyStoreRow[] };
 
@@ -25,6 +26,7 @@ export async function companyView(company: CompanyAccess): Promise<CompanyView> 
       .select({
         id: regions.id,
         name: regions.name,
+        version: regions.version,
         stores: sql<number>`(select count(*)::int from store_profiles sp where sp.region_id = ${regions.id})`,
         managers: sql<number>`(select count(*)::int from role_assignments ra where ra.region_id = ${regions.id})`,
       })

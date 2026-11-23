@@ -32,8 +32,8 @@ import { AddRegionDialog, DeleteRegionDialog, RenameRegionDialog } from "./regio
 import { AddStoreDialog, MoveStoreDialog } from "./store-dialogs";
 
 const REGIONS = [
-  { id: "r1", name: "North", stores: 0, managers: 0 },
-  { id: "r2", name: "South", stores: 1, managers: 0 },
+  { id: "r1", name: "North", version: 1, stores: 0, managers: 0 },
+  { id: "r2", name: "South", version: 1, stores: 1, managers: 0 },
 ];
 const shared = { opener: null, onClose: vi.fn(), regions: REGIONS };
 
@@ -77,7 +77,7 @@ describe("AddRegionDialog", () => {
 });
 
 describe("RenameRegionDialog and DeleteRegionDialog", () => {
-  it("rename sends the id, the new name and the name seen, and only once the name differs", async () => {
+  it("rename sends the id, the new name, the name and version seen, and only once the name differs", async () => {
     mocks.renameRegion.mockResolvedValue({ status: "saved", message: "Saved" });
     const user = userEvent.setup();
     render(<RenameRegionDialog {...shared} region={REGIONS[0]} />);
@@ -85,7 +85,7 @@ describe("RenameRegionDialog and DeleteRegionDialog", () => {
     await user.clear(screen.getByLabelText("Name"));
     await user.type(screen.getByLabelText("Name"), "Northeast");
     await user.click(screen.getByRole("button", { name: "Save name" }));
-    expect(mocks.renameRegion).toHaveBeenCalledWith("r1", "Northeast", "North");
+    expect(mocks.renameRegion).toHaveBeenCalledWith("r1", "Northeast", "North", 1);
   });
 
   it("delete of an empty region asks for the id", async () => {
