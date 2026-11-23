@@ -1,10 +1,11 @@
 // One account as an admin sees it (spec 0.7.1 7.3): the account's own facts, the stores it belongs to and the
-// invitations sent to its address. No store data, and no secrets: lib/admin/reads-people.ts selects none.
-// 0.7.1a's actions (Sign out everywhere, Cancel invitation) are added here by the help-actions task.
+// invitations sent to its address, and the help actions on them (person-actions.tsx). No store data, and no
+// secrets: lib/admin/reads-people.ts selects none.
 
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
+import { CancelInvitation, PersonActions } from "@/components/admin/person-actions";
 import { PausedBadge } from "@/components/admin/paused-badge";
 import { LocalTime } from "@/components/time/local-time";
 import type { PersonLookup } from "@/lib/admin/reads-people";
@@ -47,6 +48,7 @@ export function PersonCard({ person }: { person: PersonLookup }) {
         <Fact label="Two-step sign-in">{twoStep(person)}</Fact>
         <Fact label="Signed in on">{person.sessions === 1 ? "1 device" : `${person.sessions} devices`}</Fact>
       </dl>
+      <PersonActions userId={person.userId} name={person.name} sessions={person.sessions} canReset={!person.isAdmin && (person.twoFactorEnabled || person.passkeys > 0)} />
 
       <section aria-labelledby="person-stores" className="flex flex-col gap-2">
         <h3 id="person-stores" className="font-semibold text-ink">Stores</h3>
@@ -74,14 +76,17 @@ export function PersonCard({ person }: { person: PersonLookup }) {
         ) : (
           <ul className="flex flex-col divide-y divide-line-subtle">
             {person.invitations.map((i) => (
-              <li key={i.id} className="flex flex-col gap-0.5 py-2">
-                <p className="wrap-break-word text-ink">
-                  {i.storeName} <span className="text-ink-muted">as {i.roleName ?? "no role"}</span>
-                </p>
-                <p className="text-sm text-ink-muted">
-                  {i.expired ? "Expired " : "Expires "}
-                  <LocalTime at={i.expiresAt} />
-                </p>
+              <li key={i.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <p className="wrap-break-word text-ink">
+                    {i.storeName} <span className="text-ink-muted">as {i.roleName ?? "no role"}</span>
+                  </p>
+                  <p className="text-sm text-ink-muted">
+                    {i.expired ? "Expired " : "Expires "}
+                    <LocalTime at={i.expiresAt} />
+                  </p>
+                </div>
+                <CancelInvitation invitationId={i.id} email={person.email} storeName={i.storeName} />
               </li>
             ))}
           </ul>

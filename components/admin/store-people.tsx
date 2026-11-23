@@ -1,7 +1,10 @@
-// A store's people and waiting invitations, on /admin/stores/[id]: names, emails, roles, dates. Never its data.
+// A store's people and waiting invitations, on /admin/stores/[id]: names, emails, roles, dates, and the help
+// actions beside them (Make Store Manager, Cancel invitation). Never its data.
 
 import Link from "next/link";
 
+import { CancelInvitation } from "@/components/admin/person-actions";
+import { MakeManager } from "@/components/admin/store-actions";
 import { LocalTime } from "@/components/time/local-time";
 import type { StoreDetail } from "@/lib/admin/reads";
 
@@ -15,16 +18,19 @@ export function StorePeople({ store }: { store: StoreDetail }) {
         ) : (
           <ul className="flex flex-col divide-y divide-line-subtle">
             {store.people.map((p) => (
-              <li key={p.userId} className="flex flex-col gap-0.5 py-2">
-                <p className="wrap-break-word text-ink">
-                  {p.name} <span className="text-ink-muted">{p.roleName ?? "No role"}</span>
-                </p>
-                <Link
-                  href={`/admin/people?email=${encodeURIComponent(p.email)}`}
-                  className="inline-flex min-h-11 items-center self-start text-sm break-all text-ink-muted underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                >
-                  {p.email}
-                </Link>
+              <li key={p.userId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <p className="wrap-break-word text-ink">
+                    {p.name} <span className="text-ink-muted">{p.roleName ?? "No role"}</span>
+                  </p>
+                  <Link
+                    href={`/admin/people?email=${encodeURIComponent(p.email)}`}
+                    className="inline-flex min-h-11 items-center self-start text-sm break-all text-ink-muted underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  >
+                    {p.email}
+                  </Link>
+                </div>
+                {p.isManager ? null : <MakeManager storeId={store.id} storeName={store.name} userId={p.userId} name={p.name} />}
               </li>
             ))}
           </ul>
@@ -37,14 +43,17 @@ export function StorePeople({ store }: { store: StoreDetail }) {
         ) : (
           <ul className="flex flex-col divide-y divide-line-subtle">
             {store.invitations.map((i) => (
-              <li key={i.id} className="flex flex-col gap-0.5 py-2">
-                <p className="break-all text-ink">
-                  {i.email} <span className="text-ink-muted">as {i.roleName ?? "no role"}</span>
-                </p>
-                <p className="text-sm text-ink-muted">
-                  {i.expired ? "Expired " : "Expires "}
-                  <LocalTime at={i.expiresAt} />
-                </p>
+              <li key={i.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <p className="break-all text-ink">
+                    {i.email} <span className="text-ink-muted">as {i.roleName ?? "no role"}</span>
+                  </p>
+                  <p className="text-sm text-ink-muted">
+                    {i.expired ? "Expired " : "Expires "}
+                    <LocalTime at={i.expiresAt} />
+                  </p>
+                </div>
+                <CancelInvitation invitationId={i.id} email={i.email} storeName={store.name} />
               </li>
             ))}
           </ul>

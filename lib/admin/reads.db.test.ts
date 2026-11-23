@@ -126,7 +126,8 @@ describe("listStores and storeDetail", () => {
     const detail = await storeDetail(store);
     expect(detail?.name).toBe("Test store detail");
     expect(detail?.people.map((p) => p.userId)).toEqual([manager.userId, worker.userId]);
-    expect(detail?.people[0]).toMatchObject({ roleName: "Store Manager", email: expect.stringContaining("@") });
+    expect(detail?.people[0]).toMatchObject({ roleName: "Store Manager", isManager: true, email: expect.stringContaining("@") });
+    expect(detail?.people[1]).toMatchObject({ isManager: false });
     expect(detail?.invitations.map((i) => i.id)).toEqual([pending]);
     expect(detail?.pause).toBeNull();
   });

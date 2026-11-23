@@ -3,11 +3,12 @@
 // never exists without its platform_events row. The script has no signed-in person, so the event's
 // actor is the script itself.
 
-import { and, eq, like, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { passkey, session, twoFactor, user, verification } from "@/db/auth-schema";
+import { user } from "@/db/auth-schema";
 import { platformAdmins, platformEvents } from "@/db/schema";
+import { wipeTwoFactor } from "@/lib/two-factor/wipe";
 
 const ACTOR = "Liminal Bloom script";
 
@@ -49,13 +50,8 @@ export async function resetTwoFactor(email: string): Promise<{ status: "reset"; 
   const [admin] = await db.select({ id: platformAdmins.userId }).from(platformAdmins).where(eq(platformAdmins.userId, who.id));
   if (!admin) throw new Error(`${who.email} is not a Liminal Bloom admin. Grant it first (npm run admin:grant).`);
   await db.batch([
-    db.delete(twoFactor).where(eq(twoFactor.userId, who.id)),
-    // A passkey is a second factor too, and the admin who lost the device may be the one who lost the passkey: they register a new one after signing in.
-    db.delete(passkey).where(eq(passkey.userId, who.id)),
-    db.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, who.id)),
-    db.delete(session).where(eq(session.userId, who.id)),
-    // Better Auth's trusted-device records hold the user id as their value; the step-up's count is keyed by it.
-    db.delete(verification).where(or(and(like(verification.identifier, "trust-device-%"), eq(verification.value, who.id)), eq(verification.id, `two-factor-failures:${who.id}`), like(verification.identifier, `passkey-add:${who.id}:%`))),
+    // Passkeys, trusted devices and the step-up count go too: the admin who lost the device may be the one who lost the passkey, and registers a new one after signing in.
+    ...wipeTwoFactor(who.id),
     db.insert(platformEvents).values(event("two_factor_reset", who, "Reset by npm run admin:grant -- --reset-two-factor")),
   ]);
   return { status: "reset", userId: who.id };

@@ -73,7 +73,7 @@ export async function listStores(): Promise<StoreRow[]> {
   }));
 }
 
-export type StorePerson = { userId: string; name: string; email: string; roleName: string | null };
+export type StorePerson = { userId: string; name: string; email: string; roleName: string | null; isManager: boolean };
 export type StoreInvitation = { id: string; email: string; roleName: string | null; expiresAt: Date; expired: boolean };
 export type StoreDetail = {
   id: string;
@@ -91,7 +91,7 @@ export async function storeDetail(storeId: string, now: Date = new Date()): Prom
   const [pause, people, invitations] = await Promise.all([
     db.select({ reason: storeSuspensions.reason, byName: storeSuspensions.suspendedByName, since: storeSuspensions.createdAt }).from(storeSuspensions).where(eq(storeSuspensions.storeId, storeId)),
     db
-      .select({ userId: user.id, name: user.name, email: user.email, roleName: roleDefinitions.name })
+      .select({ userId: user.id, name: user.name, email: user.email, roleName: roleDefinitions.name, builtin: roleDefinitions.builtin })
       .from(member)
       .innerJoin(user, eq(user.id, member.userId))
       .leftJoin(roleDefinitions, and(eq(roleDefinitions.storeId, member.organizationId), eq(roleDefinitions.id, member.roleId)))
@@ -108,7 +108,7 @@ export async function storeDetail(storeId: string, now: Date = new Date()): Prom
   return {
     ...store,
     pause: pause[0] ?? null,
-    people,
+    people: people.map(({ builtin, ...p }) => ({ ...p, isManager: builtin === "store_manager" })),
     invitations: invitations.map((i) => ({ ...i, expired: i.expiresAt <= now })),
   };
 }

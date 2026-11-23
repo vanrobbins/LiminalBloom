@@ -1,11 +1,12 @@
 // /admin/stores/[id] (spec 0.7.1 7.3): one store's people (name, email, role), pending invitations and pause.
-// The help actions (Make Store Manager, Cancel invitation, Pause, Restore) are added by the help-actions task.
+// The help actions are Pause / Restore here and Make Store Manager and Cancel invitation beside its people (components/admin).
 
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { PausedBadge } from "@/components/admin/paused-badge";
+import { PauseRestore } from "@/components/admin/store-actions";
 import { StorePeople } from "@/components/admin/store-people";
 import { LocalTime } from "@/components/time/local-time";
 import { requirePlatformAdmin } from "@/lib/admin/guard";
@@ -27,6 +28,7 @@ export default async function AdminStorePage({ params }: { params: Promise<{ id:
         <h1 className="text-2xl font-semibold tracking-tight text-ink wrap-break-word md:text-3xl">{store.name}</h1>
         {store.pause ? <PausedBadge /> : null}
       </div>
+      <PauseRestore storeId={store.id} storeName={store.name} paused={store.pause !== null} />
       <div className="grid gap-8 lg:grid-cols-2">
         <section aria-labelledby="facts" className="flex flex-col gap-4">
           <h2 id="facts" className="text-lg font-semibold text-ink">Details</h2>

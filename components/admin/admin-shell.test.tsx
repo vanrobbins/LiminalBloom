@@ -42,6 +42,7 @@ describe("AdminShell", () => {
       ["People", "/admin/people"],
       ["Stores", "/admin/stores"],
       ["Activity", "/admin/activity"],
+      ["Admins", "/admin/admins"],
     ]);
   });
 
@@ -67,7 +68,7 @@ describe("AdminShell", () => {
     // The sheet's button comes first and the dropdown's second: CSS shows one of them, jsdom has no CSS.
     await userEvent.setup().click(screen.getAllByRole("button", { name: "Menu" })[0]);
     const sheet = await screen.findByRole("dialog", { name: "Liminal Bloom admin" });
-    expect(within(sheet).getAllByRole("link").map((l) => l.textContent)).toEqual(["Overview", "People", "Stores", "Activity", "Back to the app"]);
+    expect(within(sheet).getAllByRole("link").map((l) => l.textContent)).toEqual(["Overview", "People", "Stores", "Activity", "Admins", "Back to the app"]);
     expect(within(sheet).getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 
@@ -77,6 +78,6 @@ describe("AdminShell", () => {
     screen.getAllByRole("button", { name: "Menu" })[1].focus();
     await user.keyboard("{Enter}");
     const menu = await screen.findByRole("menu");
-    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Overview", "People", "Stores", "Activity", "Back to the app", "Switch to dark theme", "Sign out"]);
+    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Overview", "People", "Stores", "Activity", "Admins", "Back to the app", "Switch to dark theme", "Sign out"]);
   });
 });

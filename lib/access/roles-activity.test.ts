@@ -31,6 +31,11 @@ describe("activityText", () => {
     expect(line("store_renamed", { from: "Pioneer Place", to: "Riverside" })).toBe("Van Robbins renamed the store from Pioneer Place to Riverside");
   });
 
+  it("reads Liminal Bloom's pause and restore without a reason", () => {
+    expect(line("store_paused", {})).toBe("Van Robbins paused the store");
+    expect(line("store_restored", {})).toBe("Van Robbins restored the store");
+  });
+
   it("shows an invitation's email only to someone who may manage people", () => {
     const detail = { email: "jane@x.com", role: "Sales Associate" };
     expect(line("invitation_created", detail)).toBe("Van Robbins invited jane@x.com as Sales Associate");

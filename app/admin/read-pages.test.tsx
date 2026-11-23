@@ -42,7 +42,7 @@ const detail = (over = {}) => ({
   name: "Pioneer Place",
   createdAt: at,
   pause: null,
-  people: [{ userId: "u1", name: "Mona Manager", email: "mona@example.com", roleName: "Store Manager" }],
+  people: [{ userId: "u1", name: "Mona Manager", email: "mona@example.com", roleName: "Store Manager", isManager: true }],
   invitations: [{ id: "i1", email: "new@example.com", roleName: "Sales Associate", expiresAt: at, expired: false }],
   ...over,
 });

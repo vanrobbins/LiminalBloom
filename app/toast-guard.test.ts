@@ -20,6 +20,7 @@ const IMPORTERS = new Set(["components/ui/toaster.tsx"]);
 const CONNECTION = "a lost connection (\"Check the connection and try again\")";
 const ALLOWED: Record<string, Allowed> = {
   "app/(app)/account/change-password-form.tsx": { calls: 1, why: "password change: the result is not where the person is looking (a form that resets)" },
+  "components/admin/reason-dialog.tsx": { calls: 1, why: "an admin help action that finishes (pause, restore, sign out everywhere) reloads the page and its result is out of sight; refusals and a lost connection show inline in the dialog" },
   "components/invite/accept-button.tsx": { calls: 1, why: "accepting an invitation navigates away, so the confirmation must outlive the page" },
   "components/people/invitations-card.tsx": { calls: 1, why: CONNECTION },
   "components/planograms/corner-bar.tsx": { calls: 2, why: `discard draft (a long, final task), and ${CONNECTION}` },
