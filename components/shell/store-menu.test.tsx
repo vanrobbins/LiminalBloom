@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { StoreName } from "./store-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+import { StoreMenuItems, StoreName } from "./store-menu";
 
 const STORES = [
   { id: "store-a", name: "Pioneer Place" },
@@ -43,5 +46,41 @@ describe("StoreName", () => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
       unmount();
     }
+  });
+});
+
+describe("StoreMenuItems", () => {
+  const COMPANY_STORES = [
+    { id: "a", name: "Pioneer Place", companyId: "co", companyName: "Acme Coffee", regionName: "North" },
+    { id: "c", name: "Corner Cafe", companyId: null, companyName: null, regionName: null },
+  ];
+
+  async function openSwitch(stores: typeof COMPANY_STORES | typeof STORES) {
+    render(
+      <DropdownMenu open>
+        <DropdownMenuTrigger asChild>
+          <button type="button">Account menu</button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <StoreMenuItems stores={stores} activeStoreId={stores[0].id} switchingTo={null} switchTo={async () => true} />
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "Switch store" }));
+    return screen.findByRole("menuitemradio", { name: stores[0].name });
+  }
+
+  it("labels the company, its region and Standalone in the dropdown", async () => {
+    await openSwitch(COMPANY_STORES);
+    expect(screen.getByText("Acme Coffee")).toBeInTheDocument();
+    expect(screen.getByText("North · 1")).toBeInTheDocument();
+    expect(screen.getByText("Standalone")).toBeInTheDocument();
+    expect(screen.getAllByRole("menuitemradio").map((r) => r.textContent)).toEqual(["Pioneer Place", "Corner Cafe"]);
+  });
+
+  it("shows no group labels for a standalone-only list", async () => {
+    await openSwitch(STORES);
+    expect(screen.queryByText("Standalone")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("menuitemradio")).toHaveLength(2);
   });
 });

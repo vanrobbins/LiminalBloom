@@ -11,6 +11,7 @@ import Link from "next/link";
 
 import {
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import { storeInitials } from "@/lib/initials";
+import { type GroupableStore, storeGroups } from "@/lib/store-groups";
 
 import { CompanyFootItem } from "./company-links";
 
@@ -88,13 +90,14 @@ export function StoreMenuItems({
   switchTo,
   companyName = null,
 }: {
-  stores: Store[];
+  stores: GroupableStore[];
   activeStoreId: string;
   switchingTo: string | null;
   switchTo: (storeId: string) => Promise<boolean>;
   /** A company person's company: its name is a link to /company beside New store. */
   companyName?: string | null;
 }) {
+  const groups = storeGroups(stores);
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger data-store-switch>
@@ -106,21 +109,34 @@ export function StoreMenuItems({
         Switch store
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup
-          value={activeStoreId}
-          onValueChange={(id) => void switchTo(id)}
-        >
-          {stores.map((store) => (
-            <DropdownMenuRadioItem
-              key={store.id}
-              value={store.id}
-              data-store-name={store.name}
-              disabled={switchingTo !== null}
-            >
-              {switchingTo === store.id ? "Switching…" : store.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        {/* Only the list scrolls: New store and the company link stay in view below it. */}
+        <div className="max-h-[60vh] overflow-y-auto">
+          <DropdownMenuRadioGroup
+            value={activeStoreId}
+            onValueChange={(id) => void switchTo(id)}
+          >
+            {groups.map((group) => (
+              <div key={group.heading ?? "stores"}>
+                {group.heading ? <DropdownMenuLabel>{group.heading}</DropdownMenuLabel> : null}
+                {group.regions.map((region) => (
+                  <div key={region.heading ?? "stores"}>
+                    {region.heading ? <DropdownMenuLabel>{region.heading}</DropdownMenuLabel> : null}
+                    {region.stores.map((store) => (
+                      <DropdownMenuRadioItem
+                        key={store.id}
+                        value={store.id}
+                        data-store-name={store.name}
+                        disabled={switchingTo !== null}
+                      >
+                        {switchingTo === store.id ? "Switching…" : store.name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </DropdownMenuRadioGroup>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/create-store">

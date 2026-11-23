@@ -48,6 +48,20 @@ describe("commandsFor, the rest", () => {
     expect(two).not.toContain("Switch to Main St");
   });
 
+  it("lists company stores in the switcher's order and finds them by company and region", () => {
+    const grouped = [
+      { id: "s2", name: "Elm Ave", companyId: "co", companyName: "Acme Coffee", regionName: "North" },
+      { id: "s3", name: "Corner Cafe", companyId: null, companyName: null, regionName: null },
+      { id: "s4", name: "Harbor", companyId: "co", companyName: "Acme Coffee", regionName: null },
+      { id: "s1", name: "Main St", companyId: null, companyName: null, regionName: null },
+    ];
+    const commands = commandsFor({ switches: ["view"] }, grouped, "s1", "light");
+    const storeCommands = commands.filter((c) => c.id.startsWith("action:store:"));
+    expect(storeCommands.map((c) => c.label)).toEqual(["Switch to Elm Ave", "Switch to Harbor", "Switch to Corner Cafe"]);
+    expect(storeCommands[0].keywords).toContain("North");
+    expect(storeCommands[0].keywords).toContain("Acme Coffee");
+  });
+
   it("names the opposite theme", () => {
     expect(labels(["view"], { theme: "dark" })).toContain("Switch to light theme");
     expect(labels(["view"], { theme: "light" })).toContain("Switch to dark theme");
