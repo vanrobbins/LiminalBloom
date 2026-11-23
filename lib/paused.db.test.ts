@@ -13,6 +13,8 @@ import { storeSuspensions } from "@/db/schema";
 import { resolveAccess } from "@/lib/access/resolve";
 import { chooseActiveStore } from "@/lib/active-store";
 import { dropPeople, makePerson } from "@/lib/access/test-roles";
+import { assignCompanyRole, dropCompanies, makeBareAccount, makeCompany, makeCompanyStore } from "@/lib/companies/test-companies";
+import { companies } from "@/db/schema";
 import { dropStores, makeStore } from "@/lib/products/test-stores";
 
 import { pausedAmong, pausedStoresOf } from "./paused";
@@ -22,6 +24,7 @@ const activeStoreOf = async (userId: string, storeId: string) => (await resolveA
 
 afterAll(async () => {
   await dropStores();
+  await dropCompanies();
   await dropPeople();
 });
 
@@ -84,5 +87,47 @@ describe("pausedStoresOf", () => {
     await pause(outsider);
     expect((await pausedStoresOf(userId)).map((s) => s.id)).toEqual([stores[1]]);
     expect(await pausedStoresOf(randomUUID())).toEqual([]);
+  });
+});
+
+// A paused company is `companies.suspended_at` (spec 0.7.1 7.4, B10 sets it): none of its stores resolve, and nor
+// does the company role, so the read must still say "paused" and not "no store".
+describe("pausedStoresOf for a paused company", () => {
+  const pauseCompany = (id: string) => db.update(companies).set({ suspendedAt: new Date(), suspendedReason: "db test", suspendedByName: "Test" }).where(eq(companies.id, id));
+
+  it("lists a member's store of a paused company, by its own name, and not once the company is restored", async () => {
+    const owner = await makeBareAccount("pc-owner");
+    const { id } = await makeCompany("pc-member", owner);
+    const { store } = await makeCompanyStore(id, null, "pc-store");
+    const { userId } = await makePerson(store, null);
+    expect(await pausedStoresOf(userId)).toEqual([]);
+    await pauseCompany(id);
+    expect((await pausedStoresOf(userId)).map((s) => s.id)).toEqual([store]);
+    expect((await resolveAccess(userId, { activeStoreId: store })).activeStoreId).toBeNull();
+    await db.update(companies).set({ suspendedAt: null, suspendedReason: null, suspendedByName: null }).where(eq(companies.id, id));
+    expect(await pausedStoresOf(userId)).toEqual([]);
+  });
+
+  it("lists the company itself for its owner, a corporate admin and a regional manager, who hold no member row", async () => {
+    const owner = await makeBareAccount("pc-o");
+    const { id } = await makeCompany("pc-roles", owner);
+    const admin = await makeBareAccount("pc-a");
+    await assignCompanyRole(id, admin, "corporate_admin");
+    await pauseCompany(id);
+    for (const who of [owner, admin]) {
+      expect((await resolveAccess(who, {})).company, who).toBeNull();
+      expect(await pausedStoresOf(who), who).toEqual([{ id, name: "Test company pc-roles" }]);
+    }
+  });
+
+  it("lists nothing for someone of another company, and a store both paused and of a paused company once", async () => {
+    const owner = await makeBareAccount("pc-x");
+    const { id } = await makeCompany("pc-once", owner);
+    const { store } = await makeCompanyStore(id, null, "pc-once-store");
+    const { userId } = await makePerson(store, null);
+    await pause(store);
+    await pauseCompany(id);
+    expect((await pausedStoresOf(userId)).map((s) => s.id)).toEqual([store]);
+    expect(await pausedStoresOf(await makeBareAccount("pc-other"))).toEqual([]);
   });
 });
