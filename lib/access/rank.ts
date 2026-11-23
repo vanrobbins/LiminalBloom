@@ -1,9 +1,12 @@
 // The rank rule and its neighbours (spec 0.7, 4.2 and 4.3). A smaller rank
 // number is a higher rank. The company-level exception (owners and corporate
-// admins acting on any role) arrives in 0.7.1 and is deliberately not here.
+// admins acting on any role) needs no code here: their ranks 10 and 20 are above
+// every store role and they hold every store switch. `canActOnCompany` is the
+// same rule over company switches.
 
 import type { ProductStatus } from "@/lib/product-status";
 
+import type { CompanySwitch } from "./company-switches";
 import type { Switch } from "./switches";
 
 export type Actor = { rank: number; switches: ReadonlySet<Switch> };
@@ -15,6 +18,18 @@ export type Actor = { rank: number; switches: ReadonlySet<Switch> };
  * action: people or roles.
  */
 export function canActOn(actor: Actor, targetRank: number, needs: "people.manage" | "roles.manage"): boolean {
+  if (!Number.isSafeInteger(actor.rank) || !Number.isSafeInteger(targetRank)) return false;
+  return actor.switches.has(needs) && actor.rank < targetRank;
+}
+
+export type CompanyActor = { rank: number; switches: ReadonlySet<CompanySwitch> };
+
+/**
+ * The same rule over company switches (0.7.1, spec 2.3): the switch and a
+ * strictly lower rank, so an owner (10) acts on corporate admins (20) and
+ * regional managers (30), a corporate admin only on regional managers.
+ */
+export function canActOnCompany(actor: CompanyActor, targetRank: number, needs: CompanySwitch): boolean {
   if (!Number.isSafeInteger(actor.rank) || !Number.isSafeInteger(targetRank)) return false;
   return actor.switches.has(needs) && actor.rank < targetRank;
 }
