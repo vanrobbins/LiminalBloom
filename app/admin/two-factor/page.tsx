@@ -21,7 +21,7 @@ export default async function AdminTwoFactorPage() {
   if (!account.twoFactorEnabled) {
     return (
       <PageShell>
-        <TwoFactorSetup intro="Liminal Bloom admins need it." start={startTwoFactorAction} confirm={confirmTwoFactorAction} doneHref="/admin" />
+        <TwoFactorSetup intro={account.passkey ? "You sign in with a passkey, which counts. This adds an authenticator app as well." : "Liminal Bloom admins need it."} start={startTwoFactorAction} confirm={confirmTwoFactorAction} doneHref="/admin" />
       </PageShell>
     );
   }

@@ -32,7 +32,7 @@ async function signInOrUp(page: Page, account: { email: string; password: string
   await page.getByLabel("Password", { exact: true }).fill(account.password);
   // Ticked so the saved session is a lasting cookie, as it was before the box existed.
   await page.getByLabel("Keep me signed in").check();
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   const refused = page.getByText("That email and password do not match.");
   await expect(refused.or(page.getByRole("searchbox", { name: "Search products" })).or(page.getByLabel("Store name")).or(page.getByRole("heading", { name: "Welcome" }))).toBeVisible();
   if (!(await refused.isVisible())) return;

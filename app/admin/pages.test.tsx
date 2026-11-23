@@ -20,7 +20,7 @@ vi.mock("./verify/actions", () => ({ verifyAdminCodeAction: vi.fn() }));
 import TwoFactorPage from "./two-factor/page";
 import VerifyPage from "./verify/page";
 
-const account = (over: object) => ({ userId: "u1", sessionId: "s1", name: "Van", email: "v@example.com", twoFactorEnabled: false, twoFactorAt: null, ...over });
+const account = (over: object) => ({ userId: "u1", sessionId: "s1", name: "Van", email: "v@example.com", twoFactorEnabled: false, passkey: false, twoFactorAt: null, ...over });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -60,5 +60,21 @@ describe("/admin/verify", () => {
   it("sends an admin whose code is fresh on to /admin", async () => {
     mocks.account.mockResolvedValue(account({ twoFactorEnabled: true, twoFactorAt: new Date() }));
     await expect(VerifyPage()).rejects.toThrow("redirect:/admin");
+  });
+  it("offers only Use a passkey to an admin whose second factor is a passkey (A3c), and both to one with both", async () => {
+    mocks.account.mockResolvedValue(account({ passkey: true }));
+    const { unmount } = render(await VerifyPage());
+    expect(screen.getByRole("button", { name: "Use a passkey" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Code from your authenticator app")).toBeNull();
+    unmount();
+    mocks.account.mockResolvedValue(account({ passkey: true, twoFactorEnabled: true }));
+    render(await VerifyPage());
+    expect(screen.getByRole("button", { name: "Use a passkey" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Code from your authenticator app")).toBeInTheDocument();
+  });
+  it("an admin with an authenticator app and no passkey is not offered one", async () => {
+    mocks.account.mockResolvedValue(account({ twoFactorEnabled: true }));
+    render(await VerifyPage());
+    expect(screen.queryByRole("button", { name: "Use a passkey" })).toBeNull();
   });
 });

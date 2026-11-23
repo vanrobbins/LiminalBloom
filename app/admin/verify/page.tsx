@@ -14,11 +14,12 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminVerifyPage() {
   const account = await requirePlatformAdminAccount();
-  if (!account.twoFactorEnabled) redirect("/admin/two-factor");
+  // An authenticator app or a passkey is a second factor (A3c); the form offers whichever the admin has.
+  if (!account.twoFactorEnabled && !account.passkey) redirect("/admin/two-factor");
   if (isFresh(account.twoFactorAt)) redirect("/admin");
   return (
     <PageShell>
-      <VerifyForm verify={verifyAdminCodeAction} doneHref="/admin" />
+      <VerifyForm verify={verifyAdminCodeAction} doneHref="/admin" totp={account.twoFactorEnabled} passkey={account.passkey} />
     </PageShell>
   );
 }

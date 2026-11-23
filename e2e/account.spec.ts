@@ -104,7 +104,7 @@ test("changing the password signs out the other devices, keeps this one, and the
   await hydrated(later.page);
   await later.page.getByLabel("Work email").fill(email);
   await later.page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await later.page.getByRole("button", { name: "Sign in" }).click();
+  await later.page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(later.page.getByText("That email and password do not match.")).toBeVisible();
   await signInOnScreen(later.page, email, NEW);
   await later.context.close();

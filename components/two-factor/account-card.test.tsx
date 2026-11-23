@@ -10,8 +10,9 @@ import { TwoFactorCard } from "./account-card";
 const actions = () => ({ start: vi.fn(), confirm: vi.fn(), makeCodes: vi.fn(), disable: vi.fn() });
 /** The turn-off form: the card also has the new-codes password field, so a field is looked for inside this one. */
 const turnOff = () => within(screen.getByRole("button", { name: "Turn off two-step sign-in" }).closest("form")!);
-const OFF = { on: false, codesLeft: 0, isAdmin: false, requiredBy: null };
-const ON = { on: true, codesLeft: 7, isAdmin: false, requiredBy: null };
+const OFF = { on: false, codesLeft: 0, isAdmin: false, requiredBy: null, passkeys: [] };
+const ON = { on: true, codesLeft: 7, isAdmin: false, requiredBy: null, passkeys: [] };
+const KEY = { id: "k1", name: "Phone", createdAt: new Date("2026-11-20T10:00:00Z"), lastUsedAt: null };
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -74,5 +75,14 @@ describe("TwoFactorCard", () => {
     expect(mocks.refresh).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("button", { name: "Turn off" })).toBeInTheDocument();
+  });
+
+  it("with a passkey: an admin or a required role may turn the app off, and an off app says the passkey counts (A3c)", () => {
+    const { rerender } = render(<TwoFactorCard status={{ ...ON, isAdmin: true, passkeys: [KEY] }} {...actions()} />);
+    expect(screen.getByRole("button", { name: "Turn off" })).toBeInTheDocument();
+    rerender(<TwoFactorCard status={{ ...ON, requiredBy: "Pioneer Place", passkeys: [KEY] }} {...actions()} />);
+    expect(screen.getByRole("button", { name: "Turn off" })).toBeInTheDocument();
+    rerender(<TwoFactorCard status={{ ...OFF, passkeys: [KEY] }} {...actions()} />);
+    expect(screen.getByText(/Your passkey counts as your second step/)).toBeInTheDocument();
   });
 });

@@ -12,15 +12,19 @@ import { Plus, Store } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PasskeyCard } from "@/components/passkeys/passkey-card";
 import { RequiredTwoFactor } from "@/components/two-factor/required-setup";
 import { TwoFactorCard } from "@/components/two-factor/account-card";
 import { requireAccountPerson } from "@/lib/current-member";
 import { twoFactorStatus } from "@/lib/two-factor/status";
 
 import { ChangePasswordForm } from "./change-password-form";
+import { allowPasskeyAddAction, removePasskeyAction, renamePasskeyAction } from "./passkey-actions";
 import { confirmTwoFactorAction, disableTwoFactorAction, newBackupCodesAction, startTwoFactorAction } from "./two-factor-actions";
 
 export const dynamic = "force-dynamic";
+
+const PASSKEY_ACTIONS = { allow: allowPasskeyAddAction, rename: renamePasskeyAction, remove: removePasskeyAction };
 
 export default async function AccountPage() {
   // Membership-checked, so a store this person was removed from is never
@@ -29,7 +33,7 @@ export default async function AccountPage() {
   // only that (and Sign out), never a redirect back to itself.
   const person = await requireAccountPerson();
   if (person.kind === "needs-two-factor") {
-    return <RequiredTwoFactor roleName={person.roleName} start={startTwoFactorAction} confirm={confirmTwoFactorAction} />;
+    return <RequiredTwoFactor roleName={person.roleName} start={startTwoFactorAction} confirm={confirmTwoFactorAction} allow={allowPasskeyAddAction} rename={renamePasskeyAction} />;
   }
   const { user, stores, activeStoreId } = person;
   const two = await twoFactorStatus(user.id);
@@ -52,6 +56,8 @@ export default async function AccountPage() {
       </Card>
 
       <ChangePasswordForm />
+
+      <PasskeyCard passkeys={two.passkeys} {...PASSKEY_ACTIONS} />
 
       <TwoFactorCard status={two} start={startTwoFactorAction} confirm={confirmTwoFactorAction} makeCodes={newBackupCodesAction} disable={disableTwoFactorAction} />
 

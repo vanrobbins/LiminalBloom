@@ -3,7 +3,7 @@
 
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -14,11 +14,18 @@ import { signIn } from "@/lib/auth-client";
 import { CONNECTION_ERROR } from "@/lib/connection-error";
 import { authHref, safeReturnPath } from "@/lib/return-path";
 
+import { usePasskeySignIn } from "./use-passkey-sign-in";
+
 /** `next` is where to go afterwards: a path on this site, or nothing for the usual first page. */
 export function SignInForm({ next }: { next: string | null }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // A passkey sign-in ends where a password one does: no code step, the passkey is the second factor.
+  const passkey = usePasskeySignIn(() => {
+    router.push(safeReturnPath(next) ?? "/home");
+    router.refresh();
+  });
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,7 +78,8 @@ export function SignInForm({ next }: { next: string | null }) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <h1 className="text-3xl font-semibold tracking-tight text-ink">Sign in</h1>
 
-          <Input label="Work email" name="email" type="email" required autoComplete="email" />
+          {/* "webauthn" lets the browser list this person's passkeys under the field (usePasskeySignIn). */}
+          <Input label="Work email" name="email" type="email" required autoComplete="username webauthn" />
           <Input
             label="Password"
             name="password"
@@ -101,6 +109,16 @@ export function SignInForm({ next }: { next: string | null }) {
           <Button type="submit" loading={pending} loadingText="Signing in…">
             Sign in
           </Button>
+
+          <Button type="button" variant="secondary" loading={passkey.passkeyPending} loadingText="Waiting for your passkey…" onClick={() => void passkey.signInWithPasskey()}>
+            <KeyRound aria-hidden="true" strokeWidth={1.75} className="size-5" />
+            Sign in with a passkey
+          </Button>
+          {passkey.passkeyError ? (
+            <p role="alert" className="text-sm text-danger">
+              {passkey.passkeyError}
+            </p>
+          ) : null}
 
           <Button asChild variant="ghost">
             <a href={authHref("/sign-up", next)}>Need an account? Create one</a>

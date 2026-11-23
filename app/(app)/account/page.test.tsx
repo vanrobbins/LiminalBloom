@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({ person: vi.fn(), status: vi.fn() }));
 vi.mock("@/lib/current-member", () => ({ requireAccountPerson: mocks.person }));
 vi.mock("@/lib/two-factor/status", () => ({ twoFactorStatus: mocks.status }));
 vi.mock("./two-factor-actions", () => ({ startTwoFactorAction: vi.fn(), confirmTwoFactorAction: vi.fn(), newBackupCodesAction: vi.fn(), disableTwoFactorAction: vi.fn() }));
+vi.mock("./passkey-actions", () => ({ allowPasskeyAddAction: vi.fn(), renamePasskeyAction: vi.fn(), removePasskeyAction: vi.fn() }));
 vi.mock("./actions", () => ({ changePasswordAction: vi.fn() }));
 vi.mock("@/components/shell/use-sign-out", () => ({ useSignOut: () => ({ signOut: vi.fn(), isSigningOut: false }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -18,7 +19,7 @@ const MEMBER = { kind: "member", user: USER, stores: [{ id: "a", name: "Pioneer 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.person.mockResolvedValue(MEMBER);
-  mocks.status.mockResolvedValue({ on: false, codesLeft: 0, isAdmin: false, requiredBy: null });
+  mocks.status.mockResolvedValue({ on: false, codesLeft: 0, isAdmin: false, requiredBy: null, passkeys: [] });
 });
 
 describe("AccountPage", () => {
@@ -55,5 +56,17 @@ describe("AccountPage", () => {
     expect(screen.queryByRole("heading", { name: "Change password" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Create a store" })).toBeNull();
     expect(mocks.status).not.toHaveBeenCalled();
+  });
+
+  it("has the Passkeys card, with Add a passkey", async () => {
+    render(await AccountPage());
+    expect(screen.getByRole("heading", { name: /Passkeys/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add a passkey" })).toBeInTheDocument();
+  });
+
+  it("a person who must set up two-factor can add a passkey instead of an authenticator app", async () => {
+    mocks.person.mockResolvedValue({ kind: "needs-two-factor", user: USER, roleName: "Store Manager" });
+    render(await AccountPage());
+    expect(screen.getByRole("button", { name: "Add a passkey" })).toBeInTheDocument();
   });
 });

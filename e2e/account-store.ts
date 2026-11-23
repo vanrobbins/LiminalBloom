@@ -57,6 +57,6 @@ export async function signInOnScreen(page: Page, email: string, password: string
   await page.getByLabel("Work email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   if (keep) await page.getByLabel("Keep me signed in").check();
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL("**/home");
 }

@@ -2,13 +2,43 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+const mocks = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), passkey: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }) }));
+vi.mock("@/lib/auth-client", () => ({ signIn: { passkey: mocks.passkey } }));
 
 import { NewBackupCodes } from "./new-codes";
 import { VerifyForm } from "./verify-form";
 
 beforeEach(() => vi.clearAllMocks());
+
+describe("VerifyForm with a passkey (A3c)", () => {
+  it("Use a passkey signs in with it (a new session that passed a second factor) and lands on the next page", async () => {
+    mocks.passkey.mockResolvedValue({ data: { session: {} }, error: null });
+    render(<VerifyForm verify={vi.fn()} doneHref="/admin" passkey />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Use a passkey" }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/admin"));
+    expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it("a passkey-only admin sees no code field; a refused passkey says so, a cancelled one says nothing", async () => {
+    const user = userEvent.setup();
+    render(<VerifyForm verify={vi.fn()} doneHref="/admin" totp={false} passkey />);
+    expect(screen.queryByLabelText("Code from your authenticator app")).toBeNull();
+    mocks.passkey.mockResolvedValueOnce({ data: null, error: { code: "ERROR_CEREMONY_ABORTED" } });
+    await user.click(screen.getByRole("button", { name: "Use a passkey" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Use a passkey" })).toBeEnabled());
+    expect(screen.queryByRole("alert")).toBeNull();
+    mocks.passkey.mockResolvedValueOnce({ data: null, error: { code: "PASSKEY_NOT_FOUND", status: 401 } });
+    await user.click(screen.getByRole("button", { name: "Use a passkey" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("That passkey didn't work.");
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it("without a passkey the button is not there", () => {
+    render(<VerifyForm verify={vi.fn()} doneHref="/admin" />);
+    expect(screen.queryByRole("button", { name: "Use a passkey" })).toBeNull();
+  });
+});
 
 describe("VerifyForm (admin step-up)", () => {
   it("sends the code, then lands on the next page and refreshes it", async () => {
