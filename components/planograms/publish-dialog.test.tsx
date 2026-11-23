@@ -82,7 +82,7 @@ describe("PublishDialog", () => {
   it("names the store in the title, button and version", async () => {
     actions.previewPublishAction.mockResolvedValue({ planogramVersion: 2, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false, adjustments: [], soldOut: [] });
     render(
-      <ShellProvider value={{ stores: [{ id: "s", name: "Pioneer Place" }], activeStoreId: "s", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"] }}>
+      <ShellProvider value={{ stores: [{ id: "s", name: "Pioneer Place" }], activeStoreId: "s", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"], isPlatformAdmin: false }}>
         <PublishDialog open onOpenChange={vi.fn()} fixtureId="fx" />
       </ShellProvider>,
     );

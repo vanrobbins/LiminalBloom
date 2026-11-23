@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   listOrganizations: vi.fn(),
   resolveAccess: vi.fn(),
+  isPlatformAdmin: vi.fn(),
   // Next's redirect() throws to stop rendering; so does this stand-in.
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
@@ -29,6 +30,7 @@ vi.mock("@/lib/access/resolve", () => ({
   resolveAccess: mocks.resolveAccess,
 }));
 vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: async () => true }));
+vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: mocks.isPlatformAdmin }));
 
 import { can, getCurrentMember, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";
 
@@ -59,6 +61,7 @@ function signedIn(store: string, role: typeof MANAGER | null, switches: string[]
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.isPlatformAdmin.mockResolvedValue(false);
 });
 
 describe("getCurrentMember", () => {
@@ -97,7 +100,22 @@ describe("getCurrentMember", () => {
       // Plain values for client components: no `builtin`, switches as an array.
       role: { id: "role-1", name: "Store Manager", rank: 100 },
       switches: ["view", "store.settings"],
+      isPlatformAdmin: false,
     });
+  });
+
+  it("says whether the person is a Liminal Bloom admin, read from the admin table for this person (menu link only)", async () => {
+    signedIn("store-a", SALES, ["view"]);
+    mocks.isPlatformAdmin.mockResolvedValue(true);
+
+    expect(await getCurrentMember()).toMatchObject({ kind: "member", isPlatformAdmin: true });
+    expect(mocks.isPlatformAdmin).toHaveBeenCalledWith("user-1");
+  });
+
+  it("does not ask the admin table of a visitor with no session or no store", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    await getCurrentMember();
+    expect(mocks.isPlatformAdmin).not.toHaveBeenCalled();
   });
 
   it("carries no role and view only for a member with no role", async () => {

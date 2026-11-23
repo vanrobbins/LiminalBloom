@@ -22,6 +22,7 @@ const value: ShellValue = {
   activeStoreId: "s1",
   user: { id: "u1", name: "Van", email: "v@x.co" },
   switches: ["view", "products.edit"],
+  isPlatformAdmin: false,
 };
 const index = {
   planograms: [{ fixtureId: "f1", name: "Denim Wall", zoneName: "Men", state: "Draft" }],

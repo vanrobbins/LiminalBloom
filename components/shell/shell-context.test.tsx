@@ -11,7 +11,7 @@ function Name() {
 describe("shell context", () => {
   it("names the active store", () => {
     render(
-      <ShellProvider value={{ stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Washington Square" }], activeStoreId: "b", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"] }}>
+      <ShellProvider value={{ stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Washington Square" }], activeStoreId: "b", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"], isPlatformAdmin: false }}>
         <Name />
       </ShellProvider>,
     );
@@ -28,7 +28,7 @@ describe("shell context", () => {
       return <p>{useShell()?.switches.join(",")}</p>;
     }
     render(
-      <ShellProvider value={{ stores: [], activeStoreId: "a", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view", "layout.edit"] }}>
+      <ShellProvider value={{ stores: [], activeStoreId: "a", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view", "layout.edit"], isPlatformAdmin: false }}>
         <Switches />
       </ShellProvider>,
     );
@@ -41,7 +41,7 @@ describe("shell context", () => {
       return <button onClick={() => setOpen(!open)}>{`${label} ${open ? "open" : "closed"}`}</button>;
     }
     render(
-      <ShellProvider value={{ stores: [], activeStoreId: "a", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"] }}>
+      <ShellProvider value={{ stores: [], activeStoreId: "a", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"], isPlatformAdmin: false }}>
         <Toggle label="header" />
         <Toggle label="palette" />
       </ShellProvider>,

@@ -18,6 +18,7 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, listOrganizations: mocks.listOrganizations } } }));
 vi.mock("@/lib/access/resolve", () => ({ resolveAccess: mocks.resolveAccess }));
 vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: mocks.hasSecondFactor }));
+vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: async () => false }));
 
 import { getCurrentMember, requireAccountPerson, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";
 

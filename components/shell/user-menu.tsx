@@ -14,6 +14,7 @@ import {
   CircleUser,
   LogOut,
   Moon,
+  ShieldCheck,
   Sun,
 } from "lucide-react";
 import { useState } from "react";
@@ -61,11 +62,14 @@ export function UserMenu({
   variant,
   stores,
   activeStoreId,
+  isPlatformAdmin = false,
 }: {
   user: { name: string; email: string };
   variant: UserMenuVariant;
   stores: Store[];
   activeStoreId: string;
+  /** A Liminal Bloom admin gets a link to /admin; the area guards itself. */
+  isPlatformAdmin?: boolean;
 }) {
   const [isSheetOpen, setIsSheetOpen] = useShellSheet("account");
   // Held here, not in the store list: the sheet and the dropdown unmount their content on close,
@@ -150,6 +154,14 @@ export function UserMenu({
                   Account
                 </Link>
               </Button>
+              {isPlatformAdmin ? (
+                <Button asChild variant="secondary">
+                  <Link href="/admin" onClick={() => openSheet(false)}>
+                    <ShieldCheck {...ICON} />
+                    Liminal Bloom admin
+                  </Link>
+                </Button>
+              ) : null}
               {isMounted ? (
                 <Button variant="secondary" onClick={switchTheme}>
                   <ThemeIcon {...ICON} />
@@ -208,6 +220,14 @@ export function UserMenu({
             Account
           </Link>
         </DropdownMenuItem>
+        {isPlatformAdmin ? (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <ShieldCheck {...ICON} />
+              Liminal Bloom admin
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         {isMounted ? (
           <DropdownMenuItem onSelect={switchTheme}>
             <ThemeIcon {...ICON} />

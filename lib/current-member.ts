@@ -22,6 +22,7 @@ import { cache } from "react";
 
 import { can } from "@/lib/access/can";
 import { resolveAccess } from "@/lib/access/resolve";
+import { isPlatformAdmin } from "@/lib/admin/is-admin";
 import type { Switch } from "@/lib/access/switches";
 import { auth } from "@/lib/auth";
 import { hasSecondFactor } from "@/lib/two-factor/has-second-factor";
@@ -37,6 +38,8 @@ export type Member = {
   // Plain values, so the whole member can cross into client components.
   role: { id: string; name: string; rank: number } | null;
   switches: Switch[];
+  /** Only the avatar menu's link to /admin reads this; the admin guard re-reads the admin table itself. */
+  isPlatformAdmin: boolean;
 };
 
 /**
@@ -74,7 +77,7 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     return { kind: "needs-two-factor", user: { id: session.user.id, name: session.user.name, email: session.user.email }, roleName: access.role.name };
   }
 
-  const stores = await auth.api.listOrganizations({ headers: requestHeaders });
+  const [stores, isAdmin] = await Promise.all([auth.api.listOrganizations({ headers: requestHeaders }), isPlatformAdmin(session.user.id)]);
 
   return {
     kind: "member",
@@ -88,6 +91,7 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     activeStoreId: access.activeStoreId,
     role: access.role && { id: access.role.id, name: access.role.name, rank: access.role.rank },
     switches: [...access.switches],
+    isPlatformAdmin: isAdmin,
   };
 });
 

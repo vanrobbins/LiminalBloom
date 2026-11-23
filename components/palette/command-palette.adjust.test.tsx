@@ -20,7 +20,7 @@ function Opener() {
 }
 const draw = (switches: ShellValue["switches"]) =>
   render(
-    <ShellProvider value={{ stores: [{ id: "s1", name: "Pioneer Place" }], activeStoreId: "s1", user: { id: "u1", name: "Van", email: "v@x.co" }, switches }}>
+    <ShellProvider value={{ stores: [{ id: "s1", name: "Pioneer Place" }], activeStoreId: "s1", user: { id: "u1", name: "Van", email: "v@x.co" }, switches, isPlatformAdmin: false }}>
       <Opener />
       <CommandPalette />
       <main id="content" tabIndex={-1} />
