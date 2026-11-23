@@ -44,6 +44,14 @@ describe("HelpForm", () => {
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/help/t1"));
   });
 
+  it("announces the send and keeps focus in the field", async () => {
+    mocks.open.mockResolvedValue({ status: "done", id: "t1" });
+    render(<HelpForm kinds={ASKABLE_KINDS} initialKind="account" from={null} />);
+    await fillAndSend();
+    await waitFor(() => expect(screen.getAllByRole("status").some((s) => s.textContent === "Request sent")).toBe(true));
+    expect(screen.getByRole("textbox", { name: "Message" })).toHaveFocus();
+  });
+
   it("shows the five-open refusal under the form and stays put, with no toast", async () => {
     mocks.open.mockResolvedValue({ status: "too-many-open" });
     render(<HelpForm kinds={ASKABLE_KINDS} initialKind="account" from={null} />);

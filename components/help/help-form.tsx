@@ -5,7 +5,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { openHelpAction } from "@/app/(app)/help/actions";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,20 @@ export function HelpForm({ kinds, initialKind, from }: Props) {
   const [kind, setKind] = useState<HelpKind>(initialKind);
   const [body, setBody] = useState("");
   const [problem, setProblem] = useState<{ field: "kind" | "body" | "form"; text: string } | null>(null);
+  const [sent, setSent] = useState(false);
+  const field = useRef<HTMLTextAreaElement>(null);
   const isLongEnough = body.trim().length >= MIN_FIRST_BODY;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (isBusy || !isLongEnough) return;
     setProblem(null);
+    setSent(false);
     const reply = await call(() => openHelpAction({ kind, body, from }));
     if (!reply) return;
     if (reply.status === "done" && reply.id) {
+      setSent(true);
+      field.current?.focus();
       router.push(`/help/${reply.id}`);
       return;
     }
@@ -52,6 +57,7 @@ export function HelpForm({ kinds, initialKind, from }: Props) {
         {problem?.field === "kind" ? <p className="text-sm text-danger">{problem.text}</p> : null}
       </fieldset>
       <Textarea
+        ref={field}
         label="Message"
         hint="Liminal Bloom can't see your store's products, map or planograms, so describe what you see. Never send a password."
         value={body}
@@ -63,6 +69,9 @@ export function HelpForm({ kinds, initialKind, from }: Props) {
       />
       <p role="status" className="text-sm text-danger empty:hidden">
         {problem?.field === "form" ? problem.text : null}
+      </p>
+      <p role="status" className="sr-only">
+        {sent ? "Request sent" : ""}
       </p>
       <Button type="submit" loading={isBusy} loadingText="Sending…" disabled={!isLongEnough}>
         Send

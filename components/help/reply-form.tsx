@@ -4,7 +4,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { replyHelpAction } from "@/app/(app)/help/actions";
 import { Button } from "@/components/ui/button";
@@ -18,15 +18,20 @@ export function ReplyForm({ id, sticky }: { id: string; sticky: boolean }) {
   const { isBusy, call } = useHelpCall();
   const [body, setBody] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const field = useRef<HTMLTextAreaElement>(null);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (isBusy || body.trim() === "") return;
     setProblem(null);
+    setSent(false);
     const reply = await call(() => replyHelpAction(id, body));
     if (!reply) return;
     if (reply.status === "done") {
       setBody("");
+      setSent(true);
+      field.current?.focus();
       router.refresh();
       return;
     }
@@ -37,7 +42,10 @@ export function ReplyForm({ id, sticky }: { id: string; sticky: boolean }) {
 
   return (
     <form onSubmit={submit} className={`flex flex-col gap-3 rounded-lg border border-line-subtle bg-raised p-4 ${sticky ? "sticky bottom-20 z-20 md:static" : ""}`.trim()}>
-      <Textarea label="Reply" rows={3} value={body} maxLength={MAX_BODY} autoComplete="off" onChange={(e) => setBody(e.target.value)} error={problem ?? undefined} />
+      <Textarea ref={field} label="Reply" rows={3} value={body} maxLength={MAX_BODY} autoComplete="off" onChange={(e) => setBody(e.target.value)} error={problem ?? undefined} />
+      <p role="status" className="sr-only">
+        {sent ? "Reply sent" : ""}
+      </p>
       <Button type="submit" className="self-start" loading={isBusy} loadingText="Sending…" disabled={body.trim() === ""}>
         Send
       </Button>

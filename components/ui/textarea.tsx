@@ -37,7 +37,7 @@ export function Textarea({ label, hint, error, className = "", rows = 5, ...prop
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} className="text-sm text-danger">
+        <p id={errorId} role="alert" className="text-sm text-danger">
           {error}
         </p>
       ) : null}

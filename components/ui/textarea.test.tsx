@@ -18,6 +18,11 @@ describe("Textarea", () => {
     expect(field).toHaveAccessibleDescription("Write 10 to 2000 characters.");
   });
 
+  it("announces its error as an alert", () => {
+    render(<Textarea label="Message" error="Too short." />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Too short.");
+  });
+
   it("passes the usual textarea props through", () => {
     render(<Textarea label="Message" maxLength={2000} rows={5} required />);
     expect(screen.getByRole("textbox", { name: "Message" })).toHaveAttribute("maxlength", "2000");

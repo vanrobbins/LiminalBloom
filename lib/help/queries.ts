@@ -24,12 +24,11 @@ export async function listRequests(userId: string): Promise<HelpListItem[]> {
   const requests = await db.select().from(helpRequests).where(eq(helpRequests.requesterId, userId)).orderBy(desc(helpRequests.createdAt), desc(helpRequests.id));
   if (requests.length === 0) return [];
   const bodies = await db
-    .select({ requestId: helpMessages.requestId, body: helpMessages.body })
+    .selectDistinctOn([helpMessages.requestId], { requestId: helpMessages.requestId, body: helpMessages.body })
     .from(helpMessages)
     .innerJoin(helpRequests, eq(helpRequests.id, helpMessages.requestId))
     .where(eq(helpRequests.requesterId, userId))
-    .orderBy(desc(helpMessages.createdAt));
-  // Newest first, so the last write per request is its first message.
+    .orderBy(helpMessages.requestId, helpMessages.createdAt, helpMessages.id);
   const first = new Map<string, string>();
   for (const b of bodies) first.set(b.requestId, b.body);
   return requests.map((r) => ({

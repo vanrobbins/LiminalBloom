@@ -28,6 +28,16 @@ describe("ReplyForm", () => {
     expect(screen.getByRole("textbox", { name: "Reply" })).toHaveValue("");
   });
 
+  it("refocuses the field and announces the send politely", async () => {
+    mocks.reply.mockResolvedValue({ status: "done" });
+    render(<ReplyForm id="t1" sticky={false} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox", { name: "Reply" }), "Thanks a lot");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Reply sent");
+    expect(screen.getByRole("textbox", { name: "Reply" })).toHaveFocus();
+  });
+
   it("says a full thread is full, beside the field, without a toast", async () => {
     mocks.reply.mockResolvedValue({ status: "too-many-messages" });
     render(<ReplyForm id="t1" sticky />);
