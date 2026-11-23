@@ -1,112 +1,110 @@
-// The current store, and the way to change it. §5.2: on a phone it is the
-// line under the page title (PageHeader) and opens a bottom sheet; on tablet
-// and desktop a menu drops down from the button. The shell picks the variant by
-// where it places the menu -- page header, rail or sidebar -- never by
-// measuring the screen.
+// The current store's name, and the store choices the account menu offers (11-22, Van: switching
+// moved into the account menu so search can sit beside the store's name). The name is plain text
+// on one line, never a button: on a phone it is the line under the page title (PageHeader, for
+// someone in two or more stores), on the tablet rail the store's initials, in the sidebar the name.
+// The shell picks the variant by where it places the name, never by measuring the screen.
 
 "use client";
 
-import { ChevronDown, ChevronsUpDown, Plus } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 import Link from "next/link";
 
-import { StoreSwitcher } from "@/components/store-switcher";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip } from "@/components/ui/tooltip";
 import { storeInitials } from "@/lib/initials";
 
-import { useShellSheet } from "./shell-context";
-import { type Store, useSwitchStore } from "./use-switch-store";
-import { NameTip, Tooltip } from "@/components/ui/tooltip";
+import type { Store } from "./use-switch-store";
 
-export type StoreMenuVariant = "sheet" | "initials" | "name";
+export type StoreNameVariant = "sheet" | "initials" | "name";
 
-const TRIGGER_BASE =
-  "inline-flex min-h-11 items-center gap-2 rounded border border-line bg-raised text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+export const activeStoreName = (stores: Store[], activeStoreId: string) =>
+  stores.find((store) => store.id === activeStoreId)?.name ?? "Your store";
 
-const TRIGGER: Record<StoreMenuVariant, string> = {
-  sheet: "flex min-h-11 w-full min-w-0 items-center gap-1 rounded text-left text-sm text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
-  initials: `${TRIGGER_BASE} size-11 shrink-0 justify-center`,
-  name: `${TRIGGER_BASE} w-full justify-between px-3 py-2 text-left`,
+const NAME: Record<StoreNameVariant, string> = {
+  sheet: "min-w-0 truncate py-2 text-sm text-ink-muted",
+  initials:
+    "inline-flex size-11 shrink-0 items-center justify-center rounded border border-line-subtle text-sm font-medium text-ink",
+  name: "min-w-0 truncate px-3 text-sm font-medium text-ink",
 };
 
-export function StoreMenu({
+/** The store being worked in. `title` keeps a cut-off name whole on hover; the rail says it in full to screen readers. */
+export function StoreName({
   stores,
   activeStoreId,
   variant,
 }: {
   stores: Store[];
   activeStoreId: string;
-  variant: StoreMenuVariant;
+  variant: StoreNameVariant;
 }) {
-  const [isSheetOpen, setIsSheetOpen] = useShellSheet("stores");
-  const { switchingTo, switchTo } = useSwitchStore(activeStoreId);
+  const name = activeStoreName(stores, activeStoreId);
 
-  const name = stores.find((store) => store.id === activeStoreId)?.name ?? "Your store";
-  // Starts with the visible name, so speech input can say what it sees.
-  const label = `${name}, switch store`;
-
-  if (variant === "sheet") {
+  if (variant === "initials") {
     return (
-      <>
-        <Tooltip label={label}>
-          <button
-            type="button"
-            data-store-trigger={name}
-            aria-label={label}
-            aria-haspopup="dialog"
-            aria-expanded={isSheetOpen}
-            onClick={() => setIsSheetOpen(true)}
-            className={TRIGGER.sheet}
-          >
-            <span data-store-label className="min-w-0 truncate">
-              {name}
-            </span>
-            <ChevronDown aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
-          </button>
-        </Tooltip>
-
-        <BottomSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} title="Stores">
-          <StoreSwitcher
-            stores={stores}
-            activeStoreId={activeStoreId}
-            switchingTo={switchingTo}
-            switchTo={switchTo}
-            onSwitched={() => setIsSheetOpen(false)}
-          />
-        </BottomSheet>
-      </>
+      <Tooltip label={name}>
+        {/* Focusable so the tooltip has a keyboard way in, like the rail's other items. */}
+        <span
+          tabIndex={0}
+          data-store-current={name}
+          className={`${NAME.initials} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink`}
+        >
+          <span aria-hidden="true">{storeInitials(name)}</span>
+          <span className="sr-only">{name}</span>
+        </span>
+      </Tooltip>
     );
   }
-
   return (
-    <DropdownMenu>
-<NameTip label={variant === "initials" ? label : null}>
-      <DropdownMenuTrigger data-store-trigger={name} aria-label={label} className={TRIGGER[variant]}>
-        {variant === "initials" ? (
-          <span aria-hidden="true">{storeInitials(name)}</span>
-        ) : (
-          <>
-            <span data-store-label className="min-w-0 wrap-break-word">
-              {name}
-            </span>
-            <ChevronsUpDown aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
-          </>
-        )}
-      </DropdownMenuTrigger>
-      </NameTip>
+    <p
+      data-store-current={name}
+      data-store-label
+      title={name}
+      className={NAME[variant]}
+    >
+      {name}
+    </p>
+  );
+}
 
-      <DropdownMenuContent side={variant === "initials" ? "right" : "bottom"}>
-        <DropdownMenuLabel>Stores</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={activeStoreId} onValueChange={(id) => void switchTo(id)}>
+/**
+ * The account dropdown's "Switch store" item: a submenu of every store, the current one checked, and
+ * a way to add one (11-22, Van). A submenu, not an inline list, so someone over many stores (a
+ * regional manager) doesn't push Account and Sign out off the menu.
+ */
+export function StoreMenuItems({
+  stores,
+  activeStoreId,
+  switchingTo,
+  switchTo,
+}: {
+  stores: Store[];
+  activeStoreId: string;
+  switchingTo: string | null;
+  switchTo: (storeId: string) => Promise<boolean>;
+}) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger data-store-switch>
+        <ArrowLeftRight
+          aria-hidden="true"
+          strokeWidth={1.75}
+          className="size-4 shrink-0"
+        />
+        Switch store
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        <DropdownMenuRadioGroup
+          value={activeStoreId}
+          onValueChange={(id) => void switchTo(id)}
+        >
           {stores.map((store) => (
             <DropdownMenuRadioItem
               key={store.id}
@@ -125,7 +123,7 @@ export function StoreMenu({
             New store
           </Link>
         </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }

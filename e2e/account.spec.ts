@@ -3,7 +3,7 @@
 // here (account-store.ts); the shared test accounts are never touched.
 
 import { clearAccounts, newEmail, otherDevice, PASSWORD, signInOnScreen, signUpWithStore } from "./account-store";
-import { expect, hydrated, sizeOf, storeTrigger, test } from "./fixtures";
+import { expect, hydrated, sizeOf, currentStore, test } from "./fixtures";
 
 test.use({
   storageState: { cookies: [], origins: [] },
@@ -22,7 +22,7 @@ test("renaming the store shows the new name in the header", async ({ page }, tes
   // A phone's header names the store only for someone in more than one (page-header.tsx); this account has one.
   const headerNamesStore = sizeOf(testInfo) !== "phone";
   await signUpWithStore(page, newEmail(), "Rename Me");
-  if (headerNamesStore) await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", "Rename Me");
+  if (headerNamesStore) await expect(currentStore(page)).toHaveAttribute("data-store-current", "Rename Me");
 
   await page.goto("/store");
   await hydrated(page);
@@ -33,7 +33,7 @@ test("renaming the store shows the new name in the header", async ({ page }, tes
   // Store name's indicator is the first on the page (the time zone's is the second).
   await expect(page.locator("[data-panel-status]").first()).toHaveText("Saved");
 
-  if (headerNamesStore) await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", "Riverside Flagship");
+  if (headerNamesStore) await expect(currentStore(page)).toHaveAttribute("data-store-current", "Riverside Flagship");
   await page.goto("/account");
   await expect(page.locator("#content").getByText("Riverside Flagship")).toBeVisible();
 });

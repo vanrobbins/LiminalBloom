@@ -31,13 +31,14 @@ describe("PageHeader", () => {
     expect(screen.getByRole("button", { name: "Account menu" })).toBeInTheDocument();
   });
 
-  it("shows the store line for someone in two stores", () => {
+  it("shows the store line, plain text rather than a button, for someone in two stores", () => {
     render(
       <ShellProvider value={two}>
         <PageHeader title="Planograms" />
       </ShellProvider>,
     );
-    expect(screen.getByRole("button", { name: "Pioneer Place, switch store" })).toBeInTheDocument();
+    expect(screen.getByText("Pioneer Place")).toHaveAttribute("data-store-current", "Pioneer Place");
+    expect(screen.queryByRole("button", { name: /Pioneer Place/ })).not.toBeInTheDocument();
   });
 
   it("has no store line for someone in one store (council 10-10)", () => {
@@ -46,7 +47,7 @@ describe("PageHeader", () => {
         <PageHeader title="Planograms" />
       </ShellProvider>,
     );
-    expect(screen.queryByRole("button", { name: /switch store/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Pioneer Place")).not.toBeInTheDocument();
   });
 
   it("puts the search trigger just before the account menu, after the page's own actions, and only inside the shell", () => {
@@ -71,10 +72,7 @@ describe("PageHeader", () => {
 
   // loading.tsx and the page each draw a header, so the one a sheet was opened from
   // is swapped for another when the page arrives (B7).
-  it.each([
-    ["Pioneer Place, switch store", "Stores"],
-    ["Account menu", "Van"],
-  ])("a sheet opened from %s stays open when the page replaces the loading header, and closes on navigation", async (trigger, sheet) => {
+  it.each([["Account menu", "Van"]])("a sheet opened from %s stays open when the page replaces the loading header, and closes on navigation", async (trigger, sheet) => {
     nav.path = "/products";
     const user = userEvent.setup();
     const { rerender } = render(

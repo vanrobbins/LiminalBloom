@@ -8,7 +8,7 @@
 
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { DropdownMenu as Menu } from "radix-ui";
 
 const ITEM =
@@ -17,6 +17,10 @@ const ITEM =
 export const DropdownMenu = Menu.Root;
 export const DropdownMenuTrigger = Menu.Trigger;
 export const DropdownMenuRadioGroup = Menu.RadioGroup;
+export const DropdownMenuSub = Menu.Sub;
+
+const PANEL =
+  "z-50 flex max-h-[var(--radix-dropdown-menu-content-available-height)] w-64 max-w-[calc(100vw-16px)] flex-col overflow-y-auto rounded-lg border border-line bg-raised p-1 shadow-lg";
 
 export function DropdownMenuContent({
   children,
@@ -35,7 +39,7 @@ export function DropdownMenuContent({
         align={align}
         sideOffset={6}
         collisionPadding={8}
-        className="z-50 flex max-h-[var(--radix-dropdown-menu-content-available-height)] w-64 max-w-[calc(100vw-16px)] flex-col overflow-y-auto rounded-lg border border-line bg-raised p-1 shadow-lg"
+        className={PANEL}
       >
         {children}
       </Menu.Content>
@@ -62,14 +66,57 @@ export function DropdownMenuRadioItem({
     >
       <span className="min-w-0 flex-1">{children}</span>
       <Menu.ItemIndicator>
-        <Check aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
+        <Check
+          aria-hidden="true"
+          strokeWidth={1.75}
+          className="size-4 shrink-0"
+        />
       </Menu.ItemIndicator>
     </Menu.RadioItem>
   );
 }
 
+/** An item that opens a submenu to its side (Right arrow or hover opens it, Left arrow closes it). */
+export function DropdownMenuSubTrigger({
+  className = "",
+  children,
+  ...props
+}: React.ComponentProps<typeof Menu.SubTrigger>) {
+  return (
+    <Menu.SubTrigger
+      className={`${ITEM} data-[state=open]:bg-line-subtle ${className}`.trim()}
+      {...props}
+    >
+      {children}
+      <ChevronRight
+        aria-hidden="true"
+        strokeWidth={1.75}
+        className="ml-auto size-4 shrink-0"
+      />
+    </Menu.SubTrigger>
+  );
+}
+
+export function DropdownMenuSubContent({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Menu.Portal>
+      <Menu.SubContent sideOffset={6} collisionPadding={8} className={PANEL}>
+        {children}
+      </Menu.SubContent>
+    </Menu.Portal>
+  );
+}
+
 export function DropdownMenuLabel({ children }: { children: React.ReactNode }) {
-  return <Menu.Label className="px-3 py-2 text-sm text-ink-muted">{children}</Menu.Label>;
+  return (
+    <Menu.Label className="px-3 py-2 text-sm text-ink-muted">
+      {children}
+    </Menu.Label>
+  );
 }
 
 export function DropdownMenuSeparator() {

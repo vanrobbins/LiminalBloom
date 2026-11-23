@@ -50,11 +50,11 @@ export async function expectRefused(page: Page, path: string) {
   await page.goto(path);
   await expect(page).toHaveURL(/\/no-access$/);
   await expect(page.getByRole("heading", { level: 1, name: "You don't have access to this" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to Home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to Hub" })).toBeVisible();
 }
 
 export const navLabels = (page: Page) => mainNav(page).getByRole("link").allTextContents();
-export const NAV = ["Home", "Products", "Layout", "Planograms", "Store"];
+export const NAV = ["Hub", "Products", "Layout", "Planograms", "Store"];
 
 /** Opens this worker's own product, so workers sharing the store never change the same one. */
 export async function openMyProduct(page: Page, testInfo: TestInfo) {

@@ -1,5 +1,5 @@
-// The way to open the command palette from the screen (spec §2): a search icon in every page's
-// header, beside the page's own actions, at every width (moved out of the sidebar and rail 11-22).
+// The way to open the command palette from the screen (spec §2): a search icon beside the store
+// menu on desktop, under it in the tablet rail, and in the phone's top bar (11-22, Van).
 // It opens the shell's "palette" sheet; Ctrl/Cmd+K and `/` are in use-palette-keys.
 
 "use client";

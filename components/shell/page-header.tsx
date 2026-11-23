@@ -1,8 +1,7 @@
 // Each signed-in page's header (spec §3, council 10-10). On a phone it is the
 // sticky top bar: back · title · search · avatar, and under the title the store line for
 // someone in two or more stores. On tablet and desktop it is the page's own
-// back link and big title with the search icon beside the page's actions; store and avatar
-// stay in the rail or sidebar.
+// back link and big title; store, search and avatar stay in the rail or sidebar.
 
 "use client";
 
@@ -12,7 +11,7 @@ import Link from "next/link";
 import { PaletteTrigger } from "@/components/palette/palette-trigger";
 
 import { useShell } from "./shell-context";
-import { StoreMenu } from "./store-menu";
+import { StoreName } from "./store-menu";
 import { UserMenu } from "./user-menu";
 
 type PageHeaderProps = {
@@ -54,16 +53,20 @@ export function PageHeader({ title, back, actions }: PageHeaderProps) {
           {title}
         </h1>
         {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
-        {shell ? <PaletteTrigger /> : null}
         {shell ? (
           <div className="md:hidden">
-            <UserMenu variant="sheet" user={shell.user} />
+            <PaletteTrigger />
+          </div>
+        ) : null}
+        {shell ? (
+          <div className="md:hidden">
+            <UserMenu variant="sheet" user={shell.user} stores={shell.stores} activeStoreId={shell.activeStoreId} />
           </div>
         ) : null}
       </div>
       {showStore ? (
         <div className={`-mt-2 pb-1 md:hidden ${back ? "pl-11" : "pl-3"}`}>
-          <StoreMenu variant="sheet" stores={shell.stores} activeStoreId={shell.activeStoreId} />
+          <StoreName variant="sheet" stores={shell.stores} activeStoreId={shell.activeStoreId} />
         </div>
       ) : null}
     </header>

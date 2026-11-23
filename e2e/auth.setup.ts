@@ -5,7 +5,7 @@ import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
 import type { Page } from "@playwright/test";
 
-import { expect, test as setup, storeTrigger, switchStore } from "./fixtures";
+import { expect, test as setup, currentStore, switchStore } from "./fixtures";
 import { placeRoleAccount, roleStoreId, seedRoleStore } from "./role-store";
 import { accountFor, authFileFor, E2E_WORKERS, HOME_STORE, ipFor, ROLE_KEYS, ROLE_STORE, roleAccount, roleAuthFile, roleIp, SECOND_STORE } from "./test-account";
 
@@ -57,10 +57,10 @@ setup("sign in every worker's account, each with two stores, in the home store",
     if (!has(SECOND_STORE)) await createStore(page, SECOND_STORE);
 
     await page.goto("/products");
-    if ((await storeTrigger(page).getAttribute("data-store-trigger")) !== HOME_STORE) {
+    if ((await currentStore(page).getAttribute("data-store-current")) !== HOME_STORE) {
       await switchStore(page, HOME_STORE);
     }
-    await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", HOME_STORE);
+    await expect(currentStore(page)).toHaveAttribute("data-store-current", HOME_STORE);
     await context.storageState({ path: authFileFor(worker) });
     await context.close();
   }
@@ -85,7 +85,7 @@ setup("sign in one account per built-in role, all in one shared store, each save
     else await placeRoleAccount(store, key);
     await page.goto("/products");
     await expect(page.getByRole("searchbox", { name: "Search products" })).toBeVisible();
-    await expect(storeTrigger(page)).toHaveAttribute("data-store-trigger", ROLE_STORE);
+    await expect(currentStore(page)).toHaveAttribute("data-store-current", ROLE_STORE);
     await context.storageState({ path: roleAuthFile(key) });
     await context.close();
   }

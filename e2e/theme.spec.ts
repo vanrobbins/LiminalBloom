@@ -2,7 +2,7 @@
 // belongs and nowhere else, the theme switches, the rail's contrast, and long
 // names, which the behaviour specs leave to light (DECISIONS 10-11, 11-06).
 
-import { expect, goldColors, hydrated, storeTrigger, test, userMenuButton } from "./fixtures";
+import { expect, goldColors, hydrated, currentStore, test, userMenuButton } from "./fixtures";
 import { seedFrameRun, seedLayout } from "./map-store";
 import { seedCatalog } from "./product-store";
 
@@ -67,8 +67,8 @@ test("long store and product names wrap instead of overflowing", async ({ page }
   );
   expect(pastTheEdge).toEqual([]);
 
-  // The name stays inside the store button's border.
-  const spilled = await storeTrigger(page).evaluateAll((buttons) =>
+  // The name stays inside its box.
+  const spilled = await currentStore(page).evaluateAll((buttons) =>
     buttons
       .filter((button) => button.scrollHeight > button.clientHeight + 1)
       .map((button) => button.textContent),
@@ -103,7 +103,7 @@ test("the corner theme toggle is only on pages without the shell", async ({ page
   const corner = page.getByRole("button", { name: /^Switch to (light|dark)$/ });
 
   await page.goto("/products");
-  await expect(storeTrigger(page)).toBeVisible();
+  await expect(currentStore(page)).toBeVisible();
   await expect(corner).toHaveCount(0);
 
   await page.goto("/");
