@@ -1,3 +1,4 @@
+-- (A3c adds passkey_last_used: when each passkey last signed in, kept beside Better Auth's passkey table; RLS on, no grant.)
 -- Hand-edited after `drizzle-kit generate` (DECISIONS 10-08, "0.7.1"). Tables, columns,
 -- enums, indexes, checks and foreign keys are as generated, and so is the snapshot. That
 -- includes Better Auth's own additions (two_factor, passkey, user.two_factor_enabled,
@@ -11,6 +12,7 @@
 --   * Row-level security on the five app tables, with no policy and no grant to
 --     app_store_user: the store role reads nothing there (fail closed, the second wall).
 --     two_factor and passkey, like the other Better Auth tables, are never granted.
+--   * passkey_last_used gets row-level security too, with no policy and no grant.
 --   * The backfill for role_definitions.requires_two_factor: on for every role that holds
 --     people.manage or roles.manage (lib/access/switches.ts), off for the rest.
 CREATE TYPE "public"."help_kind" AS ENUM('account', 'company_request', 'broken', 'other');--> statement-breakpoint
@@ -71,6 +73,11 @@ CREATE TABLE "store_suspensions" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "passkey_last_used" (
+	"passkey_id" text PRIMARY KEY NOT NULL,
+	"used_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "passkey" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text,
@@ -106,6 +113,7 @@ ALTER TABLE "platform_admins" ADD CONSTRAINT "platform_admins_added_by_user_id_f
 ALTER TABLE "platform_events" ADD CONSTRAINT "platform_events_actor_id_user_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "store_suspensions" ADD CONSTRAINT "store_suspensions_store_id_organization_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "store_suspensions" ADD CONSTRAINT "store_suspensions_suspended_by_user_id_fk" FOREIGN KEY ("suspended_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "passkey_last_used" ADD CONSTRAINT "passkey_last_used_passkey_id_passkey_id_fk" FOREIGN KEY ("passkey_id") REFERENCES "public"."passkey"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "two_factor" ADD CONSTRAINT "two_factor_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "help_messages_request_idx" ON "help_messages" USING btree ("request_id","created_at");--> statement-breakpoint
@@ -135,5 +143,6 @@ ALTER TABLE "platform_events" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "store_suspensions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "help_requests" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "help_messages" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "passkey_last_used" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 -- Hand-written: backfill. Roles that manage people or roles must have two-factor.
 UPDATE "role_definitions" SET "requires_two_factor" = true WHERE "switches" && ARRAY['roles.manage', 'people.manage']::text[];

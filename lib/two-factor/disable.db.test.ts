@@ -15,6 +15,8 @@ import { clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { clearWrongGuesses } from "@/lib/password-guesses";
 import { dropStores } from "@/lib/products/test-stores";
 
+import { addPasskeyRow } from "@/lib/passkeys/test-passkeys";
+
 import { disableTwoFactor } from "./disable";
 import { confirmTwoFactor, startTwoFactor } from "./setup";
 import { cookieHeader, dropAccounts, makeAccount, TEST_PASSWORD, totpFor } from "./test-accounts";
@@ -81,6 +83,15 @@ describe("disableTwoFactor", () => {
     await db.insert(platformAdmins).values({ userId: a.userId, addedByName: "Test" });
     expect(await disableTwoFactor(a.cookie, a.userId, TEST_PASSWORD, await totpFor(a.key))).toEqual({ status: "refused", reason: "admin" });
     expect(await isOn(a.userId)).toBe(true);
+    await db.delete(platformAdmins).where(eq(platformAdmins.userId, a.userId));
+  });
+
+  it("an admin or a required role may turn the app off once they have a passkey: the passkey is the second factor left (A3c)", async () => {
+    const a = await accountWithTwoFactor();
+    await db.insert(platformAdmins).values({ userId: a.userId, addedByName: "Test" });
+    await addPasskeyRow(a.userId);
+    expect((await disableTwoFactor(a.cookie, a.userId, TEST_PASSWORD, await totpFor(a.key))).status).toBe("off");
+    expect(await isOn(a.userId)).toBe(false);
     await db.delete(platformAdmins).where(eq(platformAdmins.userId, a.userId));
   });
 

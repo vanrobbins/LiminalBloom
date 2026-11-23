@@ -65,6 +65,26 @@ test.describe("closed organization endpoints", () => {
     });
   }
 
+  // Passkey remove, rename and list are the Account actions' (lib/passkeys/change.ts); the four ceremonies stay open.
+  for (const name of ["delete-passkey", "update-passkey", "list-user-passkeys"]) {
+    test(`/passkey/${name} is 404 in every spelling, GET and POST`, async ({ request }) => {
+      for (const path of variantsAt("/api/auth/passkey/", name)) {
+        expect((await request.post(path, { data: {} })).status(), `POST ${path}`).toBe(404);
+        expect((await request.get(path)).status(), `GET ${path}`).toBe(404);
+      }
+    });
+  }
+
+  test("the passkey sign-in ceremony is open without a session (a refusal, not a 404)", async ({ playwright, baseURL }) => {
+    const anonymous = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { "x-forwarded-for": "10.77.0.10" } });
+    try {
+      expect((await anonymous.get("/api/auth/passkey/generate-authenticate-options")).status()).toBe(200);
+      expect((await anonymous.post("/api/auth/passkey/verify-authentication", { data: { response: {} } })).status()).not.toBe(404);
+    } finally {
+      await anonymous.dispose();
+    }
+  });
+
   // Open for the sign-in challenge (answered with the two-factor cookie, no session). With a session they are
   // 404 (lib/auth-sign-in-only.ts): otherwise a stolen session could guess codes there, or turn two-factor
   // on from the browser past the app's own confirm. The `request` fixture is the signed-in test account.

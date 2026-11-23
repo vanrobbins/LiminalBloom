@@ -7,22 +7,20 @@
 //
 // With a session present Better Auth counts no wrong codes and `auth.api` skips its HTTP limiter, so both
 // tries are counted here: the code under the step-up's counter, the password under the password counter.
-// A Liminal Bloom admin can't turn it off (spec 8.2), nor can anyone whose role requires it (A3b).
+// A Liminal Bloom admin can't turn it off (spec 8.2), nor can anyone whose role requires it (A3b), unless they have a passkey (A3c).
 
 import "server-only";
 
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
 
-import { db } from "@/db";
-import { platformAdmins } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { keepShortSessionShort } from "@/lib/change-password";
 import { claimCodeGuess, clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
+import { hasPasskey } from "@/lib/passkeys/list";
 
-import { storeRequiringTwoFactor } from "./required-by";
 import { bestEffort } from "./best-effort";
+import { twoFactorRequirement } from "./required-by";
 import { newSessionToken } from "./setup";
 import { forgetTrustedDevices } from "./trusted-devices";
 
@@ -31,11 +29,13 @@ export type DisableReply = { status: "off"; responseHeaders: Headers } | { statu
 const codeOf = (error: unknown) => (error instanceof APIError ? (error.body as { code?: string } | undefined)?.code : undefined);
 
 export async function disableTwoFactor(requestHeaders: Headers, userId: string, password: string, code: string): Promise<DisableReply> {
-  const [admin] = await db.select({ id: platformAdmins.userId }).from(platformAdmins).where(eq(platformAdmins.userId, userId));
-  if (admin) return { status: "refused", reason: "admin" };
-  // A role that requires it keeps it on (turning it off would only lock the person out of the store), and no try is spent.
-  const store = await storeRequiringTwoFactor(userId);
-  if (store) return { status: "refused", reason: "required", store };
+  // An admin, or a role that requires it, keeps it on (turning it off would only lock the person out), and no try is
+  // spent. A passkey is a second factor of its own (A3c), so with one the app can go.
+  if (!(await hasPasskey(userId))) {
+    const need = await twoFactorRequirement(userId);
+    if (need.isAdmin) return { status: "refused", reason: "admin" };
+    if (need.store) return { status: "refused", reason: "required", store: need.store };
+  }
 
   // The code first, so a wrong one never spends a password try.
   if (!(await claimCodeGuess(userId))) return { status: "refused", reason: "locked" };

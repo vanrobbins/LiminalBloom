@@ -12,10 +12,15 @@ describe("CLOSED_PATHS", () => {
     expect(CLOSED_PATHS).not.toContain("/two-factor/verify-totp");
     expect(CLOSED_PATHS).not.toContain("/two-factor/verify-backup-code");
   });
-  it("still closes change-password and the organization people routes, and leaves set-active and passkey routes alone", () => {
+  it("closes the three passkey routes the app's own actions replace (remove, rename, list) and leaves the four ceremonies open (A3c)", () => {
+    for (const name of ["delete-passkey", "update-passkey", "list-user-passkeys"]) expect(CLOSED_PATHS, name).toContain(`/passkey/${name}`);
+    for (const name of ["generate-authenticate-options", "verify-authentication", "generate-register-options", "verify-registration"]) {
+      expect(CLOSED_PATHS, name).not.toContain(`/passkey/${name}`);
+    }
+  });
+  it("still closes change-password and the organization people routes, and leaves set-active alone", () => {
     expect(CLOSED_PATHS).toContain("/change-password");
     expect(CLOSED_PATHS).toContain("/organization/invite-member");
     expect(CLOSED_PATHS).not.toContain("/organization/set-active");
-    expect(CLOSED_PATHS.some((p) => p.startsWith("/passkey"))).toBe(false);
   });
 });

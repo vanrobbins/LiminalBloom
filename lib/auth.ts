@@ -17,14 +17,15 @@ import { db } from "@/db";
 
 import { rememberSwitch, storeForNewSession } from "./active-store";
 import { CLOSED_PATHS } from "./auth-closed-paths";
-import { refuseSessionOnSignInPaths } from "./auth-sign-in-only";
+import { beforeAuth } from "./auth-before";
 import { passkeyRelyingParty, twoFactorAtFor } from "./auth-factors";
 import { optionalEnv } from "./env";
 
 export const auth = betterAuth({
   disabledPaths: CLOSED_PATHS,
-  // The two sign-in verify routes answer 404 to a request that has a session (lib/auth-sign-in-only.ts).
-  hooks: { before: refuseSessionOnSignInPaths },
+  // The two sign-in verify routes answer 404 to a request that has a session (lib/auth-sign-in-only.ts);
+  // adding a passkey needs the password just before (lib/passkeys/add-gate.ts). Both are in lib/auth-before.ts.
+  hooks: { before: beforeAuth },
   // Read through optionalEnv so a value pasted into a dashboard with a
   // trailing newline cannot produce an "Invalid URL" build failure.
   baseURL: optionalEnv("BETTER_AUTH_URL"),
@@ -106,6 +107,19 @@ export const auth = betterAuth({
       rpName: "Liminal Bloom",
       ...passkeyRelyingParty(optionalEnv("BETTER_AUTH_URL")),
       authenticatorSelection: { userVerification: "required" },
+      // When it last signed someone in, for Account (its table is db/schema/passkey-uses.ts). Imported inside
+      // the hook: the Better Auth CLI loads this file outside Next.js, where the server-only chain throws.
+      authentication: {
+        afterVerification: async ({ clientData }) => {
+          // A failure here only loses the "last used" time: it must not fail the sign-in.
+          try {
+            const { recordPasskeyUse } = await import("./passkeys/list");
+            await recordPasskeyUse(String(clientData.id));
+          } catch (error) {
+            console.error("passkey last used not recorded", error);
+          }
+        },
+      },
     }),
     // Each retail store is an organization: its own workspace, its own
     // members, its own data. This plugin owns the organization, member and

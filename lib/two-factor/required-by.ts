@@ -8,7 +8,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { member, organization } from "@/db/auth-schema";
-import { roleDefinitions } from "@/db/schema";
+import { platformAdmins, roleDefinitions } from "@/db/schema";
 
 /** The name of a store where this person's role requires two-factor, or null when none does. */
 export async function storeRequiringTwoFactor(userId: string): Promise<string | null> {
@@ -21,4 +21,13 @@ export async function storeRequiringTwoFactor(userId: string): Promise<string | 
     .orderBy(asc(organization.name))
     .limit(1);
   return row?.name ?? null;
+}
+
+/** Why the account must keep a second factor, if it must: it is a Liminal Bloom admin, or a role of theirs requires it (the store's name). */
+export async function twoFactorRequirement(userId: string): Promise<{ isAdmin: boolean; store: string | null }> {
+  const [admin, store] = await Promise.all([
+    db.select({ id: platformAdmins.userId }).from(platformAdmins).where(eq(platformAdmins.userId, userId)),
+    storeRequiringTwoFactor(userId),
+  ]);
+  return { isAdmin: admin.length > 0, store };
 }

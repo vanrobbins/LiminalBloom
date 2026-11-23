@@ -13,6 +13,7 @@ export function isFresh(twoFactorAt: Date | null | undefined, now: Date = new Da
   return age <= ADMIN_FRESH_MS && age >= -SKEW_MS;
 }
 
+// `twoFactorEnabled` here means the account has a second factor: an authenticator app or a passkey (A3c).
 export type AdminFacts = { signedIn: boolean; isAdmin: boolean; twoFactorEnabled: boolean; twoFactorAt: Date | null };
 export type AdminStanding = "signed-out" | "not-admin" | "needs-two-factor" | "needs-verify" | "ok";
 

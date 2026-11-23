@@ -36,11 +36,19 @@ const CLOSED_ORGANIZATION_PATHS = [
 // so the browser cannot turn it on or off, read its link, or ask for new backup codes: each of those
 // answers 404. Email codes need Resend, so their two endpoints are closed too. Open on purpose:
 // /two-factor/verify-totp and /two-factor/verify-backup-code, which sign-in needs (but only without
-// a session: lib/auth-sign-in-only.ts answers 404 to a request that has one). The passkey
-// routes stay open too (they need a session; A3c). e2e/auth-routes.spec.ts proves each path and its spellings.
+// a session: lib/auth-sign-in-only.ts answers 404 to a request that has one). e2e/auth-routes.spec.ts
+// proves each path and its spellings.
 const CLOSED_TWO_FACTOR_PATHS = ["enable", "disable", "get-totp-uri", "generate-backup-codes", "send-otp", "verify-otp"].map((name) => `/two-factor/${name}`);
 
-export const CLOSED_PATHS: string[] = [...CLOSED_ORGANIZATION_PATHS, ...CLOSED_TWO_FACTOR_PATHS, "/change-password"];
+// Passkeys (A3c). Open: the two ceremonies for signing in (/passkey/generate-authenticate-options and
+// /verify-authentication, which need no session), and the two for adding one (/generate-register-options and
+// /verify-registration, which need a session and, from lib/passkeys/add-gate.ts, the password just before).
+// Closed: remove (it needs the password and the last-passkey rule), rename (a length) and list (it returns
+// each public key and credential id; Account reads the list on the server). Account's server actions
+// (lib/passkeys/change.ts) do those three. e2e/auth-routes.spec.ts proves each closed path and its spellings.
+const CLOSED_PASSKEY_PATHS = ["delete-passkey", "update-passkey", "list-user-passkeys"].map((name) => `/passkey/${name}`);
+
+export const CLOSED_PATHS: string[] = [...CLOSED_ORGANIZATION_PATHS, ...CLOSED_TWO_FACTOR_PATHS, ...CLOSED_PASSKEY_PATHS, "/change-password"];
 
 // True when a request pathname under /api/auth is a closed path in any spelling: percent-encoding,
 // letter case, and repeated or trailing slashes are folded away first. The route handler uses it to

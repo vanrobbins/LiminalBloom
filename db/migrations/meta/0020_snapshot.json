@@ -3787,6 +3787,46 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.passkey_last_used": {
+      "name": "passkey_last_used",
+      "schema": "",
+      "columns": {
+        "passkey_id": {
+          "name": "passkey_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "passkey_last_used_passkey_id_passkey_id_fk": {
+          "name": "passkey_last_used_passkey_id_passkey_id_fk",
+          "tableFrom": "passkey_last_used",
+          "tableTo": "passkey",
+          "columnsFrom": [
+            "passkey_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.account": {
       "name": "account",
       "schema": "",

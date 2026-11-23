@@ -1,5 +1,5 @@
 // Who may use /admin (spec 0.7.1 7.2). Read from the database on every request: the admin row, the
-// account's `two_factor_enabled` and this session's `two_factor_at`, never from a cached session
+// account's `two_factor_enabled` (the authenticator app) and its passkeys (either is a second factor, A3c) and this session's `two_factor_at`, never from a cached session
 // payload or anything the client sends. Every /admin page calls a page guard; every admin server
 // action awaits an action guard first (app/server-actions-guard.test.ts checks both the first and
 // that its `forbidden` answer is branched on).
@@ -19,10 +19,11 @@ import { db } from "@/db";
 import { session, user } from "@/db/auth-schema";
 import { platformAdmins } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { hasPasskey } from "@/lib/passkeys/list";
 
 import { adminStanding, type AdminStanding } from "./freshness";
 
-export type AdminAccount = { userId: string; sessionId: string; name: string; email: string; twoFactorEnabled: boolean; twoFactorAt: Date | null };
+export type AdminAccount = { userId: string; sessionId: string; name: string; email: string; twoFactorEnabled: boolean; passkey: boolean; twoFactorAt: Date | null };
 
 const SIGN_IN = "/sign-in?next=/admin";
 
@@ -37,8 +38,10 @@ const readAdmin = cache(async (): Promise<{ standing: AdminStanding; account: Ad
     .leftJoin(session, eq(session.id, current.session.id))
     .where(eq(user.id, current.user.id));
   if (!row) return { standing: "signed-out", account: null };
-  const account = { userId: current.user.id, sessionId: current.session.id, name: current.user.name, email: current.user.email, twoFactorEnabled: row.twoFactorEnabled === true, twoFactorAt: row.twoFactorAt ?? null };
-  const standing = adminStanding({ signedIn: true, isAdmin: row.admin !== null, twoFactorEnabled: account.twoFactorEnabled, twoFactorAt: account.twoFactorAt });
+  // Only an admin's passkeys matter here, so a non-admin costs no extra query.
+  const passkey = row.admin !== null && (await hasPasskey(current.user.id));
+  const account = { userId: current.user.id, sessionId: current.session.id, name: current.user.name, email: current.user.email, twoFactorEnabled: row.twoFactorEnabled === true, passkey, twoFactorAt: row.twoFactorAt ?? null };
+  const standing = adminStanding({ signedIn: true, isAdmin: row.admin !== null, twoFactorEnabled: account.twoFactorEnabled || passkey, twoFactorAt: account.twoFactorAt });
   return { standing, account };
 });
 

@@ -7,11 +7,13 @@
 // closed path does. Server code calling `auth.api.verifyTOTP` (the confirm, the step-up) has no
 // `request` and is let through. Spec 0.7.1 8.2; e2e/auth-routes.spec.ts proves it over HTTP.
 
-import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api";
+import { APIError, getAuthoritativeSessionFromCtx } from "better-auth/api";
 
 export const SIGN_IN_ONLY_PATHS: readonly string[] = ["/two-factor/verify-totp", "/two-factor/verify-backup-code"];
 
-export const refuseSessionOnSignInPaths = createAuthMiddleware(async (ctx) => {
+type HookContext = { path?: string; request?: Request } & Parameters<typeof getAuthoritativeSessionFromCtx>[0];
+
+export async function refuseSessionOnSignInPath(ctx: HookContext): Promise<void> {
   if (ctx.request === undefined || !SIGN_IN_ONLY_PATHS.includes(ctx.path ?? "")) return;
   if (await getAuthoritativeSessionFromCtx(ctx)) throw new APIError("NOT_FOUND", { message: "Not found" });
-});
+}
