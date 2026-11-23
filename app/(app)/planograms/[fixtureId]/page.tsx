@@ -1,16 +1,19 @@
 // Planogram Detail (spec §5.2): the published planogram, the draft, or a past
 // version (?version=K), face by face; ?product=<id> highlights a product.
 
-import { History } from "lucide-react";
+import { History, Zap } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
+import { AdjustmentLines } from "@/components/planograms/adjusted-line";
 import { PlanogramScreen } from "@/components/planograms/planogram-screen";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
+import { can } from "@/lib/access/can";
 import { requireMember } from "@/lib/current-member";
 import { loadLayout } from "@/lib/layout/load";
+import { adjustedFloor, replacedSpots } from "@/lib/planograms/adjust";
 import { planogramOwner, planogramScope } from "@/lib/planograms/faces";
 import { productLooks } from "@/lib/planograms/product-looks";
 import { loadPlanogram, loadVersion } from "@/lib/planograms/queries";
@@ -38,11 +41,15 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
   const scope = planogramScope(layout, owner.id);
   if (!scope || scope.faces.length === 0) notFound();
 
-  const [state, zone] = await Promise.all([loadPlanogram(activeStoreId, owner.id), storeTimezone(activeStoreId)]);
+  const [state, zone] = await Promise.all([loadPlanogram(activeStoreId, owner.id, true), storeTimezone(activeStoreId)]);
   const today = storeToday(zone);
   const versionNumber = z.coerce.number().int().min(1).safeParse(query.version);
   const viewing = versionNumber.success && state.row ? await loadVersion(activeStoreId, state.row.id, versionNumber.data) : null;
-  const looks = await productLooks(activeStoreId, [...(state.latest?.placements ?? []), ...(viewing?.placements ?? [])].map((p) => p.productId));
+  // The Published view draws the version with its published Quick Adjust applied (0.7.0.9 spec §6.4); the monthly draft and past versions are plain.
+  const adjusted = state.latest && state.adjustments.published ? { ...state.latest, placements: adjustedFloor(state.latest, state.adjustments.published.changes) } : state.latest;
+  const looks = await productLooks(activeStoreId, [...(state.latest?.placements ?? []), ...(adjusted?.placements ?? []), ...(viewing?.placements ?? [])].map((p) => p.productId));
+  // A Quick Adjust draft goes to the client only for those who may draft or publish it (the line hides it from the rest too).
+  const sees = can(member, "planograms.draft") || can(member, "planograms.publish");
   const product = typeof query.product === "string" && z.uuid().safeParse(query.product).success ? query.product : null;
 
   return (
@@ -52,11 +59,20 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         back={{ href: "/planograms", label: "Planograms" }}
         actions={
           state.row?.publishedVersion ? (
-            <Button asChild variant="secondary" icon>
-              <Link href={`/planograms/${owner.id}/history`} aria-label="History">
-                <History aria-hidden="true" strokeWidth={1.75} className="size-5" />
-              </Link>
-            </Button>
+            <>
+              {can(member, "planograms.draft") ? (
+                <Button asChild variant="secondary" icon>
+                  <Link href={`/planograms/${owner.id}/adjust`} aria-label="Quick Adjust">
+                    <Zap aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                  </Link>
+                </Button>
+              ) : null}
+              <Button asChild variant="secondary" icon>
+                <Link href={`/planograms/${owner.id}/history`} aria-label="History">
+                  <History aria-hidden="true" strokeWidth={1.75} className="size-5" />
+                </Link>
+              </Button>
+            </>
           ) : null
         }
       />
@@ -64,13 +80,16 @@ export default async function PlanogramPage({ params, searchParams }: Params) {
         key={`${state.row?.version ?? 0}-${viewing?.number ?? 0}`}
         scope={scope}
         row={state.row}
-        latest={state.latest}
+        latest={adjusted}
+        plain={state.latest}
         draft={state.draft}
         viewing={viewing}
         looks={looks}
         highlightProductId={product}
         dueDate={state.row?.dueDate ?? null}
         today={today}
+        replacedSpots={replacedSpots(state.adjustments.published?.changes ?? [])}
+        afterStatus={state.latest && !viewing ? <AdjustmentLines fixtureId={owner.id} scope={scope} adjustments={sees ? state.adjustments : { ...state.adjustments, draft: null }} version={state.latest} looks={looks} member={member} /> : undefined}
         member={member}
       />
     </div>

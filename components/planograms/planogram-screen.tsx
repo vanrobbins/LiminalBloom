@@ -37,17 +37,23 @@ type PlanogramScreenProps = {
   scope: PlanogramScope;
   row: PlanogramRow | null;
   latest: PublishedVersion | null;
+  /** The latest version as published, before its Quick Adjust: what a draft starts from, so moves from Published are checked against it. */
+  plain?: PublishedVersion | null;
   draft: DraftState | null;
   viewing: PublishedVersion | null;
   looks: Record<string, ProductLook>;
   highlightProductId: string | null;
   dueDate: string | null;
   today: string;
+  /** The spots a published Quick Adjust put a different product on (`replacedSpots`): those tiles can't be moved from Published. */
+  replacedSpots?: ReadonlySet<string>;
+  /** Under the status row: the Quick Adjust lines (a server-rendered element from the page). */
+  afterStatus?: React.ReactNode;
   /** Whose switches decide which controls show; the server checks them again. */
   member: Holder;
 };
 
-export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing, looks, highlightProductId, dueDate, today, member }: PlanogramScreenProps) {
+export function PlanogramScreen({ scope, row, latest, plain, draft: pageDraft, viewing, looks, highlightProductId, dueDate, today, replacedSpots, afterStatus, member }: PlanogramScreenProps) {
   const router = useRouter();
   const canDraft = can(member, "planograms.draft");
   // A draft is for those who may draft: without the switch the page reads as the published planogram only.
@@ -65,7 +71,8 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
   const canMove = canDraft && viewing === null && (isEditing || (draft === null && latest !== null));
   const placements = draft?.placements ?? [];
   const issues = isEditing ? draftIssues(placements, scope.faces) : new Map<string, string>();
-  const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks);
+  const items = isEditing ? itemsFromDraft(placements) : itemsFromSnapshot((viewing ?? latest)?.placements ?? [], looks, viewing === null, replacedSpots);
+  const plainItems = !isEditing && !viewing && plain ? itemsFromSnapshot(plain.placements, looks) : undefined;
   const busy = status.kind === "saving";
   const isEmpty = !latest && !draft;
   const { selectedId, setSelectedId, sheetId, openSheet, select, onTile, editNumbers } = useSelection(isEditing, items);
@@ -99,7 +106,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
     select(null);
   }
 
-  const actions = usePlacementActions({ scope, face, layout, placements, items, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers, onAdd: (cell) => setAdding({ cell: cell ?? null }) });
+  const actions = usePlacementActions({ scope, face, layout, placements, items, plainItems, isEditing, canMove, selectedId, builder, setSelectedId, select, showFace, editNumbers, onAdd: (cell) => setAdding({ cell: cell ?? null }) });
   const add = useAddProduct({ scope, face, placements, items, isEditing, builder, select, showFace, note });
 
   const body = (
@@ -169,6 +176,7 @@ export function PlanogramScreen({ scope, row, latest, draft: pageDraft, viewing,
           {cornerBar}
         </StatusRow>
       )}
+      {afterStatus}
       {isEmpty ? (
         <div data-empty className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-line p-8">
           <p className="text-lg font-semibold text-ink">No planogram yet</p>

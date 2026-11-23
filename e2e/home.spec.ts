@@ -1,11 +1,12 @@
 // Home as the Store Manager of a worker's own store (0.7.0.6 spec section 14): the first tab, the search,
-// and the cards that need planograms and products (seeded in home-store.ts). Nothing here changes data.
+// and the cards that need planograms and products (seeded in home-store.ts). Only the Quick Adjust test
+// changes data (a sold-out product, a draft adjustment), and puts it back.
 
 import type { Page } from "@playwright/test";
 
 import { mainNav } from "./access-page";
 import { expect, hydrated, sizeOf, test } from "./fixtures";
-import { addDays, clearHomeWork, dueText, homeStoreId, seedHomeWork, unplacedProducts, type HomeSeed } from "./home-store";
+import { addDays, clearHomeWork, dueText, endAdjustWork, homeStoreId, startAdjustWork, seedHomeWork, unplacedProducts, type HomeSeed } from "./home-store";
 
 let seed: HomeSeed;
 test.beforeAll(async () => {
@@ -93,7 +94,24 @@ test("the cards run in the spec's order, and the due dates are the store's own d
   expect(addDays(seed.today, -3)).toBe(seed.overdue);
   await openHome(page);
   const titles = await page.getByRole("main").getByRole("heading", { level: 2 }).allTextContents();
-  const known = ["Set up the store", "Planograms to finish", "Invitations waiting", "Not placed yet", "Recently published", "Recent changes"];
+  const known = ["Set up the store", "Planograms to finish", "Sold out on display", "Invitations waiting", "Not placed yet", "Recently published", "Recent changes"];
   expect(titles).toEqual(known.filter((title) => titles.includes(title)));
   expect(titles).toEqual(expect.arrayContaining(["Planograms to finish", "Not placed yet", "Recently published"]));
+});
+
+test("Quick Adjust work shows: Sold out on display after Planograms to finish, and a draft adjustment as an Adjusting row", async ({ page }) => {
+  await startAdjustWork(seed.ids.published);
+  try {
+    await openHome(page);
+    const titles = await page.getByRole("main").getByRole("heading", { level: 2 }).allTextContents();
+    expect(titles.indexOf("Sold out on display")).toBe(titles.indexOf("Planograms to finish") + 1);
+    await expect(card(page, "Sold out on display").getByRole("link", { name: "1 sold-out product still on display" })).toHaveAttribute("href", "/products?status=sold_out&place=floor");
+    const row = card(page, "Planograms to finish").getByRole("link", { name: /^Wall B, (?:[A-Za-z ]+, )?Adjusting$/ });
+    await expect(row).toHaveAttribute("href", `/planograms/${seed.ids.published}/adjust`);
+    await row.click();
+    await expect(page).toHaveURL(new RegExp(`/planograms/${seed.ids.published}/adjust$`));
+    await expect(page.getByRole("heading", { level: 1, name: "Wall B" })).toBeVisible();
+  } finally {
+    await endAdjustWork();
+  }
 });

@@ -84,7 +84,7 @@ describe("the history clears", () => {
   const settled = () => act(() => new Promise((resolve) => setTimeout(resolve, 20)));
 
   it("after publish", async () => {
-    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 2, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
+    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 2, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false, adjustments: [], soldOut: [] });
     actions.publishAction.mockResolvedValue({ status: "saved", message: "Published" });
     const user = await withOneStep();
     await user.click(screen.getByRole("button", { name: "Publish" }));

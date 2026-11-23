@@ -75,7 +75,8 @@ export function toPick(item: PaletteItem): RecentPick | null {
       return { id: item.id.replace(/^recent:/, ""), kind: item.of, label: item.label, ...(item.second ? { second: item.second } : {}), href: item.href };
     case "page":
     case "action":
-      return "href" in item.target ? { id: item.id, kind: item.kind, label: item.label, href: item.target.href } : null;
+      // A Quick Adjust command (adjustCommands) is rebuilt from what the palette loaded: it would be dropped from Recent as not a command.
+      return "href" in item.target && !item.id.startsWith("action:adjust:") ? { id: item.id, kind: item.kind, label: item.label, href: item.target.href } : null;
     case "all-products":
       return null;
   }

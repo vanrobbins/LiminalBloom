@@ -11,6 +11,8 @@ export type PlanogramSummary = {
   publishedAt: Date | null;
   hasDraft: boolean;
   dueDate: string | null;
+  /** A Quick Adjust under way ("draft") or on the floor ("published"): the row's one extra word. */
+  adjustment?: "draft" | "published" | null;
 };
 export type ListItem = Omit<PlanogramSummary, "fixtureId"> & { fixtureId: string; name: string; typeLabel: string };
 /** `zoneId` is null for "Not in a zone"; it keys the group's fold (A1). */
@@ -32,6 +34,7 @@ export function planogramList(layout: Layout, summaries: readonly PlanogramSumma
       publishedAt: s?.publishedAt ?? null,
       hasDraft: s?.hasDraft ?? false,
       dueDate: s?.dueDate ?? null,
+      adjustment: s?.adjustment ?? null,
     };
   };
   const groups: ListGroup[] = byName(layout.zones).map((z) => ({ zoneId: z.id, zoneName: z.name, items: shown.filter((f) => f.zoneId === z.id).map(item) }));

@@ -3,13 +3,15 @@
 
 import "server-only";
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 
 import { db } from "@/db";
-import { planogramPlacements, planograms, planogramVersions, productCategories, products } from "@/db/schema";
+import { planogramAdjustments, planogramPlacements, planograms, planogramVersions, productCategories, products } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
 import { imageKeyOf } from "@/lib/products/queries";
 
+import type { Adjustments } from "./adjust";
+import { adjustmentQueries, NO_ADJUSTMENTS, toAdjustments } from "./adjust-queries";
 import type { PlanogramSummary } from "./list";
 import { parseSnapshot } from "./snapshot";
 import type { DraftState, PlacementView, SnapshotEntry } from "./types";
@@ -24,7 +26,8 @@ export type PlanogramRow = {
   version: number;
 };
 export type PublishedVersion = { number: number; publishedAt: Date; publishedByName: string; summary: string | null; placements: SnapshotEntry[] };
-export type PlanogramState = { row: PlanogramRow | null; draft: DraftState | null; latest: PublishedVersion | null };
+/** `adjustments` is empty unless the caller asked for them (loadPlanogram's third argument): most reads don't need them. */
+export type PlanogramState = { row: PlanogramRow | null; draft: DraftState | null; latest: PublishedVersion | null; adjustments: Adjustments };
 
 const rowColumns = {
   id: planograms.id,
@@ -78,10 +81,12 @@ function draftQuery(storeId: string, planogramId: string) {
     .orderBy(asc(planogramPlacements.row), asc(planogramPlacements.col), asc(planogramPlacements.id));
 }
 
-export async function planogramSummaries(storeId: string): Promise<PlanogramSummary[]> {
-  const [rows] = await withStore(storeId, [
+/** `seesDrafts` false: a Quick Adjust being drafted is not told (only the one on the floor), for members who may neither draft nor publish. */
+export async function planogramSummaries(storeId: string, seesDrafts = true): Promise<PlanogramSummary[]> {
+  const [rows, open] = await withStore(storeId, [
     db
       .select({
+        id: planograms.id,
         fixtureId: planograms.fixtureId,
         publishedVersion: planograms.publishedVersion,
         hasDraft: planograms.hasDraft,
@@ -94,17 +99,26 @@ export async function planogramSummaries(storeId: string): Promise<PlanogramSumm
         and(eq(planogramVersions.planogramId, planograms.id), eq(planogramVersions.number, planograms.publishedVersion)),
       )
       .where(eq(planograms.storeId, storeId)),
+    db
+      .select({ planogramId: planogramAdjustments.planogramId, state: planogramAdjustments.state })
+      .from(planogramAdjustments)
+      .where(and(eq(planogramAdjustments.storeId, storeId), ne(planogramAdjustments.state, "ended"))),
   ] as const);
-  return rows;
+  // One word for the row: a Quick Adjust being drafted (it is the work waiting) over one that is on the floor.
+  const wordFor = (planogramId: string): PlanogramSummary["adjustment"] => {
+    const states = open.filter((a) => a.planogramId === planogramId).map((a) => a.state);
+    return seesDrafts && states.includes("draft") ? "draft" : states.includes("published") ? "published" : null;
+  };
+  return rows.map(({ id, ...summary }) => ({ ...summary, adjustment: wordFor(id) }));
 }
 
-export async function loadPlanogram(storeId: string, fixtureId: string): Promise<PlanogramState> {
+export async function loadPlanogram(storeId: string, fixtureId: string, withAdjustments = false): Promise<PlanogramState> {
   const [rows] = await withStore(storeId, [
     db.select(rowColumns).from(planograms).where(and(eq(planograms.storeId, storeId), eq(planograms.fixtureId, fixtureId))),
   ] as const);
   const row = rows[0] ?? null;
-  if (!row) return { row: null, draft: null, latest: null };
-  const [draftRows, versionRows] = await withStore(storeId, [
+  if (!row) return { row: null, draft: null, latest: null, adjustments: NO_ADJUSTMENTS };
+  const [draftRows, versionRows, adjustmentRows, changeRows] = await withStore(storeId, [
     draftQuery(storeId, row.id),
     db
       .select(versionColumns)
@@ -116,12 +130,14 @@ export async function loadPlanogram(storeId: string, fixtureId: string): Promise
           eq(planogramVersions.number, row.publishedVersion ?? 0),
         ),
       ),
+    ...(withAdjustments ? adjustmentQueries(storeId, row.id) : ([] as const)),
   ] as const);
   const placements: PlacementView[] = draftRows.map(({ imagePath, ...p }) => ({ ...p, imageKey: imageKeyOf(imagePath) }));
   return {
     row,
     draft: row.hasDraft ? { planogramVersion: row.version, placements } : null,
     latest: versionRows[0] ? toVersion(versionRows[0]) : null,
+    adjustments: adjustmentRows && changeRows ? toAdjustments(adjustmentRows, changeRows) : NO_ADJUSTMENTS,
   };
 }
 

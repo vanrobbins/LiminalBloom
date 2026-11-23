@@ -29,7 +29,7 @@ describe("server actions are guarded (spec 0.7 §4.7)", () => {
 
   it("finds the action files, so the scan cannot pass by looking at nothing", () => {
     const names = files.map((f) => f.file);
-    for (const expected of ["app/(app)/store/actions.ts", "app/(app)/store/people-actions.ts", "app/(app)/store/roles/actions.ts", "app/(app)/products/status-actions.ts", "app/(app)/planograms/actions.ts", "app/(editor)/layout/edit/actions.ts", "app/create-store/actions.ts"]) {
+    for (const expected of ["app/(app)/store/actions.ts", "app/(app)/store/people-actions.ts", "app/(app)/store/roles/actions.ts", "app/(app)/products/status-actions.ts", "app/(app)/planograms/actions.ts", "app/(app)/planograms/adjust-actions.ts", "app/(editor)/layout/edit/actions.ts", "app/create-store/actions.ts"]) {
       expect(names).toContain(expected);
     }
   });

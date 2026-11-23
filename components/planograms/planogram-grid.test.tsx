@@ -19,6 +19,18 @@ describe("PlanogramGrid", () => {
     expect(screen.getByRole("button", { name: "High-Rise Pant, Left · Middle, Folded 6" })).toBeInTheDocument();
   });
 
+  it("read only: each placement is a named image, not a button, with no tab stop and no press state, and a click does nothing", () => {
+    const onSelect = vi.fn();
+    render(<PlanogramGrid readOnly layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" onSelect={onSelect} />);
+    expect(screen.queryByRole("button")).toBeNull();
+    const tile = screen.getByRole("img", { name: "High-Rise Pant, Left · Middle, Folded 6" });
+    expect(tile).not.toHaveAttribute("aria-pressed");
+    expect(tile).not.toHaveAttribute("tabindex");
+    expect(tile.tagName).toBe("DIV");
+    fireEvent.click(tile);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it("a tap on a tile selects it", () => {
     const onSelect = vi.fn();
     render(<PlanogramGrid layout={singleBlock(face("u", null, 3))} items={[pant]} label="T" onSelect={onSelect} />);

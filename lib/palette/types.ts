@@ -9,12 +9,14 @@ export const GROUP_KEYS = ["recent", "planograms", "zones", "products", "goto", 
 export type GroupKey = (typeof GROUP_KEYS)[number];
 
 /** `GET /api/palette`: what the browser matches itself. */
-export type IndexPlanogram = { fixtureId: string; name: string; typeHint?: string; zoneName: string; state: string };
+/** `published` (present only when true) says a version is on the floor: the "Version N" state word as a flag, so the Quick Adjust command can leave out a planogram it has no page for. */
+export type IndexPlanogram = { fixtureId: string; name: string; typeHint?: string; zoneName: string; state: string; published?: true };
 export type IndexZone = { id: string; name: string; fixtureCount: number };
 export type PaletteIndex = { planograms: IndexPlanogram[]; zones: IndexZone[] };
 
 /** `GET /api/palette/products?q=`: the top few, already trimmed. */
-export type PaletteProduct = { id: string; name: string; styleNumber: string; status: ProductStatus; place: string | null; more: number };
+/** `adjustFixtureId` (0.7.0.9) is sent only to a member with planograms.draft: the fixture of a sold-out or on-sale product's first floor place, where Quick Adjust opens. */
+export type PaletteProduct = { id: string; name: string; styleNumber: string; status: ProductStatus; place: string | null; more: number; adjustFixtureId?: string };
 export type PaletteProducts = { products: PaletteProduct[]; total: number };
 
 /** What choosing a page or action does: go somewhere, or change something in place. */

@@ -30,7 +30,7 @@ export async function loadHome(member: Member, now: Date = new Date()): Promise<
     reads.planograms ? loadLayout(storeId) : null,
     reads.summaries ? planogramSummaries(storeId) : null,
     reads.summaries ? storeTimezone(storeId) : null,
-    reads.batch ? homeReads(storeId) : null,
+    reads.batch ? homeReads(storeId, { soldOut: reads.soldOut }) : null,
     reads.invitations ? invitationRowsFor(member, now) : null,
     reads.invitations ? memberCount(storeId) : null,
     reads.activity ? readActivity(member, CHANGES_SHOWN) : null,
@@ -55,6 +55,7 @@ export async function loadHome(member: Member, now: Date = new Date()): Promise<
   if (groups && zone && cardAllowed(member, "planograms")) data.planograms = planogramWork(groups, storeToday(zone, now));
   if (invitationRows && cardAllowed(member, "invitations")) data.invitations = invitationRows;
   if (groups && batch && cardAllowed(member, "notPlaced")) data.notPlaced = { products: batch.unplacedCount, fixtures: fixturesWithoutPlanogram(groups) };
+  if (batch?.soldOutCount != null && cardAllowed(member, "soldOut")) data.soldOut = { products: batch.soldOutCount };
   if (batch && cardAllowed(member, "published")) data.published = batch.recentPublishes;
   if (activity && cardAllowed(member, "changes")) data.changes = activity.map((a): ChangeRow => ({ id: a.id, text: a.text, at: new Date(a.at) }));
   return data;

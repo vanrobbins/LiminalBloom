@@ -20,7 +20,15 @@ import { toast } from "@/lib/toast";
 
 const FADE = "motion-safe:transition-opacity motion-safe:duration-300 motion-safe:ease-[var(--ease-enter)]";
 
-export function StatusControl({ product, member, onChanged }: { product: ProductRow; member: Holder; onChanged: (product: ProductRow) => void }) {
+type StatusControlProps = {
+  product: ProductRow;
+  member: Holder;
+  onChanged: (product: ProductRow) => void;
+  /** How many floor locations the product has (bins are not displays); a sold-out one still on display is said aloud (0.7.0.9). */
+  displays?: number;
+};
+
+export function StatusControl({ product, member, onChanged, displays = 0 }: StatusControlProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [problem, setProblem] = useState("");
   // Only the current status and the changes this person's switches allow (rank.ts); the server checks the same rule.
@@ -59,6 +67,9 @@ export function StatusControl({ product, member, onChanged }: { product: Product
     radios[(at + step + radios.length) % radios.length]?.focus();
   }
 
+  // A refusal first; else a sold-out product that is still on a display, which is what Quick Adjust fixes.
+  const line = problem || (product.status === "sold_out" && displays > 0 ? `Sold out. On ${displays} ${displays === 1 ? "display" : "displays"}.` : "");
+
   // Nothing to choose: show the status, not a control that does nothing.
   if (choices.length === 1) return <StatusBadge status={product.status} />;
 
@@ -93,9 +104,9 @@ export function StatusControl({ product, member, onChanged }: { product: Product
         </div>
         <InfoPopover term="status" />
       </div>
-      {/* Always in the page, so a refusal that arrives is announced. */}
-      <p role="status" aria-live="polite" className={problem ? "mt-1 text-sm text-danger" : "sr-only"}>
-        {problem}
+      {/* Always in the page, so a refusal (or the sold-out line) that arrives is announced. */}
+      <p role="status" aria-live="polite" className={problem ? "mt-1 text-sm text-danger" : line ? "mt-1 text-sm text-ink-muted" : "sr-only"}>
+        {line}
       </p>
     </div>
   );

@@ -17,11 +17,11 @@ function compareWork(a: PlanogramWorkRow, b: PlanogramWorkRow): number {
   return compareNames(a.name, b.name);
 }
 
-/** Planograms with a due date or a draft, in order; `rows` is capped at `limit`, `total` is not. */
+/** Planograms with a due date, a draft or a Quick Adjust draft (0.7.0.9), in order; `rows` is capped at `limit`, `total` is not. */
 export function planogramWork(groups: readonly ListGroup[], today: string, limit = 5): PlanogramWork {
   const work = groups
     .flatMap((g) => g.items)
-    .filter((i) => i.dueDate !== null || i.hasDraft)
+    .filter((i) => i.dueDate !== null || i.hasDraft || i.adjustment === "draft")
     .map((i): PlanogramWorkRow => ({ ...i, overdue: i.dueDate !== null && dueLabel(i.dueDate, today).overdue }))
     .sort(compareWork);
   return { rows: work.slice(0, limit), total: work.length, today };

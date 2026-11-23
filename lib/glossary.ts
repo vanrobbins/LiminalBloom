@@ -23,6 +23,7 @@ export const GLOSSARY = {
   invitation: { term: "Invitation link", text: "Whoever opens it signs in with the invited email and joins in that role. It works for 48 hours; send it yourself, because the app doesn't email it yet." },
   rank: { term: "Rank", text: "A role's place in the store's order, highest first. A role can manage only the people and roles ranked below it." },
   storeManager: { term: "Store Manager", text: "The top role in a store. It always keeps the permissions to manage people, roles and store settings, and a store always has at least one." },
+  quickAdjust: { term: "Quick Adjust", text: "A temporary change on top of the published planogram, for when a product sells out. It stays until it is reverted or the next version is published." },
   permission: { term: "Permission", text: "Something a role lets people do, like publishing planograms. A change reaches everyone with that role on their next tap." },
 } as const satisfies Record<string, { term: string; text: string }>;
 

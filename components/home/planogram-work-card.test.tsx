@@ -28,7 +28,7 @@ const work = (rows: PlanogramWorkRow[], total = rows.length): PlanogramWork => (
 
 describe("PlanogramWorkCard", () => {
   it("lists rows in the order given, each linking to its planogram", () => {
-    render(<PlanogramWorkCard work={work([row("Front table", { hasDraft: true }), row("Wall 2", { hasDraft: true })])} />);
+    render(<PlanogramWorkCard canDraft work={work([row("Front table", { hasDraft: true }), row("Wall 2", { hasDraft: true })])} />);
     const links = within(screen.getByRole("region", { name: "Planograms to finish" })).getAllByRole("link", { name: /^(Front table|Wall 2)/ });
     expect(links.map((l) => l.getAttribute("href"))).toEqual(["/planograms/front-table", "/planograms/wall-2"]);
   });
@@ -36,6 +36,7 @@ describe("PlanogramWorkCard", () => {
   it("names the state and the due date in the row's link name", () => {
     render(
       <PlanogramWorkCard
+        canDraft
         work={work([
           row("Front table", { hasDraft: true, dueDate: "2026-11-09", overdue: true }),
           row("Wall 2", { publishedVersion: 3, publishedAt: new Date("2026-11-01T12:00:00Z"), dueDate: "2026-11-20" }),
@@ -49,23 +50,48 @@ describe("PlanogramWorkCard", () => {
   });
 
   it("shows the due chip with its words, and the type only when the name doesn't say it", () => {
-    render(<PlanogramWorkCard work={work([row("Front", { hasDraft: true, dueDate: "2026-11-09", overdue: true }), row("Back rack", { hasDraft: true })])} />);
+    render(<PlanogramWorkCard canDraft work={work([row("Front", { hasDraft: true, dueDate: "2026-11-09", overdue: true }), row("Back rack", { hasDraft: true })])} />);
     expect(screen.getByText("Overdue · Nov 9")).toBeInTheDocument();
     expect(screen.getAllByText("Rack")).toHaveLength(1);
   });
 
   it("spans both columns on a tablet", () => {
-    render(<PlanogramWorkCard work={work([row("A", { hasDraft: true })])} />);
+    render(<PlanogramWorkCard canDraft work={work([row("A", { hasDraft: true })])} />);
     expect(screen.getByRole("region", { name: "Planograms to finish" })).toHaveClass("md:col-span-2");
   });
 
   it("names the remainder on the see-all link", () => {
-    render(<PlanogramWorkCard work={work([row("A", { hasDraft: true }), row("B", { hasDraft: true })], 6)} />);
+    render(<PlanogramWorkCard canDraft work={work([row("A", { hasDraft: true }), row("B", { hasDraft: true })], 6)} />);
     expect(screen.getByRole("link", { name: "All planograms, 4 more" })).toHaveAttribute("href", "/planograms");
   });
 
   it("leaves the remainder out when every planogram is shown", () => {
-    render(<PlanogramWorkCard work={work([row("A", { hasDraft: true })])} />);
+    render(<PlanogramWorkCard canDraft work={work([row("A", { hasDraft: true })])} />);
     expect(screen.getByRole("link", { name: "All planograms" })).toBeInTheDocument();
+  });
+
+  it("shows a Quick Adjust draft with its own word and a link to the adjust page", () => {
+    render(<PlanogramWorkCard canDraft work={work([row("Wall 2", { publishedVersion: 3, adjustment: "draft" })])} />);
+    const link = screen.getByRole("link", { name: "Wall 2, Rack, Adjusting" });
+    expect(link).toHaveAttribute("href", "/planograms/wall-2/adjust");
+    expect(within(link).getByText("Adjusting")).toBeInTheDocument();
+  });
+
+  it("a member who can publish but not draft has no adjust page: the Adjusting row opens the planogram, whose draft line has Compare and Publish", () => {
+    render(<PlanogramWorkCard canDraft={false} work={work([row("Wall 2", { publishedVersion: 3, adjustment: "draft" })])} />);
+    const link = screen.getByRole("link", { name: "Wall 2, Rack, Adjusting" });
+    expect(link).toHaveAttribute("href", "/planograms/wall-2");
+    expect(within(link).getByText("Adjusting")).toBeInTheDocument();
+  });
+
+  it("a planogram with a monthly draft too keeps its monthly link and the Draft word, and adds Adjusting", () => {
+    render(<PlanogramWorkCard canDraft work={work([row("Wall 2", { hasDraft: true, adjustment: "draft" })])} />);
+    const link = screen.getByRole("link", { name: "Wall 2, Rack, Draft, Adjusting" });
+    expect(link).toHaveAttribute("href", "/planograms/wall-2");
+  });
+
+  it("an adjustment on the floor adds no word and no change of link", () => {
+    render(<PlanogramWorkCard canDraft work={work([row("Wall 2", { hasDraft: true, adjustment: "published" })])} />);
+    expect(screen.getByRole("link", { name: "Wall 2, Rack, Draft" })).toHaveAttribute("href", "/planograms/wall-2");
   });
 });

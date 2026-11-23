@@ -40,7 +40,7 @@ describe("CornerBar", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("closing the Publish dialog without publishing leaves focus to return to the Publish button", async () => {
-    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false });
+    actions.previewPublishAction.mockResolvedValue({ planogramVersion: 3, basedOnVersion: null, nextNumber: 1, changes: [], issues: [], isEmpty: false, adjustments: [], soldOut: [] });
     const user = userEvent.setup();
     show();
     await user.click(screen.getByRole("button", { name: "Publish" }));

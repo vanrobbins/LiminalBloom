@@ -18,7 +18,7 @@ function stateOf(item: ListItem): string {
 export function toPaletteIndex(layout: Layout, summaries: readonly PlanogramSummary[]): PaletteIndex {
   return {
     planograms: planogramList(layout, summaries).flatMap((g) =>
-      g.items.map((i) => ({ fixtureId: i.fixtureId, name: i.name, ...optional(typeHint(i.name, i.typeLabel)), zoneName: g.zoneName, state: stateOf(i) })),
+      g.items.map((i) => ({ fixtureId: i.fixtureId, name: i.name, ...optional(typeHint(i.name, i.typeLabel)), zoneName: g.zoneName, state: stateOf(i), ...(i.publishedVersion && i.publishedAt ? { published: true as const } : {}) })),
     ),
     zones: byName(layout.zones).map((z) => ({
       id: z.id,
@@ -31,16 +31,21 @@ export function toPaletteIndex(layout: Layout, summaries: readonly PlanogramSumm
 
 const optional = (typeHint: string | undefined) => (typeHint === undefined ? {} : { typeHint });
 
-export function toPaletteProducts(page: SearchPage): PaletteProducts {
+/** `adjust`: the member holds planograms.draft, so a sold-out or on-sale product also names the fixture Quick Adjust opens on. */
+export function toPaletteProducts(page: SearchPage, { adjust = false }: { adjust?: boolean } = {}): PaletteProducts {
   return {
-    products: page.results.map((r) => ({
-      id: r.id,
-      name: r.name,
-      styleNumber: r.styleNumber,
-      status: r.status,
-      place: r.locations[0]?.label ?? null,
-      more: Math.max(0, r.locations.length - 1),
-    })),
+    products: page.results.map((r) => {
+      const fixtureId = adjust && r.status !== "in_stock" ? r.locations.find((l) => l.floor)?.floor?.fixtureId : undefined;
+      return {
+        id: r.id,
+        name: r.name,
+        styleNumber: r.styleNumber,
+        status: r.status,
+        place: r.locations[0]?.label ?? null,
+        more: Math.max(0, r.locations.length - 1),
+        ...(fixtureId ? { adjustFixtureId: fixtureId } : {}),
+      };
+    }),
     total: page.total,
   };
 }

@@ -28,6 +28,15 @@ describe("ProductSheet", () => {
     expect(screen.getByRole("link", { name: "Find in Products" })).toHaveAttribute("href", "/products?q=HR-1");
   });
 
+  it("lets a long style number wrap inside the narrow side panel (820 px, 0.7.0.9 e2e: the page scrolled sideways by 8 px)", () => {
+    render(<ProductSheet open item={pant} face={top} onClose={vi.fn()} />);
+    const list = screen.getByText("HR-1").closest("dl");
+    expect(list).toHaveClass("min-w-0");
+    // 768 to 1023 px: the side panel is about 260 px wide, so the 160 px photo goes above the details, not beside them.
+    expect(list?.parentElement).toHaveClass("md:max-lg:flex-col");
+    expect(screen.getByText("HR-1")).toHaveClass("wrap-anywhere");
+  });
+
   it("holds the editor while editing", () => {
     render(<ProductSheet open item={pant} face={top} onClose={vi.fn()}><p>editor</p></ProductSheet>);
     expect(screen.getByText("editor")).toBeInTheDocument();

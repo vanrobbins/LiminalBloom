@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 
+import { can } from "@/lib/current-member";
 import { toPaletteProducts } from "@/lib/palette/payload";
 import { search } from "@/lib/products/queries";
 import { searchInput } from "@/lib/products/schemas";
@@ -22,5 +23,5 @@ export async function GET(request: Request) {
   const q = parsed.data;
   if (!isTextQuery(normalizeQuery(q))) return Response.json({ products: [], total: 0 }, { headers: PRIVATE_HEADERS });
   const page = await search(guard.member.activeStoreId, searchInput.parse({ q }), PALETTE_LIMIT);
-  return Response.json(toPaletteProducts(page), { headers: PRIVATE_HEADERS });
+  return Response.json(toPaletteProducts(page, { adjust: can(guard.member, "planograms.draft") }), { headers: PRIVATE_HEADERS });
 }

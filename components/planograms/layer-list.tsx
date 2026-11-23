@@ -47,7 +47,7 @@ export function LayerList({ item, items, onPick, onReorder, busy = false }: Laye
                   {g.pieceCount} {g.pieceCount === 1 ? "piece" : "pieces"}
                 </span>
               </button>
-              {isOpen && onReorder ? (
+              {isOpen && onReorder && !g.adjusted ? (
                 <>
                   <Button icon variant="secondary" aria-label="Move forward" disabled={busy || reorderTarget(g, items, "forward") === null} onClick={() => onReorder(g, "forward")}>
                     <ArrowUp aria-hidden="true" strokeWidth={1.75} className="size-4" />

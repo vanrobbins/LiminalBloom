@@ -8,13 +8,14 @@ import type { Switch } from "@/lib/access/switches";
 
 import type { CardKey, HomeData } from "./types";
 
-/** One order for every role. */
-export const CARD_ORDER: readonly CardKey[] = ["setup", "planograms", "invitations", "notPlaced", "published", "changes"];
+/** One order for every role. "Sold out on display" follows "Planograms to finish": both are floor work for those who draft (0.7.0.9). */
+export const CARD_ORDER: readonly CardKey[] = ["setup", "planograms", "soldOut", "invitations", "notPlaced", "published", "changes"];
 
 /** Each card is allowed when the viewer holds any of these. */
 const CARD_SWITCHES: Record<CardKey, readonly Switch[]> = {
   setup: ["layout.edit", "products.edit", "people.manage"],
   planograms: ["planograms.draft", "planograms.publish"],
+  soldOut: ["planograms.draft"],
   invitations: ["people.manage"],
   notPlaced: ["planograms.draft"],
   published: ["view"],
@@ -27,7 +28,7 @@ export function cardAllowed(holder: Holder, key: CardKey): boolean {
   return holdsAny(holder, CARD_SWITCHES[key]);
 }
 
-export type Reads = { planograms: boolean; summaries: boolean; invitations: boolean; activity: boolean; batch: boolean };
+export type Reads = { planograms: boolean; summaries: boolean; invitations: boolean; activity: boolean; soldOut: boolean; batch: boolean };
 
 /** Which reads `loadHome` starts for this viewer. */
 export function readsFor(holder: Holder): Reads {
@@ -38,6 +39,8 @@ export function readsFor(holder: Holder): Reads {
     summaries: holdsAny(holder, ["planograms.draft", "planograms.publish"]),
     invitations: can(holder, "people.manage"),
     activity: can(holder, "roles.manage"),
+    // One count inside the home batch, run only for those who may open the adjust page.
+    soldOut: can(holder, "planograms.draft"),
     batch: true,
   };
 }
@@ -48,6 +51,8 @@ function hasContent(key: CardKey, data: HomeData): boolean {
       return (data.setup?.length ?? 0) > 0;
     case "planograms":
       return (data.planograms?.rows.length ?? 0) > 0;
+    case "soldOut":
+      return (data.soldOut?.products ?? 0) > 0;
     case "invitations":
       return (data.invitations?.length ?? 0) > 0;
     case "notPlaced":

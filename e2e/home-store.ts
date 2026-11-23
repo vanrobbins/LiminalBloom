@@ -68,3 +68,22 @@ export const homeStoreId = () => storeId(HOME_STORE);
 
 /** The row text the planogram card's link carries: "Table 1, Draft, Overdue · Nov 10". */
 export const dueText = (iso: string, today: string) => `${iso < today ? "Overdue · " : "Due "}${formatDay(iso)}`;
+
+/**
+ * Quick Adjust work for the Home cards (0.7.0.9): the placed E2E pant sold out (it sits on Table 1), and a Quick Adjust
+ * draft on the published planogram. Undo with `endAdjustWork`.
+ */
+export async function startAdjustWork(publishedFixtureId: string): Promise<void> {
+  const db = sql();
+  const store = await homeStoreId();
+  await db`update products set status = 'sold_out' where store_id = ${store} and style_number = 'E2E-HRP-01'`;
+  const [plan] = await db`select id from planograms where store_id = ${store} and fixture_id = ${publishedFixtureId}`;
+  await db`insert into planogram_adjustments (store_id, planogram_id, based_on_version, state, created_by_name) values (${store}, ${plan.id}, 1, 'draft', 'Pat Publisher')`;
+}
+
+export async function endAdjustWork(): Promise<void> {
+  const db = sql();
+  const store = await homeStoreId();
+  await db`delete from planogram_adjustments where store_id = ${store}`;
+  await db`update products set status = 'in_stock' where store_id = ${store} and style_number = 'E2E-HRP-01'`;
+}

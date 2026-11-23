@@ -2,14 +2,14 @@
 // A feature adds its line here, as it does in nav-items.ts. Hiding is a courtesy: every
 // target page or action still checks its own switch on the server.
 
-import { CirclePlus, MapPinOff, Moon, PackageX, Pencil, ShieldCheck, Store, Sun, Tags, User, type LucideIcon } from "lucide-react";
+import { CirclePlus, MapPinOff, Moon, PackageX, Pencil, ShieldCheck, Store, Sun, Tags, User, Zap, type LucideIcon } from "lucide-react";
 
 import { NAV_ITEMS } from "@/components/shell/nav-items";
 import { can, type Holder } from "@/lib/access/can";
 import type { Switch } from "@/lib/access/switches";
 import type { Theme } from "@/lib/theme";
 
-import type { PaletteItem, Target } from "./types";
+import type { PaletteIndex, PaletteItem, PaletteProducts, Target } from "./types";
 
 type Command = Extract<PaletteItem, { kind: "page" | "action" }>;
 type StoreRef = { id: string; name: string };
@@ -39,4 +39,21 @@ export function commandsFor(holder: Holder, stores: readonly StoreRef[], activeS
   for (const s of stores.filter((s) => s.id !== activeStoreId)) add("action", `store:${s.id}`, `Switch to ${s.name}`, Store, { storeId: s.id }, "store");
   action("/create-store", "Create a store", CirclePlus, "new store", null);
   return out;
+}
+
+/**
+ * Quick Adjust <fixture> and Adjust <product> (0.7.0.9, DECISIONS 11-17 Q7; this extends spec §3.3 on purpose). They
+ * come from what the palette has loaded, so they are a separate list the groups add only while something is typed. A
+ * planogram needs a published version to have an adjust page; a product needs the server to have named its fixture,
+ * which it does only for planograms.draft. The ids start "action:adjust:" so Recent never keeps them.
+ */
+export function adjustCommands(holder: Holder, index: PaletteIndex | null, products: PaletteProducts | null): PaletteItem[] {
+  if (!can(holder, "planograms.draft")) return [];
+  const command = (id: string, label: string, keywords: string, href: string): PaletteItem => ({ kind: "action", id: `action:adjust:${id}`, label, keywords, icon: Zap, target: { href } });
+  return [
+    ...(index?.planograms ?? []).filter((p) => p.published).map((p) => command(`planogram:${p.fixtureId}`, `Quick Adjust ${p.name}`, `${p.typeHint ?? ""} ${p.zoneName} sold out`, `/planograms/${p.fixtureId}/adjust`)),
+    ...(products?.products ?? []).flatMap((p) =>
+      p.adjustFixtureId ? [command(`product:${p.id}`, `Adjust ${p.name}`, `${p.styleNumber} quick`, `/planograms/${p.adjustFixtureId}/adjust?product=${p.id}`)] : [],
+    ),
+  ];
 }

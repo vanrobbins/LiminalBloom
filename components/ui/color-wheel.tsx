@@ -10,6 +10,7 @@
 import { useState } from "react";
 
 import { hexToOklch, oklchToHex, type Oklch } from "@/lib/products/colors";
+import { hueName } from "@/lib/products/color-family";
 import { SWATCH_MESSAGE } from "@/lib/products/schemas";
 
 import { Input } from "./input";
@@ -25,14 +26,8 @@ const SIZE = 200;
 const RING = 18;
 const SQUARE = 92;
 const MAX_CHROMA = 0.2;
-const HUE_NAMES: [number, string][] = [
-  [25, "red"], [55, "orange"], [95, "yellow"], [145, "green"], [195, "teal"], [255, "blue"], [305, "purple"], [350, "pink"],
-];
 
-export function hueName(h: number): string {
-  const distance = (a: number) => Math.min(Math.abs(a - h), 360 - Math.abs(a - h));
-  return HUE_NAMES.reduce((best, next) => (distance(next[0]) < distance(best[0]) ? next : best))[1];
-}
+export { hueName };
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 const round = (n: number, step: number) => Math.round(n / step) * step;

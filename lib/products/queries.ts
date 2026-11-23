@@ -9,6 +9,7 @@ import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { productCategories, productFootprints, productLocations, products } from "@/db/schema";
 import { withStore } from "@/lib/db/with-store";
+import { adjustedOffFor, type AdjustedOff } from "@/lib/planograms/adjust-queries";
 import type { ProductStatus } from "@/lib/product-status";
 
 import type { CategoryDefaults, Overrides } from "./footprint";
@@ -49,7 +50,8 @@ export type ProductRow = {
   imageKey: string | null;
 };
 
-export type SearchResult = ProductRow & { locations: LocationRow[] };
+/** `adjustedOff`: fixtures a published Quick Adjust took this product off (0.7.0.9); absent reads as none. */
+export type SearchResult = ProductRow & { locations: LocationRow[]; adjustedOff?: AdjustedOff[] };
 export type SearchPage = { results: SearchResult[]; total: number };
 
 export type CategoryRow = CategoryDefaults & { id: string; name: string; sizeRange: string; version: number; productCount: number };
@@ -129,8 +131,9 @@ export async function searchProducts(storeId: string, input: SearchInput, limit 
 
 export async function search(storeId: string, input: SearchInput, limit = SEARCH_LIMIT): Promise<SearchPage> {
   const { rows, total } = await searchRows(storeId, input, limit);
-  const locations = await locationsFor(storeId, rows.map((r) => r.id));
-  return { results: rows.map((row) => ({ ...row, locations: locations.filter((l) => l.productId === row.id) })), total };
+  const ids = rows.map((r) => r.id);
+  const [locations, off] = await Promise.all([locationsFor(storeId, ids), adjustedOffFor(storeId, ids)]);
+  return { results: rows.map((row) => ({ ...row, locations: locations.filter((l) => l.productId === row.id), adjustedOff: off.get(row.id) ?? [] })), total };
 }
 
 const categoryColumns = {

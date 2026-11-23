@@ -27,6 +27,14 @@ describe("PlanogramList", () => {
     expect(plain).not.toHaveClass("border-dashed");
   });
 
+  it("appends adjusted or adjusting to the version, and nothing when there is no Quick Adjust", () => {
+    const row = (fixtureId: string, adjustment: "draft" | "published" | null) => ({ ...bay, fixtureId, name: `Bay ${fixtureId}`, hasDraft: false, dueDate: null, adjustment });
+    render(<PlanogramList groups={[{ zoneId: "z", zoneName: "Zone", items: [row("a", "published"), row("b", "draft"), row("c", null)] }]} today="2026-10-08" storeKey="s" />);
+    expect(screen.getByRole("link", { name: /Bay a/ })).toHaveTextContent(/Version 4 · Oct 8.* · adjusted/);
+    expect(screen.getByRole("link", { name: /Bay b/ })).toHaveTextContent(/Version 4 · Oct 8.* · adjusting/);
+    expect(screen.getByRole("link", { name: /Bay c/ })).not.toHaveTextContent(/adjust/);
+  });
+
   it("shows version, draft and due state in words once a zone is opened", async () => {
     render(<PlanogramList groups={groups} today="2026-10-08" storeKey="s" />);
     const denim = screen.getByRole("region", { name: "Denim" });

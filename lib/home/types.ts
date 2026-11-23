@@ -4,7 +4,7 @@
 
 import type { ListItem } from "@/lib/planograms/list";
 
-export type CardKey = "setup" | "planograms" | "invitations" | "notPlaced" | "published" | "changes";
+export type CardKey = "setup" | "planograms" | "soldOut" | "invitations" | "notPlaced" | "published" | "changes";
 
 /** One missing step on card 1. */
 export type SetupRow = { key: "layout" | "product" | "team"; label: string; href: string };
@@ -13,6 +13,9 @@ export type SetupRow = { key: "layout" | "product" | "team"; label: string; href
 export type PlanogramWorkRow = ListItem & { overdue: boolean };
 /** `today` is the store's date the overdue flags were judged against; the card needs it for `DueBadge`. */
 export type PlanogramWork = { rows: PlanogramWorkRow[]; total: number; today: string };
+
+/** "Sold out on display" (0.7.0.9): how many sold-out products still have a floor location. The card shows the count and links to them. */
+export type SoldOut = { products: number };
 
 /** A pending invitation on card 3 (`id` is the invite link, so null unless the viewer may act on it, as on People). `state` carries the People card's words: Expires / Expired / Lapsed. */
 export type InvitationRow = { id: string | null; email: string; roleName: string; state: "pending" | "expired" | "lapsed"; expiresAt: Date };
@@ -29,6 +32,7 @@ export type ChangeRow = { id: string; text: string; at: Date };
 export type HomeData = {
   setup?: SetupRow[];
   planograms?: PlanogramWork;
+  soldOut?: SoldOut;
   invitations?: InvitationRow[];
   notPlaced?: NotPlaced;
   published?: PublishRow[];
