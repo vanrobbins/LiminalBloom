@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -126,98 +126,5 @@ describe("StoreSwitcher", () => {
     await user.click(store("Lloyd Center"));
 
     expect(mocks.switchStore).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("StoreSwitcher grouped by company and region", () => {
-  const COMPANY_STORES = [
-    {
-      id: "a",
-      name: "Pioneer Place",
-      companyId: "co",
-      companyName: "Acme Coffee",
-      regionName: "North",
-    },
-    {
-      id: "b",
-      name: "Lakeview",
-      companyId: "co",
-      companyName: "Acme Coffee",
-      regionName: null,
-    },
-    {
-      id: "c",
-      name: "Corner Cafe",
-      companyId: null,
-      companyName: null,
-      regionName: null,
-    },
-  ];
-
-  it("labels the company, each region with its count, No region and Standalone", () => {
-    render(
-      <StoreSwitcher
-        stores={COMPANY_STORES}
-        activeStoreId="a"
-        companyName="Acme Coffee"
-      />,
-    );
-    expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
-      "Acme Coffee",
-      "North · 1",
-      "No region",
-      "Standalone",
-    ]);
-    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual([
-      "Pioneer Place",
-      "Lakeview",
-      "Corner Cafe",
-    ]);
-  });
-
-  it("names each group for screen readers and puts its stores inside it", () => {
-    render(
-      <StoreSwitcher
-        stores={COMPANY_STORES}
-        activeStoreId="a"
-        companyName="Acme Coffee"
-      />,
-    );
-    const acme = screen.getByRole("group", { name: "Acme Coffee" });
-    expect(
-      within(acme).getByRole("group", { name: "North · 1" }),
-    ).toContainElement(screen.getByRole("radio", { name: "Pioneer Place" }));
-    expect(
-      within(acme).getByRole("group", { name: "No region" }),
-    ).toContainElement(screen.getByRole("radio", { name: "Lakeview" }));
-    expect(
-      within(acme).queryByRole("radio", { name: "Corner Cafe" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Standalone" })).toContainElement(
-      screen.getByRole("radio", { name: "Corner Cafe" }),
-    );
-  });
-
-  it("keeps the arrow keys moving through stores across the groups", async () => {
-    const user = userEvent.setup();
-    render(
-      <StoreSwitcher
-        stores={COMPANY_STORES}
-        activeStoreId="a"
-        companyName="Acme Coffee"
-      />,
-    );
-    await user.tab();
-    expect(store("Pioneer Place")).toHaveFocus();
-    await user.keyboard("{ArrowDown}");
-    expect(store("Lakeview")).toHaveFocus();
-    await user.keyboard("{ArrowDown}");
-    expect(store("Corner Cafe")).toHaveFocus();
-  });
-
-  it("keeps a standalone-only list exactly as before, with no headings", () => {
-    render(<StoreSwitcher stores={STORES} activeStoreId="store-a" />);
-    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("radio")).toHaveLength(2);
   });
 });

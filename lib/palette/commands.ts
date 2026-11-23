@@ -11,7 +11,6 @@ import {
   PackageX,
   Pencil,
   ShieldCheck,
-  Store,
   Sun,
   Tags,
   User,
@@ -22,13 +21,10 @@ import {
 import { NAV_ITEMS } from "@/components/shell/nav-items";
 import { can, type Holder } from "@/lib/access/can";
 import type { Switch } from "@/lib/access/switches";
-import {
-  flatStores,
-  type GroupableStore,
-  storeGroups,
-} from "@/lib/store-groups";
+import type { GroupableStore } from "@/lib/store-groups";
 import type { Theme } from "@/lib/theme";
 
+import { storeSwitchCommands } from "./store-commands";
 import type {
   PaletteIndex,
   PaletteItem,
@@ -152,19 +148,7 @@ export function commandsFor(
     { theme: true },
     "mode appearance",
   );
-  // Store-switch commands follow the switcher's order (company by region, then standalone) and also match the company and region names.
-  for (const s of flatStores(storeGroups(stores)).filter(
-    (s) => s.id !== activeStoreId,
-  )) {
-    add(
-      "action",
-      `store:${s.id}`,
-      `Switch to ${s.name}`,
-      Store,
-      { storeId: s.id },
-      ["store", s.companyName, s.regionName].filter(Boolean).join(" "),
-    );
-  }
+  out.push(...storeSwitchCommands(stores, activeStoreId));
   action("/create-store", "Create a store", CirclePlus, "new store", null);
   return out;
 }
