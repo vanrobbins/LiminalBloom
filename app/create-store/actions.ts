@@ -84,8 +84,13 @@ export async function createStore(
       }
 
       // Make it the store this session is working in, and the one remembered for the next sign-in. The
-      // creator is its Store Manager by now (the creation hook), so the access check passes.
-      if (created) await setActiveStore(session.session.id, session.user.id, created.id);
+      // creator is its Store Manager by now (the creation hook), so the access check passes. The store exists
+      // either way: a failure here must not reach the catch below ("try again" would make a second store, B4), and
+      // the next request picks a store from the remembered one or the first joined.
+      if (created) {
+        const switched = await setActiveStore(session.session.id, session.user.id, created.id).catch((error: unknown) => ({ status: error }));
+        if (switched.status !== "switched") console.error("create-store: active store not set", created.id, switched.status);
+      }
 
       redirect("/home");
     } catch (error) {

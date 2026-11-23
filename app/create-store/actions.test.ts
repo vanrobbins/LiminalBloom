@@ -38,6 +38,19 @@ vi.mock("@/lib/store-settings", async (original) => {
   };
 });
 
+// The real active-store write, which one test makes fail the way a dropped connection would.
+const active = vi.hoisted(() => ({ fail: null as Error | null }));
+vi.mock("@/lib/access/set-active-store", async (original) => {
+  const real = await original<typeof import("@/lib/access/set-active-store")>();
+  return {
+    ...real,
+    setActiveStore: async (...args: Parameters<typeof real.setActiveStore>) => {
+      if (active.fail) throw active.fail;
+      return real.setActiveStore(...args);
+    },
+  };
+});
+
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
 import { storeSettings, storeSuspensions } from "@/db/schema";
@@ -147,6 +160,22 @@ describe("createStore", () => {
       expect(logged).toHaveBeenCalledWith("create-store: time zone not saved", storeId, settings.fail);
     } finally {
       settings.fail = null;
+      logged.mockRestore();
+    }
+  });
+
+  it("goes on to /home when the active store can't be set: the store exists, so no \"could not create\" and no second store", async () => {
+    const { storeId, sessionId } = await createdStore();
+    active.fail = new Error("Connection terminated unexpectedly");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(createStore(null, form("Beaverton", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
+      expect(mocks.redirect).toHaveBeenCalledWith("/home");
+      expect(mocks.createOrganization).toHaveBeenCalledTimes(1);
+      expect(logged).toHaveBeenCalledWith("create-store: active store not set", storeId, active.fail);
+      expect(await sessionStore(sessionId)).toBeNull();
+    } finally {
+      active.fail = null;
       logged.mockRestore();
     }
   });
