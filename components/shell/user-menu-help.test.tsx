@@ -32,17 +32,17 @@ describe("UserMenu: Help", () => {
     expect(await screen.findByRole("menuitem", { name: "Help" })).toHaveAttribute("href", "/help");
   });
 
-  it("shows the reply count on the item and a dot on the avatar, which stays named Account menu", async () => {
+  it("shows the reply count on the item and a dot on the avatar, whose name says so too", async () => {
     const { container } = render(<UserMenu variant="rail" helpReplies={2} {...PROPS} />);
     expect(container.querySelector("[data-help-dot]")).not.toBeNull();
-    screen.getByRole("button", { name: "Account menu" }).focus();
+    screen.getByRole("button", { name: "Account menu, 2 help replies" }).focus();
     await userEvent.setup().keyboard("{Enter}");
     expect(await screen.findByRole("menuitem", { name: "Help · 2 replies" })).toHaveAttribute("href", "/help");
   });
 
   it("is in the phone sheet too, with the count", async () => {
     render(<UserMenu variant="sheet" helpReplies={1} {...PROPS} />);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Account menu" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Account menu, 1 help reply" }));
     expect(await screen.findByRole("link", { name: "Help · 1 reply" })).toHaveAttribute("href", "/help");
   });
 });

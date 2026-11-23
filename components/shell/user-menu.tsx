@@ -72,6 +72,8 @@ export function UserMenu({
   const { isMounted, target, switchTheme } = useThemeSwitch();
   const { signOut, isSigningOut } = useSignOut();
 
+  // The dot is for eyes; the count is for the screen reader, on the button that holds it.
+  const accountName = helpReplies > 0 ? `Account menu, ${helpReplies} help ${helpReplies === 1 ? "reply" : "replies"}` : "Account menu";
   const themeLabel = `Switch to ${target} theme`;
   const ThemeIcon = target === "dark" ? Moon : Sun;
 
@@ -94,7 +96,7 @@ export function UserMenu({
           <button
             type="button"
             data-user-menu
-            aria-label="Account menu"
+            aria-label={accountName}
             aria-haspopup="dialog"
             aria-expanded={isSheetOpen}
             onClick={() => openSheet(true)}
@@ -141,7 +143,7 @@ export function UserMenu({
         <DropdownMenuTrigger
           data-user-menu
           aria-label={
-            variant === "rail" || !user.name.trim() ? "Account menu" : undefined
+            helpReplies > 0 || variant === "rail" || !user.name.trim() ? accountName : undefined
           }
           className={TRIGGER[variant]}
         >

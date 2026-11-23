@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 
+import { AskButton } from "@/components/help/ask-button";
 import { Button } from "@/components/ui/button";
 import type { InvitationState } from "@/lib/access/invitation-look";
 import { authHref } from "@/lib/return-path";
@@ -29,6 +30,7 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
         <p role="status" className="text-ink">
           {unusableText(look.state)}
         </p>
+        <AskButton kind="account" from="/invite" />
       </PageShell>
     );
   }
@@ -72,6 +74,7 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
           <Link href={authHref("/sign-in", here)}>Sign in with another account</Link>
         </Button>
       ) : null}
+      {look.state === "expired" || look.state === "lapsed" || look.state === "full" || look.state === "wrong-email" ? <AskButton kind="account" from="/invite" /> : null}
       {look.state === "already-member" ? (
         <Button asChild variant="secondary">
           <Link href="/home">Go to Home</Link>

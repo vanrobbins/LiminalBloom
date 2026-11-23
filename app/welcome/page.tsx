@@ -9,6 +9,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PageShell } from "@/components/invite/page-shell";
+import { AskButton } from "@/components/help/ask-button";
 import { ReplyBanner } from "@/components/help/reply-banner";
 import { PasteLinkForm } from "@/components/invite/paste-link-form";
 import { WaitingList } from "@/components/invite/waiting-list";
@@ -47,6 +48,7 @@ export default async function WelcomePage() {
       <Button asChild variant="secondary">
         <Link href="/create-store">Create a store</Link>
       </Button>
+      <AskButton kind="account" from="/welcome" />
     </PageShell>
   );
 }

@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 
+import { AskButton } from "@/components/help/ask-button";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,6 +24,7 @@ export default async function NoAccessPage() {
         <Button asChild variant="secondary">
           <Link href="/home">Back to Hub</Link>
         </Button>
+        <AskButton kind="account" from="/no-access" />
       </Card>
     </div>
   );

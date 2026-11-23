@@ -6,11 +6,11 @@ import type { Page } from "@playwright/test";
 
 import { expect, hydrated, sizeOf, test } from "./fixtures";
 import { invite } from "./invite-page";
-import { seedLayout } from "./map-store";
+import { seedLayout, sql } from "./map-store";
 import { clearPeople, inviteeEmail, seedInvitation, seedTeam } from "./people-store";
 import { seedCatalog } from "./product-store";
 import { resetRoles, seedCustomRole } from "./roles-store";
-import { HOME_STORE, ipFor } from "./test-account";
+import { HOME_STORE, TEST_ACCOUNT, ipFor } from "./test-account";
 import { corner, fold, more, rack, run, stage } from "./tooltip-steps";
 
 test.beforeEach(async () => {
@@ -180,5 +180,21 @@ test("/welcome and /invite/[id]: every icon-only button has an aria-label", asyn
     await expectIconsNamed(guest);
   } finally {
     await context.close();
+  }
+});
+
+test("/help/[id]: Close request is a named 44 px icon with a tooltip", async ({ page }) => {
+  const [{ id }] = await sql()`select id from "user" where email = ${TEST_ACCOUNT.email}`;
+  const [{ id: request }] = await sql()`insert into help_requests (requester_id, kind, context) values (${id}, 'other', '{"state":"member"}'::jsonb) returning id`;
+  try {
+    await sql()`insert into help_messages (request_id, author_id, author_name, from_admin, body) values (${request}, ${id}, 'Acct Tester', false, 'e2e tooltip')`;
+    await page.goto(`/help/${request}`);
+    await hydrated(page);
+    const close = page.getByRole("button", { name: "Close request", exact: true }).filter({ visible: true });
+    expect((await close.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
+    if (sizeOf(test.info()) === "desktop") await close.hover();
+    if (sizeOf(test.info()) === "desktop") await expect(page.getByRole("tooltip", { name: "Close request" })).toBeVisible();
+  } finally {
+    await sql()`delete from help_requests where id = ${request}`;
   }
 });

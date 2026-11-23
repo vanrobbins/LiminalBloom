@@ -56,6 +56,11 @@ describe("WelcomePage", () => {
     expect(screen.getByRole("link", { name: "Read the replies" })).toHaveAttribute("href", "/help");
   });
 
+  it("offers Ask Liminal Bloom, from /welcome", async () => {
+    render(await WelcomePage());
+    expect(screen.getByRole("link", { name: "Ask Liminal Bloom" })).toHaveAttribute("href", "/help/new?kind=account&from=%2Fwelcome");
+  });
+
   it("lists the invitations waiting for their email by store, role and expiry, and tells them to paste their link", async () => {
     // The ids are in the data here on purpose: nothing from them may reach the page, as text, link or button (the link is the secret, spec 4.9).
     mocks.waiting.mockResolvedValue([
@@ -72,7 +77,7 @@ describe("WelcomePage", () => {
     // The only Accept is the paste form's, which takes a link and never carries an id.
     expect(screen.getAllByRole("button", { name: /accept/i })).toHaveLength(1);
     expect(screen.getByLabelText("Invite link or code")).toHaveValue("");
-    expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store"]);
+    expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store", "/help/new?kind=account&from=%2Fwelcome"]);
   });
 
   it("says nothing is waiting, and still offers Create a store, when there are no invitations", async () => {

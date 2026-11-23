@@ -47,7 +47,7 @@ test("Ctrl+K toggles it and Escape lands on the page, and / opens it outside a f
 test("with no query it lists Go to and Actions", async ({ page }) => {
   await page.goto("/account");
   await openPalette(page);
-  expect(await optionLabels(page, "Go to")).toEqual(["Hub", "Products", "Layout", "Planograms", "Store", "Account", "Products not placed", "Sold out products"]);
+  expect(await optionLabels(page, "Go to")).toEqual(["Hub", "Products", "Layout", "Planograms", "Store", "Account", "Two-step sign-in", "Help", "Products not placed", "Sold out products"]);
   expect(await optionLabels(page, "Actions")).toEqual(expect.arrayContaining(["Add product", "Edit the store map", "Roles and permissions", "Create a store"]));
 });
 

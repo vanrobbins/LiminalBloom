@@ -44,6 +44,12 @@ describe("/paused", () => {
     expect(screen.getByRole("link", { name: "Read the reply" })).toHaveAttribute("href", "/help");
   });
 
+  it("offers Ask Liminal Bloom, from /paused", async () => {
+    mocks.getCurrentMember.mockResolvedValue(paused("Pioneer Place"));
+    render(await PausedPage());
+    expect(screen.getByRole("link", { name: "Ask Liminal Bloom" })).toHaveAttribute("href", "/help/new?kind=account&from=%2Fpaused");
+  });
+
   it("lists several paused stores", async () => {
     mocks.getCurrentMember.mockResolvedValue(paused("Pioneer Place", "Washington Square"));
     render(await PausedPage());

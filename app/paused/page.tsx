@@ -2,6 +2,7 @@
 // still works, because a person may have other stores; this is only for someone who has none that open.
 // Nothing here reads a store: the names come from getCurrentMember().
 
+import { AskButton } from "@/components/help/ask-button";
 import { ReplyBanner } from "@/components/help/reply-banner";
 import { PageShell } from "@/components/invite/page-shell";
 import { SignOutButton } from "@/components/paused/sign-out-button";
@@ -40,7 +41,7 @@ export default async function PausedPage() {
         </>
       )}
       <ReplyBanner replies={helpReplies} />
-      {/* Ask Liminal Bloom (the help button, plan A9) goes here once /help exists. */}
+      <AskButton kind="account" from="/paused" />
       <SignOutButton />
     </PageShell>
   );
