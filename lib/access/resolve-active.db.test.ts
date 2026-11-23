@@ -1,7 +1,7 @@
 // Which store a request works in, and what never resolves (spec 0.7.1, 4.2 and 4.3), against the dev database:
 // the session's pointer, sessions from before 0021, stale values, paused stores and paused companies.
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
@@ -10,10 +10,15 @@ import { companies, storeSuspensions } from "@/db/schema";
 import { assignCompanyRole, dropCompanies, makeBareAccount, makeCompany, makeCompanyStore, makeRegion } from "@/lib/companies/test-companies";
 import { dropStores } from "@/lib/products/test-stores";
 
+import { pauseCompany, restoreCompany } from "@/lib/admin/actions-company";
+import { makeActor } from "@/lib/access/test-admin-actions";
+
 import { resolveAccess } from "./resolve";
 import { dropPeople, makePerson, makeStoreWithRoles } from "./test-roles";
 
 afterAll(async () => {
+  // Platform events are insert-only: the rows the admin action writes go with the triggers off, then the rest.
+  await db.batch([db.execute(sql`alter table platform_events disable trigger user`), db.execute(sql`delete from platform_events where reason like 'db test paused%'`), db.execute(sql`alter table platform_events enable trigger user`)]);
   await dropStores();
   await dropCompanies();
   await dropPeople();
@@ -107,5 +112,17 @@ describe("a paused store or company never resolves", { timeout: 30_000 }, () => 
     await db.insert(member).values({ id: crypto.randomUUID(), organizationId: mine.store, userId: owner, role: "member", roleId: mine.roles.vm_manager, createdAt: new Date() });
     await db.update(companies).set({ suspendedAt: new Date() }).where(eq(companies.id, id));
     expect(await resolveAccess(owner, {})).toMatchObject({ activeStoreId: mine.store, company: null });
+  });
+
+  it("a company paused by Liminal Bloom's action never resolves, for its owner or its store's people, and comes back on restore", async () => {
+    const owner = await makeBareAccount("paused-owner");
+    const { id } = await makeCompany("paused-admin", owner);
+    const store = await makeCompanyStore(id, null, "paused-admin-s");
+    const worker = await makePerson(store.store, store.roles.vm_worker);
+    const actor = await makeActor();
+    expect(await pauseCompany(actor, id, "db test paused by the admin action")).toMatchObject({ status: "done" });
+    for (const who of [owner, worker.userId]) expect(await resolveAccess(who, { activeStoreId: store.store }), who).toMatchObject({ activeStoreId: null, stores: [], company: null });
+    expect(await restoreCompany(actor, id, "db test paused by the admin action")).toMatchObject({ status: "done" });
+    expect((await resolveAccess(owner, { activeStoreId: store.store })).activeStoreId).toBe(store.store);
   });
 });

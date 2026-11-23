@@ -10,6 +10,7 @@ import type { StoreRow } from "@/lib/admin/reads";
 const LINK = "text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const managers = (s: StoreRow) => (s.managers.length > 0 ? s.managers.join(", ") : "No Store Manager");
 const peopleCount = (s: StoreRow) => `${s.people} ${s.people === 1 ? "person" : "people"}`;
+const placeOf = (s: StoreRow) => (s.company ? `${s.company}${s.region ? `, ${s.region}` : ""}` : "Standalone");
 
 export function StoreList({ stores }: { stores: StoreRow[] }) {
   if (stores.length === 0) return <p className="text-ink-muted">There are no stores yet.</p>;
@@ -27,6 +28,7 @@ export function StoreList({ stores }: { stores: StoreRow[] }) {
             <p className="text-sm text-ink-muted">
               {peopleCount(s)} · {managers(s)}
             </p>
+            <p className="text-sm text-ink-muted wrap-break-word">{placeOf(s)}</p>
             <p className="text-sm text-ink-muted">
               Created <LocalTime at={s.createdAt} />
             </p>
@@ -39,6 +41,7 @@ export function StoreList({ stores }: { stores: StoreRow[] }) {
             <th scope="col" className="py-2 pr-4 font-medium">Store</th>
             <th scope="col" className="py-2 pr-4 font-medium">People</th>
             <th scope="col" className="py-2 pr-4 font-medium">Store Managers</th>
+            <th scope="col" className="py-2 pr-4 font-medium">Company and region</th>
             <th scope="col" className="py-2 pr-4 font-medium">Created</th>
             <th scope="col" className="py-2 font-medium">Status</th>
           </tr>
@@ -53,6 +56,7 @@ export function StoreList({ stores }: { stores: StoreRow[] }) {
               </td>
               <td className="py-2 pr-4 text-ink-muted">{s.people}</td>
               <td className="py-2 pr-4 wrap-break-word text-ink-muted">{managers(s)}</td>
+              <td className="py-2 pr-4 wrap-break-word text-ink-muted">{placeOf(s)}</td>
               <td className="py-2 pr-4 whitespace-nowrap text-ink-muted">
                 <LocalTime at={s.createdAt} />
               </td>
