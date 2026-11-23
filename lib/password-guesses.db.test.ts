@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { verification } from "@/db/auth-schema";
 
-import { clearWrongGuesses, MAX_WRONG_GUESSES, recordWrongGuess, tooManyGuesses, WRONG_GUESS_WINDOW_MS } from "./password-guesses";
+import { claimGuess, clearWrongGuesses, MAX_WRONG_GUESSES, recordWrongGuess, tooManyGuesses, WRONG_GUESS_WINDOW_MS } from "./password-guesses";
 
 const made: string[] = [];
 const newPerson = () => {
@@ -76,5 +76,19 @@ describe("wrong-password guesses", () => {
     await clearWrongGuesses(b);
     expect(await tooManyGuesses(a)).toBe(true);
     expect(await db.select().from(verification).where(eq(verification.identifier, `password-change-failures:${a}`))).toHaveLength(1);
+  });
+
+  it("claim counts the try first: 5 tries go ahead, the 6th is refused, and a clear starts over", async () => {
+    const who = newPerson();
+    for (let i = 0; i < MAX_WRONG_GUESSES; i++) expect(await claimGuess(who)).toBe(true);
+    expect(await claimGuess(who)).toBe(false);
+    await clearWrongGuesses(who);
+    expect(await claimGuess(who)).toBe(true);
+  });
+
+  it("20 tries at the same moment: at most 5 get past (the count is one atomic statement)", async () => {
+    const who = newPerson();
+    const answers = await Promise.all(Array.from({ length: 20 }, () => claimGuess(who)));
+    expect(answers.filter(Boolean)).toHaveLength(MAX_WRONG_GUESSES);
   });
 });

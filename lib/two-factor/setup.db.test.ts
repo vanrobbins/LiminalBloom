@@ -4,11 +4,12 @@
 // the short session kept short. A wrong password is counted, and five stop the next try.
 
 import { eq } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
 import { session, twoFactor, user } from "@/db/auth-schema";
 import { auth } from "@/lib/auth";
+import { clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { clearWrongGuesses } from "@/lib/password-guesses";
 
 import { confirmTwoFactor, newBackupCodes, startTwoFactor } from "./setup";
@@ -63,6 +64,46 @@ describe("confirmTwoFactor", () => {
     const { cookie, userId } = await started();
     expect(await confirmTwoFactor(cookie, userId, "000000")).toEqual({ status: "refused", reason: "code" });
     expect((await db.select({ on: user.twoFactorEnabled }).from(user).where(eq(user.id, userId)))[0].on).toBe(false);
+  });
+
+  it("five wrong codes lock the next try, even the right code, without asking Better Auth, and leave two-factor off", async () => {
+    const { cookie, userId, key } = await started();
+    for (let i = 0; i < 5; i++) expect(await confirmTwoFactor(cookie, userId, "000000")).toEqual({ status: "refused", reason: "code" });
+    const verifier = vi.spyOn(auth.api, "verifyTOTP");
+    try {
+      expect(await confirmTwoFactor(cookie, userId, await totpFor(key))).toEqual({ status: "refused", reason: "locked" });
+      expect(verifier).not.toHaveBeenCalled();
+    } finally {
+      verifier.mockRestore();
+      await clearWrongCodes(userId);
+    }
+    expect((await db.select({ on: user.twoFactorEnabled }).from(user).where(eq(user.id, userId)))[0].on).toBe(false);
+  });
+
+  it("20 wrong codes at the same moment: at most 5 reach Better Auth", async () => {
+    const { cookie, userId } = await started();
+    const verifier = vi.spyOn(auth.api, "verifyTOTP");
+    try {
+      await Promise.all(Array.from({ length: 20 }, () => confirmTwoFactor(cookie, userId, "000000")));
+      expect(verifier).toHaveBeenCalledTimes(5);
+    } finally {
+      verifier.mockRestore();
+      await clearWrongCodes(userId);
+    }
+  });
+
+  it("with two-factor already on it is refused as already-on without asking Better Auth, and counts no guess", async () => {
+    const { cookie, userId, key } = await started();
+    const on = await confirmTwoFactor(cookie, userId, await totpFor(key));
+    if (on.status !== "on") throw new Error("confirm failed");
+    const signed = cookieHeader(on.responseHeaders);
+    const verifier = vi.spyOn(auth.api, "verifyTOTP");
+    try {
+      for (let i = 0; i < 7; i++) expect(await confirmTwoFactor(signed, userId, "000000")).toEqual({ status: "refused", reason: "already-on" });
+      expect(verifier).not.toHaveBeenCalled();
+    } finally {
+      verifier.mockRestore();
+    }
   });
 
   it("the right code turns it on, swaps the session, and the new cookie is signed in with two_factor_at set", async () => {

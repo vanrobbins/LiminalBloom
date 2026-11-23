@@ -3,10 +3,11 @@
 // `two_factor_at` itself. Against the development database, with a real account that turned two-factor on.
 
 import { eq } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
 import { session } from "@/db/auth-schema";
+import { auth } from "@/lib/auth";
 import { confirmTwoFactor, startTwoFactor } from "@/lib/two-factor/setup";
 import { cookieHeader, dropAccounts, makeAccount, TEST_PASSWORD, totpFor } from "@/lib/two-factor/test-accounts";
 import { setupKey } from "@/lib/two-factor/totp-key";
@@ -70,5 +71,18 @@ describe("verifyAdminCode", () => {
     const b = await staleAdmin();
     expect((await verifyAdminCode(a.cookie, a.userId, b.sessionId, await totpFor(a.key))).status).toBe("ok");
     expect(Date.now() - (await enteredAt(b.sessionId)).getTime()).toBeGreaterThan(12 * HOUR);
+  });
+
+  it("20 wrong codes at the same moment: at most 5 reach Better Auth, the rest are locked", async () => {
+    const a = await staleAdmin();
+    const verifier = vi.spyOn(auth.api, "verifyTOTP");
+    try {
+      const replies = await Promise.all(Array.from({ length: 20 }, () => verifyAdminCode(a.cookie, a.userId, a.sessionId, "000000")));
+      expect(verifier).toHaveBeenCalledTimes(5);
+      expect(replies.filter((r) => r.status === "refused" && r.reason === "locked")).toHaveLength(15);
+    } finally {
+      verifier.mockRestore();
+      await clearWrongCodes(a.userId);
+    }
   });
 });

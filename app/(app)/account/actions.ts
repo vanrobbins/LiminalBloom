@@ -13,7 +13,7 @@ import { auth } from "@/lib/auth";
 import { applyAuthCookies } from "@/lib/auth-cookies";
 import { keepShortSessionShort } from "@/lib/change-password";
 import { requireMember } from "@/lib/current-member";
-import { clearWrongGuesses, recordWrongGuess, tooManyGuesses } from "@/lib/password-guesses";
+import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
 import { MAX_PASSWORD, MIN_PASSWORD } from "@/lib/password-limits";
 
 export type PasswordReply = { status: "saved"; message: string } | { status: "refused"; message: string; field?: "current" | "new" | "confirm" };
@@ -29,8 +29,8 @@ export async function changePasswordAction(currentPassword: unknown, newPassword
   if (newPassword === currentPassword) return refuse("Choose a password different from your current one.", "new");
 
   // Server-side calls skip Better Auth's HTTP rate limiter, so wrong guesses are limited here
-  // (lib/password-guesses.ts), before Better Auth is asked anything.
-  if (await tooManyGuesses(user.id)) return refuse("Too many tries. Try again in a few minutes.");
+  // (lib/password-guesses.ts): the try is counted before Better Auth is asked anything.
+  if (!(await claimGuess(user.id))) return refuse("Too many tries. Try again in a few minutes.");
 
   const requestHeaders = await headers();
   let result: { headers: Headers; response: { token: string | null } };
@@ -42,7 +42,6 @@ export async function changePasswordAction(currentPassword: unknown, newPassword
     });
   } catch (error) {
     if (error instanceof APIError && error.body?.code === "INVALID_PASSWORD") {
-      await recordWrongGuess(user.id);
       return refuse("That isn't your current password.", "current");
     }
     // Not Better Auth's own message: it can name server configuration.

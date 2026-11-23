@@ -13,7 +13,9 @@ const limit = guessLimit("password-change-failures");
 
 /** True once this person has used up their wrong guesses and the window has not ended. */
 export const tooManyGuesses = limit.tooMany;
-/** Counts one wrong current password. */
+/** Counts one try before the password is checked; false once the limit is spent. Atomic: parallel tries cannot all pass. */
+export const claimGuess = limit.claim;
+/** Counts one wrong current password (a plain count; `claimGuess` is the one callers use before checking). */
 export const recordWrongGuess = limit.record;
-/** A successful change forgets the wrong guesses before it. */
+/** A right password forgets the wrong guesses before it. */
 export const clearWrongGuesses = limit.clear;
