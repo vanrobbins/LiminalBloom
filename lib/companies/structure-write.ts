@@ -108,6 +108,10 @@ export async function moveStore(companyId: string, actor: CompanyActor, storeId:
     throw error;
   }
   if (done.rows.length === 1) return { status: "moved" };
-  const there = await db.execute(sql`select 1 from store_profiles where store_id = ${storeId} and company_id = ${companyId}`);
-  return { status: there.rows.length === 1 ? "unchanged" : "gone" };
+  // Nothing moved: the store is already in that region (unchanged), or it is not this company's store, or the
+  // target region is another company's or was deleted (gone). Only the first is a no-op.
+  const here = await db.execute(sql`select region_id from store_profiles where store_id = ${storeId} and company_id = ${companyId}`);
+  if (here.rows.length !== 1) return { status: "gone" };
+  const current = (here.rows[0] as { region_id: string | null }).region_id;
+  return { status: current === regionId ? "unchanged" : "gone" };
 }

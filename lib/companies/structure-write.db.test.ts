@@ -103,9 +103,18 @@ describe("moving a store", { timeout: 30_000 }, () => {
     const theirRegion = await makeRegion(b.id, "Theirs");
     const mine = await makeCompanyStore(a.id, null, "mv-mine");
     const theirs = await makeCompanyStore(b.id, null, "mv-theirs");
-    expect(await moveStore(a.id, actor(a.ownerId), mine.store, theirRegion)).toEqual({ status: "unchanged" });
+    expect(await moveStore(a.id, actor(a.ownerId), mine.store, theirRegion)).toEqual({ status: "gone" });
     expect(await moveStore(a.id, actor(a.ownerId), theirs.store, null)).toEqual({ status: "gone" });
     expect((await db.select().from(storeProfiles).where(eq(storeProfiles.storeId, mine.store)))[0].regionId).toBeNull();
+  });
+
+  it("answers gone for a region deleted before the move, and leaves the store where it was", async () => {
+    const c = await makeCompany("mv-gone");
+    const doomed = await makeRegion(c.id, "Doomed");
+    const store = await makeCompanyStore(c.id, null, "mv-gone");
+    expect(await deleteRegion(c.id, actor(c.ownerId), doomed)).toEqual({ status: "deleted" });
+    expect(await moveStore(c.id, actor(c.ownerId), store.store, doomed)).toEqual({ status: "gone" });
+    expect((await db.select().from(storeProfiles).where(eq(storeProfiles.storeId, store.store)))[0].regionId).toBeNull();
   });
 });
 
