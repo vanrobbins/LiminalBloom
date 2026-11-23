@@ -14,6 +14,7 @@ import { createRole, moveRole, renameRole, type CreateOutcome, type MoveOutcome,
 import { setRequiresTwoFactor, type RequireTwoFactorOutcome } from "@/lib/access/roles-two-factor";
 import { resetRole, saveSwitches, type ResetOutcome, type SaveOutcome } from "@/lib/access/roles-switches";
 import type { RolesActor } from "@/lib/access/roles-write";
+import { storeActorName } from "@/lib/access/actor-name";
 import { SWITCHES } from "@/lib/access/switches";
 import { requireSwitchForAction, type Member } from "@/lib/current-member";
 
@@ -26,7 +27,7 @@ const INVALID = { status: "invalid" } as const;
 const FORBIDDEN = { status: "forbidden" } as const;
 
 function actorFor(member: Member): RolesActor {
-  return { ...actorOf(member), userId: member.user.id, name: member.user.name };
+  return { ...actorOf(member), userId: member.user.id, name: storeActorName(member) };
 }
 
 export async function saveSwitchesAction(edits: unknown): Promise<SaveOutcome> {

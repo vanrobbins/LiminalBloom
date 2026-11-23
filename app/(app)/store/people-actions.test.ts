@@ -18,7 +18,8 @@ vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }
 
 import { db } from "@/db";
 import { invitation, member } from "@/db/auth-schema";
-import { accessEvents } from "@/db/schema";
+import { accessEvents, storeProfiles } from "@/db/schema";
+import { assignCompanyRole, dropCompanies, makeBareAccount, makeCompany } from "@/lib/companies/test-companies";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
 
@@ -26,6 +27,7 @@ import { cancelInvitationAction, changeRoleAction, createInvitationAction, remov
 
 afterAll(async () => {
   await dropStores();
+  await dropCompanies();
   await dropPeople();
 });
 
@@ -143,5 +145,22 @@ describe("people actions", () => {
     }
     expect(await removePersonAction("m", 7)).toEqual({ status: "invalid" });
     expect(await eventCount()).toBe(0);
+  });
+
+  it("logs a company person's change under the company's name, never theirs, and a store member's under their own (spec 0.7.1 13)", async () => {
+    const co = await makeCompany("pa-actor", await makeBareAccount("pa-actor-owner"));
+    await db.insert(storeProfiles).values({ storeId: store, companyId: co.id, regionId: null });
+    const admin = await makeBareAccount("pa-actor-admin");
+    await assignCompanyRole(co.id, admin, "corporate_admin");
+    mocks.getSession.mockResolvedValue({ user: { id: admin, name: "Corey Corporate", email: `${admin}@example.com` }, session: { activeStoreId: store, activeOrganizationId: null } });
+    const made = await createInvitationAction("new@example.test", roles.store_manager);
+    expect(made.status).toBe("created");
+    const manager = await signInAs("store_manager");
+    expect((await createInvitationAction("two@example.test", roles.vm_worker)).status).toBe("created");
+    const names = (await db.select({ actorId: accessEvents.actorId, actorName: accessEvents.actorName }).from(accessEvents).where(eq(accessEvents.storeId, store))).sort((a, b) => a.actorName.localeCompare(b.actorName));
+    expect(names).toEqual([
+      { actorId: admin, actorName: `Test company pa-actor` },
+      { actorId: manager, actorName: "Van" },
+    ]);
   });
 });
