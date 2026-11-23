@@ -107,6 +107,7 @@ describe("/admin overview", () => {
     render(await OverviewPage());
     expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Help waiting" }).parentElement).toHaveTextContent("3");
+    expect(screen.getByRole("link", { name: /Help waiting/ })).toHaveAttribute("href", "/admin/help");
     expect(screen.getByText("Store paused")).toBeInTheDocument();
     expect(screen.getByText(/Billing question/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "All activity" })).toHaveAttribute("href", "/admin/activity");

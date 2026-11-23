@@ -3,6 +3,7 @@
 // The worker's own account asks; its requests are removed after each test so the five-open limit never bites.
 // An admin's reply is written straight to the development database, as the rest of the e2e setup does.
 
+import { adminContext, clearAdmins } from "./admin-account";
 import { sql } from "./map-store";
 import { expect, hydrated, test } from "./fixtures";
 import { TEST_ACCOUNT } from "./test-account";
@@ -70,4 +71,36 @@ test("a reply from Liminal Bloom shows a dot and a count until the thread is ope
   await page.getByRole("dialog").getByRole("button", { name: "Close request" }).click();
   await expect(page.getByText("Closed. Ask again if you still need help.")).toBeVisible();
   await expect(page.getByLabel("Reply")).toHaveCount(0);
+});
+
+test("an admin opens the request, replies, and the requester sees Liminal Bloom and never the admin's name", async ({ browser, page }, testInfo) => {
+  const id = await asker();
+  const [{ id: request }] = await sql()`insert into help_requests (requester_id, kind, context) values (${id}, 'other', '{"state":"member","role":"Sales Associate"}'::jsonb) returning id`;
+  await sql()`insert into help_messages (request_id, author_id, author_name, from_admin, body) values (${request}, ${id}, 'Acct Tester', false, ${MESSAGE})`;
+
+  const admin = await adminContext(browser, testInfo);
+  try {
+    await admin.page.goto("/admin/help");
+    await hydrated(admin.page);
+    await admin.page.getByRole("link", { name: new RegExp(MESSAGE) }).click();
+    await admin.page.waitForURL(`**/admin/help/${request}`);
+    await hydrated(admin.page);
+    await expect(admin.page.getByRole("heading", { name: "Context" })).toBeVisible();
+    await expect(admin.page.getByText("Sales Associate")).toBeVisible();
+
+    await admin.page.getByLabel("Reply").fill("Try signing in again now.");
+    await admin.page.getByRole("button", { name: "Send reply" }).click();
+    await expect(admin.page.locator("[data-help-status]")).toHaveText("Replied");
+    await expect(admin.page.getByRole("list", { name: "Messages" }).getByText("Ada Admin")).toBeVisible();
+  } finally {
+    await admin.context.close();
+    await clearAdmins();
+  }
+
+  await page.goto(`/help/${request}`);
+  await hydrated(page);
+  const thread = page.getByRole("list", { name: "Messages" });
+  await expect(thread.getByText("Try signing in again now.")).toBeVisible();
+  await expect(thread.getByText("Liminal Bloom", { exact: true })).toBeVisible();
+  await expect(page.getByText("Ada Admin")).toHaveCount(0);
 });

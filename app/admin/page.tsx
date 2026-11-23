@@ -1,5 +1,5 @@
 // /admin: what needs an admin now (spec 0.7.1 7.3). Help waiting and the last 10 things done. The requests card
-// waits for 0.7.1b, and the help count links to the queue once /admin/help exists (A8).
+// waits for 0.7.1b, and the help card links to the queue (/admin/help).
 
 import { LifeBuoy } from "lucide-react";
 import Link from "next/link";
@@ -19,11 +19,13 @@ export default async function AdminOverviewPage() {
       <h1 className="text-2xl font-semibold tracking-tight text-ink md:text-3xl">Overview</h1>
       <div className="grid gap-4 md:grid-cols-2">
         <Card compact>
-          <h2 className="flex items-center gap-2 font-semibold text-ink">
-            <LifeBuoy aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0" />
-            Help waiting
-          </h2>
-          <p className="mt-2 text-3xl font-semibold tabular-nums text-ink">{helpWaiting}</p>
+          <Link href="/admin/help" className="block min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+            <h2 className="flex items-center gap-2 font-semibold text-ink">
+              <LifeBuoy aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0" />
+              Help waiting
+            </h2>
+            <p className="mt-2 text-3xl font-semibold tabular-nums text-ink">{helpWaiting}</p>
+          </Link>
         </Card>
       </div>
       <section aria-labelledby="recent" className="flex flex-col gap-2">

@@ -1,7 +1,7 @@
 // The admin area's sections. Only what is built is listed (as components/shell/nav-items.ts): each
 // section's task adds its own line, and the sidebar, the phone sheet and the tablet menu all pick it up.
 
-import { History, LayoutDashboard, ShieldCheck, Store, UserSearch, type LucideIcon } from "lucide-react";
+import { History, LayoutDashboard, LifeBuoy, ShieldCheck, Store, UserSearch, type LucideIcon } from "lucide-react";
 
 export type AdminNavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -9,6 +9,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/people", label: "People", icon: UserSearch },
   { href: "/admin/stores", label: "Stores", icon: Store },
+  { href: "/admin/help", label: "Help", icon: LifeBuoy },
   { href: "/admin/activity", label: "Activity", icon: History },
   { href: "/admin/admins", label: "Admins", icon: ShieldCheck },
 ];
