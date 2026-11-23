@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { invitation, member } from "@/db/auth-schema";
-import { companyEvents, companyInvitations, roleAssignments } from "@/db/schema";
+import { companies, companyEvents, companyInvitations, roleAssignments } from "@/db/schema";
 import { acceptInvitation } from "@/lib/access/invitation-accept";
 import { lookInvitation } from "@/lib/access/invitation-look";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
@@ -80,6 +80,18 @@ describe("acceptCompanyInvitation", { timeout: 30_000 }, () => {
     expect(await lookInvitation(id, null)).toMatchObject({ state: "lapsed" });
     expect(await acceptCompanyInvitation(await person(who), id)).toMatchObject({ status: "lapsed" });
     expect(await rolesOf(who)).toEqual([]);
+  });
+
+  it("refuses while the company is paused, writes nothing, and the page says so; it works again once restored", async () => {
+    const s = await makeStaffedCompany("ca-paused");
+    const { who, id } = await invited(s);
+    await db.update(companies).set({ suspendedAt: new Date(), suspendedReason: "test", suspendedByName: "Admin" }).where(eq(companies.id, s.company.id));
+    expect((await lookInvitation(id, await person(who))).state).toBe("company-paused");
+    expect(await acceptCompanyInvitation(await person(who), id)).toMatchObject({ status: "company-paused" });
+    expect(await rolesOf(who)).toEqual([]);
+    expect((await db.select().from(companyInvitations).where(eq(companyInvitations.id, id)))[0].status).toBe("pending");
+    await db.update(companies).set({ suspendedAt: null, suspendedReason: null, suspendedByName: null }).where(eq(companies.id, s.company.id));
+    expect(await acceptCompanyInvitation(await person(who), id)).toMatchObject({ status: "accepted" });
   });
 
   it("refuses an expired and a cancelled invitation", async () => {

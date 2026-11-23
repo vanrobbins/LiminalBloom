@@ -31,9 +31,11 @@ export type InvitationState =
   | { state: "used" }
   | { state: "cancelled" }
   | Named<"expired" | "lapsed" | "signed-out" | "wrong-email" | "already-member" | "full">
+  // A company invitation whose company is paused: nothing can be accepted until Liminal Bloom restores it.
+  | Named<"company-paused">
   // In a different company (spec 0.7.1 5.4): the refusal names it.
   | (Named<"in-company"> & { companyName: string })
-  // Present (true) only when the store is paused: they may still accept, but won't see it until it is restored (DECISIONS 11-23).
+  // Present (true) only when the store, or its company, is paused: they may still accept, but won't see it until it is restored (DECISIONS 11-23).
   | (Named<"ready"> & { paused?: true });
 
 /** The invitation as `viewer` (null: signed out) would find it, as one plain state for the page to word. A company invitation (spec 0.7.1 6.5) is looked up when no store invitation has the id. */
@@ -48,7 +50,8 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
       expiresAt: invitation.expiresAt,
       storeName: organization.name,
       roleName: roleDefinitions.name,
-      paused: sql<boolean>`exists (select 1 from ${storeSuspensions} where ${storeSuspensions.storeId} = ${invitation.organizationId})`,
+      paused: sql<boolean>`(exists (select 1 from ${storeSuspensions} where ${storeSuspensions.storeId} = ${invitation.organizationId})
+        or exists (select 1 from store_profiles sp join companies pc on pc.id = sp.company_id where sp.store_id = ${invitation.organizationId} and pc.suspended_at is not null))`,
       lapsed: sql<boolean>`not ${inviterMayGrant(invitation.organizationId, invitation.roleId, invitation.inviterId)}`,
     })
     .from(invitation)

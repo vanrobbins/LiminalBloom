@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
-import { member, user } from "@/db/auth-schema";
+import { invitation, member, user } from "@/db/auth-schema";
 import { companies, roleAssignments } from "@/db/schema";
 import { dropCompanies, makeCompanyStore, makeRegion, makeStaffedCompany } from "@/lib/companies/test-companies";
 import { dropStores } from "@/lib/products/test-stores";
@@ -16,7 +16,7 @@ import { acceptInvitation } from "./invitation-accept";
 import { lookInvitation } from "./invitation-look";
 import { companyRole } from "./company-roles";
 import { createInvitation, type InviteOutcome } from "./invite";
-import { dropPeople } from "./test-roles";
+import { dropPeople, makeInvitation, makePerson } from "./test-roles";
 
 const made: string[] = [];
 afterAll(async () => {
@@ -89,5 +89,18 @@ describe("a company person's store invitation", () => {
     const other = await makeRegion(c.company.id, "West");
     await db.execute(sql`update store_profiles set region_id = ${other} where company_id = ${c.company.id}`);
     expect((await lookInvitation(id, nia)).state).toBe("lapsed");
+  });
+
+  it("a Store Manager's invitation into a paused company's store shows the paused note on the invite page", async () => {
+    const c = await makeStaffedCompany("col-note");
+    const s = await makeCompanyStore(c.company.id, c.north, "col-note");
+    const manager = await makePerson(s.store, s.roles.store_manager);
+    const nia = await newcomer();
+    const id = await makeInvitation(s.store, manager.userId, s.roles.sales_associate);
+    await db.update(invitation).set({ email: nia.email }).where(eq(invitation.id, id));
+    expect(await lookInvitation(id, nia)).toMatchObject({ state: "ready" });
+    expect(await lookInvitation(id, nia)).not.toHaveProperty("paused");
+    await db.update(companies).set({ suspendedAt: new Date(), suspendedReason: "test", suspendedByName: "Admin" }).where(eq(companies.id, c.company.id));
+    expect(await lookInvitation(id, nia)).toMatchObject({ state: "ready", paused: true });
   });
 });

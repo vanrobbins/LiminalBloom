@@ -26,6 +26,8 @@ export function unusableText(state: Unusable | "stale", storeName?: string, comp
       return `You're already in ${storeName ?? "this store"}.`;
     case "full":
       return `${storeName ?? "This store"} has ${MAX_PEOPLE} people, the most it can hold. Ask a manager to make room.`;
+    case "company-paused":
+      return `${storeName ?? "This company"} is paused right now. You can accept once Liminal Bloom restores it.`;
     case "in-company":
       // One company per person (spec 0.7.1 5.4).
       return `You're part of ${companyName ?? "another company"}. Ask them to remove you first, or ask Liminal Bloom.`;

@@ -15,7 +15,7 @@ import { unusableText } from "./invite-text";
 import { PageShell } from "./page-shell";
 
 // The refusals that end in a status line; all but already-member (who has Home to go to) also offer Ask.
-const UNUSABLE = new Set<InvitationState["state"]>(["expired", "lapsed", "already-member", "full", "wrong-email", "in-company"]);
+const UNUSABLE = new Set<InvitationState["state"]>(["expired", "lapsed", "already-member", "full", "wrong-email", "in-company", "company-paused"]);
 
 type InviteViewProps = {
   id: string;

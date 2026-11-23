@@ -2,7 +2,8 @@
 // role_assignments row and writes the company_events row, so none exists without the others. The conditions sit in
 // the statement itself: pending, unexpired, this person's email, the inviter still holds the authority (a lapse, the
 // inviter's rows locked FOR SHARE as a store accept does), the person holds no company role or ownership at all (a
-// company person is only ever one), and is in no other company through a store (one-company.ts). Two accepts of
+// company person is only ever one), is in no other company through a store (one-company.ts), and the company is not paused
+// (its row locked FOR SHARE, so a pause still uncommitted is waited for). Two accepts of
 // the same link cannot both win; two grants for one person are serialized by an advisory lock first in the batch (one-company.ts); role_assignments'
 // primary key stays as a backstop, an error answered "stale". Never writes a `member` row.
 //
@@ -39,6 +40,7 @@ export async function acceptCompanyInvitation(person: Person, invitationId: stri
         where i.id = ${invitationId}::text and i.status = 'pending' and i.expires_at > ${now.toISOString()}::timestamptz
           and lower(i.email) = ${email}::text
           and ${inviterMayGrantCompany(sql`i.company_id`, sql`i.role`, sql`i.inviter_id`, true)}
+          and not exists (select 1 from companies pc where pc.id = i.company_id and pc.suspended_at is not null for share)
           and not exists (select 1 from companies c where c.owner_user_id = ${me})
           and not exists (select 1 from role_assignments ra where ra.user_id = ${me})
           and not ${inOtherCompany(me, sql`i.company_id`)}

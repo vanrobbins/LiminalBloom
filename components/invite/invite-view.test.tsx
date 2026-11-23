@@ -73,4 +73,10 @@ describe("InviteView", () => {
     expect(screen.getByRole("status")).toHaveTextContent(message);
     expect(document.body.textContent).not.toContain("Spring Street");
   });
+
+  it("tells the invited person a paused company takes no one yet, with no Accept", () => {
+    show({ state: "company-paused", storeName: "Acme", roleName: "Regional Manager" }, "nia@example.test");
+    expect(screen.getByText("Acme is paused right now. You can accept once Liminal Bloom restores it.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
 });

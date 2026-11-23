@@ -14,7 +14,7 @@ import type { InvitationState, Viewer } from "@/lib/access/invitation-look";
 import { inviterMayGrantCompany } from "./authority";
 import { otherCompanyName } from "./one-company";
 
-type Row = { company_id: string; company_name: string; email: string; role: CompanyRoleKey; status: string; expired: boolean; lapsed: boolean; here: boolean };
+type Row = { company_id: string; company_name: string; email: string; role: CompanyRoleKey; status: string; expired: boolean; lapsed: boolean; paused: boolean; here: boolean };
 
 /** Null when no company invitation has this id (the caller says "missing" or tries another kind). */
 export async function lookCompanyInvitation(id: string, viewer: Viewer | null, now: Date = new Date()): Promise<InvitationState | null> {
@@ -22,6 +22,7 @@ export async function lookCompanyInvitation(id: string, viewer: Viewer | null, n
     select i.company_id, c.name as company_name, i.email, i.role::text as role, i.status::text as status,
       i.expires_at <= ${now.toISOString()}::timestamptz as expired,
       not ${inviterMayGrantCompany(sql`i.company_id`, sql`i.role`, sql`i.inviter_id`)} as lapsed,
+      c.suspended_at is not null as paused,
       ${viewer ? sql`(c.owner_user_id = ${viewer.id} or exists (select 1 from role_assignments ra where ra.user_id = ${viewer.id}))` : sql`false`} as here
     from company_invitations i join companies c on c.id = i.company_id where i.id = ${id}`);
   const row = rows[0];
@@ -37,5 +38,7 @@ export async function lookCompanyInvitation(id: string, viewer: Viewer | null, n
   const other = await otherCompanyName(viewer.id, sql`${row.company_id}::text`);
   if (other) return { state: "in-company", companyName: other, ...named };
   if (row.here) return { state: "already-member", ...named };
+  // A paused company takes no one new until Liminal Bloom restores it (accept refuses the same way).
+  if (row.paused) return { state: "company-paused", ...named };
   return { state: "ready", ...named };
 }
