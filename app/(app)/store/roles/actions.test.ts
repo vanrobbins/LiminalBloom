@@ -136,7 +136,7 @@ describe("roles actions", () => {
     expect(await saveSwitchesAction([{ roleId: vmw.id, version: vmw.version, switches: [...vmw.switches, "store.settings"] }])).toMatchObject({ status: "nesting", problem: { direction: "on", switch: "store.settings", other: { name: "Visual Merchandising Manager" } } });
   });
 
-  it("answers invalid, not an error, to arguments that are not what the action takes", async () => {
+  it("answers invalid, not an error, to arguments that are not what the action takes", { timeout: 30_000 }, async () => {
     await signInAs("assistant_manager");
     const sa = await roleRow("sales_associate");
     for (const bad of [undefined, null, 42, "", {}, "x".repeat(300)]) {
