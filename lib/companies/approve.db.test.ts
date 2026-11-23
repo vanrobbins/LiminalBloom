@@ -16,7 +16,7 @@ import { dropStores } from "@/lib/products/test-stores";
 import { assignCompanyRole, dropCompanies, makeBareAccount, makeCompany, makeCompanyStore } from "./test-companies";
 
 import { approveRequest } from "./approve";
-import { sendRequest } from "./request";
+import { sendRequest, withdrawRequest } from "./request";
 
 const REASON = "db test: approve company request";
 const requesters: string[] = [];
@@ -137,5 +137,43 @@ describe("approveRequest", () => {
     await expect(approveRequest({ userId: randomUUID(), name: "Nobody" }, req, REASON)).rejects.toThrow();
     expect(await db.select().from(roleAssignments).where(eq(roleAssignments.userId, who))).toHaveLength(1);
     expect((await db.select().from(companyRequests).where(eq(companyRequests.id, req.id)))[0].status).toBe("pending");
+  });
+
+  it("does not approve a withdrawn request: no company, and the old company is left alone", async () => {
+    const actor = await makeActor();
+    const old = await makeCompany("old5");
+    const store = await makeCompanyStore(old.id, null, "old5-store");
+    const who = await requester("withdrawn");
+    await assignCompanyRole(old.id, who, "corporate_admin");
+    await join(store.store, who);
+    const req = await request(who, uniqueName("withdrawn"));
+    expect(await withdrawRequest(who, req.id)).toEqual({ status: "done" });
+    expect(await approveRequest(actor, req, REASON)).toEqual({ status: "already" });
+    expect(await db.select().from(companies).where(eq(companies.ownerUserId, who))).toHaveLength(0);
+    expect(await db.select().from(roleAssignments).where(eq(roleAssignments.userId, who))).toHaveLength(1);
+    expect(await memberOf(store.store, who)).toBe(1);
+    expect((await db.select().from(companyRequests).where(eq(companyRequests.id, req.id)))[0].status).toBe("withdrawn");
+  });
+
+  it("a withdraw and an approve at the same time never leave a company behind a withdrawn request", async () => {
+    const actor = await makeActor();
+    const old = await makeCompany("old6");
+    const store = await makeCompanyStore(old.id, null, "old6-store");
+    const who = await requester("racing");
+    await join(store.store, who);
+    const req = await request(who, uniqueName("racing"));
+    const [, out] = await Promise.all([withdrawRequest(who, req.id), approveRequest(actor, req, REASON)]);
+    const [after] = await db.select().from(companyRequests).where(eq(companyRequests.id, req.id));
+    const made = await db.select().from(companies).where(eq(companies.ownerUserId, who));
+    if (after.status === "approved") {
+      expect(out.status).toBe("done");
+      expect(made).toHaveLength(1);
+      expect(await memberOf(store.store, who)).toBe(0);
+    } else {
+      expect(after.status).toBe("withdrawn");
+      expect(out.status).toBe("already");
+      expect(made).toHaveLength(0);
+      expect(await memberOf(store.store, who)).toBe(1);
+    }
   });
 });

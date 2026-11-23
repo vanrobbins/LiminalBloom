@@ -26,6 +26,14 @@ async function readRequest(id: string) {
   return rows[0] ?? null;
 }
 
+/** A concurrent approval made this person a company between the guard and the insert (companies_owner_unique). */
+function isOwnerRace(err: unknown): boolean {
+  for (let e = err as { code?: string; constraint?: string; constraint_name?: string; cause?: unknown } | undefined, i = 0; e && i < 4; e = e.cause as typeof e, i++) {
+    if (e.code === "23505" && (e.constraint ?? e.constraint_name) === "companies_owner_unique") return true;
+  }
+  return false;
+}
+
 export async function approveRequest(actor: AdminActor, input: { id: string; version: number }, reason: string): Promise<ApproveOutcome> {
   const { id, version } = input;
   const found = await readRequest(id);
@@ -43,12 +51,17 @@ export async function approveRequest(actor: AdminActor, input: { id: string; ver
     reason,
     detail: sql`jsonb_build_object('requester', p.person, 'email', p.email, 'leftCompanies', (select count(*) from old))`,
   } as const;
-  const { rows } = await db.execute<Row>(sql`
+  // "for update of r" holds the request row, so a withdraw that commits first leaves req empty (re-checked under
+  // the lock) and nothing is made; one that comes later waits for this statement.
+  let rows: Row[];
+  try {
+    ({ rows } = await db.execute<Row>(sql`
     with req as (
       select r.requester_id, r.company_name, u.name as person, u.email
       from company_requests r join "user" u on u.id = r.requester_id
       where r.id = ${id} and r.status = 'pending' and r.version = ${version}
-        and not exists (select 1 from companies c where c.owner_user_id = r.requester_id)),
+        and not exists (select 1 from companies c where c.owner_user_id = r.requester_id)
+      for update of r),
     made as (
       insert into companies (name, slug, owner_user_id)
       select company_name, ${slug}::text, requester_id from req
@@ -78,7 +91,11 @@ export async function approveRequest(actor: AdminActor, input: { id: string; ver
       update help_requests h set status = 'closed', closed_by = 'admin', updated_at = now(), version = h.version + 1
       where h.company_request_id = ${id} and h.status <> 'closed' and exists (select 1 from made) returning h.id),
     logged as (${platformEventFrom(actor, event, sql`made m cross join req p`)})
-    select m.id, m.name from made m`);
+    select m.id, m.name from made m`));
+  } catch (err) {
+    if (!isOwnerRace(err)) throw err;
+    rows = [];
+  }
   if (rows[0]) return { status: "done", companyId: String(rows[0].id), name: String(rows[0].name) };
 
   // Nothing changed. Say why: they own a company, the slug is taken, or someone decided it first.
