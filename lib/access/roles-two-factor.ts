@@ -12,12 +12,14 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { roleDefinitions } from "@/db/schema";
 
+import { isSyntheticRoleId } from "./company-roles";
 import { canActOn } from "./rank";
 import { isRefusal, runRoleWrite, type RoleRefusal, type RolesActor } from "./roles-write";
 
 export type RequireTwoFactorOutcome = { status: "set"; name: string; on: boolean } | RoleRefusal;
 
 export async function setRequiresTwoFactor(storeId: string, actor: RolesActor, roleId: string, version: number, on: boolean): Promise<RequireTwoFactorOutcome> {
+  if (isSyntheticRoleId(roleId)) return { status: "invalid" };
   const [role] = await db.select().from(roleDefinitions).where(and(eq(roleDefinitions.storeId, storeId), eq(roleDefinitions.id, roleId)));
   if (!role) return { status: "gone" };
   if (!canActOn(actor, role.rank, "roles.manage")) return { status: "forbidden" };

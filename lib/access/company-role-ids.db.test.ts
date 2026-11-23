@@ -16,6 +16,7 @@ import { actorIn, personIn, type Setup } from "./people-test";
 import { createRole, moveRole, renameRole } from "./roles-structure";
 import { deleteRole } from "./roles-delete";
 import { resetRole, saveSwitches } from "./roles-switches";
+import { setRequiresTwoFactor } from "./roles-two-factor";
 import { dropPeople, makeStoreWithRoles } from "./test-roles";
 
 afterAll(async () => {
@@ -67,5 +68,13 @@ describe("a company role id is not a role id", () => {
 
     expect(await roleRows(s.store)).toBe(before);
     expect((await db.select().from(roleDefinitions).where(eq(roleDefinitions.id, FAKE)))[0]).toMatchObject({ name: "Planted", rank: 900, version: custom.version });
+  });
+
+  it("the Requires two-factor setting refuses it and changes nothing", async () => {
+    const FAKE = "company:two-factor";
+    const s = await planted("ids-two-factor", FAKE);
+    const [planted_] = await db.select().from(roleDefinitions).where(eq(roleDefinitions.id, FAKE));
+    expect(await setRequiresTwoFactor(s.store, s.actor, FAKE, planted_.version, true)).toEqual({ status: "invalid" });
+    expect((await db.select().from(roleDefinitions).where(eq(roleDefinitions.id, FAKE)))[0]).toMatchObject({ requiresTwoFactor: false, version: planted_.version });
   });
 });
