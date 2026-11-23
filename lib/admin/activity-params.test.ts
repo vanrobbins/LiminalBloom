@@ -16,6 +16,10 @@ describe("activityParams", () => {
     expect(activityParams({ limit: ["100", "200"] }).limit).toBe(100);
     expect(activityParams({ kind: "drop table" }).kind).toBeUndefined();
   });
+  it("rounds a limit down to a multiple of 50", () => {
+    expect(activityParams({ limit: "149" }).limit).toBe(100);
+    expect(activityParams({ limit: "75" }).limit).toBe(50);
+  });
   it("never asks for more than 1000", () => {
     expect(activityParams({ limit: "999999" }).limit).toBe(1000);
   });

@@ -29,9 +29,12 @@ export type PersonLookup = {
 /** The email as stored: Better Auth lowercases addresses, so the lookup does too. */
 export const normalizeEmail = (raw: string) => raw.trim().toLowerCase();
 
+/** The longest address that can exist (RFC 5321); anything longer finds nobody. */
+export const MAX_EMAIL = 254;
+
 export async function lookupPerson(rawEmail: string, now: Date = new Date()): Promise<PersonLookup | null> {
   const email = normalizeEmail(rawEmail);
-  if (email === "") return null;
+  if (email === "" || email.length > MAX_EMAIL) return null;
   const [found] = await db.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt, twoFactorEnabled: user.twoFactorEnabled }).from(user).where(eq(user.email, email));
   if (!found) return null;
 

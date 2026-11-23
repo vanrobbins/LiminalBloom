@@ -11,7 +11,7 @@ const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v
 
 export function activityParams(raw: Raw): { limit: number; kind: string | undefined } {
   const n = Number(first(raw.limit));
-  const limit = Number.isInteger(n) && n >= PAGE_SIZE ? Math.min(n, MAX_LIMIT) : PAGE_SIZE;
+  const limit = Number.isInteger(n) && n >= PAGE_SIZE ? Math.min(Math.floor(n / PAGE_SIZE) * PAGE_SIZE, MAX_LIMIT) : PAGE_SIZE;
   const kind = first(raw.kind);
   return { limit, kind: isEventKind(kind) ? kind : undefined };
 }

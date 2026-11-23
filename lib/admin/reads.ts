@@ -8,11 +8,13 @@
 
 import "server-only";
 
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { invitation, member, organization, user } from "@/db/auth-schema";
 import { helpRequests, platformEvents, roleDefinitions, storeSuspensions } from "@/db/schema";
+
+import { escapeLike } from "./store-search";
 
 export type AdminEvent = { id: string; actorName: string; action: string; targetKind: string; targetLabel: string; reason: string; createdAt: Date };
 
@@ -40,17 +42,21 @@ export async function recentEvents({ limit, kind }: { limit: number; kind?: stri
 
 export type StoreRow = { id: string; name: string; createdAt: Date; people: number; managers: string[]; paused: boolean };
 
-const MAX_STORES = 500;
+export const MAX_STORES = 500;
 
-/** Every store: name, created, people count, Store Managers' names, paused. Companies join the list in 0.7.1b. */
-export async function listStores(): Promise<StoreRow[]> {
-  const stores = await db
+/** Stores (those whose name contains `q`, when given): name, created, people, Store Managers' names, paused. The
+ * first 500 by name; `truncated` says there are more. Companies join the list in 0.7.1b. */
+export async function listStores(q = ""): Promise<{ stores: StoreRow[]; truncated: boolean }> {
+  const rows = await db
     .select({ id: organization.id, name: organization.name, createdAt: organization.createdAt, paused: storeSuspensions.storeId })
     .from(organization)
     .leftJoin(storeSuspensions, eq(storeSuspensions.storeId, organization.id))
+    .where(q ? ilike(organization.name, `%${escapeLike(q)}%`) : undefined)
     .orderBy(asc(organization.name), asc(organization.id))
-    .limit(MAX_STORES);
-  if (stores.length === 0) return [];
+    .limit(MAX_STORES + 1);
+  const truncated = rows.length > MAX_STORES;
+  const stores = rows.slice(0, MAX_STORES);
+  if (stores.length === 0) return { stores: [], truncated: false };
   const ids = stores.map((s) => s.id);
   const [counts, managers] = await Promise.all([
     db.select({ storeId: member.organizationId, n: count() }).from(member).where(inArray(member.organizationId, ids)).groupBy(member.organizationId),
@@ -63,14 +69,17 @@ export async function listStores(): Promise<StoreRow[]> {
       .orderBy(asc(user.name)),
   ]);
   const people = new Map(counts.map((c) => [c.storeId, c.n]));
-  return stores.map((s) => ({
+  const managersOf = new Map<string, string[]>();
+  for (const m of managers) managersOf.set(m.storeId, [...(managersOf.get(m.storeId) ?? []), m.name]);
+  const list = stores.map((s) => ({
     id: s.id,
     name: s.name,
     createdAt: s.createdAt,
     people: people.get(s.id) ?? 0,
-    managers: managers.filter((m) => m.storeId === s.id).map((m) => m.name),
+    managers: managersOf.get(s.id) ?? [],
     paused: s.paused !== null,
   }));
+  return { stores: list, truncated };
 }
 
 export type StorePerson = { userId: string; name: string; email: string; roleName: string | null; isManager: boolean };

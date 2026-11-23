@@ -24,7 +24,7 @@ vi.mock("next-themes", () => ({ useTheme: () => ({ resolvedTheme: "light", setTh
 vi.mock("@/lib/toast", () => ({ toast: vi.fn() }));
 vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: vi.fn() } }));
 vi.mock("@/lib/admin/guard", () => ({ requirePlatformAdmin: mocks.guard, adminShellAccount: mocks.shell }));
-vi.mock("@/lib/admin/reads", () => ({ adminOverview: mocks.overview, recentEvents: mocks.events, listStores: mocks.stores, storeDetail: mocks.store }));
+vi.mock("@/lib/admin/reads", () => ({ adminOverview: mocks.overview, recentEvents: mocks.events, listStores: mocks.stores, MAX_STORES: 500, storeDetail: mocks.store }));
 vi.mock("@/lib/admin/reads-people", () => ({ lookupPerson: mocks.person }));
 
 import AdminLayout from "./layout";
@@ -67,7 +67,7 @@ beforeEach(() => {
   mocks.guard.mockResolvedValue({});
   mocks.overview.mockResolvedValue({ helpWaiting: 3, events: [event()] });
   mocks.events.mockResolvedValue({ events: [event()], hasMore: false });
-  mocks.stores.mockResolvedValue([store()]);
+  mocks.stores.mockResolvedValue({ stores: [store()], truncated: false });
   mocks.store.mockResolvedValue(detail());
   mocks.person.mockResolvedValue(person());
 });
@@ -76,7 +76,7 @@ describe("every page awaits its guard before it reads anything", () => {
   const pages: [string, () => Promise<unknown>][] = [
     ["overview", () => OverviewPage()],
     ["people", () => PeoplePage({ searchParams: search({ email: "a@b.co" }) })],
-    ["stores", () => StoresPage()],
+    ["stores", () => StoresPage({ searchParams: search({}) })],
     ["store", () => StorePage({ params: Promise.resolve({ id: "s1" }) })],
     ["activity", () => ActivityPage({ searchParams: search({}) })],
   ];
@@ -140,14 +140,23 @@ describe("/admin/people", () => {
 
 describe("/admin/stores", () => {
   it("lists each store as a link with its people, Store Managers and pause", async () => {
-    mocks.stores.mockResolvedValue([store(), store({ id: "s2", name: "Washington Square", managers: [], paused: true, people: 1 })]);
-    render(await StoresPage());
+    mocks.stores.mockResolvedValue({ stores: [store(), store({ id: "s2", name: "Washington Square", managers: [], paused: true, people: 1 })], truncated: false });
+    render(await StoresPage({ searchParams: search({}) }));
     const rows = screen.getAllByRole("list")[0];
     expect(within(rows).getByRole("link", { name: "Pioneer Place" })).toHaveAttribute("href", "/admin/stores/s1");
     expect(within(rows).getByText("2 people · Mona Manager")).toBeInTheDocument();
     expect(within(rows).getByText("1 person · No Store Manager")).toBeInTheDocument();
     expect(within(rows).getAllByText("Paused")).toHaveLength(1);
     expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(3);
+  });
+  it("passes the search on, says when the list was cut off, and when nothing matches", async () => {
+    mocks.stores.mockResolvedValue({ stores: [store()], truncated: true });
+    render(await StoresPage({ searchParams: search({ q: " Pio " }) }));
+    expect(mocks.stores).toHaveBeenCalledWith("Pio");
+    expect(screen.getByText("Showing the first 500 stores. Search to find others.")).toBeInTheDocument();
+    mocks.stores.mockResolvedValue({ stores: [], truncated: false });
+    render(await StoresPage({ searchParams: search({ q: "zzz" }) }));
+    expect(screen.getByText("No store has that name.")).toBeInTheDocument();
   });
 });
 

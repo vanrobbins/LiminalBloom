@@ -110,10 +110,22 @@ describe("listStores and storeDetail", () => {
     const manager = await makePerson(store, roles.store_manager);
     await db.update(user).set({ name: "Mona Manager" }).where(eq(user.id, manager.userId));
     await makePerson(store, roles.sales_associate);
-    const row = (await listStores()).find((s) => s.id === store);
+    const row = (await listStores()).stores.find((s) => s.id === store);
     expect(row).toMatchObject({ name: "Test store list", people: 2, managers: ["Mona Manager"], paused: false });
     await db.insert(storeSuspensions).values({ storeId: store, reason: REASON, suspendedByName: "Reads test" });
-    expect((await listStores()).find((s) => s.id === store)?.paused).toBe(true);
+    expect((await listStores()).stores.find((s) => s.id === store)?.paused).toBe(true);
+  });
+
+  it("searches names without treating % or _ as wildcards", async () => {
+    const { store } = await makeStoreWithRoles("srch");
+    expect((await listStores("TEST STORE srch")).stores.map((s) => s.id)).toContain(store);
+    expect((await listStores("Test store %")).stores).toEqual([]);
+    expect((await listStores("Test_store srch")).stores).toEqual([]);
+    expect((await listStores("zzz no such store")).truncated).toBe(false);
+  });
+
+  it("finds no account for an email longer than 254 characters", async () => {
+    expect(await lookupPerson(`${"a".repeat(250)}@example.com`)).toBeNull();
   });
 
   it("gives a store's people with emails and roles, highest rank first, and its pending invitations only", async () => {
