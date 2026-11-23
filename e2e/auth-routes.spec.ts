@@ -65,9 +65,20 @@ test.describe("closed organization endpoints", () => {
     });
   }
 
-  test("the two sign-in verify routes are open: with no sign-in under way they refuse, they do not 404", async ({ request }) => {
-    for (const name of ["verify-totp", "verify-backup-code"]) {
-      expect((await request.post(`/api/auth/two-factor/${name}`, { data: { code: "000000" } })).status(), name).not.toBe(404);
+  // Open for the sign-in challenge (answered with the two-factor cookie, no session). With a session they are
+  // 404 (lib/auth-sign-in-only.ts): otherwise a stolen session could guess codes there, or turn two-factor
+  // on from the browser past the app's own confirm. The `request` fixture is the signed-in test account.
+  test("the two sign-in verify routes are 404 with a session, and open without one (a refusal, not a 404)", async ({ request, playwright, baseURL }) => {
+    // A browser's own POST carries its Origin; without it Better Auth refuses a cookie-bearing request with 403 first.
+    const headers = { origin: baseURL! };
+    const anonymous = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { "x-forwarded-for": "10.77.0.9" } });
+    try {
+      for (const name of ["verify-totp", "verify-backup-code"]) {
+        expect((await request.post(`/api/auth/two-factor/${name}`, { headers, data: { code: "000000" } })).status(), `${name} signed in`).toBe(404);
+        expect((await anonymous.post(`/api/auth/two-factor/${name}`, { data: { code: "000000" } })).status(), `${name} signed out`).not.toBe(404);
+      }
+    } finally {
+      await anonymous.dispose();
     }
   });
 

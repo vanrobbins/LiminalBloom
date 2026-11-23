@@ -9,7 +9,7 @@
 
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,9 +35,14 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref }: Props) {
   const [saved, setSaved] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Single flight: a second submit before the first answers (a double click, Enter twice) would run the step
+  // twice; for the confirm each run deletes the other's new session. State is too slow for that, a ref is not.
+  const busy = useRef(false);
 
   /** Runs one step: a refusal or a lost connection becomes the inline message; `onOk` runs on success. */
   async function run<R extends { status: string }>(work: () => Promise<R>, onOk: (reply: Exclude<R, { status: "refused" }>) => void) {
+    if (busy.current) return;
+    busy.current = true;
     setProblem(null);
     setPending(true);
     try {
@@ -47,6 +52,7 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref }: Props) {
     } catch {
       setProblem(CONNECTION_ERROR);
     } finally {
+      busy.current = false;
       setPending(false);
     }
   }

@@ -35,7 +35,8 @@ const CLOSED_ORGANIZATION_PATHS = [
 // Two-factor setup runs through the app's own server actions (lib/two-factor/, spec 0.7.1 8.2 and 8.3),
 // so the browser cannot turn it on or off, read its link, or ask for new backup codes: each of those
 // answers 404. Email codes need Resend, so their two endpoints are closed too. Open on purpose:
-// /two-factor/verify-totp and /two-factor/verify-backup-code, which sign-in needs. The passkey
+// /two-factor/verify-totp and /two-factor/verify-backup-code, which sign-in needs (but only without
+// a session: lib/auth-sign-in-only.ts answers 404 to a request that has one). The passkey
 // routes stay open too (they need a session; A3c). e2e/auth-routes.spec.ts proves each path and its spellings.
 const CLOSED_TWO_FACTOR_PATHS = ["enable", "disable", "get-totp-uri", "generate-backup-codes", "send-otp", "verify-otp"].map((name) => `/two-factor/${name}`);
 

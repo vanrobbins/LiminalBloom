@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -83,6 +83,21 @@ describe("TwoFactorSetup", () => {
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/admin"));
     expect(p.confirm).toHaveBeenCalledWith("123456");
     expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it("a second submit while the first is still answering does nothing (one confirm, not two)", async () => {
+    const p = props();
+    let answer: (reply: { status: "on" }) => void = () => {};
+    p.confirm.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const user = await startUp(p);
+    await user.type(await screen.findByLabelText("Code from your authenticator app"), "123456");
+    await user.click(screen.getByRole("checkbox", { name: "I saved these codes somewhere safe." }));
+    const form = screen.getByRole("button", { name: "Turn on two-step sign-in" }).closest("form")!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(p.confirm).toHaveBeenCalledTimes(1);
+    answer({ status: "on" });
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledTimes(1));
   });
 
   it("a wrong code says so and stays on the page", async () => {

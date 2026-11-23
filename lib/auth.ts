@@ -17,11 +17,14 @@ import { db } from "@/db";
 
 import { rememberSwitch, storeForNewSession } from "./active-store";
 import { CLOSED_PATHS } from "./auth-closed-paths";
+import { refuseSessionOnSignInPaths } from "./auth-sign-in-only";
 import { passkeyRelyingParty, twoFactorAtFor } from "./auth-factors";
 import { optionalEnv } from "./env";
 
 export const auth = betterAuth({
   disabledPaths: CLOSED_PATHS,
+  // The two sign-in verify routes answer 404 to a request that has a session (lib/auth-sign-in-only.ts).
+  hooks: { before: refuseSessionOnSignInPaths },
   // Read through optionalEnv so a value pasted into a dashboard with a
   // trailing newline cannot produce an "Invalid URL" build failure.
   baseURL: optionalEnv("BETTER_AUTH_URL"),
