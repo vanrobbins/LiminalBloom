@@ -21,6 +21,9 @@ export default async function CreateStorePage() {
   if (member.kind === "signed-out") {
     redirect("/sign-in");
   }
+  if (member.kind === "needs-two-factor") {
+    redirect("/account");
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface px-4 py-16">

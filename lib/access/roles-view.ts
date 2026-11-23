@@ -27,6 +27,8 @@ export type RoleRow = {
   locked: Switch[];
   /** Who holds it: names, and pending invitations. Only custom roles are filled in; built-ins can't be deleted. */
   people: RolePeople;
+  /** Whoever holds this role must have two-factor sign-in (0.7.1a). */
+  requiresTwoFactor: boolean;
   /** The role a Move up / Move down would swap with, or null where the move is not offered. */
   upId: string | null;
   downId: string | null;
@@ -52,6 +54,7 @@ export type RoleInput = {
   builtin: string | null;
   version: number;
   switches: unknown;
+  requiresTwoFactor: boolean;
   people: RolePeople;
 };
 
@@ -72,6 +75,7 @@ export function buildRoleRows(input: readonly RoleInput[], actor: Actor, viewerR
       builtin,
       version: r.version,
       switches: [...cleanSwitches(r.switches)],
+      requiresTwoFactor: r.requiresTwoFactor,
       editable,
       relation: editable ? null : r.id === viewerRoleId ? "you" : "above",
       locked: builtin === "store_manager" ? [...LOCKED_SWITCHES.store_manager] : [],
@@ -106,7 +110,7 @@ export function permissionCount(switches: readonly Switch[]): string {
 
 export const labelOf = (s: Switch) => SWITCH_TEXT[s].label;
 
-export type RoleAction = "rename" | "up" | "down" | "reset" | "delete";
+export type RoleAction = "rename" | "up" | "down" | "reset" | "delete" | "two-factor";
 
 /** Whether a built-in's name or permissions differ from what it shipped with, so Reset has something to do. */
 export function differsFromDefault(row: RoleRow): boolean {
@@ -121,6 +125,7 @@ export function roleActions(row: RoleRow): { key: RoleAction; label: string }[] 
   if (!row.editable) return [];
   const all: { key: RoleAction; label: string; on: boolean }[] = [
     { key: "rename", label: "Rename", on: true },
+    { key: "two-factor", label: row.requiresTwoFactor ? "Stop requiring two-factor" : "Require two-factor", on: true },
     { key: "up", label: "Move up", on: row.upId !== null },
     { key: "down", label: "Move down", on: row.downId !== null },
     { key: "reset", label: "Reset to default", on: differsFromDefault(row) },

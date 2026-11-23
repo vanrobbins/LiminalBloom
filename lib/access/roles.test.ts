@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { BUILTIN_ROLES, LOCKED_SWITCHES, builtinRole, withLockedSwitches, type BuiltinRoleKey } from "./roles";
+import { BUILTIN_ROLES, LOCKED_SWITCHES, builtinRole, withLockedSwitches, type BuiltinRoleKey, requiresTwoFactorByDefault } from "./roles";
 import { SWITCHES, type Switch } from "./switches";
 
 // Spec 4.2, written out independently of the code: one character per switch
@@ -105,5 +105,24 @@ describe("withLockedSwitches", () => {
     for (const role of BUILTIN_ROLES) {
       expect([...withLockedSwitches(new Set(role.switches), role.key)]).toEqual([...role.switches]);
     }
+  });
+});
+
+describe("requiresTwoFactorByDefault", () => {
+  it("is on for a role holding people.manage or roles.manage, and off for the rest", () => {
+    expect(requiresTwoFactorByDefault(["view", "people.manage"])).toBe(true);
+    expect(requiresTwoFactorByDefault(["view", "roles.manage"])).toBe(true);
+    expect(requiresTwoFactorByDefault(["view", "products.edit", "store.settings"])).toBe(false);
+    expect(requiresTwoFactorByDefault([])).toBe(false);
+  });
+
+  it("agrees with the built-ins: the Store Manager, Assistant Manager and VM Manager, not the Worker or Associate", () => {
+    expect(BUILTIN_ROLES.map((r) => [r.key, requiresTwoFactorByDefault(r.switches)])).toEqual([
+      ["store_manager", true],
+      ["assistant_manager", true],
+      ["vm_manager", true],
+      ["vm_worker", false],
+      ["sales_associate", false],
+    ]);
   });
 });

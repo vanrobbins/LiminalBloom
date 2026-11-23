@@ -24,7 +24,7 @@ export const roleDefinitions = pgTable(
     rank: integer("rank").notNull(),
     switches: text("switches").array().notNull(),
     // Whoever holds this role must have two-factor sign-in (0.7.1a, A3b). Migration 0020 turns it
-    // on for roles holding people.manage or roles.manage; a new role starts off.
+    // on for roles holding people.manage or roles.manage, and a new role gets the same default.
     requiresTwoFactor: boolean("requires_two_factor").notNull().default(false),
     version: mapVersion(),
     createdAt: mapCreatedAt(),

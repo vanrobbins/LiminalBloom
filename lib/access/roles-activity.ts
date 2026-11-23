@@ -28,6 +28,8 @@ export function activityText(event: string, actor: string, detail: Detail, canSe
       const parts = [on ? `turned on ${on}` : "", off ? `turned off ${off}` : ""].filter(Boolean);
       return `${actor} changed ${role}${parts.length ? `: ${parts.join("; ")}` : ""}`;
     }
+    case "role_two_factor_changed":
+      return detail.on === true ? `${actor} made ${role} require two-factor sign-in` : `${actor} stopped ${role} requiring two-factor sign-in`;
     case "role_reordered":
       return `${actor} moved ${role} ${detail.direction === "up" ? "above" : "below"} ${text(detail, "past", "another role")}`;
     case "role_reset":

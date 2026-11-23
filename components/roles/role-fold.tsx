@@ -4,7 +4,7 @@
 
 "use client";
 
-import { ArrowDown, ArrowUp, Pencil, RotateCcw, Trash2, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, RotateCcw, ShieldCheck, Trash2, type LucideIcon } from "lucide-react";
 
 import { Fold } from "@/components/ui/fold";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { PermissionRow } from "./permission-row";
 import { cellNote, switchesOf, type Staged } from "./staged";
 import type { MoveSaid } from "./use-move-role";
 
-const ACTION_ICON: Record<RoleAction, LucideIcon> = { rename: Pencil, up: ArrowUp, down: ArrowDown, reset: RotateCcw, delete: Trash2 };
+const ACTION_ICON: Record<RoleAction, LucideIcon> = { "two-factor": ShieldCheck, rename: Pencil, up: ArrowUp, down: ArrowDown, reset: RotateCcw, delete: Trash2 };
 
 type RoleFoldProps = {
   view: RolesView;
@@ -53,6 +53,7 @@ export function RoleFold({ view, row, staged, refusal, open, onOpen, onToggle, o
             />
           );
         })}
+        {row.requiresTwoFactor ? <p className="px-2 text-sm text-ink-muted">Requires two-factor sign-in.</p> : null}
         <div className="px-2">
           <p className="text-sm font-medium text-ink">This role can:</p>
           <ul className="mt-1 list-disc pl-5 text-sm text-ink-muted">

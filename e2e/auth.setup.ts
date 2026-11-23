@@ -7,16 +7,22 @@ import type { Page } from "@playwright/test";
 
 import { expect, test as setup, currentStore, switchStore } from "./fixtures";
 import { placeRoleAccount, roleStoreId, seedRoleStore } from "./role-store";
+import { relaxTwoFactor } from "./relax-two-factor";
 import { accountFor, authFileFor, E2E_WORKERS, HOME_STORE, ipFor, ROLE_KEYS, ROLE_STORE, roleAccount, roleAuthFile, roleIp, SECOND_STORE } from "./test-account";
 
 config({ path: ".env.local", quiet: true });
 
 setup.use({ storageState: { cookies: [], origins: [] } });
 
-async function createStore(page: Page, name: string) {
+async function createStore(page: Page, name: string, email: string) {
   await page.goto("/create-store");
   await page.getByLabel("Store name").fill(name);
   await page.getByRole("button", { name: "Create store" }).click();
+  // A new Store Manager is sent to Account until two-factor is on (the role requires it by default): turn that off for this
+  // store, as the owner, then carry on to Home. relax-two-factor.ts says why.
+  await page.waitForURL(/\/(home|account)$/);
+  await relaxTwoFactor([email]);
+  await page.goto("/home");
   await page.waitForURL("**/home");
 }
 
@@ -42,6 +48,8 @@ async function signInOrUp(page: Page, account: { email: string; password: string
 setup("sign in every worker's account, each with two stores, in the home store", async ({ browser }) => {
   setup.setTimeout(60_000 * E2E_WORKERS);
   const db = neon(process.env.DATABASE_URL!);
+  // Stores that already exist have the role requirement on (migration 0020 backfilled it): off before anyone signs in.
+  await relaxTwoFactor([...Array.from({ length: E2E_WORKERS }, (_, worker) => accountFor(worker).email), ...ROLE_KEYS.map((key) => roleAccount(key).email)]);
   for (let worker = 0; worker < E2E_WORKERS; worker++) {
     const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": ipFor(worker) } });
     const page = await context.newPage();
@@ -53,8 +61,8 @@ setup("sign in every worker's account, each with two stores, in the home store",
       join "user" u on u.id = m.user_id
       where u.email = ${accountFor(worker).email}`;
     const has = (name: string) => stores.some((store) => store.name === name);
-    if (!has(HOME_STORE)) await createStore(page, HOME_STORE);
-    if (!has(SECOND_STORE)) await createStore(page, SECOND_STORE);
+    if (!has(HOME_STORE)) await createStore(page, HOME_STORE, accountFor(worker).email);
+    if (!has(SECOND_STORE)) await createStore(page, SECOND_STORE, accountFor(worker).email);
 
     await page.goto("/products");
     if ((await currentStore(page).getAttribute("data-store-current")) !== HOME_STORE) {
@@ -77,7 +85,7 @@ setup("sign in one account per built-in role, all in one shared store, each save
     await signInOrUp(page, account, account.name);
     let store = await roleStoreId();
     if (key === "store_manager" && !store) {
-      await createStore(page, ROLE_STORE);
+      await createStore(page, ROLE_STORE, account.email);
       store = await roleStoreId();
     }
     if (!store) throw new Error(`The Store Manager account has not made ${ROLE_STORE}.`);

@@ -7,6 +7,8 @@ describe("activityText", () => {
 
   it("reads each role event as a sentence", () => {
     expect(line("role_created", { role: "Educator" })).toBe("Van Robbins added the role Educator");
+    expect(line("role_two_factor_changed", { role: "Educator", on: true })).toBe("Van Robbins made Educator require two-factor sign-in");
+    expect(line("role_two_factor_changed", { role: "Educator", on: false })).toBe("Van Robbins stopped Educator requiring two-factor sign-in");
     expect(line("role_renamed", { from: "Sales Associate", to: "Educator" })).toBe("Van Robbins renamed Sales Associate to Educator");
     expect(line("role_reordered", { role: "Educator", past: "Sales Associate", direction: "up" })).toBe("Van Robbins moved Educator above Sales Associate");
     expect(line("role_reordered", { role: "Educator", past: "Sales Associate", direction: "down" })).toBe("Van Robbins moved Educator below Sales Associate");

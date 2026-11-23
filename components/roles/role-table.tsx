@@ -52,6 +52,7 @@ export function RoleTable({ view, staged, refusal, onToggle, onAction }: RoleTab
                   <th scope="row" tabIndex={-1} data-role-name={row.name} className="sticky left-0 z-10 bg-raised px-3 py-2 text-left font-medium text-ink outline-none">
                     <span className="wrap-break-word">{row.name}</span>
                     {staged[row.id] ? <span className="block text-xs font-normal text-ink">Unsaved</span> : null}
+                    {row.requiresTwoFactor ? <span className="block text-xs font-normal text-ink-muted">Requires two-factor</span> : null}
                     {row.relation ? <span className="block text-xs font-normal text-ink-muted">{row.relation === "you" ? "Your role" : "Above you"}</span> : null}
                   </th>
                   {EDITABLE_SWITCHES.map((s) => (

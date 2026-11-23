@@ -25,6 +25,8 @@ export type Access = {
   role: ResolvedRole | null;
   /** `view` and nothing else for a member with no role; empty only when there is no store. */
   switches: ReadonlySet<Switch>;
+  /** The role asks for two-factor sign-in (0.7.1a). False for a member with no role. */
+  requiresTwoFactor: boolean;
 };
 
 const VIEW_ONLY: ReadonlySet<Switch> = new Set<Switch>(["view"]);
@@ -38,7 +40,7 @@ function builtinKey(stored: string | null): BuiltinRoleKey | null {
 // filtered by hand, by user id and store id, and the role is joined on both the
 // store id and the role id (the composite foreign key keeps them consistent;
 // the join does not rely on that). Better Auth's own `member.role` is never read.
-async function readRole(userId: string, storeId: string): Promise<ResolvedRole & { stored: unknown } | null> {
+async function readRole(userId: string, storeId: string): Promise<ResolvedRole & { stored: unknown; requiresTwoFactor: boolean } | null> {
   const [row] = await db
     .select({
       id: roleDefinitions.id,
@@ -46,11 +48,12 @@ async function readRole(userId: string, storeId: string): Promise<ResolvedRole &
       rank: roleDefinitions.rank,
       builtin: roleDefinitions.builtin,
       stored: roleDefinitions.switches,
+      requiresTwoFactor: roleDefinitions.requiresTwoFactor,
     })
     .from(member)
     .innerJoin(roleDefinitions, and(eq(roleDefinitions.storeId, member.organizationId), eq(roleDefinitions.id, member.roleId)))
     .where(and(eq(member.userId, userId), eq(member.organizationId, storeId)));
-  return row ? { id: row.id, name: row.name, rank: row.rank, builtin: builtinKey(row.builtin), stored: row.stored } : null;
+  return row ? { id: row.id, name: row.name, rank: row.rank, builtin: builtinKey(row.builtin), stored: row.stored, requiresTwoFactor: row.requiresTwoFactor } : null;
 }
 
 async function storeHasRoles(storeId: string): Promise<boolean> {
@@ -69,7 +72,7 @@ async function storeHasRoles(storeId: string): Promise<boolean> {
  */
 export async function resolveAccess(userId: string, sessionStoreId: string | null | undefined): Promise<Access> {
   const activeStoreId = await resolveActiveStore(userId, sessionStoreId);
-  if (!activeStoreId) return { activeStoreId: null, role: null, switches: new Set() };
+  if (!activeStoreId) return { activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: false };
 
   let found = await readRole(userId, activeStoreId);
   if (!found && !(await storeHasRoles(activeStoreId))) {
@@ -83,8 +86,8 @@ export async function resolveAccess(userId: string, sessionStoreId: string | nul
     }
     found = await readRole(userId, activeStoreId);
   }
-  if (!found) return { activeStoreId, role: null, switches: VIEW_ONLY };
+  if (!found) return { activeStoreId, role: null, switches: VIEW_ONLY, requiresTwoFactor: false };
 
-  const { stored, ...role } = found;
-  return { activeStoreId, role, switches: withLockedSwitches(cleanSwitches(stored), role.builtin) };
+  const { stored, requiresTwoFactor, ...role } = found;
+  return { activeStoreId, role, switches: withLockedSwitches(cleanSwitches(stored), role.builtin), requiresTwoFactor };
 }

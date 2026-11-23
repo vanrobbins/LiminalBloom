@@ -28,6 +28,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/access/resolve", () => ({
   resolveAccess: mocks.resolveAccess,
 }));
+vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: async () => true }));
 
 import { can, getCurrentMember, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";
 

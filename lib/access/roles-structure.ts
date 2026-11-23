@@ -8,7 +8,7 @@ import { sql } from "drizzle-orm";
 
 import { nestingProblem } from "./nesting";
 import { canActOn, canGrant, rankBetween, renumberRanks } from "./rank";
-import { withLockedSwitches } from "./roles";
+import { requiresTwoFactorByDefault, withLockedSwitches } from "./roles";
 import { lockedRoles, nestingBad, pins, textArray, touchStamp } from "./roles-sql";
 import { checkName, isRefusal, readSnapshot, runRoleWrite, sameName, type DbRole, type RoleRefusal, type RolesActor, type Snapshot } from "./roles-write";
 import type { Switch } from "./switches";
@@ -72,8 +72,8 @@ export async function insertRole(storeId: string, actor: RolesActor, snapshot: S
       where r.store_id = ${storeId} and r.id = rn.id and r.rank <> rn.rank and (select ok from pins) and not exists (select 1 from bad)
       returning r.id),
     made as (
-      insert into role_definitions (store_id, name, rank, switches)
-      select ${storeId}::text, ${name}::text, ${placed.rank}::int, ${textArray(switches)}
+      insert into role_definitions (store_id, name, rank, switches, requires_two_factor)
+      select ${storeId}::text, ${name}::text, ${placed.rank}::int, ${textArray(switches)}, ${requiresTwoFactorByDefault(switches)}::boolean
       where (select ok from pins) and not exists (select 1 from bad)
       returning id, name),
     logged as (

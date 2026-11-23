@@ -33,6 +33,11 @@ describe("WelcomePage", () => {
     await expect(WelcomePage()).rejects.toThrow("redirect:/home");
   });
 
+  it("sends a person whose role needs two-step sign-in to Account, which does not send them back here", async () => {
+    mocks.current.mockResolvedValue({ kind: "needs-two-factor" });
+    await expect(WelcomePage()).rejects.toThrow("redirect:/account");
+  });
+
   it("lists the invitations waiting for their email by store, role and expiry, and tells them to paste their link", async () => {
     // The ids are in the data here on purpose: nothing from them may reach the page, as text, link or button (the link is the secret, spec 4.9).
     mocks.waiting.mockResolvedValue([

@@ -25,7 +25,7 @@ test("moves a custom role past its neighbour, never a built-in, and says which r
   await seedCustomRole("Educator", 550, ["view", "products.stock"]);
   await seedCustomRole("Planner", 600, ["view"]);
   await openRoles(page);
-  expect(await actionsOf(page, "Sales Associate")).toEqual(["Rename"]);
+  expect(await actionsOf(page, "Sales Associate")).toEqual(["Rename", "Require two-factor"]);
   await act(page, "Educator", "Move up");
   // No toast: the row just moves, and a screen reader hears it.
   await expect(page.getByRole("status").filter({ hasText: "Moved Educator above Sales Associate" })).toBeAttached();
@@ -42,13 +42,13 @@ test("moves a custom role past its neighbour, never a built-in, and says which r
 test("offers no Move up to a custom role directly below your own", async ({ page }) => {
   await seedCustomRole("Educator", 150, ["view"]);
   await openRoles(page);
-  expect(await actionsOf(page, "Educator")).toEqual(["Rename", "Move down", "Delete"]);
+  expect(await actionsOf(page, "Educator")).toEqual(["Rename", "Require two-factor", "Move down", "Delete"]);
 });
 
 test("resets a built-in to its name and permissions, only when it differs", async ({ page }) => {
   await setSwitchesBehindTheScenes("vm_worker", ["view", "products.stock"]);
   await openRoles(page);
-  expect(await actionsOf(page, "Visual Merchandising Worker")).toEqual(["Rename", "Reset to default"]);
+  expect(await actionsOf(page, "Visual Merchandising Worker")).toEqual(["Rename", "Require two-factor", "Reset to default"]);
   await act(page, "Visual Merchandising Worker", "Reset to default");
   const dialog = page.getByRole("dialog", { name: "Reset Visual Merchandising Worker?" });
   await expect(dialog).toContainText("Its name goes back to Visual Merchandising Worker and it can again:");
@@ -57,7 +57,7 @@ test("resets a built-in to its name and permissions, only when it differs", asyn
   await expect(page.getByText("Reset Visual Merchandising Worker", { exact: true }).first()).toBeVisible();
   expect((await storedRoles()).find((r) => r.name === "Visual Merchandising Worker")!.switches).toEqual(WORKER);
   expect((await loggedEvents())[0]).toBe("role_reset");
-  expect(await actionsOf(page, "Visual Merchandising Worker")).toEqual(["Rename"]);
+  expect(await actionsOf(page, "Visual Merchandising Worker")).toEqual(["Rename", "Require two-factor"]);
 });
 
 test("deletes a role nobody holds after one confirm; a built-in has no Delete", async ({ page }) => {

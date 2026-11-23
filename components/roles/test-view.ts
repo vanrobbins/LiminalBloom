@@ -5,9 +5,9 @@ import { buildRoleRows, type RoleInput, type RolesView } from "@/lib/access/role
 import { SWITCHES, type Switch } from "@/lib/access/switches";
 
 export const builtinInputs = (): RoleInput[] =>
-  BUILTIN_ROLES.map((r) => ({ id: r.key, name: r.name, rank: r.rank, builtin: r.key, version: 1, switches: [...r.switches], people: { names: [], invitations: 0 } }));
+  BUILTIN_ROLES.map((r) => ({ id: r.key, name: r.name, rank: r.rank, builtin: r.key, version: 1, switches: [...r.switches], requiresTwoFactor: false, people: { names: [], invitations: 0 } }));
 
-export const customRole = (id: string, rank: number, switches: Switch[], people = { names: [] as string[], invitations: 0 }): RoleInput => ({ id, name: id, rank, builtin: null, version: 1, switches, people });
+export const customRole = (id: string, rank: number, switches: Switch[], people = { names: [] as string[], invitations: 0 }): RoleInput => ({ id, name: id, rank, builtin: null, version: 1, switches, requiresTwoFactor: false, people });
 
 /** The view for someone who holds `holds` at `rank`, in the role `roleId`. */
 export function viewFor(rank: number, roleId: string, holds: readonly Switch[], more: RoleInput[] = [], extra: Partial<RolesView> = {}): RolesView {

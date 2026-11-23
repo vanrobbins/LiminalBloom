@@ -30,6 +30,7 @@ import { changedRows, stagedProblem, toggled, type Staged } from "./staged";
 import { StagedBar } from "./staged-bar";
 import { useFocusAfter } from "./use-focus-after";
 import { useMoveRole } from "./use-move-role";
+import { useRequireTwoFactor } from "./use-require-two-factor";
 
 type Open = { kind: "review" } | { kind: "discard" } | { kind: "add" } | { kind: "rename" | "reset" | "delete"; row: RoleRow } | null;
 
@@ -42,7 +43,8 @@ export function RolesScreen({ view }: { view: RolesView }) {
   const [added, setAdded] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const { focusAfter, armTitle, takeTitle } = useFocusAfter();
-  const { move, said } = useMoveRole({ refresh: () => router.refresh(), focusAfter });
+  const { move, said, setSaid } = useMoveRole({ refresh: () => router.refresh(), focusAfter });
+  const toggleTwoFactor = useRequireTwoFactor({ refresh: () => router.refresh(), setSaid });
   const refusal = said?.refused ? said : null;
 
   const count = Object.keys(staged).length;
@@ -64,6 +66,7 @@ export function RolesScreen({ view }: { view: RolesView }) {
 
   function onAction(row: RoleRow, action: RoleAction, trigger: HTMLElement) {
     if (action === "up" || action === "down") return void move(row, action);
+    if (action === "two-factor") return void toggleTwoFactor(row);
     openFrom(trigger, { kind: action, row });
   }
 

@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import type { Browser, Page } from "@playwright/test";
 
 import { hydrated } from "./fixtures";
+import { relaxTwoFactor } from "./relax-two-factor";
 import { sql } from "./map-store";
 
 export const PASSWORD = "correct-horse-battery";
@@ -42,6 +43,10 @@ export async function signUpWithStore(page: Page, email: string, storeName: stri
   await page.goto("/create-store");
   await page.getByLabel("Store name").fill(storeName);
   await page.getByRole("button", { name: "Create store" }).click();
+  // The new Store Manager is sent to Account until two-factor is on; these specs are not about that (relax-two-factor.ts).
+  await page.waitForURL(/\/(home|account)$/);
+  await relaxTwoFactor([email]);
+  await page.goto("/home");
   await page.waitForURL("**/home");
 }
 

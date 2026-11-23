@@ -24,6 +24,7 @@ import { can } from "@/lib/access/can";
 import { resolveAccess } from "@/lib/access/resolve";
 import type { Switch } from "@/lib/access/switches";
 import { auth } from "@/lib/auth";
+import { hasSecondFactor } from "@/lib/two-factor/has-second-factor";
 
 // Also here for server code that already imports this file; client components import ./access/can.
 export { can };
@@ -38,7 +39,14 @@ export type Member = {
   switches: Switch[];
 };
 
-export type CurrentMember = { kind: "signed-out" } | { kind: "no-store" } | Member;
+/**
+ * Signed in, but the role in the active store asks for two-factor sign-in and the account has none
+ * (0.7.1a "Requires two-factor"). Nothing of the store is read or shown: the only pages that answer
+ * are Account, which sets it up, and sign-out. `requireMember` sends everyone else to /account.
+ */
+export type NeedsTwoFactor = { kind: "needs-two-factor"; user: Member["user"]; roleName: string };
+
+export type CurrentMember = { kind: "signed-out" } | { kind: "no-store" } | NeedsTwoFactor | Member;
 
 /** One read per request: the layout and the page share the result. */
 export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
@@ -60,6 +68,12 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     return { kind: "no-store" };
   }
 
+  // Asked only for a role that requires it, so every other request skips the read. Not `session.two_factor_at`:
+  // a trusted-device sign-in has none and the account still has two-factor (DECISIONS 11-23).
+  if (access.requiresTwoFactor && access.role && !(await hasSecondFactor(session.user.id))) {
+    return { kind: "needs-two-factor", user: { id: session.user.id, name: session.user.name, email: session.user.email }, roleName: access.role.name };
+  }
+
   const stores = await auth.api.listOrganizations({ headers: requestHeaders });
 
   return {
@@ -77,6 +91,9 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
   };
 });
 
+/** The page that sets two-factor up; the one signed-in page a person who is missing a required factor can open. */
+export const TWO_FACTOR_SETUP_PATH = "/account";
+
 /** For pages: the member, or a redirect to where they need to go first. */
 export async function requireMember(): Promise<Member> {
   const member = await getCurrentMember();
@@ -87,8 +104,19 @@ export async function requireMember(): Promise<Member> {
   if (member.kind === "no-store") {
     redirect("/welcome");
   }
+  if (member.kind === "needs-two-factor") {
+    redirect(TWO_FACTOR_SETUP_PATH);
+  }
 
   return member;
+}
+
+/** What the Account page and its two-factor actions need: a member, or someone who must set two-factor up first. The one guard that lets the second kind through. */
+export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor> {
+  const current = await getCurrentMember();
+  if (current.kind === "signed-out") redirect("/sign-in");
+  if (current.kind === "no-store") redirect("/welcome");
+  return current;
 }
 
 /**

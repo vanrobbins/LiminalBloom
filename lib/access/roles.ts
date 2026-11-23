@@ -66,3 +66,9 @@ export function withLockedSwitches(proposed: Iterable<Switch>, builtinKey: Built
   if (builtinKey === "store_manager") for (const s of LOCKED_SWITCHES.store_manager) out.add(s);
   return new Set(SWITCHES.filter((s) => out.has(s)));
 }
+
+/** A role holding either of these asks for two-factor sign-in until someone turns that off (0.7.1a, DECISIONS 11-22). Migration 0020 backfilled the same rule. */
+export function requiresTwoFactorByDefault(switches: Iterable<Switch>): boolean {
+  const held = new Set(switches);
+  return held.has("people.manage") || held.has("roles.manage");
+}

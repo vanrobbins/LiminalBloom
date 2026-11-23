@@ -22,6 +22,8 @@ export default async function WelcomePage() {
   const current = await getCurrentMember();
   if (current.kind === "signed-out") redirect("/sign-in");
   if (current.kind === "member") redirect("/home");
+  // A role in the store they belong to asks for two-step sign-in first; Account is where it is set up.
+  if (current.kind === "needs-two-factor") redirect("/account");
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");

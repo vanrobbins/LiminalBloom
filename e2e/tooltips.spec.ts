@@ -114,7 +114,7 @@ const SWEPT: Swept[] = [
   { path: "/store", role: "button", name: "Copy link", open: (page) => invite(page, inviteeEmail(), "Sales Associate").then(() => {}) },
   { path: "/store/roles", role: "button", name: "Discard changes", open: stage },
   { path: "/store/roles", role: "button", name: "Review and save", open: stage },
-  ...["Rename", "Move up", "Move down", "Delete"].map((action): Swept => ({ path: "/store/roles", role: "button", name: `${action} Educator`, only: "phone", open: fold })),
+  ...["Rename", "Require two-factor", "Move up", "Move down", "Delete"].map((action): Swept => ({ path: "/store/roles", role: "button", name: `${action} Educator`, only: "phone", open: fold })),
   { path: "/layout/edit", role: "button", name: "List", only: "phone" },
   { path: "/layout/edit", role: "button", name: "Undo corner", open: corner },
   { path: "/layout/edit", role: "button", name: "Cancel drawing", open: corner },
