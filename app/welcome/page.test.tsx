@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   current: vi.fn(),
   getSession: vi.fn(),
   waiting: vi.fn(),
+  replies: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
   }),
@@ -13,6 +14,7 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/lib/current-member", () => ({ getCurrentMember: mocks.current }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
+vi.mock("@/lib/help/badge", () => ({ helpRepliesFor: mocks.replies }));
 vi.mock("@/lib/access/invitation-look", () => ({ pendingInvitationsFor: mocks.waiting }));
 vi.mock("@/app/invite/[id]/actions", () => ({ acceptInvitationAction: vi.fn() }));
 
@@ -23,6 +25,7 @@ beforeEach(() => {
   mocks.current.mockResolvedValue({ kind: "no-store" });
   mocks.getSession.mockResolvedValue({ user: { id: "u1", name: "Nia", email: "nia@example.test" } });
   mocks.waiting.mockResolvedValue([]);
+  mocks.replies.mockResolvedValue(0);
 });
 
 describe("WelcomePage", () => {
@@ -41,6 +44,16 @@ describe("WelcomePage", () => {
   it("sends a person whose stores are all paused to /paused, not to a welcome for people with no store", async () => {
     mocks.current.mockResolvedValue({ kind: "paused" });
     await expect(WelcomePage()).rejects.toThrow("redirect:/paused");
+  });
+
+  it("says Liminal Bloom replied, linking to Help, only when there is a reply for this person", async () => {
+    const { unmount } = render(await WelcomePage());
+    expect(screen.queryByText("Liminal Bloom replied.")).toBeNull();
+    unmount();
+    mocks.replies.mockResolvedValue(2);
+    render(await WelcomePage());
+    expect(mocks.replies).toHaveBeenCalledWith("u1");
+    expect(screen.getByRole("link", { name: "Read the replies" })).toHaveAttribute("href", "/help");
   });
 
   it("lists the invitations waiting for their email by store, role and expiry, and tells them to paste their link", async () => {

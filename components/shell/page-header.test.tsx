@@ -16,8 +16,8 @@ import { PageHeader } from "./page-header";
 import { ShellProvider, type ShellValue } from "./shell-context";
 
 const user = { id: "u", name: "Van", email: "v@x.co" };
-const two: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Washington Square" }], activeStoreId: "a", user, switches: ["view"], isPlatformAdmin: false };
-const one: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }], activeStoreId: "a", user, switches: ["view"], isPlatformAdmin: false };
+const two: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Washington Square" }], activeStoreId: "a", user, switches: ["view"], isPlatformAdmin: false, helpReplies: 0 };
+const one: ShellValue = { stores: [{ id: "a", name: "Pioneer Place" }], activeStoreId: "a", user, switches: ["view"], isPlatformAdmin: false, helpReplies: 0 };
 
 describe("PageHeader", () => {
   it("draws one h1, the back links and the account menu", () => {

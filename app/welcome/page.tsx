@@ -9,12 +9,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PageShell } from "@/components/invite/page-shell";
+import { ReplyBanner } from "@/components/help/reply-banner";
 import { PasteLinkForm } from "@/components/invite/paste-link-form";
 import { WaitingList } from "@/components/invite/waiting-list";
 import { Button } from "@/components/ui/button";
 import { pendingInvitationsFor } from "@/lib/access/invitation-look";
 import { auth } from "@/lib/auth";
 import { getCurrentMember } from "@/lib/current-member";
+import { helpRepliesFor } from "@/lib/help/badge";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +31,12 @@ export default async function WelcomePage() {
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
-  const waiting = await pendingInvitationsFor({ id: session.user.id, email: session.user.email });
+  const [waiting, helpReplies] = await Promise.all([pendingInvitationsFor({ id: session.user.id, email: session.user.email }), helpRepliesFor(session.user.id)]);
 
   return (
     <PageShell>
       <h1 className="text-3xl font-semibold tracking-tight text-ink">Welcome</h1>
+      <ReplyBanner replies={helpReplies} />
       <p className="text-ink-muted">You&apos;re not in a store yet.</p>
       {waiting.length > 0 ? (
         <WaitingList invitations={waiting} />

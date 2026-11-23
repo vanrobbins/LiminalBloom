@@ -2,9 +2,11 @@
 // still works, because a person may have other stores; this is only for someone who has none that open.
 // Nothing here reads a store: the names come from getCurrentMember().
 
+import { ReplyBanner } from "@/components/help/reply-banner";
 import { PageShell } from "@/components/invite/page-shell";
 import { SignOutButton } from "@/components/paused/sign-out-button";
 import { getCurrentMember } from "@/lib/current-member";
+import { helpRepliesFor } from "@/lib/help/badge";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ export default async function PausedPage() {
   if (current.kind === "member") redirect("/home");
 
   const { stores } = current;
+  const helpReplies = await helpRepliesFor(current.user.id);
   return (
     <PageShell>
       <h1 className="text-3xl font-semibold tracking-tight text-ink">{stores.length === 1 ? "Your store is paused" : "Your stores are paused"}</h1>
@@ -36,6 +39,7 @@ export default async function PausedPage() {
           </ul>
         </>
       )}
+      <ReplyBanner replies={helpReplies} />
       {/* Ask Liminal Bloom (the help button, plan A9) goes here once /help exists. */}
       <SignOutButton />
     </PageShell>

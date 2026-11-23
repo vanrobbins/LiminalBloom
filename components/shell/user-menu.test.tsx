@@ -137,6 +137,7 @@ describe("UserMenu", () => {
     expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
       "Switch store",
       "Account",
+      "Help",
       "Switch to light theme",
       "Sign out",
     ]);

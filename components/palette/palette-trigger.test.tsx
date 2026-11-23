@@ -8,7 +8,7 @@ import { ShellProvider, useShellSheet, type ShellValue } from "@/components/shel
 
 import { PaletteTrigger } from "./palette-trigger";
 
-const value: ShellValue = { stores: [], activeStoreId: "s", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"], isPlatformAdmin: false };
+const value: ShellValue = { stores: [], activeStoreId: "s", user: { id: "u", name: "Van", email: "v@x.co" }, switches: ["view"], isPlatformAdmin: false, helpReplies: 0 };
 
 function Open() {
   const [open] = useShellSheet("palette");

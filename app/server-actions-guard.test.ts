@@ -29,6 +29,7 @@ const ALLOWED: Record<string, Exception> = {
   "app/(app)/account/actions.ts": { guard: "requireMember", first: [], why: "changing your own password is for any signed-in member whatever their role, so there is no switch to hold; requireMember redirects a signed-out visitor before anything is read" },
   "app/(app)/account/two-factor-actions.ts": { guard: "requireAccountPerson", first: [], why: "two-step sign-in is for any signed-in account whatever its role, and a person whose role requires it but who has none yet is who calls these: requireMember would send exactly them away. requireAccountPerson redirects a signed-out visitor before anything is read" },
   "app/(app)/account/passkey-actions.ts": { guard: "requireAccountPerson", first: [], why: "passkeys are for any signed-in account whatever its role, and a person whose role requires two-factor and who has none yet is who adds one (a passkey counts): requireMember would send exactly them away. requireAccountPerson redirects a signed-out visitor before anything is read" },
+  "app/(app)/help/actions.ts": { guard: "requireSignedIn", first: [], why: "Help is for any signed-in account, and the people who most need it have no store, no role or only paused stores (spec 0.7.1 9.3), so there is no switch to hold. requireSignedIn redirects a signed-out visitor before anything is read; every statement then filters by the session's own person, and the context is built on the server" },
   "app/admin/two-factor/actions.ts": { guard: ACCOUNT_GUARD, first: [], why: "setting up two-step sign-in is for an admin who does not have it yet, so the full admin guard (which wants a fresh factor) would refuse the one person who needs these" },
   "app/admin/verify/actions.ts": { guard: ACCOUNT_GUARD, first: [], why: "the step-up is how an admin with a missing or stale factor gets a fresh one, so the full admin guard would refuse the one person who needs it" },
   "app/(editor)/layout/edit/actions.ts": { guard: GUARD, first: ["getCurrentMember"], why: "the editor answers signed-out itself (its last change was not saved; the guard would redirect), so one getCurrentMember() comes first" },
@@ -40,7 +41,7 @@ describe("server actions are guarded (spec 0.7 §4.7)", () => {
 
   it("finds the action files, so the scan cannot pass by looking at nothing", () => {
     const names = files.map((f) => f.file);
-    for (const expected of ["app/(app)/store/actions.ts", "app/(app)/store/people-actions.ts", "app/(app)/store/roles/actions.ts", "app/(app)/products/status-actions.ts", "app/(app)/planograms/actions.ts", "app/(app)/planograms/adjust-actions.ts", "app/(editor)/layout/edit/actions.ts", "app/create-store/actions.ts", "app/admin/two-factor/actions.ts", "app/admin/two-factor/codes-actions.ts", "app/admin/verify/actions.ts"]) {
+    for (const expected of ["app/(app)/store/actions.ts", "app/(app)/store/people-actions.ts", "app/(app)/store/roles/actions.ts", "app/(app)/products/status-actions.ts", "app/(app)/planograms/actions.ts", "app/(app)/planograms/adjust-actions.ts", "app/(editor)/layout/edit/actions.ts", "app/create-store/actions.ts", "app/admin/two-factor/actions.ts", "app/admin/two-factor/codes-actions.ts", "app/admin/verify/actions.ts", "app/(app)/help/actions.ts"]) {
       expect(names).toContain(expected);
     }
   });

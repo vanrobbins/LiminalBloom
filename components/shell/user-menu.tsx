@@ -12,6 +12,7 @@ import {
   ArrowLeftRight,
   ChevronRight,
   CircleUser,
+  LifeBuoy,
   LogOut,
   Moon,
   ShieldCheck,
@@ -31,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { helpLabel } from "@/lib/help/label";
 import { personInitial } from "@/lib/initials";
 
 import { useShellSheet } from "./shell-context";
@@ -63,6 +65,7 @@ export function UserMenu({
   stores,
   activeStoreId,
   isPlatformAdmin = false,
+  helpReplies = 0,
 }: {
   user: { name: string; email: string };
   variant: UserMenuVariant;
@@ -70,6 +73,8 @@ export function UserMenu({
   activeStoreId: string;
   /** A Liminal Bloom admin gets a link to /admin; the area guards itself. */
   isPlatformAdmin?: boolean;
+  /** Replies from Liminal Bloom not yet opened: a dot on the avatar and the count beside Help. */
+  helpReplies?: number;
 }) {
   const [isSheetOpen, setIsSheetOpen] = useShellSheet("account");
   // Held here, not in the store list: the sheet and the dropdown unmount their content on close,
@@ -90,11 +95,14 @@ export function UserMenu({
   const avatar = (
     <span
       aria-hidden="true"
-      className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-line-subtle font-medium text-ink"
+      className="relative inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-line-subtle font-medium text-ink"
     >
       {personInitial(user.name, user.email)}
+      {/* The count in words is on the Help item inside the menu; the dot only says there is something to read. */}
+      {helpReplies > 0 ? <span data-help-dot className="absolute -top-0.5 -right-0.5 size-3 rounded-full border-2 border-raised bg-info" /> : null}
     </span>
   );
+  const help = helpLabel(helpReplies);
 
   if (variant === "sheet") {
     return (
@@ -152,6 +160,12 @@ export function UserMenu({
                 <Link href="/account" onClick={() => openSheet(false)}>
                   <CircleUser {...ICON} />
                   Account
+                </Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/help" onClick={() => openSheet(false)}>
+                  <LifeBuoy {...ICON} />
+                  {help}
                 </Link>
               </Button>
               {isPlatformAdmin ? (
@@ -218,6 +232,12 @@ export function UserMenu({
           <Link href="/account">
             <CircleUser {...ICON} />
             Account
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/help">
+            <LifeBuoy {...ICON} />
+            {help}
           </Link>
         </DropdownMenuItem>
         {isPlatformAdmin ? (
