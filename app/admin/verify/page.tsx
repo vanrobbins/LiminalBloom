@@ -8,7 +8,7 @@ import { VerifyForm } from "@/components/two-factor/verify-form";
 import { requirePlatformAdminAccount } from "@/lib/admin/guard";
 import { isFresh } from "@/lib/admin/freshness";
 
-import { verifyAdminCodeAction } from "./actions";
+import { dropReplacedSessionAction, verifyAdminCodeAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export default async function AdminVerifyPage() {
   if (isFresh(account.twoFactorAt)) redirect("/admin");
   return (
     <PageShell>
-      <VerifyForm verify={verifyAdminCodeAction} doneHref="/admin" totp={account.twoFactorEnabled} passkey={account.passkey} />
+      <VerifyForm verify={verifyAdminCodeAction} dropOld={dropReplacedSessionAction} doneHref="/admin" totp={account.twoFactorEnabled} passkey={account.passkey} />
     </PageShell>
   );
 }

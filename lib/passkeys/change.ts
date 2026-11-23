@@ -12,10 +12,12 @@ import { APIError } from "better-auth/api";
 import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { passkey } from "@/db/auth-schema";
+import { passkey, user } from "@/db/auth-schema";
 import { auth } from "@/lib/auth";
 import { claimCodeGuess, clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
+import { needsFreshProof } from "@/lib/two-factor/fresh-proof";
+import { factorLock, turningOff } from "@/lib/two-factor/factor-lock";
 import { hasAuthenticatorApp } from "@/lib/two-factor/has-second-factor";
 import { twoFactorRequirement } from "@/lib/two-factor/required-by";
 
@@ -62,30 +64,32 @@ async function checkCode(requestHeaders: Headers, userId: string, code: string |
 /**
  * Removes one of the account's own passkeys after the password. The last one stays while the account
  * needs a second factor (a Liminal Bloom admin, or a role that requires it) and has no authenticator app:
- * removing it would lock the person out of what they need. The delete itself re-checks that in one
- * statement: it first locks the account's passkey rows (`for update`, in id order), so two removals at
- * once queue, and the second counts only what is left once the first is done (a deleted row is skipped).
+ * removing it would lock the person out of what they need. The delete re-checks that in its own statement,
+ * under the account's factor lock (lib/two-factor/factor-lock.ts), so two removals queue and the second counts
+ * only what is left, and an app being turned off at the same moment is not counted as a factor that remains.
  */
 export async function removePasskey(requestHeaders: Headers, userId: string, id: string, password: string): Promise<ChangeReply> {
   const mine = await listPasskeys(userId);
   if (!mine.some((row) => row.id === id)) return no("missing");
-  let store: string | undefined;
-  let guarded = false;
-  if (!(await hasAuthenticatorApp(userId))) {
-    const need = await twoFactorRequirement(userId);
-    guarded = need.isAdmin || need.store !== null;
-    store = need.store ?? undefined;
-  }
-  if (guarded && mine.length === 1) return no("last", store);
+  const need = await twoFactorRequirement(userId);
+  const needs = need.isAdmin || need.store !== null;
+  const store = need.store ?? undefined;
+  if (needs && mine.length === 1 && !(await hasAuthenticatorApp(userId))) return no("last", store);
   const refusal = await checkPassword(requestHeaders, userId, password);
   if (refusal) return no(refusal);
-  const done = await db.execute(sql`
-    with mine as (select ${passkey.id} from ${passkey} where ${passkey.userId} = ${userId} order by ${passkey.id} for update)
-    delete from ${passkey} where ${passkey.id} = ${id} and ${passkey.userId} = ${userId} and (${!guarded} or (select count(*) from mine) > 1)
-    returning ${passkey.id}
-  `);
+  const [, done] = await db.batch([
+    factorLock(userId),
+    db.execute(sql`
+      delete from ${passkey} where ${passkey.id} = ${id} and ${passkey.userId} = ${userId} and (
+        ${!needs}
+        or (select count(*) from ${passkey} where ${passkey.userId} = ${userId}) > 1
+        or (exists (select 1 from ${user} where ${user.id} = ${userId} and ${user.twoFactorEnabled}) and not ${turningOff(userId)})
+      )
+      returning ${passkey.id}
+    `),
+  ]);
   if (done.rows.length === 1) return { status: "ok" };
-  return guarded && (await listPasskeys(userId)).some((row) => row.id === id) ? no("last", store) : no("missing");
+  return needs && (await listPasskeys(userId)).some((row) => row.id === id) ? no("last", store) : no("missing");
 }
 
 /**
@@ -96,6 +100,7 @@ export async function removePasskey(requestHeaders: Headers, userId: string, id:
 export async function allowPasskeyAdd(requestHeaders: Headers, userId: string, password: string, code?: string): Promise<ChangeReply> {
   const current = await auth.api.getSession({ headers: requestHeaders });
   if (!current || current.user.id !== userId) return no("failed");
+  if (await needsFreshProof(requestHeaders, userId)) return no("verify");
   if (await hasAuthenticatorApp(userId)) {
     const wrong = await checkCode(requestHeaders, userId, code);
     if (wrong) return no(wrong);

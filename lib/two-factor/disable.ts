@@ -17,9 +17,10 @@ import { auth } from "@/lib/auth";
 import { keepShortSessionShort } from "@/lib/change-password";
 import { claimCodeGuess, clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
-import { hasPasskey } from "@/lib/passkeys/list";
 
 import { bestEffort } from "./best-effort";
+import { claimTurnOff, releaseTurnOff } from "./factor-lock";
+import { hasAuthenticatorApp } from "./has-second-factor";
 import { twoFactorRequirement } from "./required-by";
 import { newSessionToken } from "./setup";
 import { forgetTrustedDevices } from "./trusted-devices";
@@ -29,14 +30,22 @@ export type DisableReply = { status: "off"; responseHeaders: Headers } | { statu
 const codeOf = (error: unknown) => (error instanceof APIError ? (error.body as { code?: string } | undefined)?.code : undefined);
 
 export async function disableTwoFactor(requestHeaders: Headers, userId: string, password: string, code: string): Promise<DisableReply> {
+  // Nothing to turn off: refused before any try is spent (and before Better Auth is asked about a code).
+  if (!(await hasAuthenticatorApp(userId))) return { status: "refused", reason: "not-on" };
   // An admin, or a role that requires it, keeps it on (turning it off would only lock the person out), and no try is
-  // spent. A passkey is a second factor of its own (A3c), so with one the app can go.
-  if (!(await hasPasskey(userId))) {
-    const need = await twoFactorRequirement(userId);
-    if (need.isAdmin) return { status: "refused", reason: "admin" };
-    if (need.store) return { status: "refused", reason: "required", store: need.store };
+  // spent. A passkey is a second factor of its own (A3c), so with one the app can go: the claim takes the mark that
+  // keeps that passkey from being removed meanwhile, and fails if it was removed first (lib/two-factor/factor-lock.ts).
+  const need = await twoFactorRequirement(userId);
+  const needs = need.isAdmin || need.store !== null;
+  if (needs && !(await claimTurnOff(userId))) return need.isAdmin ? { status: "refused", reason: "admin" } : { status: "refused", reason: "required", store: need.store ?? undefined };
+  try {
+    return await turnOff(requestHeaders, userId, password, code);
+  } finally {
+    if (needs) await bestEffort("release the turn-off mark", () => releaseTurnOff(userId));
   }
+}
 
+async function turnOff(requestHeaders: Headers, userId: string, password: string, code: string): Promise<DisableReply> {
   // The code first, so a wrong one never spends a password try.
   if (!(await claimCodeGuess(userId))) return { status: "refused", reason: "locked" };
   try {

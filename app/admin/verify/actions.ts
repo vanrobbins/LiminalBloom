@@ -8,6 +8,7 @@
 import { headers } from "next/headers";
 
 import { requirePlatformAdminAccountForAction } from "@/lib/admin/guard";
+import { dropReplacedSession } from "@/lib/admin/replace-session";
 import { verifyAdminCode } from "@/lib/admin/step-up";
 import { type VerifyActionReply, refused } from "@/lib/two-factor/replies";
 
@@ -18,4 +19,12 @@ export async function verifyAdminCodeAction(code: unknown): Promise<VerifyAction
   if (typeof code !== "string" || code.trim() === "" || code.length > 32) return refused("code");
   const reply = await verifyAdminCode(await headers(), check.admin.userId, check.admin.sessionId, code.trim());
   return reply.status === "ok" ? reply : refused(reply.reason);
+}
+
+/** After "Use a passkey" made a new session: deletes the stale one the admin came with (lib/admin/replace-session.ts). */
+export async function dropReplacedSessionAction(oldSessionId: unknown): Promise<VerifyActionReply> {
+  const check = await requirePlatformAdminAccountForAction();
+  if (check.status === "forbidden") return refused("failed");
+  if (typeof oldSessionId !== "string" || oldSessionId === "" || oldSessionId.length > 64) return refused("failed");
+  return (await dropReplacedSession(await headers(), oldSessionId)) ? { status: "ok" } : refused("failed");
 }

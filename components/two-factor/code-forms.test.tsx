@@ -2,9 +2,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), passkey: vi.fn() }));
+const mocks = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), passkey: vi.fn(), getSession: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }) }));
-vi.mock("@/lib/auth-client", () => ({ signIn: { passkey: mocks.passkey } }));
+vi.mock("@/lib/auth-client", () => ({ signIn: { passkey: mocks.passkey }, authClient: { getSession: mocks.getSession } }));
 
 import { NewBackupCodes } from "./new-codes";
 import { VerifyForm } from "./verify-form";
@@ -18,6 +18,28 @@ describe("VerifyForm with a passkey (A3c)", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Use a passkey" }));
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/admin"));
     expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it("with dropOld, asks for the session id before the prompt and deletes that old session after the new one is in place", async () => {
+    const order: string[] = [];
+    mocks.getSession.mockImplementation(async () => (order.push("session"), { data: { session: { id: "old-1" } } }));
+    mocks.passkey.mockImplementation(async () => (order.push("passkey"), { data: { session: {} }, error: null }));
+    const dropOld = vi.fn(async () => order.push("drop"));
+    render(<VerifyForm verify={vi.fn()} dropOld={dropOld} doneHref="/admin" passkey />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Use a passkey" }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/admin"));
+    expect(dropOld).toHaveBeenCalledWith("old-1");
+    expect(order).toEqual(["session", "passkey", "drop"]);
+  });
+
+  it("a refused passkey deletes nothing", async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: { id: "old-1" } } });
+    mocks.passkey.mockResolvedValue({ data: null, error: { code: "PASSKEY_NOT_FOUND" } });
+    const dropOld = vi.fn();
+    render(<VerifyForm verify={vi.fn()} dropOld={dropOld} doneHref="/admin" passkey />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Use a passkey" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(dropOld).not.toHaveBeenCalled();
   });
 
   it("a passkey-only admin sees no code field; a refused passkey says so, a cancelled one says nothing", async () => {

@@ -10,7 +10,13 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
+import { platformAdmins } from "@/db/schema";
+import { clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { auth } from "@/lib/auth";
+import { clearWrongGuesses } from "@/lib/password-guesses";
+
+import { confirmTwoFactor, startTwoFactor } from "./setup";
+import { setupKey } from "./totp-key";
 
 export const TEST_PASSWORD = "test-password-1";
 
@@ -41,3 +47,16 @@ export async function dropAccounts() {
 
 /** The authenticator code for a setup key (the otpauth link's base32 secret) right now. */
 export const totpFor = (key: string) => createOTP(base32.decode(key)).totp();
+
+/** An account with the authenticator app on (and, with `admin`, a Liminal Bloom admin): its key and the cookie of the session the confirm made, fresh. */
+export async function accountWithApp(options: { admin?: boolean } = {}) {
+  const account = await makeAccount();
+  if (options.admin) await db.insert(platformAdmins).values({ userId: account.userId, addedByName: "test" });
+  const start = await startTwoFactor(account.cookie, account.userId, TEST_PASSWORD);
+  if (start.status !== "started") throw new Error(`start refused: ${start.reason}`);
+  const key = setupKey(start.otpauthUri)!;
+  const done = await confirmTwoFactor(account.cookie, account.userId, await totpFor(key));
+  if (done.status !== "on") throw new Error(`confirm refused: ${done.reason}`);
+  await Promise.all([clearWrongCodes(account.userId), clearWrongGuesses(account.userId)]);
+  return { ...account, key, cookie: cookieHeader(done.responseHeaders) };
+}

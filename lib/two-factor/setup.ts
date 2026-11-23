@@ -23,6 +23,9 @@ import { claimCodeGuess, clearWrongCodes } from "@/lib/admin/two-factor-guesses"
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
 
 import { bestEffort } from "./best-effort";
+import { hasPasskey } from "@/lib/passkeys/list";
+
+import { needsFreshProof, sessionTwoFactorAt } from "./fresh-proof";
 import { qrSvgOf } from "./qr";
 import { setupKey } from "./totp-key";
 import { forgetTrustedDevices } from "./trusted-devices";
@@ -31,14 +34,16 @@ const ISSUER = "Liminal Bloom";
 
 export type StartReply =
   | { status: "started"; otpauthUri: string; setupKey: string; qrSvg: string | null; backupCodes: string[] }
-  | { status: "refused"; reason: "password" | "locked" | "already-on" | "failed" };
-export type ConfirmReply = { status: "on"; responseHeaders: Headers } | { status: "refused"; reason: "code" | "locked" | "already-on" | "failed" };
-export type CodesReply = { status: "codes"; backupCodes: string[] } | { status: "refused"; reason: "password" | "locked" | "not-on" | "failed" };
+  | { status: "refused"; reason: "password" | "locked" | "already-on" | "verify" | "failed" };
+export type ConfirmReply = { status: "on"; responseHeaders: Headers } | { status: "refused"; reason: "code" | "locked" | "already-on" | "verify" | "failed" };
+export type CodesReply = { status: "codes"; backupCodes: string[] } | { status: "refused"; reason: "password" | "locked" | "not-on" | "verify" | "failed" };
 
 const codeOf = (error: unknown) => (error instanceof APIError ? (error.body as { code?: string } | undefined)?.code : undefined);
 
 /** Step 1: checks the password (each try is counted, 5 per 10 minutes) and stores a new unverified secret with ten backup codes. Calling it again before confirming starts over. */
 export async function startTwoFactor(requestHeaders: Headers, userId: string, password: string): Promise<StartReply> {
+  // An admin who already has a second factor (a passkey) must prove one lately before adding another (lib/two-factor/fresh-proof.ts).
+  if (await needsFreshProof(requestHeaders, userId)) return { status: "refused", reason: "verify" };
   if (!(await claimGuess(userId))) return { status: "refused", reason: "locked" };
   try {
     const result = await auth.api.enableTwoFactor({ body: { password, issuer: ISSUER }, headers: requestHeaders });
@@ -72,7 +77,11 @@ export async function confirmTwoFactor(requestHeaders: Headers, userId: string, 
   // per account in one statement, under the step-up's `two-factor-failures:` counter (5 per 10 minutes).
   const [row] = await db.select({ on: user.twoFactorEnabled }).from(user).where(eq(user.id, userId));
   if (row?.on) return { status: "refused", reason: "already-on" };
+  if (await needsFreshProof(requestHeaders, userId)) return { status: "refused", reason: "verify" };
   if (!(await claimCodeGuess(userId))) return { status: "refused", reason: "locked" };
+  // An account that already has a factor (a passkey) keeps its session's proof as it was: the confirm's new session
+  // is stamped "just passed a second factor" by Better Auth's hook, which a stolen session must not get by adding an app.
+  const had = (await hasPasskey(userId)) ? { at: await sessionTwoFactorAt(requestHeaders, userId) } : null;
   let responseHeaders: Headers;
   try {
     responseHeaders = (await auth.api.verifyTOTP({ body: { code }, headers: requestHeaders, returnHeaders: true })).headers;
@@ -82,6 +91,7 @@ export async function confirmTwoFactor(requestHeaders: Headers, userId: string, 
   const token = await newSessionToken(responseHeaders);
   // No new cookie: two-factor was already on, so nothing was swapped.
   if (!token) return { status: "refused", reason: "already-on" };
+  if (had) await db.update(session).set({ twoFactorAt: had.at }).where(eq(session.token, token));
   // The code is checked and two-factor is on: nothing below may fail the setup, and each step stands alone.
   await bestEffort("clear wrong codes", () => clearWrongCodes(userId));
   // Trust marks left from an earlier time it was on mean nothing for this new secret.
@@ -93,6 +103,7 @@ export async function confirmTwoFactor(requestHeaders: Headers, userId: string, 
 
 /** Replaces the backup codes (the old ones stop working) after checking the password; a wrong one is counted. */
 export async function newBackupCodes(requestHeaders: Headers, userId: string, password: string): Promise<CodesReply> {
+  if (await needsFreshProof(requestHeaders, userId)) return { status: "refused", reason: "verify" };
   if (!(await claimGuess(userId))) return { status: "refused", reason: "locked" };
   try {
     const { backupCodes } = await auth.api.generateBackupCodes({ body: { password }, headers: requestHeaders });

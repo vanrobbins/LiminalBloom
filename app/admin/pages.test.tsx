@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/admin/guard", () => ({ requirePlatformAdminAccount: mocks.account, requirePlatformAdmin: mocks.full }));
 vi.mock("./two-factor/actions", () => ({ startTwoFactorAction: vi.fn(), confirmTwoFactorAction: vi.fn() }));
 vi.mock("./two-factor/codes-actions", () => ({ newBackupCodesAction: vi.fn() }));
-vi.mock("./verify/actions", () => ({ verifyAdminCodeAction: vi.fn() }));
+vi.mock("./verify/actions", () => ({ verifyAdminCodeAction: vi.fn(), dropReplacedSessionAction: vi.fn() }));
 
 import TwoFactorPage from "./two-factor/page";
 import VerifyPage from "./verify/page";

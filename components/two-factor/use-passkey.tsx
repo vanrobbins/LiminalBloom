@@ -12,12 +12,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { signIn } from "@/lib/auth-client";
+import { authClient, signIn } from "@/lib/auth-client";
 import { CONNECTION_ERROR } from "@/lib/connection-error";
 
 const QUIET = new Set(["AUTH_CANCELLED", "ERROR_CEREMONY_ABORTED"]);
 
-export function UsePasskey({ doneHref, variant = "secondary" }: { doneHref: string; variant?: "primary" | "secondary" }) {
+type Props = { doneHref: string; variant?: "primary" | "secondary"; /** Deletes the session the admin came with once the passkey made a new one (it is stale, and still signed in). */ dropOld?: (oldSessionId: string) => Promise<unknown> };
+
+export function UsePasskey({ doneHref, variant = "secondary", dropOld }: Props) {
   const router = useRouter();
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -26,8 +28,12 @@ export function UsePasskey({ doneHref, variant = "secondary" }: { doneHref: stri
     setProblem(null);
     setPending(true);
     try {
+      // The browser is the only one that knows the old session's id: ask before the passkey signs in as a new one.
+      const oldId = dropOld ? await authClient.getSession().then((got) => got.data?.session.id, () => undefined) : undefined;
       const reply = await signIn.passkey();
       if (reply?.data) {
+        // The new session is in place. A failure leaves the old one to expire: the person is signed in either way.
+        if (dropOld && oldId) await dropOld(oldId).catch(() => undefined);
         // Still waiting until the next page replaces this one.
         router.push(doneHref);
         router.refresh();

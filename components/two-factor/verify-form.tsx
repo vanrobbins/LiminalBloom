@@ -13,9 +13,9 @@ import type { VerifyActionReply } from "@/lib/two-factor/replies";
 import { CodeField } from "./code-field";
 import { UsePasskey } from "./use-passkey";
 
-type Props = { verify: (code: string) => Promise<VerifyActionReply>; doneHref: string; /** The account has an authenticator app (a code is asked for). */ totp?: boolean; /** The account has a passkey ("Use a passkey" is offered). */ passkey?: boolean };
+type Props = { verify: (code: string) => Promise<VerifyActionReply>; /** After "Use a passkey": deletes the stale session the admin came with. */ dropOld?: (oldSessionId: string) => Promise<unknown>; doneHref: string; /** The account has an authenticator app (a code is asked for). */ totp?: boolean; /** The account has a passkey ("Use a passkey" is offered). */ passkey?: boolean };
 
-export function VerifyForm({ verify, doneHref, totp = true, passkey = false }: Props) {
+export function VerifyForm({ verify, dropOld, doneHref, totp = true, passkey = false }: Props) {
   const router = useRouter();
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -60,7 +60,7 @@ export function VerifyForm({ verify, doneHref, totp = true, passkey = false }: P
       ) : (
         <p className="text-ink-muted">Use your passkey to confirm it&apos;s you.</p>
       )}
-      {passkey ? <UsePasskey doneHref={doneHref} variant={totp ? "secondary" : "primary"} /> : null}
+      {passkey ? <UsePasskey dropOld={dropOld} doneHref={doneHref} variant={totp ? "secondary" : "primary"} /> : null}
     </div>
   );
 }
