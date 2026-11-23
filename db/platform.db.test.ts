@@ -177,13 +177,16 @@ describe("roles that require two-factor", () => {
     return statement.replace(/;$/, "");
   };
 
-  it("is off for a new role, and the migration's backfill turns it on for roles holding people.manage or roles.manage only", async () => {
+  it("is off for a role inserted without it, and the migration's backfill turns it on for roles holding people.manage or roles.manage only", async () => {
     const { store } = await makeStoreWithRoles("pl-flag");
     const flags = async () =>
       Object.fromEntries((await db.select().from(roleDefinitions).where(eq(roleDefinitions.storeId, store))).map((r) => [r.builtin ?? r.name, r.requiresTwoFactor]));
+    // The seed now sets the flag itself, so clear it to stand in for rows that predate the column.
+    await db.update(roleDefinitions).set({ requiresTwoFactor: false }).where(eq(roleDefinitions.storeId, store));
     expect(Object.values(await flags()).every((on) => on === false)).toBe(true);
     await db.insert(roleDefinitions).values({ storeId: store, name: "Floor Lead", rank: 250, switches: ["view", "people.manage"] });
     await db.insert(roleDefinitions).values({ storeId: store, name: "Greeter", rank: 260, switches: ["view", "products.stock"] });
+    expect(Object.values(await flags()).every((on) => on === false)).toBe(true);
 
     // Narrowed to this store, like lib/access/backfill.db.test.ts does for 0018.
     await db.execute(sql.raw(`${backfill()} AND "store_id" = '${store}'`));
