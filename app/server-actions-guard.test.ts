@@ -18,7 +18,9 @@ const GUARD = "requireSwitchForAction";
 // gets a fresh second factor, so they hold the account-level guard (an admin, factor state not asked).
 const ADMIN_GUARD = "requirePlatformAdminForAction";
 const ACCOUNT_GUARD = "requirePlatformAdminAccountForAction";
-const FORBIDDEN_GUARDS = [GUARD, ADMIN_GUARD, ACCOUNT_GUARD];
+// /company's writes (spec 0.7.1 6.2): a company switch, not a store switch, branched on the same way.
+const COMPANY_GUARD = "requireCompanyForAction";
+const FORBIDDEN_GUARDS = [GUARD, ADMIN_GUARD, ACCOUNT_GUARD, COMPANY_GUARD];
 const guardFor = (file: string) => (file.startsWith("app/admin/") ? ADMIN_GUARD : GUARD);
 
 // Files off the plain rule, with reasons: `guard` is awaited instead; `first` lists the only awaits before it, in order.
@@ -31,6 +33,9 @@ const ALLOWED: Record<string, Exception> = {
   "app/(app)/account/passkey-actions.ts": { guard: "requireAccountPerson", first: [], why: "passkeys are for any signed-in account whatever its role, and a person whose role requires two-factor and who has none yet is who adds one (a passkey counts): requireMember would send exactly them away. requireAccountPerson redirects a signed-out visitor before anything is read" },
   "app/(app)/switch-store-actions.ts": { guard: "requireAccountPerson", first: [], why: "switching is for any signed-in person who reaches the store, and a person whose role still needs two-factor may move to another of their stores (DECISIONS 11-23), so requireMember would send exactly them away. setActiveStore does the real check: it refuses a store they do not reach today. requireAccountPerson redirects a signed-out visitor before anything is read" },
   "app/(app)/help/actions.ts": { guard: "requireSignedIn", first: [], why: "Help is for any signed-in account, and the people who most need it have no store, no role or only paused stores (spec 0.7.1 9.3), so there is no switch to hold. requireSignedIn redirects a signed-out visitor before anything is read; every statement then filters by the session's own person, and the context is built on the server" },
+  "app/(app)/company/actions.ts": { guard: COMPANY_GUARD, first: [], why: "company writes hold a company switch (company.settings or company.structure) from the session, not a store switch: a company person may have no store at all. requireCompanyForAction redirects a signed-out visitor before anything is read" },
+  "app/(app)/company/store-actions.ts": { guard: COMPANY_GUARD, first: [], why: "adding a store holds company.structure from the session, and a company person may have no store yet; the company is the person's own, never the browser's. requireCompanyForAction redirects a signed-out visitor before anything is read" },
+  "app/(app)/request-company/actions.ts": { guard: "requireSignedIn", first: [], why: "asking for a company is for any signed-in account, and the people who ask are mostly the ones with no store (spec 0.7.1 5.1), so there is no switch to hold. requireSignedIn redirects a signed-out visitor before anything is read; every statement then filters by the session's own person" },
   "app/admin/two-factor/actions.ts": { guard: ACCOUNT_GUARD, first: [], why: "setting up two-step sign-in is for an admin who does not have it yet, so the full admin guard (which wants a fresh factor) would refuse the one person who needs these" },
   "app/admin/verify/actions.ts": { guard: ACCOUNT_GUARD, first: [], why: "the step-up is how an admin with a missing or stale factor gets a fresh one, so the full admin guard would refuse the one person who needs it" },
   "app/(editor)/layout/edit/actions.ts": { guard: GUARD, first: ["getCurrentMember"], why: "the editor answers signed-out itself (its last change was not saved; the guard would redirect), so one getCurrentMember() comes first" },
