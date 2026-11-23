@@ -1,13 +1,13 @@
 // The admin help actions end to end (0.7.1a, A5 and A6), at desktop: the shared dialog needs a reason, each action
 // changes what the other person sees in their own browser, and the admins page adds and removes. The admin is
-// made by admin-account.ts; the person helped is a disposable account in a browser of its own, with a store of
+// the shared one from admin-account.ts; the person helped is a disposable account in a browser of its own, with a store of
 // its own. Phone and tablet open the same pages (admin.spec.ts), so the flows run once.
 
 import { randomUUID } from "node:crypto";
 
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { adminContext, clearAdmins } from "./admin-account";
+import { adminContext } from "./admin-account";
 import { clearAccounts, newEmail, otherDevice, PASSWORD, signInOnScreen, signUpWithStore } from "./account-store";
 import { builtinOf, clearActionData, invitationStatus, isAdmin, REASON, seedPendingInvitation, seedTwoFactor, seedWorker, storeOf, twoFactorRows } from "./admin-actions-store";
 import { expect, hydrated, sizeOf, test } from "./fixtures";
@@ -36,7 +36,6 @@ test.describe("admin help actions", () => {
   test.afterAll(async () => {
     await admin?.context().close();
     await helped?.context.close();
-    await clearAdmins();
     await clearAccounts();
     await clearActionData();
   });

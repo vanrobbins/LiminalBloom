@@ -1,11 +1,10 @@
-// The Liminal Bloom admin area opens and reads at phone, tablet and desktop (0.7.1a, A4). The admin is made in
-// the database with a fresh code (admin-account.ts, temporary until A10's real two-factor flow); the pages
-// read the development database, so the specs look at what the worker accounts' stores already give them.
+// The Liminal Bloom admin area opens and reads at phone, tablet and desktop (0.7.1a, A4). The admin is the shared
+// one, signed in with a code (admin-account.ts); the pages read the development database, so the specs look at what the worker accounts' stores already give them.
 // Help actions, pausing and the admins page are specced with their own tasks (A5, A6, A8).
 
 import type { Page } from "@playwright/test";
 
-import { adminContext, clearAdmins } from "./admin-account";
+import { adminContext } from "./admin-account";
 import { expect, hydrated, sizeOf, test } from "./fixtures";
 import { HOME_STORE, TEST_ACCOUNT } from "./test-account";
 
@@ -37,7 +36,6 @@ test.describe("a signed-in admin", () => {
   });
   test.afterAll(async () => {
     await page?.context().close();
-    await clearAdmins();
   });
   test.afterEach(() => {
     expect(pageErrors, "uncaught exceptions").toEqual([]);

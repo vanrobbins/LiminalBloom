@@ -3,7 +3,7 @@
 // The worker's own account asks; its requests are removed after each test so the five-open limit never bites.
 // An admin's reply is written straight to the development database, as the rest of the e2e setup does.
 
-import { adminContext, clearAdmins } from "./admin-account";
+import { adminContext } from "./admin-account";
 import { sql } from "./map-store";
 import { expect, hydrated, test } from "./fixtures";
 import { TEST_ACCOUNT } from "./test-account";
@@ -94,7 +94,6 @@ test("an admin opens the request, replies, and the requester sees Liminal Bloom 
     await expect(admin.page.getByRole("list", { name: "Messages" }).getByText("Ada Admin")).toBeVisible();
   } finally {
     await admin.context.close();
-    await clearAdmins();
   }
 
   await page.goto(`/help/${request}`);

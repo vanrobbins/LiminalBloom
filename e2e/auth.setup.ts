@@ -6,6 +6,7 @@ import { config } from "dotenv";
 import type { Page } from "@playwright/test";
 
 import { expect, test as setup, currentStore, switchStore } from "./fixtures";
+import { prepareAdmin } from "./admin-account";
 import { placeRoleAccount, roleStoreId, seedRoleStore } from "./role-store";
 import { relaxTwoFactor } from "./relax-two-factor";
 import { accountFor, authFileFor, E2E_WORKERS, HOME_STORE, ipFor, ROLE_KEYS, ROLE_STORE, roleAccount, roleAuthFile, roleIp, SECOND_STORE } from "./test-account";
@@ -97,4 +98,9 @@ setup("sign in one account per built-in role, all in one shared store, each save
     await context.storageState({ path: roleAuthFile(key) });
     await context.close();
   }
+});
+
+setup("make the Liminal Bloom admin, with two-step sign-in set up through the screens, and keep its key for the run", async ({ browser }) => {
+  setup.setTimeout(60_000);
+  await prepareAdmin(browser);
 });
