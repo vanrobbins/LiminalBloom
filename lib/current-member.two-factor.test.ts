@@ -19,6 +19,7 @@ vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, list
 vi.mock("@/lib/access/resolve", () => ({ resolveAccess: mocks.resolveAccess }));
 vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: mocks.hasSecondFactor }));
 vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: async () => false }));
+vi.mock("@/lib/help/badge", () => ({ helpRepliesFor: async () => 0 }));
 vi.mock("@/lib/paused", () => ({ pausedAmong: async () => new Set<string>(), pausedStoresOf: async () => [] }));
 
 import { getCurrentMember, requireAccountPerson, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";

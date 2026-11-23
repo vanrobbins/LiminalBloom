@@ -20,6 +20,7 @@ vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, list
 vi.mock("@/lib/access/resolve", () => ({ resolveAccess: mocks.resolveAccess }));
 vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: async () => true }));
 vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: async () => false }));
+vi.mock("@/lib/help/badge", () => ({ helpRepliesFor: async () => 0 }));
 vi.mock("@/lib/paused", () => ({ pausedAmong: mocks.pausedAmong, pausedStoresOf: mocks.pausedStoresOf }));
 
 import { getCurrentMember, requireAccountPerson, requireMember } from "./current-member";
@@ -46,7 +47,7 @@ describe("when nothing resolves", () => {
   });
 
   it("is no-store when they belong to none", async () => {
-    expect(await getCurrentMember()).toEqual({ kind: "no-store" });
+    expect(await getCurrentMember()).toEqual({ kind: "no-store", user: USER });
   });
 
   it("sends requireMember and requireAccountPerson to /paused", async () => {

@@ -25,6 +25,7 @@ import { resolveAccess } from "@/lib/access/resolve";
 import { isPlatformAdmin } from "@/lib/admin/is-admin";
 import type { Switch } from "@/lib/access/switches";
 import { auth } from "@/lib/auth";
+import { helpRepliesFor } from "@/lib/help/badge";
 import { pausedAmong, pausedStoresOf } from "@/lib/paused";
 import { hasSecondFactor } from "@/lib/two-factor/has-second-factor";
 
@@ -41,7 +42,12 @@ export type Member = {
   switches: Switch[];
   /** Only the avatar menu's link to /admin reads this; the admin guard re-reads the admin table itself. */
   isPlatformAdmin: boolean;
+  /** Help requests Liminal Bloom has answered since the person last opened them: the avatar's dot and "Help · N replies". */
+  helpReplies: number;
 };
+
+/** Signed in and in no store yet. They still have an account, so Help and /welcome know who they are. */
+export type NoStore = { kind: "no-store"; user: Member["user"] };
 
 /**
  * Signed in, but the role in the active store asks for two-factor sign-in and the account has none
@@ -56,7 +62,7 @@ export type NeedsTwoFactor = { kind: "needs-two-factor"; user: Member["user"]; r
  */
 export type Paused = { kind: "paused"; user: Member["user"]; stores: { id: string; name: string }[] };
 
-export type CurrentMember = { kind: "signed-out" } | { kind: "no-store" } | NeedsTwoFactor | Paused | Member;
+export type CurrentMember = { kind: "signed-out" } | NoStore | NeedsTwoFactor | Paused | Member;
 
 /** One read per request: the layout and the page share the result. */
 export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
@@ -78,7 +84,7 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     // Nothing resolved: either they belong to no store, or every one is paused.
     const stores = await pausedStoresOf(session.user.id);
     if (stores.length > 0) return { kind: "paused", user: { id: session.user.id, name: session.user.name, email: session.user.email }, stores };
-    return { kind: "no-store" };
+    return { kind: "no-store", user: { id: session.user.id, name: session.user.name, email: session.user.email } };
   }
 
   // Asked only for a role that requires it, so every other request skips the read. Not `session.two_factor_at`:
@@ -87,7 +93,7 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     return { kind: "needs-two-factor", user: { id: session.user.id, name: session.user.name, email: session.user.email }, roleName: access.role.name };
   }
 
-  const [listed, isAdmin] = await Promise.all([auth.api.listOrganizations({ headers: requestHeaders }), isPlatformAdmin(session.user.id)]);
+  const [listed, isAdmin, helpReplies] = await Promise.all([auth.api.listOrganizations({ headers: requestHeaders }), isPlatformAdmin(session.user.id), helpRepliesFor(session.user.id)]);
   const paused = await pausedAmong(listed.map((s) => s.id));
 
   return {
@@ -103,6 +109,7 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     role: access.role && { id: access.role.id, name: access.role.name, rank: access.role.rank },
     switches: [...access.switches],
     isPlatformAdmin: isAdmin,
+    helpReplies,
   };
 });
 
@@ -130,6 +137,17 @@ export async function requireMember(): Promise<Member> {
   }
 
   return member;
+}
+
+/**
+ * For pages and actions that need an account and nothing else (Help): a member, a person with no store, one whose
+ * role still needs two-factor, or one whose stores are all paused. Only a signed-out visitor is sent away. The page
+ * chooses its frame from `kind`: the shell for a member, the bare card for the rest (spec 0.7.1 9.3).
+ */
+export async function requireSignedIn(): Promise<Exclude<CurrentMember, { kind: "signed-out" }>> {
+  const current = await getCurrentMember();
+  if (current.kind === "signed-out") redirect("/sign-in");
+  return current;
 }
 
 /** What the Account page and its two-factor actions need: a member, or someone who must set two-factor up first. The one guard that lets the second kind through. */

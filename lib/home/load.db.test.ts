@@ -39,7 +39,7 @@ const NOW = new Date("2026-11-16T15:00:00Z");
 
 function viewer(store: string, roles: StoreRoles, key: BuiltinRoleKey, switches?: Switch[]): Member {
   const def = BUILTIN_ROLES.find((r) => r.key === key)!;
-  return { kind: "member", user: { id: "u", name: "Vi Ewer", email: "viewer@example.com" }, stores: [], activeStoreId: store, role: { id: roles[key], name: def.name, rank: def.rank }, switches: switches ?? [...def.switches], isPlatformAdmin: false };
+  return { kind: "member", user: { id: "u", name: "Vi Ewer", email: "viewer@example.com" }, stores: [], activeStoreId: store, role: { id: roles[key], name: def.name, rank: def.rank }, switches: switches ?? [...def.switches], isPlatformAdmin: false, helpReplies: 0 };
 }
 
 /** A store with its manager, one fixture with a published planogram, an invitation and an access event naming an email. */

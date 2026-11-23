@@ -49,7 +49,7 @@ async function viewer(email: string) {
 
 const memberView = (s: Setup, userId: string): Member => {
   const def = BUILTIN_ROLES[0];
-  return { kind: "member", user: { id: userId, name: "Manager", email: `${userId}@example.com` }, stores: [], activeStoreId: s.store, role: { id: s.roles.store_manager, name: def.name, rank: def.rank }, switches: [...def.switches], isPlatformAdmin: false };
+  return { kind: "member", user: { id: userId, name: "Manager", email: `${userId}@example.com` }, stores: [], activeStoreId: s.store, role: { id: s.roles.store_manager, name: def.name, rank: def.rank }, switches: [...def.switches], isPlatformAdmin: false, helpReplies: 0 };
 };
 
 describe("a lapsed invitation", () => {

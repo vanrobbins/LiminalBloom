@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),
   resolveAccess: vi.fn(),
   isPlatformAdmin: vi.fn(),
+  helpReplies: vi.fn(),
   // Next's redirect() throws to stop rendering; so does this stand-in.
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
@@ -31,10 +32,11 @@ vi.mock("@/lib/access/resolve", () => ({
 }));
 vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: async () => true }));
 vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: mocks.isPlatformAdmin }));
+vi.mock("@/lib/help/badge", () => ({ helpRepliesFor: mocks.helpReplies }));
 // Paused stores are tested in current-member.paused.test.ts; here nothing is paused.
 vi.mock("@/lib/paused", () => ({ pausedAmong: async () => new Set<string>(), pausedStoresOf: async () => [] }));
 
-import { can, getCurrentMember, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";
+import { can, getCurrentMember, requireMember, requireSignedIn, requireSwitch, requireSwitchForAction } from "./current-member";
 
 const SESSION = {
   user: { id: "user-1", name: "Van", email: "van@example.com", image: null },
@@ -64,6 +66,7 @@ function signedIn(store: string, role: typeof MANAGER | null, switches: string[]
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.isPlatformAdmin.mockResolvedValue(false);
+  mocks.helpReplies.mockResolvedValue(0);
 });
 
 describe("getCurrentMember", () => {
@@ -79,7 +82,7 @@ describe("getCurrentMember", () => {
     mocks.getSession.mockResolvedValue(SESSION);
     access(null, null, []);
 
-    expect(await getCurrentMember()).toEqual({ kind: "no-store" });
+    expect(await getCurrentMember()).toEqual({ kind: "no-store", user: { id: "user-1", name: "Van", email: "van@example.com" } });
     expect(mocks.resolveAccess).toHaveBeenCalledWith("user-1", "store-b");
     expect(mocks.listOrganizations).not.toHaveBeenCalled();
   });
@@ -103,6 +106,7 @@ describe("getCurrentMember", () => {
       role: { id: "role-1", name: "Store Manager", rank: 100 },
       switches: ["view", "store.settings"],
       isPlatformAdmin: false,
+      helpReplies: 0,
     });
   });
 
@@ -112,6 +116,14 @@ describe("getCurrentMember", () => {
 
     expect(await getCurrentMember()).toMatchObject({ kind: "member", isPlatformAdmin: true });
     expect(mocks.isPlatformAdmin).toHaveBeenCalledWith("user-1");
+  });
+
+  it("carries the count of help replies the person has not opened, asked for this person only", async () => {
+    signedIn("store-a", SALES, ["view"]);
+    mocks.helpReplies.mockResolvedValue(2);
+
+    expect(await getCurrentMember()).toMatchObject({ kind: "member", helpReplies: 2 });
+    expect(mocks.helpReplies).toHaveBeenCalledWith("user-1");
   });
 
   it("does not ask the admin table of a visitor with no session or no store", async () => {
@@ -157,6 +169,21 @@ describe("requireMember", () => {
 
     expect(member.activeStoreId).toBe("store-b");
     expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("requireSignedIn", () => {
+  it("sends only a signed-out visitor away", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    await expect(requireSignedIn()).rejects.toThrow("redirect:/sign-in");
+  });
+
+  it("lets a member through, and a person with no store, who has an account to name", async () => {
+    signedIn("store-a", SALES, ["view"]);
+    expect(await requireSignedIn()).toMatchObject({ kind: "member" });
+    mocks.getSession.mockResolvedValue(SESSION);
+    access(null, null, []);
+    expect(await requireSignedIn()).toEqual({ kind: "no-store", user: { id: "user-1", name: "Van", email: "van@example.com" } });
   });
 });
 
