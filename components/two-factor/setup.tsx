@@ -10,7 +10,7 @@
 
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { groupsOfFour } from "@/lib/two-factor/totp-key";
 
 import { CodeField } from "./code-field";
 import { CopyButton } from "./copy-button";
+import { focusHeading } from "./focus-heading";
 
 type Props = {
   /** One sentence under the heading: why this account is being asked. */
@@ -43,6 +44,11 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref, level = 1 }: P
   // Single flight: a second submit before the first answers (a double click, Enter twice) would run the step
   // twice; for the confirm each run deletes the other's new session. State is too slow for that, a ref is not.
   const busy = useRef(false);
+  // The password step is replaced by the key and codes: focus goes to the new step's first heading, not to the page.
+  const keyHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (started) focusHeading(keyHeading.current);
+  }, [started]);
 
   /** Runs one step: a refusal or a lost connection becomes the inline message; `onOk` runs on success. */
   async function run<R extends { status: string }>(work: () => Promise<R>, onOk: (reply: Exclude<R, { status: "refused" }>) => void) {
@@ -89,7 +95,7 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref, level = 1 }: P
   if (!started) {
     return (
       <form onSubmit={askPassword} className="flex flex-col gap-4">
-        <Title className={level === 1 ? "text-3xl font-semibold tracking-tight text-ink" : "text-lg font-semibold text-ink"}>Turn on two-step sign-in</Title>
+        <Title data-focus-heading className={level === 1 ? "text-3xl font-semibold tracking-tight text-ink" : "text-lg font-semibold text-ink"}>Turn on two-step sign-in</Title>
         <p className="text-ink-muted">{intro}</p>
         <Input label="Password" name="password" type="password" required autoComplete="current-password" hint="Your password, to make sure it is you." />
         {alert}
@@ -105,7 +111,7 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref, level = 1 }: P
       <Title className={level === 1 ? "text-3xl font-semibold tracking-tight text-ink" : "text-lg font-semibold text-ink"}>Turn on two-step sign-in</Title>
 
       <section className="flex flex-col gap-2" aria-labelledby="setup-key">
-        <Section id="setup-key" className="text-lg font-semibold text-ink">
+        <Section id="setup-key" ref={keyHeading} className="text-lg font-semibold text-ink">
           Add it to your authenticator app
         </Section>
         {started.qrSvg ? (

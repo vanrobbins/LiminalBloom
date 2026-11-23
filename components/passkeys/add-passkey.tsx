@@ -6,11 +6,12 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import { focusHeading } from "@/components/two-factor/focus-heading";
 import { CONNECTION_ERROR } from "@/lib/connection-error";
 
 import type { PasskeyActions } from "./types";
@@ -27,6 +28,15 @@ export function AddPasskey({ allow, rename, onAdded, first, needsCode = false }:
   const [open, setOpen] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Opening the form takes the button away, and closing it takes the form away: focus follows to the heading, or back to the button.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  const was = useRef(false);
+  useEffect(() => {
+    if (open) focusHeading(heading.current);
+    else if (was.current) opener.current?.focus();
+    was.current = open;
+  }, [open]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,7 +68,7 @@ export function AddPasskey({ allow, rename, onAdded, first, needsCode = false }:
 
   if (!open) {
     return (
-      <Button variant="secondary" className="self-start" onClick={() => setOpen(true)}>
+      <Button ref={opener} variant="secondary" className="self-start" onClick={() => setOpen(true)}>
         <Plus aria-hidden="true" strokeWidth={1.75} className="size-4" />
         {first ? "Add a passkey" : "Add another passkey"}
       </Button>
@@ -66,6 +76,9 @@ export function AddPasskey({ allow, rename, onAdded, first, needsCode = false }:
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
+      <h3 ref={heading} className="text-base font-semibold text-ink">
+        Add a passkey
+      </h3>
       <Input label="Name" name="name" maxLength={60} autoComplete="off" hint="So you can tell it from your others, like Work laptop." />
       <Input label="Password" name="password" type="password" required autoComplete="current-password" hint="Your password, to make sure it is you." />
       {needsCode ? <Input label="Code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required hint="The 6-digit code from your authenticator app." /> : null}

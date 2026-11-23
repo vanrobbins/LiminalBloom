@@ -90,6 +90,15 @@ describe("PasskeyCard", () => {
     expect(a.allow).toHaveBeenCalledWith("pw-12345", "123456");
   });
 
+  it("add: focus goes to the form's heading when it opens, and back to the button on Cancel", async () => {
+    const user = userEvent.setup();
+    render(<PasskeyCard passkeys={[]} {...actions()} />);
+    await user.click(screen.getByRole("button", { name: "Add a passkey" }));
+    expect(screen.getByRole("heading", { name: "Add a passkey" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Add a passkey" })).toHaveFocus();
+  });
+
   it("add: with no app there is no code field", async () => {
     const user = userEvent.setup();
     render(<PasskeyCard passkeys={[]} {...actions()} />);

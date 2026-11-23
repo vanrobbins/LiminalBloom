@@ -34,6 +34,11 @@ describe("TwoFactorSetup", () => {
     expect(screen.queryByLabelText("Code from your authenticator app")).toBeNull();
   });
 
+  it("once the password is accepted, focus moves to the key and codes step's heading", async () => {
+    await startUp(props());
+    expect(await screen.findByRole("heading", { name: "Add it to your authenticator app" })).toHaveFocus();
+  });
+
   it("a refused password says why and shows nothing else", async () => {
     const p = props();
     p.start.mockResolvedValue({ status: "refused", message: "That isn't your password." });

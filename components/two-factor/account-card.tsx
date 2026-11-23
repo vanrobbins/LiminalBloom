@@ -7,7 +7,7 @@
 
 import { ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { InfoPopover } from "@/components/ui/info-popover";
 import type { CodesActionReply, ConfirmActionReply, DisableActionReply, StartActionReply } from "@/lib/two-factor/replies";
 import type { TwoFactorStatus } from "@/lib/two-factor/status";
 
+import { focusHeading } from "./focus-heading";
 import { NewBackupCodes } from "./new-codes";
 import { TwoFactorSetup } from "./setup";
 import { TurnOffForm } from "./turn-off-form";
@@ -30,6 +31,13 @@ type Props = {
 export function TwoFactorCard({ status, start, confirm, makeCodes, disable }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"idle" | "setup" | "off">("idle");
+  // Turn on, Turn off and Cancel swap the control that had focus for another form (or back): focus goes to the
+  // new step's heading, not to the page. Not on first render (that would take focus on page load).
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) first.current = false;
+    else focusHeading(document.querySelector<HTMLElement>("#two-factor [data-focus-heading]"));
+  }, [mode]);
   const left = `${status.codesLeft} backup ${status.codesLeft === 1 ? "code" : "codes"} left.`;
   // An admin, or a role that requires two-factor, keeps the app on unless a passkey is the second step left (A3c).
   const hasPasskey = status.passkeys.length > 0;
@@ -40,7 +48,7 @@ export function TwoFactorCard({ status, start, confirm, makeCodes, disable }: Pr
         <TwoFactorSetup level={2} intro="After your password, sign-in asks for a code from an authenticator app." start={start} confirm={confirm} doneHref="/account" />
       ) : (
         <>
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+          <h2 data-focus-heading={mode === "idle" ? "" : undefined} className="flex items-center gap-2 text-lg font-semibold text-ink">
             <ShieldCheck aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0" />
             Two-step sign-in
             <InfoPopover term="twoStep" />

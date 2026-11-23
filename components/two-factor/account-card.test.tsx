@@ -27,6 +27,20 @@ describe("TwoFactorCard", () => {
     expect(screen.getByLabelText("Password", { exact: true })).toBeInTheDocument();
   });
 
+  it("focus follows each step: Turn on to the setup heading, Turn off to its heading, Cancel back to the card's heading", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<TwoFactorCard status={OFF} {...actions()} />);
+    expect(document.body).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Turn on" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Turn on two-step sign-in" })).toHaveFocus();
+    unmount();
+    render(<TwoFactorCard status={ON} {...actions()} />);
+    await user.click(screen.getByRole("button", { name: "Turn off" }));
+    expect(screen.getByRole("heading", { level: 3, name: "Turn off two-step sign-in" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Two-step sign-in" })).toHaveFocus();
+  });
+
   it("on: says so with the backup codes left (one reads in the singular), and offers new codes and Turn off", () => {
     const { rerender } = render(<TwoFactorCard status={ON} {...actions()} />);
     expect(screen.getByText(/On\. Signing in asks for a code from your authenticator app\. 7 backup codes left\./)).toBeInTheDocument();

@@ -37,6 +37,9 @@ export function TurnOffForm({ disable, onOff, onCancel }: Props) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
+      <h3 data-focus-heading className="text-base font-semibold text-ink">
+        Turn off two-step sign-in
+      </h3>
       <p className="text-sm text-ink-muted">Your password and a current code from your authenticator app.</p>
       <Input label="Password" name="password" type="password" required autoComplete="current-password" />
       <CodeField />
