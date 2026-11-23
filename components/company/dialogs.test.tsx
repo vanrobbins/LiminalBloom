@@ -61,7 +61,7 @@ describe("AddRegionDialog", () => {
     render(<AddRegionDialog {...shared} onClose={onClose} />);
     await user.type(screen.getByLabelText("Name"), "East");
     await user.click(screen.getByRole("button", { name: "Add region" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("There is already a region called East.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("There is already a region called East.");
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -71,7 +71,7 @@ describe("AddRegionDialog", () => {
     render(<AddRegionDialog {...shared} />);
     await user.type(screen.getByLabelText("Name"), "East");
     await user.click(screen.getByRole("button", { name: "Add region" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Couldn't reach the server");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach the server");
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 });
@@ -102,13 +102,13 @@ describe("RenameRegionDialog and DeleteRegionDialog", () => {
     // The page's counts were out of date: the dialog thought it empty.
     render(<DeleteRegionDialog {...shared} region={REGIONS[0]} />);
     await user.click(screen.getByRole("button", { name: "Delete region" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Move this region's stores and regional managers first.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Move this region's stores and regional managers first.");
   });
 });
 
 describe("AddStoreDialog", () => {
   it("sends the name, a time zone and the chosen region (null for none), then goes to the new store's Home", async () => {
-    mocks.addStore.mockResolvedValue({ status: "added", storeId: "s9" });
+    mocks.addStore.mockResolvedValue({ status: "added", storeId: "s9", activeSet: true });
     const user = userEvent.setup();
     render(<AddStoreDialog {...shared} />);
     expect(screen.getByRole("button", { name: "Add store" })).toBeDisabled();
@@ -120,8 +120,20 @@ describe("AddStoreDialog", () => {
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
+  it("stays on the page, reloads it and says the store was added when the session could not move into it", async () => {
+    mocks.addStore.mockResolvedValue({ status: "added", storeId: "s9", activeSet: false });
+    const user = userEvent.setup();
+    render(<AddStoreDialog {...shared} />);
+    await user.type(screen.getByLabelText("Store name"), "Outlet");
+    await user.click(screen.getByRole("button", { name: "Add store" }));
+    expect(mocks.push).not.toHaveBeenCalled();
+    expect(mocks.refresh).toHaveBeenCalledTimes(1);
+    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Store added" }));
+    expect(shared.onClose).toHaveBeenCalled();
+  });
+
   it("sends no region when none is chosen", async () => {
-    mocks.addStore.mockResolvedValue({ status: "added", storeId: "s9" });
+    mocks.addStore.mockResolvedValue({ status: "added", storeId: "s9", activeSet: true });
     const user = userEvent.setup();
     render(<AddStoreDialog {...shared} />);
     await user.type(screen.getByLabelText("Store name"), "Outlet");
@@ -135,7 +147,7 @@ describe("AddStoreDialog", () => {
     render(<AddStoreDialog {...shared} />);
     await user.type(screen.getByLabelText("Store name"), "Outlet");
     await user.click(screen.getByRole("button", { name: "Add store" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Could not add the store. Try again.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not add the store. Try again.");
     expect(mocks.push).not.toHaveBeenCalled();
   });
 });

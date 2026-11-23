@@ -4,7 +4,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { moveStoreAction } from "@/app/(app)/company/actions";
 import { addStoreAction } from "@/app/(app)/company/store-actions";
@@ -13,6 +13,7 @@ import { useDeviceTimezone } from "@/components/time/use-device-timezone";
 import { Input } from "@/components/ui/input";
 import { FIELD_CLASSES } from "@/components/ui/password-field";
 import type { CompanyStoreRow, RegionRow } from "@/lib/companies/queries";
+import { toast } from "@/lib/toast";
 import { MAX_STORE_NAME } from "@/lib/store-name-limits";
 import { startingZone } from "@/lib/time/zones";
 
@@ -49,6 +50,8 @@ export function AddStoreDialog({ regions, ...shared }: Shared) {
   const device = startingZone(useDeviceTimezone());
   const [picked, setPicked] = useState<string | null>(null);
   const zone = picked ?? device;
+  // Whether the session moved into the new store; if not, it exists, so the list reloads and a toast says so.
+  const activeSet = useRef(true);
 
   return (
     <ActionDialog
@@ -58,11 +61,17 @@ export function AddStoreDialog({ regions, ...shared }: Shared) {
       confirm="Add store"
       loadingText="Adding…"
       ready={name.trim().length >= 2}
-      // The new store is the one this session works in: go to its Home.
-      onDone={() => router.push("/home")}
+      // The new store is the one this session works in: go to its Home. If the switch failed, stay and show it in the list.
+      onDone={() => {
+        if (activeSet.current) return router.push("/home");
+        toast({ tone: "success", title: "Store added", description: "Switch to it from the account menu." });
+        router.refresh();
+      }}
       run={async () => {
         const reply = await addStoreAction(name, zone, regionOrNull(region));
-        return reply.status === "added" ? null : reply.message;
+        if (reply.status !== "added") return reply.message;
+        activeSet.current = reply.activeSet;
+        return null;
       }}
     >
       <Input label="Store name" value={name} maxLength={MAX_STORE_NAME} autoFocus autoComplete="off" onChange={(event) => setName(event.target.value)} />

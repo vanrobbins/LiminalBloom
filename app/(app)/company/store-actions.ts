@@ -13,7 +13,8 @@ import { auth } from "@/lib/auth";
 import { requireCompanyForAction } from "@/lib/companies/guard";
 import { addCompanyStore } from "@/lib/companies/store-add";
 
-export type AddStoreReply = { status: "added"; storeId: string } | { status: "refused"; message: string };
+/** `activeSet` is false when the store exists but this session could not be moved into it: the page stays put. */
+export type AddStoreReply = { status: "added"; storeId: string; activeSet: boolean } | { status: "refused"; message: string };
 
 const NOT_ALLOWED = "Your role can't change the company's structure.";
 
@@ -40,7 +41,7 @@ export async function addStoreAction(name: unknown, timezone: unknown, regionId:
       const switched = await setActiveStore(session.session.id, user.id, outcome.storeId).catch((error: unknown) => ({ status: error }));
       if (switched.status !== "switched") console.error("add-company-store: active store not set", outcome.storeId, switched.status);
       revalidatePath("/", "layout");
-      return { status: "added", storeId: outcome.storeId };
+      return { status: "added", storeId: outcome.storeId, activeSet: switched.status === "switched" };
     }
     case "invalid-name":
       return { status: "refused", message: "Give the store a name of 2 to 60 characters." };

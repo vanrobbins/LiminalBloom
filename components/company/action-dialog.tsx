@@ -68,7 +68,7 @@ export function ActionDialog({ title, description, confirm, loadingText, danger 
       <form onSubmit={submit} className="flex flex-col gap-4">
         {children}
         {notice ? (
-          <p role="status" className="text-sm text-danger">
+          <p role="alert" className="text-sm text-danger">
             {notice}
           </p>
         ) : null}
