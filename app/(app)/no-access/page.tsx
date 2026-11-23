@@ -21,7 +21,7 @@ export default async function NoAccessPage() {
       <Card className="flex flex-col items-start gap-3">
         <p className="text-ink">Your role in this store doesn&apos;t include this page. A manager can change what a role allows.</p>
         <Button asChild variant="secondary">
-          <Link href="/home">Back to Home</Link>
+          <Link href="/home">Back to Hub</Link>
         </Button>
       </Card>
     </div>

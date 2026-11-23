@@ -8,7 +8,7 @@ import { expect, test } from "./fixtures";
 import { optionLabels, openPalette } from "./palette-page";
 import type { BuiltinRoleKey } from "../lib/access/roles";
 
-const GO_TO = ["Home", "Products", "Layout", "Planograms", "Store", "Account", "Products not placed", "Sold out products"];
+const GO_TO = ["Hub", "Products", "Layout", "Planograms", "Store", "Account", "Products not placed", "Sold out products"];
 const MANAGE_PRODUCTS = ["Add product", "Categories"];
 const MAP = ["Edit the store map"];
 const ROLES = ["Roles and permissions"];

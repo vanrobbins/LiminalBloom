@@ -18,7 +18,7 @@ export default async function HomePage() {
   await requireMember();
   return (
     <div className="mx-auto w-full max-w-2xl md:max-w-5xl">
-      <PageHeader title="Home" />
+      <PageHeader title="Hub" />
       <HomeSearch />
       <CardsBoundary>
         <Suspense

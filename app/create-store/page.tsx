@@ -38,7 +38,7 @@ export default async function CreateStorePage() {
             no store has nowhere to go back to. */}
         {member.kind === "member" ? (
           <Button asChild variant="ghost">
-            <Link href="/home">Back to Home</Link>
+            <Link href="/home">Back to Hub</Link>
           </Button>
         ) : null}
       </Card>
