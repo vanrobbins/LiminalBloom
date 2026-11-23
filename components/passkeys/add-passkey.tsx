@@ -1,4 +1,4 @@
-// "Add a passkey": the password first (the server then allows one registration for five minutes), then the
+// "Add a passkey": the password first (and a code from the authenticator app, when one is on) (the server then allows one registration for five minutes), then the
 // browser's own passkey prompt, then the name. Better Auth's registration would also use a name as the
 // authenticator's own label for the account, so the name is set after, by the rename action, and the
 // authenticator keeps showing the email. Spec 0.7.1 8.4, A3c.
@@ -23,7 +23,7 @@ function addProblem(error: { code?: string; message?: string }): string | null {
   return "Couldn't add the passkey. Try again.";
 }
 
-export function AddPasskey({ allow, rename, onAdded, first }: Pick<PasskeyActions, "allow" | "rename"> & { onAdded: () => void; first: boolean }) {
+export function AddPasskey({ allow, rename, onAdded, first, needsCode = false }: Pick<PasskeyActions, "allow" | "rename"> & { onAdded: () => void; first: boolean; needsCode?: boolean }) {
   const [open, setOpen] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -34,7 +34,7 @@ export function AddPasskey({ allow, rename, onAdded, first }: Pick<PasskeyAction
     setProblem(null);
     setPending(true);
     try {
-      const allowed = await allow(String(data.get("password")));
+      const allowed = await allow(String(data.get("password")), needsCode ? String(data.get("code")).trim() : undefined);
       if (allowed.status === "refused") {
         setProblem(allowed.message);
         return;
@@ -68,6 +68,7 @@ export function AddPasskey({ allow, rename, onAdded, first }: Pick<PasskeyAction
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Input label="Name" name="name" maxLength={60} autoComplete="off" hint="So you can tell it from your others, like Work laptop." />
       <Input label="Password" name="password" type="password" required autoComplete="current-password" hint="Your password, to make sure it is you." />
+      {needsCode ? <Input label="Code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required hint="The 6-digit code from your authenticator app." /> : null}
       {problem ? (
         <p role="alert" className="text-sm text-danger">
           {problem}

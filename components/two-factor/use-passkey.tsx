@@ -1,7 +1,9 @@
 // "Use a passkey" for the admin step-up (spec 0.7.1 8.4, A3c). A passkey sign-in is a new session with
-// `two_factor_at` set by the session hook (lib/auth-factors.ts), which meets the 12-hour rule; the page
-// then reads that session's cookie. Better Auth lists only the signed-in admin's own passkeys for the
-// prompt, and /admin checks who the new session is, so a passkey of another account gets nowhere.
+// `two_factor_at` set by the session hook (lib/auth-factors.ts), which meets the 12-hour rule; the step-up
+// swaps the session cookie for it, and the page then reads that session. Better Auth's
+// verify-authentication does not tie the passkey to the account that is signed in now: any passkey in the
+// browser can sign in as its own account. So what keeps another account's passkey out of /admin is the
+// guard there, which looks at who the new session belongs to (not an admin: not found), never at this prompt.
 
 "use client";
 

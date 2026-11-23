@@ -29,12 +29,14 @@ describe("the guard", () => {
     mocks.person.mockResolvedValue({ kind: "needs-two-factor", user: { id: "u2" }, roleName: "Store Manager" });
     mocks.allow.mockResolvedValue({ status: "ok" });
     expect(await allowPasskeyAddAction("pw-12345")).toEqual({ status: "ok" });
-    expect(mocks.allow).toHaveBeenCalledWith(expect.any(Headers), "u2", "pw-12345");
+    expect(mocks.allow).toHaveBeenCalledWith(expect.any(Headers), "u2", "pw-12345", undefined);
+    await allowPasskeyAddAction("pw-12345", "123456");
+    expect(mocks.allow).toHaveBeenLastCalledWith(expect.any(Headers), "u2", "pw-12345", "123456");
     mocks.person.mockImplementation(async () => mocks.redirect("/sign-in"));
     for (const call of [() => allowPasskeyAddAction("pw"), () => renamePasskeyAction("k1", "Name"), () => removePasskeyAction("k1", "pw")]) {
       await expect(call()).rejects.toThrow("redirect:/sign-in");
     }
-    expect(mocks.allow).toHaveBeenCalledTimes(1);
+    expect(mocks.allow).toHaveBeenCalledTimes(2);
     expect(mocks.rename).not.toHaveBeenCalled();
     expect(mocks.remove).not.toHaveBeenCalled();
   });

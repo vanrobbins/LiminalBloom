@@ -3,8 +3,8 @@
 import type { PasskeyReply } from "@/lib/passkeys/replies";
 
 export type PasskeyActions = {
-  /** Checks the password and lets the person register one passkey in the next five minutes. */
-  allow: (password: string) => Promise<PasskeyReply>;
+  /** Checks the password (and a code, with an authenticator app on) and lets the person register one passkey in the next five minutes. */
+  allow: (password: string, code?: string) => Promise<PasskeyReply>;
   rename: (id: string, name: string) => Promise<PasskeyReply>;
   remove: (id: string, password: string) => Promise<PasskeyReply>;
 };

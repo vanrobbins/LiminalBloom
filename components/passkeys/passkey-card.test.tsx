@@ -71,9 +71,30 @@ describe("PasskeyCard", () => {
     await user.type(screen.getByLabelText("Password"), "pw-12345");
     await user.click(screen.getByRole("button", { name: "Add passkey" }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
-    expect(a.allow).toHaveBeenCalledWith("pw-12345");
+    expect(a.allow).toHaveBeenCalledWith("pw-12345", undefined);
     expect(a.rename).toHaveBeenCalledWith("new-1", "Work laptop");
     expect(a.allow.mock.invocationCallOrder[0]).toBeLessThan(mocks.addPasskey.mock.invocationCallOrder[0]);
+  });
+
+  it("add: with an authenticator app on, the form asks for the code too and sends it", async () => {
+    const user = userEvent.setup();
+    const a = actions();
+    a.allow.mockResolvedValue({ status: "ok" });
+    mocks.addPasskey.mockResolvedValue({ data: { id: "new-2" }, error: null });
+    render(<PasskeyCard passkeys={[]} needsCode {...a} />);
+    await user.click(screen.getByRole("button", { name: "Add a passkey" }));
+    await user.type(screen.getByLabelText("Password"), "pw-12345");
+    await user.type(screen.getByLabelText("Code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Add passkey" }));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    expect(a.allow).toHaveBeenCalledWith("pw-12345", "123456");
+  });
+
+  it("add: with no app there is no code field", async () => {
+    const user = userEvent.setup();
+    render(<PasskeyCard passkeys={[]} {...actions()} />);
+    await user.click(screen.getByRole("button", { name: "Add a passkey" }));
+    expect(screen.queryByLabelText("Code")).toBeNull();
   });
 
   it("add: a wrong password never opens the browser's prompt; a cancelled prompt says nothing", async () => {

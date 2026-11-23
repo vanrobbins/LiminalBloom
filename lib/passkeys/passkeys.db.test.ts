@@ -122,4 +122,19 @@ describe("removePasskey", () => {
     expect(await removePasskey(a.cookie, a.userId, key.id, TEST_PASSWORD)).toEqual({ status: "ok" });
     await clearWrongGuesses(a.userId);
   });
+
+  it("two removals at once cannot take the last two passkeys of an admin with no app: one stays", async () => {
+    const people = await Promise.all(Array.from({ length: 4 }, () => makeAccount()));
+    const pairs = await Promise.all(
+      people.map(async (a) => {
+        await db.insert(platformAdmins).values({ userId: a.userId, addedByName: "Test" });
+        return { a, keys: [await addPasskeyRow(a.userId, "One"), await addPasskeyRow(a.userId, "Two")] };
+      }),
+    );
+    const replies = await Promise.all(pairs.flatMap(({ a, keys }) => keys.map((key) => removePasskey(a.cookie, a.userId, key.id, TEST_PASSWORD))));
+    for (const { a } of pairs) expect(await listPasskeys(a.userId), a.userId).toHaveLength(1);
+    expect(replies.filter((r) => r.status === "ok")).toHaveLength(4);
+    expect(replies.filter((r) => r.status === "refused" && r.reason === "last")).toHaveLength(4);
+    await Promise.all(people.map((a) => clearWrongGuesses(a.userId)));
+  });
 });

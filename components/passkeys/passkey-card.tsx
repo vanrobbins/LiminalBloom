@@ -14,7 +14,7 @@ import { AddPasskey } from "./add-passkey";
 import { PasskeyRow } from "./passkey-row";
 import type { PasskeyActions, PasskeyItem } from "./types";
 
-export function PasskeyCard({ passkeys, allow, rename, remove }: { passkeys: PasskeyItem[] } & PasskeyActions) {
+export function PasskeyCard({ passkeys, needsCode = false, allow, rename, remove }: { passkeys: PasskeyItem[]; needsCode?: boolean } & PasskeyActions) {
   const router = useRouter();
   const changed = () => router.refresh();
   return (
@@ -35,7 +35,7 @@ export function PasskeyCard({ passkeys, allow, rename, remove }: { passkeys: Pas
           ))}
         </ul>
       )}
-      <AddPasskey allow={allow} rename={rename} onAdded={changed} first={passkeys.length === 0} />
+      <AddPasskey allow={allow} rename={rename} onAdded={changed} first={passkeys.length === 0} needsCode={needsCode} />
     </Card>
   );
 }

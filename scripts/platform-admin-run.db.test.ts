@@ -6,6 +6,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { session, twoFactor, user } from "@/db/auth-schema";
 import { platformAdmins, platformEvents } from "@/db/schema";
+import { listPasskeys } from "@/lib/passkeys/list";
+import { addPasskeyRow } from "@/lib/passkeys/test-passkeys";
 import { confirmTwoFactor, startTwoFactor } from "@/lib/two-factor/setup";
 import { dropAccounts, makeAccount, TEST_PASSWORD, totpFor } from "@/lib/two-factor/test-accounts";
 import { setupKey } from "@/lib/two-factor/totp-key";
@@ -72,6 +74,16 @@ describe("resetTwoFactor", () => {
     expect((await eventsFor(a.userId)).map((e) => e.action)).toContain("two_factor_reset");
     // Still an admin: they sign in with the password and set it up again.
     expect(await db.select().from(platformAdmins).where(eq(platformAdmins.userId, a.userId))).toHaveLength(1);
+  });
+
+  it("forgets the admin's passkeys too, so a lost device cannot still sign in", async () => {
+    const a = await account();
+    await grantAdmin(a.email);
+    await addPasskeyRow(a.userId, "Lost phone");
+    await addPasskeyRow(a.userId, "Lost laptop");
+    expect(await listPasskeys(a.userId)).toHaveLength(2);
+    await resetTwoFactor(a.email);
+    expect(await listPasskeys(a.userId)).toHaveLength(0);
   });
 
   it("refuses an account that is not an admin (ordinary accounts are reset from the admin area, not here)", async () => {

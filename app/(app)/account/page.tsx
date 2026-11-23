@@ -57,7 +57,7 @@ export default async function AccountPage() {
 
       <ChangePasswordForm />
 
-      <PasskeyCard passkeys={two.passkeys} {...PASSKEY_ACTIONS} />
+      <PasskeyCard passkeys={two.passkeys} needsCode={two.on} {...PASSKEY_ACTIONS} />
 
       <TwoFactorCard status={two} start={startTwoFactorAction} confirm={confirmTwoFactorAction} makeCodes={newBackupCodesAction} disable={disableTwoFactorAction} />
 

@@ -6,7 +6,7 @@
 import { and, eq, like, or } from "drizzle-orm";
 
 import { db } from "@/db";
-import { session, twoFactor, user, verification } from "@/db/auth-schema";
+import { passkey, session, twoFactor, user, verification } from "@/db/auth-schema";
 import { platformAdmins, platformEvents } from "@/db/schema";
 
 const ACTOR = "Liminal Bloom script";
@@ -40,7 +40,7 @@ export async function grantAdmin(email: string): Promise<{ status: "granted" | "
 
 /**
  * For an admin who lost both their authenticator app and their backup codes: two-factor goes off, the
- * secret, trusted devices and wrong-code count are forgotten, and every session ends. They sign in with
+ * secret, passkeys, trusted devices and wrong-code count are forgotten, and every session ends. They sign in with
  * the password and set it up again. There is no in-app reset on purpose: one compromised admin must not
  * be able to weaken another (spec 7.1).
  */
@@ -50,10 +50,12 @@ export async function resetTwoFactor(email: string): Promise<{ status: "reset"; 
   if (!admin) throw new Error(`${who.email} is not a Liminal Bloom admin. Grant it first (npm run admin:grant).`);
   await db.batch([
     db.delete(twoFactor).where(eq(twoFactor.userId, who.id)),
+    // A passkey is a second factor too, and the admin who lost the device may be the one who lost the passkey: they register a new one after signing in.
+    db.delete(passkey).where(eq(passkey.userId, who.id)),
     db.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, who.id)),
     db.delete(session).where(eq(session.userId, who.id)),
     // Better Auth's trusted-device records hold the user id as their value; the step-up's count is keyed by it.
-    db.delete(verification).where(or(and(like(verification.identifier, "trust-device-%"), eq(verification.value, who.id)), eq(verification.id, `two-factor-failures:${who.id}`))),
+    db.delete(verification).where(or(and(like(verification.identifier, "trust-device-%"), eq(verification.value, who.id)), eq(verification.id, `two-factor-failures:${who.id}`), like(verification.identifier, `passkey-add:${who.id}:%`))),
     db.insert(platformEvents).values(event("two_factor_reset", who, "Reset by npm run admin:grant -- --reset-two-factor")),
   ]);
   return { status: "reset", userId: who.id };

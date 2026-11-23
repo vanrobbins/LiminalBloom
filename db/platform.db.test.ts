@@ -11,7 +11,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { passkey, twoFactor, user } from "@/db/auth-schema";
-import { helpMessages, helpRequests, platformAdmins, platformEvents, roleDefinitions, storeSuspensions } from "@/db/schema";
+import { helpMessages, helpRequests, passkeyLastUsed, platformAdmins, platformEvents, roleDefinitions, storeSuspensions } from "@/db/schema";
 import { dropPeople, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
 import { dbRefusal } from "@/lib/db/test-errors";
 import { withStore } from "@/lib/db/with-store";
@@ -50,6 +50,7 @@ describe("the store role and the new tables", () => {
     ["store_suspensions", storeSuspensions],
     ["help_requests", helpRequests],
     ["help_messages", helpMessages],
+    ["passkey_last_used", passkeyLastUsed],
     // Better Auth's, holding secrets: never granted either.
     ["two_factor", twoFactor],
     ["passkey", passkey],
@@ -62,9 +63,9 @@ describe("the store role and the new tables", () => {
 
   it("has row-level security on in every one, so a later grant alone would still show nothing", async () => {
     const rows = await db.execute(
-      sql`select relname, relrowsecurity from pg_class where relname in ('platform_admins', 'platform_events', 'store_suspensions', 'help_requests', 'help_messages')`,
+      sql`select relname, relrowsecurity from pg_class where relname in ('platform_admins', 'platform_events', 'store_suspensions', 'help_requests', 'help_messages', 'passkey_last_used')`,
     );
-    expect(rows.rows.map((r) => [r.relname, r.relrowsecurity]).sort()).toEqual(TABLES.slice(0, 5).map(([name]) => [name, true]).sort());
+    expect(rows.rows.map((r) => [r.relname, r.relrowsecurity]).sort()).toEqual(TABLES.slice(0, 6).map(([name]) => [name, true]).sort());
   });
 });
 
