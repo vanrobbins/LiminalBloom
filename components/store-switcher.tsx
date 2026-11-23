@@ -12,12 +12,51 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { type ReactNode, useId } from "react";
 import { ToggleGroup } from "radix-ui";
 
 import { CompanyFootLink } from "@/components/shell/company-links";
 import { useSwitchStore } from "@/components/shell/use-switch-store";
 import { Button } from "@/components/ui/button";
 import { type GroupableStore, storeGroups } from "@/lib/store-groups";
+
+/**
+ * A company's group or a region's group: a role="group" named by its heading, so a screen reader that
+ * enters it hears "Acme Coffee" or "North · 4" before the stores. With no heading (the flat list, or a
+ * region with no name) it is just its children.
+ */
+function LabelledGroup({
+  heading,
+  level,
+  className = "",
+  children,
+}: {
+  heading: string | null;
+  level: "h3" | "h4";
+  className?: string;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  if (!heading) {
+    return <>{children}</>;
+  }
+  const Heading = level;
+  return (
+    <div
+      role="group"
+      aria-labelledby={headingId}
+      className="flex flex-col gap-2"
+    >
+      <Heading
+        id={headingId}
+        className={`text-sm text-ink-muted ${className}`.trim()}
+      >
+        {heading}
+      </Heading>
+      {children}
+    </div>
+  );
+}
 
 export function StoreSwitcher({
   stores,
@@ -41,7 +80,8 @@ export function StoreSwitcher({
   companyName?: string | null;
 }) {
   const own = useSwitchStore(activeStoreId);
-  const switchingTo = parentSwitchingTo === undefined ? own.switchingTo : parentSwitchingTo;
+  const switchingTo =
+    parentSwitchingTo === undefined ? own.switchingTo : parentSwitchingTo;
   const switchTo = parentSwitchTo ?? own.switchTo;
   const groups = storeGroups(stores);
 
@@ -63,11 +103,18 @@ export function StoreSwitcher({
         className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto p-1"
       >
         {groups.map((group) => (
-          <div key={group.heading ?? "stores"} className="flex flex-col gap-2">
-            {group.heading ? <h3 className="pt-2 text-sm font-medium text-ink-muted">{group.heading}</h3> : null}
+          <LabelledGroup
+            key={group.key}
+            heading={group.heading}
+            level="h3"
+            className="pt-2 font-medium"
+          >
             {group.regions.map((region) => (
-              <div key={region.heading ?? "stores"} className="flex flex-col gap-2">
-                {region.heading ? <h4 className="text-sm text-ink-muted">{region.heading}</h4> : null}
+              <LabelledGroup
+                key={region.key}
+                heading={region.heading}
+                level="h4"
+              >
                 {region.stores.map((store) => (
                   <ToggleGroup.Item
                     key={store.id}
@@ -78,9 +125,9 @@ export function StoreSwitcher({
                     {switchingTo === store.id ? "Switching…" : store.name}
                   </ToggleGroup.Item>
                 ))}
-              </div>
+              </LabelledGroup>
             ))}
-          </div>
+          </LabelledGroup>
         ))}
       </ToggleGroup.Root>
 
@@ -90,7 +137,9 @@ export function StoreSwitcher({
           New store
         </a>
       </Button>
-      {companyName ? <CompanyFootLink name={companyName} onFollow={onSwitched} /> : null}
+      {companyName ? (
+        <CompanyFootLink name={companyName} onFollow={onSwitched} />
+      ) : null}
     </div>
   );
 }

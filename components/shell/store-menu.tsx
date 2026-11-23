@@ -8,6 +8,8 @@
 
 import { ArrowLeftRight, Plus } from "lucide-react";
 import Link from "next/link";
+import { useId, type ReactNode } from "react";
+import { DropdownMenu as Menu } from "radix-ui";
 
 import {
   DropdownMenuItem,
@@ -79,6 +81,32 @@ export function StoreName({
 }
 
 /**
+ * A company's group or a region's group in the submenu: a menu group named by its label, so a screen
+ * reader that enters it hears "Acme Coffee" or "North · 4" before the stores. No label (the flat list,
+ * a region with no name) means just its children.
+ */
+function LabelledMenuGroup({
+  heading,
+  children,
+}: {
+  heading: string | null;
+  children: ReactNode;
+}) {
+  const labelId = useId();
+  if (!heading) {
+    return <>{children}</>;
+  }
+  return (
+    <Menu.Group aria-labelledby={labelId}>
+      <div id={labelId}>
+        <DropdownMenuLabel>{heading}</DropdownMenuLabel>
+      </div>
+      {children}
+    </Menu.Group>
+  );
+}
+
+/**
  * The account dropdown's "Switch store" item: a submenu of every store, the current one checked, and
  * a way to add one (11-22, Van). A submenu, not an inline list, so someone over many stores (a
  * regional manager) doesn't push Account and Sign out off the menu.
@@ -109,34 +137,30 @@ export function StoreMenuItems({
         Switch store
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
-        {/* Only the list scrolls: New store and the company link stay in view below it. */}
-        <div className="max-h-[60vh] overflow-y-auto">
-          <DropdownMenuRadioGroup
-            value={activeStoreId}
-            onValueChange={(id) => void switchTo(id)}
-          >
-            {groups.map((group) => (
-              <div key={group.heading ?? "stores"}>
-                {group.heading ? <DropdownMenuLabel>{group.heading}</DropdownMenuLabel> : null}
-                {group.regions.map((region) => (
-                  <div key={region.heading ?? "stores"}>
-                    {region.heading ? <DropdownMenuLabel>{region.heading}</DropdownMenuLabel> : null}
-                    {region.stores.map((store) => (
-                      <DropdownMenuRadioItem
-                        key={store.id}
-                        value={store.id}
-                        data-store-name={store.name}
-                        disabled={switchingTo !== null}
-                      >
-                        {switchingTo === store.id ? "Switching…" : store.name}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </DropdownMenuRadioGroup>
-        </div>
+        {/* The submenu itself scrolls (its panel is capped at the available height), so there is no second scroll box here. */}
+        <DropdownMenuRadioGroup
+          value={activeStoreId}
+          onValueChange={(id) => void switchTo(id)}
+        >
+          {groups.map((group) => (
+            <LabelledMenuGroup key={group.key} heading={group.heading}>
+              {group.regions.map((region) => (
+                <LabelledMenuGroup key={region.key} heading={region.heading}>
+                  {region.stores.map((store) => (
+                    <DropdownMenuRadioItem
+                      key={store.id}
+                      value={store.id}
+                      data-store-name={store.name}
+                      disabled={switchingTo !== null}
+                    >
+                      {switchingTo === store.id ? "Switching…" : store.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </LabelledMenuGroup>
+              ))}
+            </LabelledMenuGroup>
+          ))}
+        </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/create-store">
