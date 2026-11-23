@@ -24,7 +24,7 @@ const THEMES = ["light", "dark"] as const;
 // began checking its colours in both themes; builder.spec.ts is behaviour only
 // (drag, undo, touch) and joined it; cards.spec.ts checks layout only (columns, name
 // widths), no colors. Anchored to whole file names.
-const LIGHT_ONLY = /(?:^|[\\/])(layout|products|shell|library|store-map|frame-racks|curved-bays|tooltips|sign-in|sign-out|planograms|builder|cards|store-time|auth-routes|people|invite|roles|roles-edit|access-managers|access-staff|account|passkeys|planogram-corner|home|home-roles|store-panel|palette|palette-roles|quick-adjust|quick-adjust-compare|quick-adjust-roles|admin|admin-actions|help|admin-two-factor|two-factor|company).spec\.ts$/;
+const LIGHT_ONLY = /(?:^|[\\/])(layout|products|shell|library|store-map|frame-racks|curved-bays|tooltips|sign-in|sign-out|planograms|builder|cards|store-time|auth-routes|people|invite|roles|roles-edit|access-managers|access-staff|account|passkeys|planogram-corner|home|home-roles|store-panel|palette|palette-roles|quick-adjust|quick-adjust-compare|quick-adjust-roles|admin|admin-actions|help|admin-two-factor|two-factor|company|company-roles|company-request|company-admin|company-people|tooltips-company).spec\.ts$/;
 
 export default defineConfig({
   testDir: "e2e",

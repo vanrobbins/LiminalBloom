@@ -11,7 +11,7 @@ import { clearPeople, inviteeEmail, seedInvitation, seedTeam } from "./people-st
 import { seedCatalog } from "./product-store";
 import { resetRoles, seedCustomRole } from "./roles-store";
 import { HOME_STORE, TEST_ACCOUNT, ipFor } from "./test-account";
-import { corner, fold, more, rack, run, stage } from "./tooltip-steps";
+import { corner, expectIconsNamed, fold, more, rack, run, stage } from "./tooltip-steps";
 
 test.beforeEach(async () => {
   await seedLayout();
@@ -51,19 +51,6 @@ test("a ⓘ opens its explanation on a tap and closes with Escape", async ({ pag
   await page.keyboard.press("Escape");
   await expect(page.getByText("The plan for what goes where on a fixture.", { exact: false })).toBeHidden();
 });
-
-// 0.7.0 (plan task 12): every control on the new screens that shows only an icon names itself, to a screen
-// reader (aria-label) and, on hover, to a mouse (the tooltip a `Button icon` adds from the same label).
-const iconOnly = (page: Page) =>
-  page.locator("button:visible, a[href]:visible, [role=menuitem]:visible").evaluateAll((els) =>
-    els
-      .filter((e) => !(e as HTMLElement).innerText.trim())
-      .map((e) => ({ label: e.getAttribute("aria-label"), html: e.outerHTML.slice(0, 100) })),
-  );
-
-async function expectIconsNamed(page: Page) {
-  for (const control of await iconOnly(page)) expect(control.label, control.html).toBeTruthy();
-}
 
 for (const path of ["/store", "/store/roles", "/account"]) {
   test(`${path}: every icon-only button has an aria-label`, async ({ page }) => {

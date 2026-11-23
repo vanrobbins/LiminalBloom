@@ -11,8 +11,8 @@ import { expect, test } from "./fixtures";
 import { expectLayout } from "./layout-check";
 import { sql } from "./map-store";
 
-const PAGES = ["/", "/sign-in", "/sign-up", "/account", "/store", "/home", "/products", "/create-store", "/layout", "/planograms", "/help", "/help/new"];
-const ADMIN_PAGES = ["/admin", "/admin/people", "/admin/stores", "/admin/activity", "/admin/admins", "/admin/help"];
+const PAGES = ["/", "/sign-in", "/sign-up", "/account", "/store", "/home", "/products", "/create-store", "/layout", "/planograms", "/help", "/help/new", "/request-company"];
+const ADMIN_PAGES = ["/admin", "/admin/people", "/admin/stores", "/admin/activity", "/admin/admins", "/admin/help", "/admin/requests", "/admin/companies"];
 
 for (const path of PAGES) {
   test.describe(path, () => {
