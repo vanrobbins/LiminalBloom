@@ -8,7 +8,6 @@
 import type { Member } from "@/lib/current-member";
 
 import { CommandPalette } from "@/components/palette/command-palette";
-import { PaletteTrigger } from "@/components/palette/palette-trigger";
 
 import { NavLinks } from "./nav-links";
 import { ShellProvider } from "./shell-context";
@@ -31,7 +30,6 @@ export function AppShell({ member, children }: { member: Member; children: React
         {/* Tablet: a rail with labelled icons. */}
         <aside className="sticky top-0 hidden h-dvh w-20 shrink-0 flex-col items-center gap-4 border-r border-line-subtle bg-raised py-4 md:flex lg:hidden">
           <StoreMenu variant="initials" stores={stores} activeStoreId={activeStoreId} />
-          <PaletteTrigger variant="rail" />
           <NavLinks variant="rail" />
           <div className="mt-auto">
             <UserMenu variant="rail" user={user} />
@@ -47,7 +45,6 @@ export function AppShell({ member, children }: { member: Member; children: React
             liminal bloom
           </p>
           <StoreMenu variant="name" stores={stores} activeStoreId={activeStoreId} />
-          <PaletteTrigger variant="sidebar" />
           <NavLinks variant="sidebar" />
           <div className="mt-auto">
             <UserMenu variant="sidebar" user={user} />

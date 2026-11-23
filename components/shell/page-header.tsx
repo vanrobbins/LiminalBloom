@@ -1,7 +1,8 @@
 // Each signed-in page's header (spec §3, council 10-10). On a phone it is the
 // sticky top bar: back · title · search · avatar, and under the title the store line for
 // someone in two or more stores. On tablet and desktop it is the page's own
-// back link and big title; store and avatar stay in the rail or sidebar.
+// back link and big title with the search icon beside the page's actions; store and avatar
+// stay in the rail or sidebar.
 
 "use client";
 
@@ -53,11 +54,7 @@ export function PageHeader({ title, back, actions }: PageHeaderProps) {
           {title}
         </h1>
         {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
-        {shell ? (
-          <div className="md:hidden">
-            <PaletteTrigger variant="header" />
-          </div>
-        ) : null}
+        {shell ? <PaletteTrigger /> : null}
         {shell ? (
           <div className="md:hidden">
             <UserMenu variant="sheet" user={shell.user} />

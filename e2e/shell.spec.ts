@@ -63,13 +63,13 @@ test("switches stores from the shell, there and back", async ({ page }) => {
   await expect(page.locator("[data-status]").first()).toBeVisible();
 });
 
-test("the sidebar offers Search with its shortcut hint, and the other widths an icon", async ({ page }, testInfo) => {
+test("every width offers Search as one icon in the page header", async ({ page }) => {
   await page.goto("/products");
   await hydrated(page);
   const search = page.locator("button[aria-keyshortcuts]").filter({ visible: true });
   await expect(search).toHaveCount(1);
-  if (sizeOf(testInfo) === "desktop") await expect(search).toHaveText(/Search\s*(Ctrl K|⌘K)/);
-  else await expect(search).toHaveAccessibleName("Search");
+  await expect(search).toHaveAccessibleName("Search");
+  await expect(page.locator("[data-page-header]").getByRole("button", { name: "Search" })).toBeVisible();
 });
 
 test("the first Tab reaches a skip link that jumps to the page", async ({ page }, testInfo) => {
