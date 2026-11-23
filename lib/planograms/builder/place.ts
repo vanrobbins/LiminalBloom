@@ -2,6 +2,7 @@
 // "Move to face…"): the first open spot that fits, faces in the order given
 // (the shown face first), top-left first, by placement.ts's own rule.
 
+import type { Presentation } from "@/lib/products/footprint";
 import { firstFreeSpot } from "@/lib/products/placement";
 
 import { checkPlacement, type Neighbour } from "../rules";
@@ -21,13 +22,18 @@ export function firstOpenSpot(
   return null;
 }
 
+/** Racks hang product first, everything else folds first (Van 11-22); a frame rack's rail is hung only. */
+function presentationsFor(face: PlanogramFace): readonly Presentation[] {
+  if (face.fixtureType === "frame_rack") return ["hung"];
+  return face.fixtureType === "rack" ? ["hung", "folded"] : ["folded", "hung"];
+}
+
 export function placeNew(faces: readonly PlanogramFace[], others: readonly Neighbour[], product: ProductFit): PlacementFields | null {
-  for (const presentation of ["folded", "hung"] as const) {
-    const { columns, rows } = product.footprints[presentation];
-    for (const face of faces) {
+  for (const face of faces) {
+    for (const presentation of presentationsFor(face)) {
+      const { columns, rows } = product.footprints[presentation];
       // A frame rack's rail takes hung product only, one row high (frame racks spec §3).
       const rail = face.fixtureType === "frame_rack";
-      if (rail && presentation === "folded") continue;
       const rowSpan = rail ? 1 : rows;
       const spot = firstOpenSpot([face], others, { colSpan: columns, rowSpan }, null);
       if (spot) return { ...spot, presentation, colSpan: columns, rowSpan, pieceCount: 1 };
@@ -37,7 +43,7 @@ export function placeNew(faces: readonly PlanogramFace[], others: readonly Neigh
 }
 
 /**
- * Where the person pointed: the product's top-left corner on that cell, folded first, if the rules allow it there
+ * Where the person pointed: the product's top-left corner on that cell, in the face's order (presentationsFor), if the rules allow it there
  * (checkPlacement: on the face, clear of everything else); null otherwise, and the caller falls back to placeNew.
  */
 export function placeAt(
@@ -48,11 +54,10 @@ export function placeAt(
 ): PlacementFields | null {
   const face = faces.find((f) => f.faceId === cell.faceId);
   if (!face) return null;
-  for (const presentation of ["folded", "hung"] as const) {
+  for (const presentation of presentationsFor(face)) {
     const { columns, rows } = product.footprints[presentation];
     // A frame rack's rail takes hung product only, on its one row (frame racks spec §3).
     const rail = face.fixtureType === "frame_rack";
-    if (rail && presentation === "folded") continue;
     const fields: PlacementFields = { faceId: face.faceId, presentation, col: cell.col, row: rail ? 0 : cell.row, colSpan: columns, rowSpan: rail ? 1 : rows, pieceCount: 1 };
     if (!checkPlacement({ ...fields, id: null }, others, faces)) return fields;
   }
