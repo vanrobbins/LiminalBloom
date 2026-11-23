@@ -126,7 +126,7 @@ export const companyInvitations = pgTable(
   (t) => [
     foreignKey({ name: "company_invitations_region_fk", columns: [t.companyId, t.regionId], foreignColumns: [regions.companyId, regions.id] }),
     check("company_invitations_role_region", sql`(${t.role} = 'regional_manager') = (${t.regionId} is not null)`),
-    uniqueIndex("company_invitations_pending_unique").on(t.companyId, t.email).where(sql`${t.status} = 'pending'`),
+    uniqueIndex("company_invitations_pending_unique").on(t.companyId, sql`lower(${t.email})`).where(sql`${t.status} = 'pending'`),
   ],
 );
 

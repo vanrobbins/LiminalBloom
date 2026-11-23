@@ -37,7 +37,7 @@ describe("the store role and the company tables", () => {
 
   it("has row-level security on in every one, so a later grant alone would still show nothing", async () => {
     const names = sql.join(NEW_TABLES.map(([n]) => sql`${n}`), sql`, `);
-    const rows = await db.execute(sql`select relname, relrowsecurity from pg_class where relname in (${names})`);
+    const rows = await db.execute(sql`select relname, relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and relname in (${names})`);
     expect(rows.rows.map((r) => [r.relname, r.relrowsecurity]).sort()).toEqual(NEW_TABLES.map(([name]) => [name, true]).sort());
   });
 
@@ -125,6 +125,7 @@ describe("one of each per person or company", () => {
     const invite = (id: string) => ({ id, companyId: co.id, email: "new@example.com", role: "corporate_admin" as const, expiresAt: new Date(Date.now() + 48 * 3_600_000) });
     await db.insert(companyInvitations).values(invite("co-inv-1"));
     expect(await dbRefusal(db.insert(companyInvitations).values(invite("co-inv-2")))).toMatch(/company_invitations_pending_unique/);
+    expect(await dbRefusal(db.insert(companyInvitations).values({ ...invite("co-inv-3"), email: "NEW@Example.com" }))).toMatch(/company_invitations_pending_unique/);
     await db.update(companyInvitations).set({ status: "canceled" }).where(eq(companyInvitations.id, "co-inv-1"));
     await db.insert(companyInvitations).values(invite("co-inv-2"));
   });

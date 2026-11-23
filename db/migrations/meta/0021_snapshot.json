@@ -1089,8 +1089,8 @@
               "nulls": "last"
             },
             {
-              "expression": "email",
-              "isExpression": false,
+              "expression": "lower(\"email\")",
+              "isExpression": true,
               "asc": true,
               "nulls": "last"
             }

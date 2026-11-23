@@ -123,7 +123,7 @@ ALTER TABLE "store_profiles" ADD CONSTRAINT "store_profiles_store_id_organizatio
 ALTER TABLE "store_profiles" ADD CONSTRAINT "store_profiles_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "store_profiles" ADD CONSTRAINT "store_profiles_region_fk" FOREIGN KEY ("company_id","region_id") REFERENCES "public"."regions"("company_id","id") ON DELETE set null ("region_id") ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "company_events_company_idx" ON "company_events" USING btree ("company_id","created_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "company_invitations_pending_unique" ON "company_invitations" USING btree ("company_id","email") WHERE "company_invitations"."status" = 'pending';--> statement-breakpoint
+CREATE UNIQUE INDEX "company_invitations_pending_unique" ON "company_invitations" USING btree ("company_id",lower("email")) WHERE "company_invitations"."status" = 'pending';--> statement-breakpoint
 CREATE UNIQUE INDEX "company_requests_pending_unique" ON "company_requests" USING btree ("requester_id") WHERE "company_requests"."status" = 'pending';--> statement-breakpoint
 CREATE UNIQUE INDEX "regions_company_name_unique" ON "regions" USING btree ("company_id",lower("name"));--> statement-breakpoint
 CREATE INDEX "role_assignments_company_idx" ON "role_assignments" USING btree ("company_id");--> statement-breakpoint
