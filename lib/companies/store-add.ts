@@ -48,6 +48,10 @@ export async function addCompanyStore(input: AddStoreInput, actor: AddStoreActor
       created = await create(name, slug);
       break;
     } catch (error) {
+      // Not a slug clash: the creation hook removes the store itself when its key, settings or roles fail (lib/auth.ts),
+      // and a failure before the organization row exists leaves nothing. The one gap is Better Auth failing to add the
+      // creator after inserting the row: an inert organization (no member, no profile, no data) whose id we are never
+      // given. Removing it by slug could take another store made at the same moment, so it is left.
       if (!isSlugTaken(error)) return { status: "failed" };
     }
   }
