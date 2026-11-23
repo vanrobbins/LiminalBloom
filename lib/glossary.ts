@@ -25,6 +25,7 @@ export const GLOSSARY = {
   storeManager: { term: "Store Manager", text: "The top role in a store. It always keeps the permissions to manage people, roles and store settings, and a store always has at least one." },
   quickAdjust: { term: "Quick Adjust", text: "A temporary change on top of the published planogram, for when a product sells out. It stays until it is reverted or the next version is published." },
   permission: { term: "Permission", text: "Something a role lets people do, like publishing planograms. A change reaches everyone with that role on their next tap." },
+  twoStep: { term: "Two-step sign-in", text: "After your password, sign-in asks for a code from an authenticator app on your phone. Backup codes work once each if you lose the phone." },
 } as const satisfies Record<string, { term: string; text: string }>;
 
 export type Term = keyof typeof GLOSSARY;

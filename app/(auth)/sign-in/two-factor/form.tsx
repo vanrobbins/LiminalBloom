@@ -1,10 +1,12 @@
 // The code step of sign-in for an account with two-factor on (spec 0.7.1 8.3): the six digits from
 // the authenticator app, or a backup code. Better Auth holds the half-finished sign-in in a cookie for
 // 10 minutes and limits the tries, so nothing is kept here. The browser calls the two verify routes,
-// which stay open on purpose; it never offers "trust this device" (A3b adds that choice).
+// which stay open on purpose. "Trust this device for 30 days" (A3b) skips the code at the next password sign-in
+// from this browser. That sign-in has no `two_factor_at`, so a Liminal Bloom admin is still asked for a code at /admin.
 
 "use client";
 
+import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -26,11 +28,13 @@ export function TwoFactorForm({ next }: { next: string | null }) {
     event.preventDefault();
     setProblem(null);
     setPending(true);
-    const code = String(new FormData(event.currentTarget).get("code")).trim();
+    const data = new FormData(event.currentTarget);
+    const code = String(data.get("code")).trim();
+    const trustDevice = data.get("trustDevice") === "on";
 
     let refusal: SignInRefusal | null = null;
     try {
-      const { error } = method === "backup" ? await authClient.twoFactor.verifyBackupCode({ code }) : await authClient.twoFactor.verifyTotp({ code });
+      const { error } = method === "backup" ? await authClient.twoFactor.verifyBackupCode({ code, trustDevice }) : await authClient.twoFactor.verifyTotp({ code, trustDevice });
       if (error) refusal = twoFactorRefusal(error, method);
     } catch {
       refusal = { message: CONNECTION_ERROR, restart: false };
@@ -60,6 +64,18 @@ export function TwoFactorForm({ next }: { next: string | null }) {
 
           {/* Keyed by method so swapping starts with an empty field. */}
           <CodeField key={method} method={method} />
+
+          {/* The real checkbox is the 44 px row, see-through and on top; the box beside it is only the picture of it. */}
+          <label className="group relative flex min-h-11 items-center gap-3 text-ink">
+            <input type="checkbox" name="trustDevice" className="peer absolute inset-0 h-11 w-full cursor-pointer opacity-0" />
+            <span
+              aria-hidden="true"
+              className="flex size-6 shrink-0 items-center justify-center rounded border border-line bg-raised group-has-checked:border-brand group-has-checked:bg-brand peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink"
+            >
+              <Check strokeWidth={2.5} className="size-4 text-on-brand opacity-0 group-has-checked:opacity-100" />
+            </span>
+            Trust this device for 30 days
+          </label>
 
           {problem ? (
             <p role="alert" className="text-sm text-danger">

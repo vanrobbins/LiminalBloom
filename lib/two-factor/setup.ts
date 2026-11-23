@@ -22,12 +22,13 @@ import { keepShortSessionShort } from "@/lib/change-password";
 import { claimCodeGuess, clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
 
+import { qrSvgOf } from "./qr";
 import { setupKey } from "./totp-key";
 
 const ISSUER = "Liminal Bloom";
 
 export type StartReply =
-  | { status: "started"; otpauthUri: string; setupKey: string; backupCodes: string[] }
+  | { status: "started"; otpauthUri: string; setupKey: string; qrSvg: string | null; backupCodes: string[] }
   | { status: "refused"; reason: "password" | "locked" | "already-on" | "failed" };
 export type ConfirmReply = { status: "on"; responseHeaders: Headers } | { status: "refused"; reason: "code" | "locked" | "already-on" | "failed" };
 export type CodesReply = { status: "codes"; backupCodes: string[] } | { status: "refused"; reason: "password" | "locked" | "not-on" | "failed" };
@@ -42,7 +43,7 @@ export async function startTwoFactor(requestHeaders: Headers, userId: string, pa
     const key = "totpURI" in result ? setupKey(result.totpURI) : null;
     if (!("totpURI" in result) || !key) return { status: "refused", reason: "failed" };
     await clearWrongGuesses(userId);
-    return { status: "started", otpauthUri: result.totpURI, setupKey: key, backupCodes: result.backupCodes };
+    return { status: "started", otpauthUri: result.totpURI, setupKey: key, qrSvg: await qrSvgOf(result.totpURI), backupCodes: result.backupCodes };
   } catch (error) {
     if (codeOf(error) === "INVALID_PASSWORD") return { status: "refused", reason: "password" };
     return { status: "refused", reason: codeOf(error) === "TOTP_ALREADY_ENABLED" ? "already-on" : "failed" };
@@ -50,7 +51,7 @@ export async function startTwoFactor(requestHeaders: Headers, userId: string, pa
 }
 
 /** The new session's token: the session cookie's value up to its first dot (the rest is the signature), URL-decoded. */
-async function newSessionToken(responseHeaders: Headers): Promise<string | null> {
+export async function newSessionToken(responseHeaders: Headers): Promise<string | null> {
   const { name } = (await auth.$context).authCookies.sessionToken;
   const cookie = parseSetCookieHeader(responseHeaders.get("set-cookie") ?? "").get(name);
   return cookie ? decodeURIComponent(cookie.value).split(".")[0] : null;

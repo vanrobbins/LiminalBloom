@@ -9,7 +9,8 @@ import { TwoFactorSetup } from "./setup";
 
 const URI = "otpauth://totp/Liminal%20Bloom:van%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Liminal%20Bloom";
 const CODES = ["aaaaa-bbbbb", "ccccc-ddddd"];
-const started = { status: "started", otpauthUri: URI, setupKey: "JBSWY3DPEHPK3PXP", backupCodes: CODES } as const;
+const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 3"><path d="M0 0h1v1H0z"/></svg>';
+const started = { status: "started", otpauthUri: URI, setupKey: "JBSWY3DPEHPK3PXP", qrSvg: SVG, backupCodes: CODES } as const;
 
 const props = () => ({ intro: "Liminal Bloom admins need it.", start: vi.fn(), confirm: vi.fn(), doneHref: "/admin" });
 
@@ -51,6 +52,30 @@ describe("TwoFactorSetup", () => {
     expect(screen.getByRole("button", { name: "Copy setup key" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy backup codes" })).toBeInTheDocument();
     for (const code of CODES) expect(screen.getByText(code)).toBeInTheDocument();
+  });
+
+  it("draws the server's QR code as a picture, with the typed key still there", async () => {
+    await startUp(props());
+    const picture = await screen.findByRole("img", { name: "QR code for your authenticator app" });
+    expect(picture.getAttribute("src")).toBe(`data:image/svg+xml;utf8,${encodeURIComponent(SVG)}`);
+    expect(screen.getByText("JBSW Y3DP EHPK 3PXP")).toBeInTheDocument();
+  });
+
+  it("shows no picture when the server could not draw one, and the key alone", async () => {
+    const p = props();
+    p.start.mockResolvedValue({ ...started, qrSvg: null });
+    const user = userEvent.setup();
+    render(<TwoFactorSetup {...p} />);
+    await user.type(screen.getByLabelText("Password", { exact: true }), "correct-horse");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("JBSW Y3DP EHPK 3PXP")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("inside another page its title is a level 2 heading", () => {
+    render(<TwoFactorSetup {...props()} level={2} />);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Turn on two-step sign-in");
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 
   it("copies the key without its spaces, and the codes one per line", async () => {

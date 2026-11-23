@@ -12,7 +12,8 @@ import type { CodesActionReply } from "@/lib/two-factor/replies";
 
 import { CopyButton } from "./copy-button";
 
-export function NewBackupCodes({ make }: { make: (password: string) => Promise<CodesActionReply> }) {
+export function NewBackupCodes({ make, level = 2 }: { make: (password: string) => Promise<CodesActionReply>; level?: 2 | 3 }) {
+  const Title = level === 2 ? "h2" : "h3";
   const [codes, setCodes] = useState<string[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -39,9 +40,9 @@ export function NewBackupCodes({ make }: { make: (password: string) => Promise<C
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby="new-codes">
-      <h2 id="new-codes" className="text-lg font-semibold text-ink">
+      <Title id="new-codes" className="text-lg font-semibold text-ink">
         Backup codes
-      </h2>
+      </Title>
       <form onSubmit={submit} className="flex flex-col gap-3">
         <Input label="Password" name="password" type="password" required autoComplete="current-password" hint="Your password, to make sure it is you." />
         {problem ? (

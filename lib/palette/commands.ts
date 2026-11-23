@@ -27,6 +27,7 @@ export function commandsFor(holder: Holder, stores: readonly StoreRef[], activeS
 
   for (const n of NAV_ITEMS) page(n.href, n.label, n.icon, NAV_KEYWORDS[n.href]);
   page("/account", "Account", User, "password profile sign in");
+  page("/account#two-factor", "Two-step sign-in", ShieldCheck, "two-factor 2fa authenticator backup codes passkey security");
   page("/products?place=unplaced", "Products not placed", MapPinOff, "unplaced missing");
   page("/products?status=sold_out", "Sold out products", PackageX, "out of stock");
 

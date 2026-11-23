@@ -32,7 +32,7 @@ describe("TwoFactorForm", () => {
     mocks.verifyTotp.mockResolvedValue({ data: { token: "t" }, error: null });
     await enter("123456");
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
-    expect(mocks.verifyTotp).toHaveBeenCalledWith({ code: "123456" });
+    expect(mocks.verifyTotp).toHaveBeenCalledWith({ code: "123456", trustDevice: false });
     expect(mocks.refresh).toHaveBeenCalled();
   });
 
@@ -42,11 +42,15 @@ describe("TwoFactorForm", () => {
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/invite/abc123"));
   });
 
-  it("never trusts this device: only the code is sent", async () => {
+  it("trusts this device only when the box is ticked, and says for how long", async () => {
     mocks.verifyTotp.mockResolvedValue({ data: {}, error: null });
-    await enter("123456");
-    await waitFor(() => expect(mocks.verifyTotp).toHaveBeenCalled());
-    expect(Object.keys(mocks.verifyTotp.mock.calls[0][0])).toEqual(["code"]);
+    const user = userEvent.setup();
+    render(<TwoFactorForm next={null} />);
+    expect(screen.getByLabelText("Trust this device for 30 days")).not.toBeChecked();
+    await user.click(screen.getByLabelText("Trust this device for 30 days"));
+    await user.type(screen.getByLabelText("Code from your authenticator app"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+    await waitFor(() => expect(mocks.verifyTotp).toHaveBeenCalledWith({ code: "123456", trustDevice: true }));
   });
 
   it("a wrong code says so, keeps the form and stays here", async () => {
@@ -88,7 +92,7 @@ describe("TwoFactorForm", () => {
     mocks.verifyBackupCode.mockResolvedValue({ data: {}, error: null });
     await enter("MrqWQ-waTkk", null, true);
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/home"));
-    expect(mocks.verifyBackupCode).toHaveBeenCalledWith({ code: "MrqWQ-waTkk" });
+    expect(mocks.verifyBackupCode).toHaveBeenCalledWith({ code: "MrqWQ-waTkk", trustDevice: false });
     expect(mocks.verifyTotp).not.toHaveBeenCalled();
   });
 

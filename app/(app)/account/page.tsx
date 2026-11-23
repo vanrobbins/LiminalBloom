@@ -12,16 +12,27 @@ import { Plus, Store } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { requireMember } from "@/lib/current-member";
+import { RequiredTwoFactor } from "@/components/two-factor/required-setup";
+import { TwoFactorCard } from "@/components/two-factor/account-card";
+import { requireAccountPerson } from "@/lib/current-member";
+import { twoFactorStatus } from "@/lib/two-factor/status";
 
 import { ChangePasswordForm } from "./change-password-form";
+import { confirmTwoFactorAction, disableTwoFactorAction, newBackupCodesAction, startTwoFactorAction } from "./two-factor-actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   // Membership-checked, so a store this person was removed from is never
-  // shown as theirs.
-  const { user, stores, activeStoreId } = await requireMember();
+  // shown as theirs. A person whose role asks for two-step sign-in and who has
+  // none is not let into the app, so this page is where they set it up: it shows
+  // only that (and Sign out), never a redirect back to itself.
+  const person = await requireAccountPerson();
+  if (person.kind === "needs-two-factor") {
+    return <RequiredTwoFactor roleName={person.roleName} start={startTwoFactorAction} confirm={confirmTwoFactorAction} />;
+  }
+  const { user, stores, activeStoreId } = person;
+  const two = await twoFactorStatus(user.id);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -41,6 +52,8 @@ export default async function AccountPage() {
       </Card>
 
       <ChangePasswordForm />
+
+      <TwoFactorCard status={two} start={startTwoFactorAction} confirm={confirmTwoFactorAction} makeCodes={newBackupCodesAction} disable={disableTwoFactorAction} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-ink">

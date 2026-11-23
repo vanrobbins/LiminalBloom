@@ -1,7 +1,8 @@
 // Turning two-factor on: three steps on one page (spec 0.7.1 8.3). Used for admins (/admin/two-factor)
-// and, from A3b, for any account. The server actions are props, so each page passes the ones that
-// carry its own guard. Never a QR code here (A3b adds one beside the typed key); the key is shown in
-// groups of four with a Copy button, and an otpauth link opens a phone's authenticator app.
+// and, from A3b, for any account (Account and the required-setup page). The server actions are props, so
+// each page passes the ones that carry its own guard. The QR code is an SVG the server drew from the
+// otpauth link (lib/two-factor/qr.ts); the typed key sits below it in groups of four with a Copy button,
+// and the link opens a phone's authenticator app.
 //
 // The key and the codes live only in this component's state, from the action's reply to this person.
 
@@ -27,9 +28,13 @@ type Props = {
   confirm: (code: string) => Promise<ConfirmActionReply>;
   /** Where to go once it is on. */
   doneHref: string;
+  /** The heading level of the title: 1 on a page of its own, 2 inside another page (its sections drop one with it). */
+  level?: 1 | 2;
 };
 
-export function TwoFactorSetup({ intro, start, confirm, doneHref }: Props) {
+export function TwoFactorSetup({ intro, start, confirm, doneHref, level = 1 }: Props) {
+  const Title = level === 1 ? "h1" : "h2";
+  const Section = level === 1 ? "h2" : "h3";
   const router = useRouter();
   const [started, setStarted] = useState<StartedReply | null>(null);
   const [saved, setSaved] = useState(false);
@@ -84,7 +89,7 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref }: Props) {
   if (!started) {
     return (
       <form onSubmit={askPassword} className="flex flex-col gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Turn on two-step sign-in</h1>
+        <Title className={level === 1 ? "text-3xl font-semibold tracking-tight text-ink" : "text-lg font-semibold text-ink"}>Turn on two-step sign-in</Title>
         <p className="text-ink-muted">{intro}</p>
         <Input label="Password" name="password" type="password" required autoComplete="current-password" hint="Your password, to make sure it is you." />
         {alert}
@@ -97,12 +102,18 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref }: Props) {
 
   return (
     <form onSubmit={finish} className="flex flex-col gap-4">
-      <h1 className="text-3xl font-semibold tracking-tight text-ink">Turn on two-step sign-in</h1>
+      <Title className={level === 1 ? "text-3xl font-semibold tracking-tight text-ink" : "text-lg font-semibold text-ink"}>Turn on two-step sign-in</Title>
 
       <section className="flex flex-col gap-2" aria-labelledby="setup-key">
-        <h2 id="setup-key" className="text-lg font-semibold text-ink">
+        <Section id="setup-key" className="text-lg font-semibold text-ink">
           Add it to your authenticator app
-        </h2>
+        </Section>
+        {started.qrSvg ? (
+          // A picture, not markup: an <img> never runs anything inside the SVG. White behind it so the code scans in dark mode.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={`data:image/svg+xml;utf8,${encodeURIComponent(started.qrSvg)}`} alt="QR code for your authenticator app" className="size-44 self-center rounded bg-white p-1" />
+        ) : null}
+        <p className="text-sm text-ink-muted">Scan the code, or type the setup key.</p>
         <div className="flex items-center gap-2">
           <code className="min-w-0 flex-1 break-words rounded border border-line bg-surface px-3 py-2 font-mono text-base text-ink">{groupsOfFour(started.setupKey)}</code>
           <CopyButton text={started.setupKey} label="Copy setup key" />
@@ -113,9 +124,9 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref }: Props) {
       </section>
 
       <section className="flex flex-col gap-2" aria-labelledby="backup-codes">
-        <h2 id="backup-codes" className="text-lg font-semibold text-ink">
+        <Section id="backup-codes" className="text-lg font-semibold text-ink">
           Backup codes
-        </h2>
+        </Section>
         <p className="text-sm text-ink-muted">If you lose your phone, each of these signs you in once.</p>
         <div className="flex items-start gap-2">
           <ul className="grid min-w-0 flex-1 grid-cols-2 gap-x-3 gap-y-1 rounded border border-line bg-surface px-3 py-2 font-mono text-sm text-ink">
@@ -139,9 +150,9 @@ export function TwoFactorSetup({ intro, start, confirm, doneHref }: Props) {
       </section>
 
       <section className="flex flex-col gap-2" aria-labelledby="first-code">
-        <h2 id="first-code" className="text-lg font-semibold text-ink">
+        <Section id="first-code" className="text-lg font-semibold text-ink">
           Enter a code to finish
-        </h2>
+        </Section>
         <CodeField />
       </section>
 

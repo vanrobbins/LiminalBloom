@@ -38,6 +38,7 @@ describe("startTwoFactor", () => {
     expect(reply.otpauthUri).toMatch(/^otpauth:\/\/totp\/Liminal%20Bloom:/);
     expect(reply.setupKey).toBe(key);
     expect(reply.backupCodes).toHaveLength(10);
+    expect(reply.qrSvg).toContain("<svg");
     expect((await twoFactorRow(userId)).verified).toBe(false);
     expect((await db.select({ on: user.twoFactorEnabled }).from(user).where(eq(user.id, userId)))[0].on).toBe(false);
   });
