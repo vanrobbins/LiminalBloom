@@ -34,6 +34,21 @@ test("opens bare for a company person with no store, with Help and Sign out", as
   await page.waitForURL("**/company");
 });
 
+test("a company person with no store opens Account from /company: its cards, their company, no store list, and back", async ({ page }) => {
+  await signUpCompanyOnly(page, newEmail());
+  await page.goto("/company");
+  await hydrated(page);
+  await page.getByRole("link", { name: "Account" }).click();
+  await page.waitForURL("**/account");
+  await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
+  for (const name of ["Change password", "Company"]) await expect(page.getByRole("heading", { name })).toBeVisible();
+  await expect(page.getByText("E2E Company")).toBeVisible();
+  await expect(page.locator("#content")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Create a store" })).toHaveCount(0);
+  await page.getByRole("link", { name: /Back/ }).click();
+  await page.waitForURL("**/company");
+});
+
 test("the owner adds a region, then a store into it, and lands on the store's Home", async ({ page }) => {
   await signUpOwnerWithStore(page, newEmail(), "Region Home Store");
   await page.goto("/company");

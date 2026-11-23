@@ -67,12 +67,13 @@ describe("/company", () => {
     expect(screen.getByText("Regional Manager · North")).toBeInTheDocument();
   });
 
-  it("for a company person with no store: the bare page, with Help and Sign out and no store to Open", async () => {
+  it("for a company person with no store: the bare page, with Help, Account and Sign out and no store to Open", async () => {
     mocks.requireCompanyPerson.mockResolvedValue({ kind: "company-only", user: USER, company: company("owner", ALL), activeStoreId: null });
     await draw();
     expect(document.querySelector("[data-shell-header]")).toBeNull();
     expect(screen.getByRole("heading", { level: 1, name: "Acme" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Help" })).toHaveAttribute("href", "/help");
+    expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account");
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
     // The row still has its menu (Move to region, with company.structure) but no Open: there is no store to be in.
     await userEvent.setup().click(screen.getByRole("button", { name: "More for Pioneer Place" }));

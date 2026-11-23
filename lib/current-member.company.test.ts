@@ -65,11 +65,12 @@ describe("a person with a company role", () => {
     expect(mocks.isPlatformAdmin).not.toHaveBeenCalled();
   });
 
-  it("sends requireMember to /company, and requireAccountPerson too until /company can host Account", async () => {
+  it("sends requireMember to /company, but lets requireAccountPerson through: Account is theirs too", async () => {
     mocks.getSession.mockResolvedValue(SESSION);
     mocks.resolveAccess.mockResolvedValue({ activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: false, stores: [], company: COMPANY });
     await expect(requireMember()).rejects.toThrow("redirect:/company");
-    await expect(requireAccountPerson()).rejects.toThrow("redirect:/company");
+    expect(await requireAccountPerson()).toMatchObject({ kind: "company-only", user: { id: "user-1" } });
+    expect(mocks.redirect).toHaveBeenCalledTimes(1);
     expect(await requireSignedIn()).toMatchObject({ kind: "company-only" });
   });
 });

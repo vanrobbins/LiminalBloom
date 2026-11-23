@@ -97,6 +97,25 @@ describe("AccountPage", () => {
     expect(screen.queryByText("Pioneer Place")).toBeNull();
   });
 
+  it("shows a company person with no store their account in the bare frame: the company and role, a way back to /company, no store list or Create a store", async () => {
+    mocks.person.mockResolvedValue({ kind: "company-only", user: USER, company: { role: "owner" } });
+    mocks.standing.mockResolvedValue({ id: "c", name: "Acme", role: "owner" });
+    render(await AccountPage());
+    expect(document.querySelector("[data-shell-header]")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1, name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Change password" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Passkeys/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Two-step sign-in/ })).toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getByText(/Owner/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open company" })).toHaveAttribute("href", "/company");
+    expect(screen.getByRole("link", { name: /Back/ })).toHaveAttribute("href", "/company");
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Create a store" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open Store" })).toBeNull();
+    expect(mocks.status).toHaveBeenCalledWith("u");
+  });
+
   it("a person who must set up two-factor can add a passkey instead of an authenticator app", async () => {
     mocks.person.mockResolvedValue({ kind: "needs-two-factor", user: USER, roleName: "Store Manager" });
     render(await AccountPage());

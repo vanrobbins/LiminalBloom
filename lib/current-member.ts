@@ -31,7 +31,7 @@ import { pausedStoresOf } from "@/lib/paused";
 import { authHref } from "@/lib/return-path";
 import { hasSecondFactor } from "@/lib/two-factor/has-second-factor";
 
-import type { CurrentMember, Member, NeedsTwoFactor, Paused } from "./current-member-types";
+import type { CompanyOnly, CurrentMember, Member, NeedsTwoFactor, Paused } from "./current-member-types";
 
 // Also here for server code that already imports this file; client components import ./access/can.
 export { can };
@@ -87,7 +87,7 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
   };
 });
 
-/** Where someone with a company role and no store yet lands (the page arrives in 0.7.1b B6). */
+/** Where someone with a company role and no store yet lands. */
 export const COMPANY_PATH = "/company";
 
 /** Where someone whose stores are all paused lands. */
@@ -133,14 +133,13 @@ export async function requireSignedIn(next?: string): Promise<Exclude<CurrentMem
 
 /**
  * What the Account page and its two-factor and passkey actions need: a member, someone who must set two-factor up
- * first, or someone whose stores are all paused (they keep their password, two-step and passkeys, DECISIONS 11-23).
+ * first, someone whose stores are all paused (they keep their password, two-step and passkeys, DECISIONS 11-23), or
+ * a company person with no store yet (company-only): Account is theirs too, in the bare frame.
  */
-export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor | Paused> {
+export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor | Paused | CompanyOnly> {
   const current = await getCurrentMember();
   if (current.kind === "signed-out") redirect("/sign-in");
   if (current.kind === "no-store") redirect("/welcome");
-  // Until /company can host the Account page (B6) a company-only person is sent there.
-  if (current.kind === "company-only") redirect(COMPANY_PATH);
   return current;
 }
 

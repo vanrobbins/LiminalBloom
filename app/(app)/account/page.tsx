@@ -65,13 +65,14 @@ export default async function AccountPage() {
   }
   const { user } = person;
   const [two, standing, requestCard] = await Promise.all([twoFactorStatus(user.id), standingCompanyOf(user.id), requestCardFor(user.id)]);
-  if (person.kind === "paused") {
-    // Every store is paused, so there is no app shell: the account on its own, with a way back and out (DECISIONS 11-23).
+  if (person.kind === "paused" || person.kind === "company-only") {
+    // No app shell: every store is paused, or a company person has no store yet. The account on its own, with a way
+    // back and out (DECISIONS 11-23); no store list, since there is no store to show or to create from here.
     return (
       <main className="flex min-h-screen justify-center bg-surface px-4 py-16">
         <div className="flex w-full max-w-2xl flex-col gap-4">
           <h1 className="text-3xl font-semibold tracking-tight text-ink">Account</h1>
-          <Link href="/paused" className="self-start text-sm text-ink-muted underline-offset-4 hover:underline">
+          <Link href={person.kind === "paused" ? "/paused" : "/company"} className="self-start text-sm text-ink-muted underline-offset-4 hover:underline">
             ← Back
           </Link>
           <AccountCards user={user} two={two} />
