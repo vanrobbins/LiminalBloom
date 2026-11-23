@@ -27,7 +27,7 @@ describe("resolveAccess when seeding fails", () => {
     const store = await makeStore("res-seedfail", { roles: false });
     const { userId } = await makePerson(store, null, "owner");
 
-    const access = await resolveAccess(userId, store);
+    const access = await resolveAccess(userId, { activeStoreId: store });
 
     expect(access.activeStoreId).toBe(store);
     expect(access.role).toBeNull();

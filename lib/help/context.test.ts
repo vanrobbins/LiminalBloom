@@ -13,7 +13,7 @@ describe("cleanFrom: the whitelist", () => {
 
 describe("buildContext: what the server knows, never what the form says", () => {
   it("names the active store and the role there for a member", () => {
-    const member = { kind: "member" as const, user: USER, stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Spring Street" }], activeStoreId: "b", role: { id: "r", name: "Assistant Manager", rank: 200 }, switches: [], isPlatformAdmin: false, helpReplies: 0 };
+    const member = { kind: "member" as const, user: USER, stores: [{ id: "a", name: "Pioneer Place", companyId: null, companyName: null, regionName: null }, { id: "b", name: "Spring Street", companyId: null, companyName: null, regionName: null }], activeStoreId: "b", role: { id: "r", name: "Assistant Manager", rank: 200 }, switches: [], company: null, isPlatformAdmin: false, helpReplies: 0 };
     expect(buildContext(member, "/no-access")).toEqual({ state: "member", store: { id: "b", name: "Spring Street" }, role: "Assistant Manager", from: "/no-access" });
   });
 

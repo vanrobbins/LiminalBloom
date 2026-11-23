@@ -29,6 +29,8 @@ export default async function WelcomePage() {
   if (current.kind === "needs-two-factor") redirect("/account");
   // Every store they belong to is paused: they are not "without a store", so say what happened.
   if (current.kind === "paused") redirect("/paused");
+  // A company role and no store yet: the company page is their home.
+  if (current.kind === "company-only") redirect("/company");
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");

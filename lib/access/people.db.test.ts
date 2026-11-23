@@ -29,7 +29,7 @@ async function named(store: string, roleId: string | null, name: string) {
 async function viewerIn(store: string, roles: StoreRoles, key: BuiltinRoleKey, name = `Viewer ${key}`): Promise<Member> {
   const { userId } = await named(store, roles[key], name);
   const def = BUILTIN_ROLES.find((r) => r.key === key)!;
-  return { kind: "member", user: { id: userId, name, email: `${userId}@example.com` }, stores: [], activeStoreId: store, role: { id: roles[key], name: def.name, rank: def.rank }, switches: [...def.switches], isPlatformAdmin: false, helpReplies: 0 };
+  return { kind: "member", user: { id: userId, name, email: `${userId}@example.com` }, stores: [], activeStoreId: store, role: { id: roles[key], name: def.name, rank: def.rank }, switches: [...def.switches], company: null, isPlatformAdmin: false, helpReplies: 0 };
 }
 
 async function crowd(label: string) {

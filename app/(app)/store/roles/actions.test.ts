@@ -7,7 +7,6 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
-  listOrganizations: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
   }),
@@ -15,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, listOrganizations: mocks.listOrganizations } } }));
+vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
 
 import { db } from "@/db";
 import { member, user } from "@/db/auth-schema";
@@ -42,8 +41,7 @@ describe("roles actions", () => {
   /** Signs in a new person holding the role with this id (a built-in's key maps through `roles`), or none, working in the store. */
   async function signInWith(roleId: string | null) {
     const { userId } = await makePerson(store, roleId);
-    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Van", email: `${userId}@example.com` }, session: { activeOrganizationId: store } });
-    mocks.listOrganizations.mockResolvedValue([{ id: store, name: "Test" }]);
+    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Van", email: `${userId}@example.com` }, session: { activeStoreId: store, activeOrganizationId: null } });
     return userId;
   }
   const signInAs = (role: keyof StoreRoles | null) => signInWith(role ? roles[role] : null);

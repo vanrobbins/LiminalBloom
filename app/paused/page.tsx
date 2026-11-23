@@ -17,6 +17,7 @@ export default async function PausedPage() {
   if (current.kind === "signed-out") redirect("/sign-in");
   if (current.kind === "no-store") redirect("/welcome");
   if (current.kind === "needs-two-factor") redirect("/account");
+  if (current.kind === "company-only") redirect("/company");
   if (current.kind === "member") redirect("/home");
 
   const { stores } = current;

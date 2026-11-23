@@ -11,13 +11,17 @@ import { member, organization } from "@/db/auth-schema";
 import { storeSuspensions } from "@/db/schema";
 import { dropStores } from "@/lib/products/test-stores";
 import { makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
-import { chooseActiveStore, resolveActiveStore } from "@/lib/active-store";
+import { resolveAccess } from "@/lib/access/resolve";
+import { chooseActiveStore } from "@/lib/active-store";
 import { pausedStoresOf } from "@/lib/paused";
 
 import { pauseStore, restoreStore } from "./actions-pause";
 import { cleanUp, eventsFor, makeActor, storeEvents } from "@/lib/access/test-admin-actions";
 
 const REASON = "db test: pause and restore";
+/** The store a request whose session names `storeId` works in. */
+const activeStoreOf = async (userId: string, storeId: string) => (await resolveAccess(userId, { activeStoreId: storeId })).activeStoreId;
+
 afterAll(() => cleanUp([REASON]));
 
 const suspension = (storeId: string) => db.select().from(storeSuspensions).where(eq(storeSuspensions.storeId, storeId));
@@ -27,7 +31,7 @@ describe("pauseStore", () => {
     const actor = await makeActor("Ada Admin");
     const { store, roles } = await makeStoreWithRoles("pause");
     const { userId } = await makePerson(store, roles.sales_associate);
-    expect(await resolveActiveStore(userId, store)).toBe(store);
+    expect(await activeStoreOf(userId, store)).toBe(store);
 
     const outcome = await pauseStore(actor, store, REASON);
     expect(outcome).toMatchObject({ status: "done" });
@@ -35,7 +39,7 @@ describe("pauseStore", () => {
     expect(await eventsFor(store)).toEqual([expect.objectContaining({ action: "store_paused", targetKind: "store", reason: REASON, actorName: "Ada Admin" })]);
     expect(await storeEvents(store)).toEqual([expect.objectContaining({ event: "store_paused", actorName: "Liminal Bloom", actorId: null })]);
 
-    expect(await resolveActiveStore(userId, store)).toBeNull();
+    expect(await activeStoreOf(userId, store)).toBeNull();
     expect(await chooseActiveStore(userId)).toBeNull();
     expect((await pausedStoresOf(userId)).map((s) => s.id)).toEqual([store]);
     // Nothing deleted: the store, its roles and the membership are all still there.
@@ -71,7 +75,7 @@ describe("restoreStore", () => {
     expect(await suspension(store)).toHaveLength(0);
     expect((await eventsFor(store)).map((e) => e.action).sort()).toEqual(["store_paused", "store_restored"]);
     expect((await storeEvents(store)).map((e) => e.event).sort()).toEqual(["store_paused", "store_restored"]);
-    expect(await resolveActiveStore(userId, store)).toBe(store);
+    expect(await activeStoreOf(userId, store)).toBe(store);
   });
 
   it("says already for a store that is not paused, writing nothing", async () => {

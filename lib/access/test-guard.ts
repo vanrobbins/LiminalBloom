@@ -11,7 +11,7 @@ import { SWITCHES, type Switch } from "./switches";
 export const EVERYTHING: Holder = { switches: [...SWITCHES] };
 
 export function memberWith(storeId: string, switches: readonly Switch[], user = { id: "member-123", name: "Test User", email: "test@example.com" }): Member {
-  return { kind: "member", user, stores: [{ id: storeId, name: "Test Store" }], activeStoreId: storeId, role: null, switches: [...switches], isPlatformAdmin: false, helpReplies: 0 };
+  return { kind: "member", user, stores: [{ id: storeId, name: "Test Store", companyId: null, companyName: null, regionName: null }], activeStoreId: storeId, role: null, switches: [...switches], company: null, isPlatformAdmin: false, helpReplies: 0 };
 }
 
 /** `guard = () => member`: read when the action runs, so a test can change the member between calls. */

@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
-  listOrganizations: vi.fn(),
   resolveAccess: vi.fn(),
   hasSecondFactor: vi.fn(),
   redirect: vi.fn((path: string) => {
@@ -15,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, listOrganizations: mocks.listOrganizations } } }));
+vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
 vi.mock("@/lib/access/resolve", () => ({ resolveAccess: mocks.resolveAccess }));
 vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: mocks.hasSecondFactor }));
 vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: async () => false }));
@@ -24,15 +23,14 @@ vi.mock("@/lib/paused", () => ({ pausedAmong: async () => new Set<string>(), pau
 
 import { getCurrentMember, requireAccountPerson, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";
 
-const SESSION = { user: { id: "user-1", name: "Van", email: "van@example.com", image: null }, session: { activeOrganizationId: "store-b" } };
-const STORE_ROWS = [{ id: "store-a", name: "Pioneer Place" }];
+const SESSION = { user: { id: "user-1", name: "Van", email: "van@example.com", image: null }, session: { activeStoreId: "store-b", activeOrganizationId: null } };
+const STORES = [{ id: "store-a", name: "Pioneer Place", companyId: null, companyName: null, regionId: null, regionName: null }];
 const MANAGER = { id: "role-1", name: "Store Manager", rank: 100, builtin: "store_manager" };
 const SALES = { id: "role-5", name: "Sales Associate", rank: 500, builtin: "sales_associate" };
 
 function signedIn(role: typeof MANAGER, switches: string[]) {
   mocks.getSession.mockResolvedValue(SESSION);
-  mocks.resolveAccess.mockResolvedValue({ activeStoreId: "store-a", role, switches: new Set(switches), requiresTwoFactor: false });
-  mocks.listOrganizations.mockResolvedValue(STORE_ROWS);
+  mocks.resolveAccess.mockResolvedValue({ activeStoreId: "store-a", role, switches: new Set(switches), requiresTwoFactor: false, stores: STORES, company: null });
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -41,16 +39,14 @@ beforeEach(() => vi.clearAllMocks());
 describe("a role that requires two-factor", () => {
   const requiring = (has: boolean) => {
     mocks.getSession.mockResolvedValue(SESSION);
-    mocks.resolveAccess.mockResolvedValue({ activeStoreId: "store-a", role: MANAGER, switches: new Set(["view", "people.manage"]), requiresTwoFactor: true });
-    mocks.listOrganizations.mockResolvedValue(STORE_ROWS);
+    mocks.resolveAccess.mockResolvedValue({ activeStoreId: "store-a", role: MANAGER, switches: new Set(["view", "people.manage"]), requiresTwoFactor: true, stores: STORES, company: null });
     mocks.hasSecondFactor.mockResolvedValue(has);
   };
 
-  it("is not a member while the account has no second factor, and reads no store list", async () => {
+  it("is not a member while the account has no second factor, and asks nothing else", async () => {
     requiring(false);
     expect(await getCurrentMember()).toEqual({ kind: "needs-two-factor", user: { id: "user-1", name: "Van", email: "van@example.com" }, roleName: "Store Manager" });
     expect(mocks.hasSecondFactor).toHaveBeenCalledWith("user-1");
-    expect(mocks.listOrganizations).not.toHaveBeenCalled();
   });
 
   it("is a member once the account has one", async () => {
@@ -80,7 +76,7 @@ describe("requireAccountPerson", () => {
     mocks.getSession.mockResolvedValue(null);
     await expect(requireAccountPerson()).rejects.toThrow("redirect:/sign-in");
     mocks.getSession.mockResolvedValue(SESSION);
-    mocks.resolveAccess.mockResolvedValue({ activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: false });
+    mocks.resolveAccess.mockResolvedValue({ activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: false, stores: [], company: null });
     await expect(requireAccountPerson()).rejects.toThrow("redirect:/welcome");
     signedIn(SALES, ["view"]);
     expect(await requireAccountPerson()).toMatchObject({ kind: "member" });

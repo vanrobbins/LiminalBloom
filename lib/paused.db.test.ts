@@ -10,11 +10,15 @@ import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { member, user } from "@/db/auth-schema";
 import { storeSuspensions } from "@/db/schema";
-import { chooseActiveStore, resolveActiveStore } from "@/lib/active-store";
+import { resolveAccess } from "@/lib/access/resolve";
+import { chooseActiveStore } from "@/lib/active-store";
 import { dropPeople, makePerson } from "@/lib/access/test-roles";
 import { dropStores, makeStore } from "@/lib/products/test-stores";
 
 import { pausedAmong, pausedStoresOf } from "./paused";
+
+/** The store a request whose session names `storeId` works in. */
+const activeStoreOf = async (userId: string, storeId: string) => (await resolveAccess(userId, { activeStoreId: storeId })).activeStoreId;
 
 afterAll(async () => {
   await dropStores();
@@ -64,11 +68,11 @@ describe("chooseActiveStore", () => {
 describe("resolveActiveStore", () => {
   it("does not honour a session that still names a paused store", async () => {
     const { userId, stores } = await personInStores(2);
-    expect(await resolveActiveStore(userId, stores[1])).toBe(stores[1]);
+    expect(await activeStoreOf(userId, stores[1])).toBe(stores[1]);
     await pause(stores[1]);
-    expect(await resolveActiveStore(userId, stores[1])).toBe(stores[0]);
+    expect(await activeStoreOf(userId, stores[1])).toBe(stores[0]);
     await pause(stores[0]);
-    expect(await resolveActiveStore(userId, stores[1])).toBeNull();
+    expect(await activeStoreOf(userId, stores[1])).toBeNull();
   });
 });
 
