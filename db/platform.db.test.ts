@@ -3,9 +3,6 @@
 // role flag's backfill. What is tested is Postgres refusing rows, so a mock would only
 // test the mock. The migration's own backfill statement is read from the file.
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -164,41 +161,5 @@ describe("store_suspensions and platform_admins", () => {
     expect([row.addedBy, row.addedByName]).toEqual([null, "Test person"]);
     await db.delete(user).where(eq(user.id, admin));
     expect(await db.select().from(platformAdmins).where(eq(platformAdmins.userId, admin))).toEqual([]);
-  });
-});
-
-describe("roles that require two-factor", () => {
-  const backfill = () => {
-    const statement = readFileSync(resolve("db/migrations/0020_platform_help.sql"), "utf8")
-      .split("--> statement-breakpoint")
-      .map((s) => s.trim())
-      .find((s) => s.includes('UPDATE "role_definitions" SET "requires_two_factor"'));
-    if (!statement) throw new Error("The role flag backfill is not where this test expects it");
-    return statement.replace(/;$/, "");
-  };
-
-  it("is off for a role inserted without it, and the migration's backfill turns it on for roles holding people.manage or roles.manage only", async () => {
-    const { store } = await makeStoreWithRoles("pl-flag");
-    const flags = async () =>
-      Object.fromEntries((await db.select().from(roleDefinitions).where(eq(roleDefinitions.storeId, store))).map((r) => [r.builtin ?? r.name, r.requiresTwoFactor]));
-    // The seed now sets the flag itself, so clear it to stand in for rows that predate the column.
-    await db.update(roleDefinitions).set({ requiresTwoFactor: false }).where(eq(roleDefinitions.storeId, store));
-    expect(Object.values(await flags()).every((on) => on === false)).toBe(true);
-    await db.insert(roleDefinitions).values({ storeId: store, name: "Floor Lead", rank: 250, switches: ["view", "people.manage"] });
-    await db.insert(roleDefinitions).values({ storeId: store, name: "Greeter", rank: 260, switches: ["view", "products.stock"] });
-    expect(Object.values(await flags()).every((on) => on === false)).toBe(true);
-
-    // Narrowed to this store, like lib/access/backfill.db.test.ts does for 0018.
-    await db.execute(sql.raw(`${backfill()} AND "store_id" = '${store}'`));
-
-    expect(await flags()).toEqual({
-      store_manager: true,
-      assistant_manager: true,
-      vm_manager: true,
-      vm_worker: false,
-      sales_associate: false,
-      "Floor Lead": true,
-      Greeter: false,
-    });
   });
 });

@@ -1,3 +1,5 @@
+-- A lock held by a running request fails this migration after 5 seconds rather than queueing every request behind it. SET LOCAL lasts to the end of drizzle's one transaction.
+SET LOCAL lock_timeout = '5s';--> statement-breakpoint
 -- (A3c adds passkey_last_used: when each passkey last signed in, kept beside Better Auth's passkey table; RLS on, no grant.)
 -- Hand-edited after `drizzle-kit generate` (DECISIONS 10-08, "0.7.1"). Tables, columns,
 -- enums, indexes, checks and foreign keys are as generated, and so is the snapshot. That
@@ -145,4 +147,6 @@ ALTER TABLE "help_requests" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "help_messages" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "passkey_last_used" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 -- Hand-written: backfill. Roles that manage people or roles must have two-factor.
-UPDATE "role_definitions" SET "requires_two_factor" = true WHERE "switches" && ARRAY['roles.manage', 'people.manage']::text[];
+-- The shared demo store is left out: its accounts share one password, so the first person in would bind their
+-- phone and lock the rest out (scripts/seed-demo/target.ts: name, and a slug that production may suffix).
+UPDATE "role_definitions" SET "requires_two_factor" = true WHERE "switches" && ARRAY['roles.manage', 'people.manage']::text[] AND "store_id" NOT IN (SELECT "id" FROM "organization" WHERE "name" = 'Liminal Bloom Demo' OR "slug" LIKE 'liminal-bloom-demo%');

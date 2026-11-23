@@ -12,6 +12,7 @@ const fake = vi.hoisted(() => ({
   deleteImagesQuietly: vi.fn(),
   seedDemoPeople: vi.fn(),
   checkDemoPeople: vi.fn(),
+  turnOffDemoTwoFactor: vi.fn(),
 }));
 
 vi.mock("./target", () => ({
@@ -19,6 +20,7 @@ vi.mock("./target", () => ({
   DEMO_STORE: "Liminal Bloom Demo",
   findDemoStore: async () => ({ storeId: "store_demo", productCount: 50 }),
   createDemoStore: vi.fn(),
+  turnOffDemoTwoFactor: fake.turnOffDemoTwoFactor,
 }));
 vi.mock("./build", () => ({
   buildDemo: () => ({ products: [], categories: [], locations: [] }),
@@ -64,6 +66,11 @@ describe("seedDemo", () => {
     await run();
     expect(calls).toEqual(["batch", "list", "delete"]);
     expect(fake.deleteImagesQuietly).toHaveBeenCalledWith(["stores/store_demo/products/seed-old.svg", "stores/store_demo/products/upload.webp"]);
+  });
+
+  it("turns two-factor off for the demo store's roles", async () => {
+    await run();
+    expect(fake.turnOffDemoTwoFactor).toHaveBeenCalledWith("store_demo");
   });
 
   it("deletes no images when the batch fails", async () => {

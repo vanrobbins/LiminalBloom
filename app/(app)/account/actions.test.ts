@@ -5,7 +5,7 @@ import { APIError } from "better-auth/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  requireMember: vi.fn(),
+  requireAccountPerson: vi.fn(),
   changePassword: vi.fn(),
   applyAuthCookies: vi.fn(),
   keepShortSessionShort: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock("@/lib/password-guesses", () => ({
   claimGuess: mocks.claimGuess,
   clearWrongGuesses: mocks.clearWrongGuesses,
 }));
-vi.mock("@/lib/current-member", () => ({ requireMember: mocks.requireMember }));
+vi.mock("@/lib/current-member", () => ({ requireAccountPerson: mocks.requireAccountPerson }));
 
 import { changePasswordAction } from "./actions";
 
@@ -37,7 +37,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.tries = 0;
   mocks.claimGuess.mockImplementation(async () => (mocks.tries += 1) <= 5);
-  mocks.requireMember.mockResolvedValue({ kind: "member", user: { id: "u1" } });
+  mocks.requireAccountPerson.mockResolvedValue({ kind: "member", user: { id: "u1" } });
   mocks.changePassword.mockResolvedValue(answer);
 });
 
@@ -53,13 +53,21 @@ describe("changePasswordAction", () => {
   });
 
   it("sends a signed-out visitor to sign in and changes nothing", async () => {
-    mocks.requireMember.mockImplementation(async () => mocks.redirect("/sign-in"));
+    mocks.requireAccountPerson.mockImplementation(async () => mocks.redirect("/sign-in"));
     await expect(changePasswordAction(OLD, NEW, NEW)).rejects.toThrow("redirect:/sign-in");
     expect(mocks.changePassword).not.toHaveBeenCalled();
   });
 
+  it("lets a person whose stores are all paused change their password", async () => {
+    mocks.requireAccountPerson.mockResolvedValue({ kind: "paused", user: { id: "u1" }, stores: [] });
+    const answer = { headers: new Headers(), response: { token: null } };
+    mocks.changePassword.mockResolvedValue(answer);
+    await expect(changePasswordAction(OLD, NEW, NEW)).resolves.toMatchObject({ status: "saved" });
+    expect(mocks.changePassword).toHaveBeenCalled();
+  });
+
   it("checks the person before it reads or changes anything", async () => {
-    mocks.requireMember.mockRejectedValue(new Error("stop"));
+    mocks.requireAccountPerson.mockRejectedValue(new Error("stop"));
     await expect(changePasswordAction(OLD, NEW, NEW)).rejects.toThrow("stop");
     expect(mocks.changePassword).not.toHaveBeenCalled();
   });

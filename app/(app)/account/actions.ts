@@ -4,7 +4,7 @@
 // /change-password is closed (lib/auth.ts), because only the server call can be made to
 // always revoke the person's other sessions: a leaked password must not leave an old
 // session open. Any signed-in member may do this, whatever their role, so the guard is
-// requireMember rather than a switch (app/server-actions-guard.test.ts lists the reason).
+// requireAccountPerson (a paused person keeps this) rather than a switch (app/server-actions-guard.test.ts lists the reason).
 
 import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
@@ -12,7 +12,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { applyAuthCookies } from "@/lib/auth-cookies";
 import { keepShortSessionShort } from "@/lib/change-password";
-import { requireMember } from "@/lib/current-member";
+import { requireAccountPerson } from "@/lib/current-member";
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
 import { MAX_PASSWORD, MIN_PASSWORD } from "@/lib/password-limits";
 
@@ -21,7 +21,7 @@ export type PasswordReply = { status: "saved"; message: string } | { status: "re
 const refuse = (message: string, field?: "current" | "new" | "confirm"): PasswordReply => ({ status: "refused", message, field });
 
 export async function changePasswordAction(currentPassword: unknown, newPassword: unknown, confirmPassword: unknown): Promise<PasswordReply> {
-  const { user } = await requireMember();
+  const { user } = await requireAccountPerson();
   if (typeof currentPassword !== "string" || currentPassword === "" || currentPassword.length > MAX_PASSWORD) return refuse("Enter your current password.", "current");
   if (typeof newPassword !== "string" || newPassword.length < MIN_PASSWORD) return refuse(`Use at least ${MIN_PASSWORD} characters.`, "new");
   if (newPassword.length > MAX_PASSWORD) return refuse(`Use at most ${MAX_PASSWORD} characters.`, "new");

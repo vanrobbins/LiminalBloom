@@ -59,7 +59,7 @@ export function AdminAccountActions({ onNavigate }: { onNavigate?: () => void })
         </Link>
       </Button>
       {isMounted ? (
-        <Button variant="secondary" onClick={switchTheme}>
+        <Button variant="secondary" className="whitespace-nowrap" onClick={switchTheme}>
           <ThemeIcon {...ICON} />
           Switch to {target} theme
         </Button>

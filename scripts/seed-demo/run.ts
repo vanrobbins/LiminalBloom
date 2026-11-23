@@ -2,7 +2,7 @@
 // changes and old ones come down after, so a failure at any point leaves a
 // working demo: at worst some unused files, which the next run removes.
 
-import { DEMO_EMAIL, DEMO_STORE, createDemoStore, findDemoStore } from "./target";
+import { DEMO_EMAIL, DEMO_STORE, createDemoStore, findDemoStore, turnOffDemoTwoFactor } from "./target";
 
 type Options = {
   isProduction: boolean;
@@ -35,6 +35,8 @@ export async function seedDemo({ isProduction, withPeople = false, confirm }: Op
     console.log("Stopped. Nothing changed.");
     return;
   }
+
+  await turnOffDemoTwoFactor(found.storeId);
 
   // Before anything is replaced: an account that may not be ours stops the run here, with the catalog untouched
   // ("Nothing was changed" is true of that refusal only). The answer goes on to seedDemoPeople so ownership is asked once.
