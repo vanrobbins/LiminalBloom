@@ -1,5 +1,6 @@
-// The People screen's body (spec 0.7, 4.8): everyone in the store grouped by role,
-// highest rank first. Everyone sees the same hierarchy; the server decides what a
+// The People screen's body (spec 0.7, 4.8): everyone in the store in one list, each row
+// naming its role, the viewer first and then by rank (11-22, Van; was one group per role).
+// Everyone sees the same order; the server decides what a
 // viewer is sent (emails, invitations) and which rows have buttons. The dialogs
 // and their focus rules live here (4.8 part 8).
 
@@ -12,7 +13,7 @@ import { InfoPopover } from "@/components/ui/info-popover";
 import { focusNearRow } from "@/components/ui/focus-near-row";
 import { useAnnouncement } from "@/components/ui/use-announcement";
 import { useCollapseOut } from "@/components/ui/use-collapse-out";
-import type { PeopleView, PersonRow } from "@/lib/access/people-view";
+import { peopleInOrder, type PeopleView, type PersonRow } from "@/lib/access/people-view";
 
 import { ChangeRoleDialog } from "./change-role-dialog";
 import { InvitationsCard } from "./invitations-card";
@@ -24,10 +25,10 @@ type Open = { kind: "role"; person: PersonRow } | { kind: "remove"; person: Pers
 export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName: string }) {
   const router = useRouter();
   const [open, setOpen] = useState<Open>(null);
-  // After a change the row may move to another group once the list reloads; focus follows it.
+  // After a change the row may move once the list reloads; focus follows it.
   const focusAfter = useRef<string | null>(null);
   const removedRow = useRef(false);
-  // No toast for a role change or a removal (0.7.0.5 spec 3.1): the row moves to its new group or folds shut,
+  // No toast for a role change or a removal (0.7.0.5 spec 3.1): the row moves to its new place or folds shut,
   // and this line says it again to a screen reader.
   const [said, setSaid] = useAnnouncement();
   // A removal whose reload failed: the row opens again with this on it.
@@ -41,7 +42,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
     focusAfter.current = null;
   }, [view]);
 
-  const everyone = view.groups.flatMap((g) => g.people);
+  const everyone = peopleInOrder(view.groups);
   const onlyYou = everyone.length === 1 && everyone[0].isYou;
 
   function openFrom(button: HTMLElement, next: NonNullable<Open>) {
@@ -54,7 +55,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
     opener.current?.focus();
   }
 
-  // The removed row is folding away, so focus goes to its neighbour, else the group's heading or the page title.
+  // The removed row is folding away, so focus goes to its neighbour, else the list's heading or the page title.
   function focusNeighbour(event: Event) {
     if (!removedRow.current) return backToOpener(event);
     removedRow.current = false;
@@ -75,24 +76,20 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
         </p>
       )}
       {view.invitations.length > 0 ? <InvitationsCard invitations={view.invitations} /> : null}
-      {view.groups.map((group) => (
-        <section key={group.key} className="mb-6">
-          <h2 className="mb-2 text-lg font-semibold text-ink">
-            {group.roleName} · {group.people.length}
-          </h2>
-          <ul className="flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
-            {group.people.map((p) => (
-              <PersonListItem key={p.memberId} person={p} leaving={isLeaving(p.memberId)} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
-            ))}
-          </ul>
-          {view.isSoleManager && group.people.some((p) => p.isYou) ? (
-            <p className="mt-2 flex items-center gap-1 text-sm text-ink-muted">
-              A store always keeps one Store Manager.
-              <InfoPopover term="storeManager" />
-            </p>
-          ) : null}
-        </section>
-      ))}
+      <section className="mb-6">
+        <h2 className="mb-2 text-lg font-semibold text-ink">People · {everyone.length}</h2>
+        <ul className="flex flex-col gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle">
+          {everyone.map((p) => (
+            <PersonListItem key={p.memberId} person={p} leaving={isLeaving(p.memberId)} onChangeRole={(person, button) => openFrom(button, { kind: "role", person })} onRemove={(person, button) => openFrom(button, { kind: "remove", person })} />
+          ))}
+        </ul>
+        {view.isSoleManager ? (
+          <p className="mt-2 flex items-center gap-1 text-sm text-ink-muted">
+            A store always keeps one Store Manager.
+            <InfoPopover term="storeManager" />
+          </p>
+        ) : null}
+      </section>
       {onlyYou ? (
         <div className="rounded-lg border border-dashed border-line p-8 text-center text-ink-muted">
           <p>Only you so far.</p>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupByRole, NO_ROLE_NAME, NO_ROLE_RANK, type PersonRow } from "./people-view";
+import { groupByRole, NO_ROLE_NAME, NO_ROLE_RANK, peopleInOrder, type PersonRow } from "./people-view";
 
 const row = (name: string, roleId: string | null, rank: number): PersonRow => ({
   memberId: `m-${name}`,
@@ -28,5 +28,17 @@ describe("groupByRole", () => {
 
   it("is empty for nobody", () => {
     expect(groupByRole([])).toEqual([]);
+  });
+});
+
+describe("peopleInOrder", () => {
+  it("puts the viewer first, then everyone else by rank and A to Z, no role last", () => {
+    const me = { ...row("Mid", "vmw", 400), isYou: true };
+    const people = peopleInOrder(groupByRole([row("Zed", "assoc", 500), row("Lone", null, NO_ROLE_RANK), me, row("Boss", "mgr", 100), row("Amy", "assoc", 500)]));
+    expect(people.map((p) => p.name)).toEqual(["Mid", "Boss", "Amy", "Zed", "Lone"]);
+  });
+
+  it("is empty for nobody", () => {
+    expect(peopleInOrder([])).toEqual([]);
   });
 });
