@@ -2,7 +2,7 @@
 // version and to the person still being a corporate admin; the old owner stays as a corporate admin.
 
 import { and, eq } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
 import { companies, companyEvents, roleAssignments } from "@/db/schema";
@@ -23,6 +23,26 @@ const company = async (id: string) => (await db.select().from(companies).where(e
 const assignment = async (userId: string) => (await db.select().from(roleAssignments).where(eq(roleAssignments.userId, userId)))[0];
 
 describe("handOffOwnership", { timeout: 30_000 }, () => {
+  it("is stale, changing nothing, when the admin is removed after the pre-read: the write pins the role itself", async () => {
+    const s = await makeStaffedCompany("ho-pin");
+    const { version } = await company(s.company.id);
+    const real = db.execute.bind(db);
+    let calls = 0;
+    // The owner check is call 1, the admin pre-read call 2; remove the admin right after the pre-read answered.
+    const spy = vi.spyOn(db, "execute").mockImplementation((async (query: Parameters<typeof real>[0]) => {
+      const out = await real(query);
+      if (++calls === 2) await db.delete(roleAssignments).where(eq(roleAssignments.userId, s.admin));
+      return out;
+    }) as typeof db.execute);
+    try {
+      expect(await handOffOwnership(s.company.id, { userId: s.owner, name: "Old Owner" }, s.admin, version)).toEqual({ status: "stale" });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await company(s.company.id)).toMatchObject({ ownerUserId: s.owner, version });
+    expect(await assignment(s.owner)).toBeUndefined();
+  });
+
   it("makes the corporate admin the owner, the old owner a corporate admin, and logs it; the company stays reachable", async () => {
     const s = await makeStaffedCompany("ho-ok");
     const store = await makeCompanyStore(s.company.id, null, "ho-ok-store");

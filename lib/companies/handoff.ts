@@ -13,6 +13,8 @@ import { db } from "@/db";
 
 import type { CompanyInviter } from "./invite";
 
+const hasCode = (error: unknown, code: string): boolean => typeof error === "object" && error !== null && (("code" in error && error.code === code) || ("cause" in error && hasCode(error.cause, code)));
+
 export type HandoffOutcome = { status: "handed"; name: string } | { status: "forbidden" | "stale" | "gone" };
 
 export async function handOffOwnership(companyId: string, actor: Pick<CompanyInviter, "userId" | "name">, toUserId: string, seenVersion: number): Promise<HandoffOutcome> {
@@ -25,7 +27,9 @@ export async function handOffOwnership(companyId: string, actor: Pick<CompanyInv
   const { name } = found[0];
 
   const company = sql`${companyId}::text`;
-  const done = await db.execute(sql`
+  let done;
+  try {
+    done = await db.execute(sql`
     with cur as (
       select c.id from companies c where c.id = ${company} and c.owner_user_id = ${actor.userId}::text and c.version = ${seenVersion}
         and not exists (select 1 from companies o where o.owner_user_id = ${toUserId}::text)
@@ -47,5 +51,10 @@ export async function handOffOwnership(companyId: string, actor: Pick<CompanyInv
       select ${company}, ${actor.userId}::text, ${actor.name}::text, 'ownership_handed_off', jsonb_build_object('from', ${actor.name}::text, 'to', ${name}::text)
       from demoted returning id)
     select id from logged`);
+  } catch (error) {
+    // The role's primary key: the old owner already holds a role here (cannot happen for an owner; defensive).
+    if (hasCode(error, "23505")) return { status: "stale" };
+    throw error;
+  }
   return done.rows.length === 1 ? { status: "handed", name } : { status: "stale" };
 }

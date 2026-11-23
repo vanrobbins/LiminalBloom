@@ -47,7 +47,9 @@ export async function createCompanyInvitation(companyId: string, actor: CompanyI
   const company = sql`${companyId}::text`;
   const detail = sql`jsonb_build_object('email', ${email}::text, 'role', ${roleName}::text, 'region', (select name from regions where id = ${regionId}::text))`;
 
-  const written = await db.execute(sql`
+  let written;
+  try {
+    written = await db.execute(sql`
     with allowed as (
       select 1 where ${actorMayAct(company, sql`${actor.userId}::text`, rankOf(role))}
         and (${regionId}::text is null or exists (select 1 from regions where id = ${regionId}::text and company_id = ${company}))
@@ -68,9 +70,16 @@ export async function createCompanyInvitation(companyId: string, actor: CompanyI
       insert into company_events (company_id, actor_id, actor_name, event, detail)
       select ${company}, ${actor.userId}::text, ${actor.name}::text, 'company_invitation_created', ${detail} from made returning id)
     select id from logged`);
+  } catch (error) {
+    // Two invites to one address at once: the second insert hits the pending-per-email unique index.
+    if (hasCode(error, "23505")) return { status: "already-invited" };
+    throw error;
+  }
   if (written.rows.length > 0) return { status: "created", id, email, roleName, expiresAt };
   return whyNot(companyId, actor, email, role, regionId, nowText);
 }
+
+const hasCode = (error: unknown, code: string): boolean => typeof error === "object" && error !== null && (("code" in error && error.code === code) || ("cause" in error && hasCode(error.cause, code)));
 
 /** After the statement wrote nothing: which of its checks stopped it, in the order the dialog lists them. */
 async function whyNot(companyId: string, actor: CompanyInviter, email: string, role: AssignableCompanyRoleKey, regionId: string | null, nowText: string): Promise<CompanyInviteOutcome> {

@@ -27,6 +27,14 @@ const fresh = () => `new_${randomUUID().slice(0, 8)}@example.test`;
 const eventsNamed = (companyId: string, event: string) => db.select().from(companyEvents).where(and(eq(companyEvents.companyId, companyId), eq(companyEvents.event, event)));
 
 describe("createCompanyInvitation", { timeout: 30_000 }, () => {
+  it("answers already-invited to the second of two invites to one address sent at once (the unique index), with one pending row", async () => {
+    const c = await makeCompany("inv-race");
+    const email = fresh();
+    const out = await Promise.all([1, 2].map(() => createCompanyInvitation(c.id, as(c.ownerId, "owner"), email, "corporate_admin", null)));
+    expect(out.map((o) => o.status).sort()).toEqual(["already-invited", "created"]);
+    expect((await rows(c.id)).filter((r) => r.status === "pending")).toHaveLength(1);
+  });
+
   it("lets the owner invite a corporate admin or a regional manager, with the event, and the id is the link", async () => {
     const s = await makeStaffedCompany("ci-owner");
     const admin = await createCompanyInvitation(s.company.id, as(s.owner, "owner"), " New.Admin@Example.test ", "corporate_admin", null);

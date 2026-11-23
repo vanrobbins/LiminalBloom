@@ -14,6 +14,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { type AdminActor, platformEventFrom, storeEventFrom } from "@/lib/admin/events";
 
+import { lockPersonGrants } from "./one-company";
 import { slugifyCompany } from "./request-rules";
 
 type Row = Record<string, unknown>;
@@ -55,7 +56,7 @@ export async function approveRequest(actor: AdminActor, input: { id: string; ver
   // the lock) and nothing is made; one that comes later waits for this statement.
   let rows: Row[];
   try {
-    ({ rows } = await db.execute<Row>(sql`
+    const [, result] = await db.batch([lockPersonGrants(String(found.requester_id)), db.execute<Row>(sql`
     with req as (
       select r.requester_id, r.company_name, u.name as person, u.email
       from company_requests r join "user" u on u.id = r.requester_id
@@ -91,7 +92,8 @@ export async function approveRequest(actor: AdminActor, input: { id: string; ver
       update help_requests h set status = 'closed', closed_by = 'admin', updated_at = now(), version = h.version + 1
       where h.company_request_id = ${id} and h.status <> 'closed' and exists (select 1 from made) returning h.id),
     logged as (${platformEventFrom(actor, event, sql`made m cross join req p`)})
-    select m.id, m.name from made m`));
+    select m.id, m.name from made m`)]);
+    rows = result.rows;
   } catch (err) {
     if (!isOwnerRace(err)) throw err;
     rows = [];

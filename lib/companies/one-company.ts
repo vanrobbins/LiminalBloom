@@ -1,7 +1,7 @@
 // One company per person (spec 0.7.1 5.4): a person is the owner of a company, holds a role in one, or is a member
 // of one of its stores, and only one company at a time. The grant statements (approve, company invitation accept,
 // store invitation accept) put `inOtherCompany` in their own WHERE, so the check and the grant are one statement.
-// Two grants at the same instant for two companies could both pass: the named, accepted race.
+// Two grants for one person are serialized by `lockPersonGrants` (a lock statement first in the grant's batch).
 
 import "server-only";
 
@@ -14,6 +14,13 @@ export const inOtherCompany = (personId: SQL, companyId: SQL): SQL => sql`(
   exists (select 1 from companies oc where oc.owner_user_id = ${personId} and oc.id <> ${companyId})
   or exists (select 1 from role_assignments ora where ora.user_id = ${personId} and ora.company_id <> ${companyId})
   or exists (select 1 from member om join store_profiles osp on osp.store_id = om.organization_id where om.user_id = ${personId} and osp.company_id <> ${companyId}))`;
+
+/**
+ * The first statement of a grant's `db.batch([...])` (one transaction). The advisory lock serializes the three grants
+ * for one person; under READ COMMITTED the grant statement after it takes a fresh snapshot, so its NOT EXISTS checks see
+ * the other grant's commit. Without it two grants whose snapshots both predate the other's commit could both pass.
+ */
+export const lockPersonGrants = (personId: string) => db.execute(sql`select pg_advisory_xact_lock(hashtext(${"company-grant:" + personId}))`);
 
 /** The company a person is in other than the one `target` names (a scalar SQL expression), for the refusal's words. */
 export async function otherCompanyName(userId: string, target: SQL): Promise<string | null> {

@@ -24,7 +24,7 @@ import { sql } from "drizzle-orm";
 
 import { db } from "@/db";
 
-import { inOtherCompany } from "@/lib/companies/one-company";
+import { inOtherCompany, lockPersonGrants } from "@/lib/companies/one-company";
 
 import { lookInvitation, type InvitationState } from "./invitation-look";
 import { inviterMayGrant } from "./invitation-lapse";
@@ -38,7 +38,8 @@ export type AcceptOutcome =
 export async function acceptInvitation(person: { id: string; name: string; email: string }, invitationId: string, now: Date = new Date()): Promise<AcceptOutcome> {
   const nowText = now.toISOString();
   const email = person.email.trim().toLowerCase();
-  const result = await db.execute(sql`
+  // The lock first, in one transaction with the grant: see lockPersonGrants (one-company.ts).
+  const [, result] = await db.batch([lockPersonGrants(person.id), db.execute(sql`
     with taken as (
       update invitation i set status = 'accepted'
       where i.id = ${invitationId}::text and i.status = 'pending' and i.expires_at > ${nowText}::timestamp
@@ -64,7 +65,7 @@ export async function acceptInvitation(person: { id: string; name: string; email
         jsonb_build_object('person', ${person.name}::text, 'email', ${email}::text, 'role', role_name)
       from named
       returning id)
-    select organization_id, role_name, store_name from named`);
+    select organization_id, role_name, store_name from named`)]);
 
   const [row] = result.rows as { organization_id: string; role_name: string; store_name: string }[];
   if (row) return { status: "accepted", storeId: row.organization_id, storeName: row.store_name, roleName: row.role_name };

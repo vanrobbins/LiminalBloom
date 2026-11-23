@@ -1,7 +1,7 @@
 // Regions and moving a store, against the dev database (spec 0.7.1 6.3, 15): every change logs its event in the
 // same statement, a region in use cannot be deleted, and nothing reaches into another company.
 
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
@@ -21,7 +21,7 @@ afterAll(async () => {
 });
 
 const actor = (userId: string): CompanyActor => ({ userId, name: "Ana Owner" });
-const events = async (companyId: string) => (await db.select({ event: companyEvents.event, detail: companyEvents.detail }).from(companyEvents).where(eq(companyEvents.companyId, companyId))).sort((a, b) => a.event.localeCompare(b.event));
+const events = async (companyId: string) => (await db.select({ event: companyEvents.event, detail: companyEvents.detail }).from(companyEvents).where(eq(companyEvents.companyId, companyId)).orderBy(asc(companyEvents.event), asc(companyEvents.createdAt), asc(companyEvents.id)));
 const regionNames = async (companyId: string) => (await db.select({ name: regions.name }).from(regions).where(eq(regions.companyId, companyId))).map((r) => r.name).sort();
 
 describe("regions", { timeout: 30_000 }, () => {

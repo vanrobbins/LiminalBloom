@@ -3,8 +3,8 @@
 // the statement itself: pending, unexpired, this person's email, the inviter still holds the authority (a lapse, the
 // inviter's rows locked FOR SHARE as a store accept does), the person holds no company role or ownership at all (a
 // company person is only ever one), and is in no other company through a store (one-company.ts). Two accepts of
-// the same link cannot both win; two for different companies at once could (the named race), but role_assignments'
-// primary key turns a second insert for the same person into an error answered "stale". Never writes a `member` row.
+// the same link cannot both win; two grants for one person are serialized by an advisory lock first in the batch (one-company.ts); role_assignments'
+// primary key stays as a backstop, an error answered "stale". Never writes a `member` row.
 //
 // The person comes from the action's session. Runs as the table owner.
 
@@ -17,7 +17,7 @@ import type { AcceptOutcome } from "@/lib/access/invitation-accept";
 
 import { inviterMayGrantCompany, roleNameSql } from "./authority";
 import { lookCompanyInvitation } from "./invite-look";
-import { inOtherCompany } from "./one-company";
+import { inOtherCompany, lockPersonGrants } from "./one-company";
 
 export type CompanyAccept = { status: "accepted"; companyId: string; regionId: string | null; companyName: string; roleName: string } | Exclude<AcceptOutcome, { status: "accepted" }>;
 
@@ -33,7 +33,7 @@ export async function acceptCompanyInvitation(person: Person, invitationId: stri
   const me = sql`${person.id}::text`;
   let rows: { company_id: string; region_id: string | null; company_name: string; role_name: string }[];
   try {
-    ({ rows } = await db.execute<{ company_id: string; region_id: string | null; company_name: string; role_name: string }>(sql`
+    const [, result] = await db.batch([lockPersonGrants(person.id), db.execute<{ company_id: string; region_id: string | null; company_name: string; role_name: string }>(sql`
       with taken as (
         update company_invitations i set status = 'accepted'
         where i.id = ${invitationId}::text and i.status = 'pending' and i.expires_at > ${now.toISOString()}::timestamptz
@@ -54,7 +54,8 @@ export async function acceptCompanyInvitation(person: Person, invitationId: stri
         insert into company_events (company_id, actor_id, actor_name, event, detail)
         select company_id, ${me}, ${person.name}::text, 'company_role_given', jsonb_build_object('person', ${person.name}::text, 'role', role_name, 'region', region_name)
         from named returning id)
-      select company_id, region_id, company_name, role_name from named`));
+      select company_id, region_id, company_name, role_name from named`)]);
+    rows = result.rows;
   } catch (error) {
     // The primary key: this person got a company role between the check and the insert.
     if (hasCode(error, "23505")) return { status: "stale" };
