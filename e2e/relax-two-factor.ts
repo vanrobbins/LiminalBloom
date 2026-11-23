@@ -13,3 +13,11 @@ export async function relaxTwoFactor(emails: string[]): Promise<void> {
     where requires_two_factor
       and store_id in (select m.organization_id from member m join "user" u on u.id = m.user_id where u.email = any(${emails}))`;
 }
+
+/** The opposite, for the specs about the requirement itself: the Store Manager role of every store these accounts belong to asks for two-factor again. */
+export async function requireTwoFactor(emails: string[]): Promise<void> {
+  await sql()`
+    update role_definitions set requires_two_factor = true
+    where builtin = 'store_manager'
+      and store_id in (select m.organization_id from member m join "user" u on u.id = m.user_id where u.email = any(${emails}))`;
+}

@@ -47,7 +47,8 @@ async function signUp(page: Page, email: string, name: string) {
   await page.waitForURL(/\/(home|welcome)/);
 }
 
-const makeAdmin = (email: string) => sql()`insert into platform_admins (user_id, added_by_name) select id, 'e2e' from "user" where email = ${email} on conflict do nothing`;
+/** Flags the account an admin straight in the development database, as Van's script does in production. */
+export const makeAdmin = (email: string) => sql()`insert into platform_admins (user_id, added_by_name) select id, 'e2e' from "user" where email = ${email} on conflict do nothing`;
 
 /** A new account that is an admin and has no two-step sign-in yet, signed in (a session with no code), in a browser of this project's size. */
 export async function newAdminAccount(browser: Browser, testInfo: TestInfo): Promise<{ context: BrowserContext; page: Page; email: string; password: string }> {
