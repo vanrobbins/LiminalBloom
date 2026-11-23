@@ -20,6 +20,18 @@ export function companyEventText({ event, actorName, detail }: EventRow): string
       return `${actorName} added ${str(detail.store, "a store")} to ${str(detail.region, "No region")}`;
     case "store_moved":
       return `${actorName} moved ${str(detail.store, "a store")} from ${str(detail.from, "No region")} to ${str(detail.to, "No region")}`;
+    case "company_invitation_created":
+      return `${actorName} invited ${str(detail.email, "someone")} as ${str(detail.role, "a company role")}${detail.region ? ` for ${str(detail.region, "a region")}` : ""}`;
+    case "company_invitation_cancelled":
+      return `${actorName} cancelled the invitation to ${str(detail.email, "someone")}`;
+    case "company_role_given":
+      return `${actorName} joined as ${str(detail.role, "a company role")}${detail.region ? ` for ${str(detail.region, "a region")}` : ""}`;
+    case "company_region_changed":
+      return `${actorName} moved ${str(detail.person, "a regional manager")} from ${str(detail.from, "No region")} to ${str(detail.to, "No region")}`;
+    case "company_role_removed":
+      return `${actorName} removed ${str(detail.person, "someone")} as ${str(detail.role, "a company role")}`;
+    case "ownership_handed_off":
+      return `${actorName} handed ownership to ${str(detail.to, "another person")}`;
     default:
       return `${actorName} made a change`;
   }

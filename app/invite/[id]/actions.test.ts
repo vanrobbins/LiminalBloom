@@ -27,6 +27,9 @@ import { invitation, member, user } from "@/db/auth-schema";
 import { eventsOf } from "@/lib/access/people-test";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { makeSession, sessionStore } from "@/lib/access/test-session";
+import { createCompanyInvitation } from "@/lib/companies/invite";
+import { dropCompanies, makeCompanyStore, makeStaffedCompany } from "@/lib/companies/test-companies";
+import { roleAssignments } from "@/db/schema";
 import { dropStores } from "@/lib/products/test-stores";
 
 import { acceptInvitationAction } from "./actions";
@@ -34,6 +37,7 @@ import { acceptInvitationAction } from "./actions";
 const made: string[] = [];
 afterAll(async () => {
   await dropStores();
+  await dropCompanies();
   await dropPeople();
   for (const id of made.splice(0)) await db.delete(user).where(eq(user.id, id));
 });
@@ -132,6 +136,29 @@ describe("acceptInvitationAction", () => {
     expect(await db.select().from(member).where(eq(member.userId, userId))).toHaveLength(1);
     expect((await eventsOf(store)).filter((e) => e.event === "invitation_accepted")).toHaveLength(1);
     expect(await sessionStore(sessionId)).toBe(store);
+  });
+
+  it("accepts a company invitation: the role (no member row), the company's first store active, and the company's name", async () => {
+    const s = await makeStaffedCompany("accept-company");
+    const north = await makeCompanyStore(s.company.id, s.north, "accept-company-n");
+    await makeCompanyStore(s.company.id, s.south, "accept-company-s");
+    const made = await createCompanyInvitation(s.company.id, { userId: s.owner, name: "Owner", role: "owner" }, address, "regional_manager", s.north);
+    if (made.status !== "created") throw new Error("not created");
+    const userId = await signInWithEmail(address);
+    expect(await acceptInvitationAction(made.id)).toMatchObject({ status: "accepted", roleName: "Regional Manager" });
+    expect(await db.select().from(roleAssignments).where(eq(roleAssignments.userId, userId))).toMatchObject([{ companyId: s.company.id, regionId: s.north }]);
+    expect(await membership(userId)).toBeUndefined();
+    expect(await sessionStore(sessionId)).toBe(north.store);
+  });
+
+  it("answers in-company, naming the company, to a person already in another one", async () => {
+    const s = await makeStaffedCompany("accept-other");
+    const made = await createCompanyInvitation(s.company.id, { userId: s.owner, name: "Owner", role: "owner" }, address, "corporate_admin", null);
+    if (made.status !== "created") throw new Error("not created");
+    const other = await makeStaffedCompany("accept-other-2");
+    const userId = await signInWithEmail(address);
+    await db.insert(roleAssignments).values({ userId, companyId: other.company.id, role: "corporate_admin" });
+    expect(await acceptInvitationAction(made.id)).toEqual({ status: "in-company", companyName: expect.stringContaining("accept-other-2") });
   });
 
   it("answers invalid to an argument that is not an id", async () => {

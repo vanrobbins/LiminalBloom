@@ -9,9 +9,13 @@ const mocks = vi.hoisted(() => ({
   requireCompanyPerson: vi.fn(),
   companyView: vi.fn(),
   recentChanges: vi.fn(),
+  companyPeople: vi.fn(),
 }));
 vi.mock("@/lib/companies/guard", () => ({ requireCompanyPerson: mocks.requireCompanyPerson }));
 vi.mock("@/lib/companies/queries", () => ({ companyView: mocks.companyView }));
+vi.mock("@/lib/companies/people-read", async (original) => ({ ...(await original<typeof import("@/lib/companies/people-read")>()), companyPeople: mocks.companyPeople }));
+vi.mock("@/app/(app)/company/people-actions", () => ({ inviteCompanyPersonAction: vi.fn(), cancelCompanyInvitationAction: vi.fn(), changeRegionAction: vi.fn(), removeCompanyPersonAction: vi.fn() }));
+vi.mock("@/app/(app)/company/ownership-actions", () => ({ handOffOwnershipAction: vi.fn() }));
 vi.mock("@/lib/companies/recent", () => ({ recentChanges: mocks.recentChanges }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/company", useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/app/(app)/company/actions", () => ({ renameCompanyAction: vi.fn(), addRegionAction: vi.fn(), renameRegionAction: vi.fn(), deleteRegionAction: vi.fn(), moveStoreAction: vi.fn() }));
@@ -34,8 +38,18 @@ const VIEW = {
   stores: [{ id: "s1", name: "Pioneer Place", regionId: "r1", regionName: "North", paused: false }],
 };
 
+const PEOPLE = {
+  version: 3,
+  invitations: [],
+  people: [
+    { userId: "u1", name: "Ana Owner", email: "ana@example.com", role: "owner", roleName: "Owner", regionId: null, regionName: null, version: 0, canAct: false },
+    { userId: "u2", name: "Cy Admin", email: "cy@example.com", role: "corporate_admin", roleName: "Corporate Admin", regionId: null, regionName: null, version: 1, canAct: true },
+  ],
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.companyPeople.mockResolvedValue(PEOPLE);
   mocks.companyView.mockResolvedValue(VIEW);
   mocks.recentChanges.mockResolvedValue([{ id: "e1", text: "Ana added the region North", at: new Date("2026-11-22T20:00:00Z"), liminal: false }]);
 });
@@ -54,6 +68,18 @@ describe("/company", () => {
     expect(screen.getByRole("button", { name: "Add region" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add store" })).toBeInTheDocument();
     expect(mocks.recentChanges).toHaveBeenCalled();
+    expect(screen.getByRole("heading", { level: 2, name: "People" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Ownership" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hand off ownership" })).toBeInTheDocument();
+  });
+
+  it("for a corporate admin: People, but Ownership is the owner's alone", async () => {
+    mocks.requireCompanyPerson.mockResolvedValue({ kind: "member", user: USER, company: company("corporate_admin", ALL), activeStoreId: "s1" });
+    await draw();
+    expect(screen.getByRole("heading", { level: 2, name: "People" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2, name: "Ownership" })).toBeNull();
+    // Below a corporate admin only regional managers can be invited, and the list is not read for the owner's section.
+    expect(screen.getByRole("button", { name: "Invite" })).toBeInTheDocument();
   });
 
   it("for a regional manager: read-only, no Recent changes read at all", async () => {
@@ -64,6 +90,9 @@ describe("/company", () => {
     expect(screen.queryByRole("button", { name: "Add store" })).toBeNull();
     expect(screen.queryByRole("heading", { level: 2, name: "Recent changes" })).toBeNull();
     expect(mocks.recentChanges).not.toHaveBeenCalled();
+    expect(mocks.companyPeople).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { level: 2, name: "People" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 2, name: "Ownership" })).toBeNull();
     expect(screen.getByText("Regional Manager · North")).toBeInTheDocument();
   });
 

@@ -4,7 +4,9 @@
 
 import { clearCompanies, newEmail, signUpCompanyOnly, signUpOwnerWithStore } from "./company-store";
 import { expect, hydrated, test } from "./fixtures";
+import { signUp, visitor } from "./invite-page";
 import { expectLayout } from "./layout-check";
+import { sql } from "./map-store";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 // Sign-up, a company and a store make these longer than the default.
@@ -68,4 +70,48 @@ test("the owner adds a region, then a store into it, and lands on the store's Ho
   await page.waitForURL("**/home");
   // Its name is on the page for every size (visible in the header or sidebar, or read by the rail).
   await expect(page.getByText("Company Added Store").first()).toBeAttached();
+});
+
+test("the owner invites a regional manager by link; they sign up, accept, land in the region's store and see it read-only", async ({ page, browser }) => {
+  await signUpOwnerWithStore(page, newEmail(), "Invite Home Store");
+  const email = newEmail();
+  await page.goto("/company");
+  await hydrated(page);
+
+  const people = page.getByRole("region", { name: "People" });
+  await people.getByRole("button", { name: "Invite" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Email").fill(email);
+  await expect(dialog.getByLabel("Role")).toHaveValue("regional_manager");
+  await expect(dialog.getByLabel("Region")).toContainText("North");
+  await dialog.getByRole("button", { name: "Create invite link" }).click();
+  const link = await dialog.getByLabel("Invite link").inputValue();
+  expect(link).toMatch(/\/invite\/[A-Za-z0-9_-]{32,}$/);
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(people.getByRole("button", { name: `Copy link for ${email}` })).toBeVisible();
+
+  const guest = await visitor(browser, page);
+  await guest.page.goto(link);
+  await expect(guest.page.getByRole("heading", { level: 1, name: "Join E2E Company" })).toBeVisible();
+  await expect(guest.page.getByText(email)).toHaveCount(0);
+  await guest.page.getByRole("link", { name: "Create an account" }).click();
+  await signUp(guest.page, email);
+  await guest.page.getByRole("button", { name: "Accept invitation" }).click();
+  await guest.page.waitForURL("**/home");
+
+  // Every company role asks for two-factor (DECISIONS 11-23); the e2e accounts are flagged as having it, as company-store.ts does.
+  await sql()`update "user" set two_factor_enabled = true where email = ${email}`;
+  // A regional manager holds no company switch: Details and Stores only, and their role and region in Details.
+  await guest.page.goto("/company");
+  await hydrated(guest.page);
+  await expect(guest.page.getByText("Regional Manager · North")).toBeVisible();
+  await expect(guest.page.getByRole("region", { name: "People" })).toHaveCount(0);
+  await expect(guest.page.getByRole("button", { name: "Add store" })).toHaveCount(0);
+  await guest.context.close();
+
+  // The owner's People now lists them, with the waiting invitation gone.
+  await page.reload();
+  await hydrated(page);
+  await expect(people.getByText("Regional Manager · North")).toBeVisible();
+  await expect(people.getByRole("button", { name: `Copy link for ${email}` })).toHaveCount(0);
 });

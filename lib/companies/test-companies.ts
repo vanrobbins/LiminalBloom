@@ -5,7 +5,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
@@ -54,6 +54,24 @@ export async function assignCompanyRole(companyId: string, userId: string, role:
 export async function makeRegion(companyId: string, name: string): Promise<string> {
   const [row] = await db.insert(regions).values({ companyId, name }).returning({ id: regions.id });
   return row.id;
+}
+
+/** The address a test account was made with. */
+export async function emailOf(userId: string): Promise<string> {
+  const [row] = await db.select({ email: user.email }).from(user).where(eq(user.id, userId));
+  return row.email;
+}
+
+/** A company with its owner, a corporate admin and a regional manager (North), who are in no store; a South region too. */
+export async function makeStaffedCompany(label: string) {
+  const company = await makeCompany(label, await makeBareAccount(`${label}-owner`));
+  const north = await makeRegion(company.id, "North");
+  const south = await makeRegion(company.id, "South");
+  const admin = await makeBareAccount(`${label}-admin`);
+  const manager = await makeBareAccount(`${label}-rm`);
+  await assignCompanyRole(company.id, admin, "corporate_admin");
+  await assignCompanyRole(company.id, manager, "regional_manager", north);
+  return { company, north, south, owner: company.ownerId, admin, manager };
 }
 
 /** Removes the companies made above, with their regions, roles, invitations and events (all cascade). */
