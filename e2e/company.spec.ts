@@ -42,7 +42,7 @@ test("a company person with no store opens Account from /company: its cards, the
   await page.waitForURL("**/account");
   await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
   for (const name of ["Change password", "Company"]) await expect(page.getByRole("heading", { name })).toBeVisible();
-  await expect(page.getByText("E2E Company")).toBeVisible();
+  await expect(page.getByText("E2E Company", { exact: true })).toBeVisible();
   await expect(page.locator("#content")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Create a store" })).toHaveCount(0);
   await page.getByRole("link", { name: /Back/ }).click();
