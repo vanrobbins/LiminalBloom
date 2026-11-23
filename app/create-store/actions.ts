@@ -14,17 +14,9 @@ import { setActiveStore } from "@/lib/access/set-active-store";
 import { auth } from "@/lib/auth";
 import { getCurrentMember } from "@/lib/current-member";
 import { isSlugTaken } from "@/lib/store-errors";
+import { slugify } from "@/lib/store-slug";
 import { setStoreTimezone } from "@/lib/store-settings";
 import { isTimezone } from "@/lib/time/zones";
-
-/** "Pioneer Place" -> "pioneer-place". Organizations are addressed by slug. */
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
-}
 
 export async function createStore(
   _previous: { error: string } | null,
