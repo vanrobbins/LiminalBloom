@@ -5,7 +5,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
-import { companyEvents, regions, storeProfiles } from "@/db/schema";
+import { companyEvents, companyInvitations, regions, storeProfiles } from "@/db/schema";
 import { dropStores } from "@/lib/products/test-stores";
 import { dropPeople } from "@/lib/access/test-roles";
 
@@ -80,6 +80,26 @@ describe("regions", { timeout: 30_000 }, () => {
     // Once the store moves out, the region goes.
     expect(await moveStore(c.id, actor(c.ownerId), store.store, null)).toEqual({ status: "moved" });
     expect(await deleteRegion(c.id, actor(c.ownerId), used)).toEqual({ status: "deleted" });
+  });
+
+  it("is not blocked by a dead waiting invitation: an expired or lapsed one goes with the region, a live one still refuses", async () => {
+    const c = await makeCompany("rg-dead");
+    const stranger = await makeAccount("rg-dead-stranger");
+    const invite = async (label: string, regionId: string, inviterId: string, expiresAt: Date) => {
+      await db.insert(companyInvitations).values({ id: `rg-dead-${label}-${c.id}`, companyId: c.id, email: `${label}@example.test`, role: "regional_manager", regionId, inviterId, expiresAt });
+    };
+    const future = new Date(Date.now() + 3_600_000);
+    const live = await makeRegion(c.id, "Live");
+    const expired = await makeRegion(c.id, "Expired");
+    const lapsed = await makeRegion(c.id, "Lapsed");
+    await invite("live", live, c.ownerId, future);
+    await invite("expired", expired, c.ownerId, new Date(Date.now() - 1000));
+    await invite("lapsed", lapsed, stranger, future);
+    expect(await deleteRegion(c.id, actor(c.ownerId), live)).toEqual({ status: "used" });
+    expect(await deleteRegion(c.id, actor(c.ownerId), expired)).toEqual({ status: "deleted" });
+    expect(await deleteRegion(c.id, actor(c.ownerId), lapsed)).toEqual({ status: "deleted" });
+    expect(await regionNames(c.id)).toEqual(["Live"]);
+    expect((await db.select({ id: companyInvitations.id }).from(companyInvitations).where(eq(companyInvitations.companyId, c.id))).map((r) => r.id)).toEqual([`rg-dead-live-${c.id}`]);
   });
 });
 

@@ -66,7 +66,7 @@ describe("a corporate admin", { timeout: 30_000 }, () => {
     const admin = await makeBareAccount("act-used-admin");
     await assignCompanyRole(company.id, admin, "corporate_admin");
     signedInAs(admin);
-    expect(await deleteRegionAction(north)).toEqual({ status: "refused", message: "Move this region's stores and regional managers first." });
+    expect(await deleteRegionAction(north)).toEqual({ status: "refused", message: "Move this region's stores and regional managers, and cancel its invitations, first." });
     expect(await regionsOf(company.id)).toEqual(["North"]);
   });
 

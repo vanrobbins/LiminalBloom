@@ -8,6 +8,7 @@ import { sql } from "drizzle-orm";
 
 import { db } from "@/db";
 
+import { inviterMayGrantCompany } from "./authority";
 import { logCompanyEvent, type CompanyActor } from "./events";
 import { cleanRegionName } from "./limits";
 
@@ -53,25 +54,25 @@ export async function renameRegion(companyId: string, actor: CompanyActor, regio
 }
 
 /**
- * Only an empty region goes: no store in it and no regional manager or waiting invitation naming it. The
+ * Only an empty region goes: no store in it and no regional manager or live waiting invitation naming it. The
  * manager half is also the role_assignments foreign key's; the store half is here, because store_profiles sets
  * null (a store moved in at the same instant would drop to "No region": accepted, harmless). Old invitations
- * (accepted, canceled) that name the region go with it, or their key would stop the delete forever.
+ * (accepted, canceled) and dead pending ones (expired, or lapsed because their inviter lost the authority: the
+ * rule invite accept uses, authority.ts) that name the region go with it, or their key would stop the delete
+ * forever; companyPeople hides the dead ones from the owner, so they must not block either.
  */
 export async function deleteRegion(companyId: string, actor: CompanyActor, regionId: string): Promise<RegionOutcome> {
+  const live = sql`(ci.status = 'pending' and ci.expires_at > now() and ${inviterMayGrantCompany(sql`ci.company_id`, sql`ci.role`, sql`ci.inviter_id`)})`;
+  const empty = sql`not exists (select 1 from store_profiles sp where sp.region_id = ${regionId})
+    and not exists (select 1 from role_assignments ra where ra.region_id = ${regionId})
+    and not exists (select 1 from company_invitations ci where ci.region_id = ${regionId} and ${live})`;
   const done = await db.execute(sql`
     with old_invitations as (
-      delete from company_invitations ci where ci.region_id = ${regionId} and ci.company_id = ${companyId} and ci.status <> 'pending'
-        and exists (select 1 from regions g where g.id = ${regionId}
-          and not exists (select 1 from store_profiles sp where sp.region_id = g.id)
-          and not exists (select 1 from role_assignments ra where ra.region_id = g.id)
-          and not exists (select 1 from company_invitations pi where pi.region_id = g.id and pi.status = 'pending'))
+      delete from company_invitations ci where ci.region_id = ${regionId} and ci.company_id = ${companyId} and not ${live}
+        and exists (select 1 from regions g where g.id = ${regionId} and ${empty})
       returning 1),
     gone as (
-      delete from regions g where g.id = ${regionId} and g.company_id = ${companyId}
-        and not exists (select 1 from store_profiles sp where sp.region_id = g.id)
-        and not exists (select 1 from role_assignments ra where ra.region_id = g.id)
-        and not exists (select 1 from company_invitations ci where ci.region_id = g.id and ci.status = 'pending')
+      delete from regions g where g.id = ${regionId} and g.company_id = ${companyId} and ${empty}
       returning g.name),
     logged as (${logCompanyEvent(companyId, actor, "region_deleted", "gone", sql`jsonb_build_object('name', r.name)`)})
     select id from logged`);

@@ -55,7 +55,7 @@ function regionReply(outcome: RegionOutcome, name: string): CompanyReply {
     case "taken":
       return { status: "refused", message: `There is already a region called ${name}.` };
     case "used":
-      return { status: "refused", message: "Move this region's stores and regional managers first." };
+      return { status: "refused", message: "Move this region's stores and regional managers, and cancel its invitations, first." };
     case "stale":
     case "gone":
       return { status: "refused", message: GONE };
