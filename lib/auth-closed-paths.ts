@@ -41,3 +41,17 @@ const CLOSED_ORGANIZATION_PATHS = [
 const CLOSED_TWO_FACTOR_PATHS = ["enable", "disable", "get-totp-uri", "generate-backup-codes", "send-otp", "verify-otp"].map((name) => `/two-factor/${name}`);
 
 export const CLOSED_PATHS: string[] = [...CLOSED_ORGANIZATION_PATHS, ...CLOSED_TWO_FACTOR_PATHS, "/change-password"];
+
+// True when a request pathname under /api/auth is a closed path in any spelling: percent-encoding,
+// letter case, and repeated or trailing slashes are folded away first. The route handler uses it to
+// answer 404 before Better Auth's rate limiter runs.
+export function isClosedAuthPath(pathname: string): boolean {
+  let decoded = pathname;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    // A malformed escape is not a closed path's spelling; Better Auth answers it.
+  }
+  const rest = decoded.toLowerCase().replace(/^\/api\/auth(?=\/|$)/, "").replace(/\/+/g, "/").replace(/\/$/, "");
+  return CLOSED_PATHS.includes(rest);
+}
