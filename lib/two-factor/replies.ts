@@ -2,7 +2,7 @@
 // imports, so client components and their tests use these types. The reasons are the ones in
 // lib/two-factor/setup.ts and lib/admin/step-up.ts.
 
-export type RefusalReason = "password" | "locked" | "already-on" | "failed" | "code" | "not-on" | "admin";
+export type RefusalReason = "password" | "locked" | "already-on" | "failed" | "code" | "not-on" | "admin" | "required";
 
 export const REFUSAL_TEXT: Record<RefusalReason, string> = {
   password: "That isn't your password.",
@@ -12,6 +12,7 @@ export const REFUSAL_TEXT: Record<RefusalReason, string> = {
   code: "That code didn't work. Try the newest one.",
   "not-on": "Two-step sign-in isn't on yet.",
   admin: "Liminal Bloom admins need two-step sign-in, so it stays on.",
+  required: "Your role requires two-factor sign-in.",
 };
 
 export type Refused = { status: "refused"; message: string };

@@ -10,8 +10,8 @@ import { TwoFactorCard } from "./account-card";
 const actions = () => ({ start: vi.fn(), confirm: vi.fn(), makeCodes: vi.fn(), disable: vi.fn() });
 /** The turn-off form: the card also has the new-codes password field, so a field is looked for inside this one. */
 const turnOff = () => within(screen.getByRole("button", { name: "Turn off two-step sign-in" }).closest("form")!);
-const OFF = { on: false, codesLeft: 0, isAdmin: false };
-const ON = { on: true, codesLeft: 7, isAdmin: false };
+const OFF = { on: false, codesLeft: 0, isAdmin: false, requiredBy: null };
+const ON = { on: true, codesLeft: 7, isAdmin: false, requiredBy: null };
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -39,6 +39,13 @@ describe("TwoFactorCard", () => {
     render(<TwoFactorCard status={{ ...ON, isAdmin: true }} {...actions()} />);
     expect(screen.getByText("Liminal Bloom admins need two-step sign-in, so it stays on.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Turn off" })).toBeNull();
+  });
+
+  it("a person whose role requires it is told so, with the store, and is not offered Turn off", () => {
+    render(<TwoFactorCard status={{ ...ON, requiredBy: "Pioneer Place" }} {...actions()} />);
+    expect(screen.getByText("Your role in Pioneer Place requires two-factor sign-in.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Turn off" })).toBeNull();
+    expect(screen.getByRole("button", { name: "New backup codes" })).toBeInTheDocument();
   });
 
   it("Turn off asks for the password and a code, sends both, and refreshes the page once it is off", async () => {

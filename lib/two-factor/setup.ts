@@ -24,6 +24,7 @@ import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
 
 import { qrSvgOf } from "./qr";
 import { setupKey } from "./totp-key";
+import { forgetTrustedDevices } from "./trusted-devices";
 
 const ISSUER = "Liminal Bloom";
 
@@ -84,6 +85,8 @@ export async function confirmTwoFactor(requestHeaders: Headers, userId: string, 
   // told it failed and, without the cookie, signed out as well.
   try {
     await clearWrongCodes(userId);
+    // Trust marks left from an earlier time it was on mean nothing for this new secret.
+    await forgetTrustedDevices(userId);
     await db.delete(session).where(and(eq(session.userId, userId), ne(session.token, token)));
     await keepShortSessionShort(token, requestHeaders);
   } catch (error) {

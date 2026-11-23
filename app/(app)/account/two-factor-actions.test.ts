@@ -86,4 +86,10 @@ describe("cookies", () => {
     expect(await disableTwoFactorAction("pw-12345", "123456")).toEqual({ status: "refused", message: "Liminal Bloom admins need two-step sign-in, so it stays on." });
     expect(mocks.applyCookies).not.toHaveBeenCalled();
   });
+
+  it("a turn off refused because the role requires it names the store", async () => {
+    mocks.disable.mockResolvedValueOnce({ status: "refused", reason: "required", store: "Pioneer Place" });
+    expect(await disableTwoFactorAction("pw-12345", "123456")).toEqual({ status: "refused", message: "Your role in Pioneer Place requires two-factor sign-in." });
+    expect(mocks.applyCookies).not.toHaveBeenCalled();
+  });
 });

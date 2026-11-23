@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
-import { session, twoFactor, user } from "@/db/auth-schema";
+import { session, twoFactor, user, verification } from "@/db/auth-schema";
 import { auth } from "@/lib/auth";
 import { clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { clearWrongGuesses } from "@/lib/password-guesses";
@@ -120,6 +120,16 @@ describe("confirmTwoFactor", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].at).toBeInstanceOf(Date);
     expect(Math.abs(Date.now() - rows[0].at!.getTime())).toBeLessThan(60_000);
+  });
+
+  it("forgets every trusted-device mark of the account (rows left from an earlier time it was on), and no one else's", async () => {
+    const { cookie, userId, key } = await started();
+    const other = await makeAccount();
+    const marks = [`trust-device-${userId}-a`, `trust-device-${userId}-b`];
+    await db.insert(verification).values([...marks.map((identifier) => ({ id: identifier, identifier, value: userId, expiresAt: new Date(Date.now() + HOUR) })), { id: `x-${other.userId}`, identifier: `trust-device-${other.userId}`, value: other.userId, expiresAt: new Date(Date.now() + HOUR) }]);
+    expect((await confirmTwoFactor(cookie, userId, await totpFor(key))).status).toBe("on");
+    expect((await db.select().from(verification).where(eq(verification.value, userId))).length).toBe(0);
+    expect((await db.select().from(verification).where(eq(verification.value, other.userId))).length).toBe(1);
   });
 
   it("signs out every other session of the account, on other devices too", async () => {

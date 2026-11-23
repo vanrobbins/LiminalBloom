@@ -2,10 +2,12 @@
 // time zone write running against the dev database (like lib/store-settings.test.ts).
 // The creator is a Store Manager, as the store-creation hook makes them.
 
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
+  listOrganizations: vi.fn(async () => []),
   createOrganization: vi.fn(),
   setActiveOrganization: vi.fn(),
   // Next's redirect() throws to stop the action; so does this stand-in.
@@ -20,6 +22,7 @@ vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
       getSession: mocks.getSession,
+      listOrganizations: mocks.listOrganizations,
       createOrganization: mocks.createOrganization,
       setActiveOrganization: mocks.setActiveOrganization,
     },
@@ -40,6 +43,7 @@ vi.mock("@/lib/store-settings", async (original) => {
 });
 
 import { db } from "@/db";
+import { user } from "@/db/auth-schema";
 import { storeSettings } from "@/db/schema";
 import { dropPeople, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
@@ -57,7 +61,7 @@ async function createdStore(role: "store_manager" | "sales_associate" = "store_m
   const { store: storeId, roles } = await makeStoreWithRoles("create-action");
   const { userId } = await makePerson(storeId, roles[role]);
   await db.insert(storeSettings).values({ storeId, timezone: "America/Los_Angeles" });
-  mocks.getSession.mockResolvedValue({ user: { id: userId }, session: {} });
+  mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Test person", email: `${userId}@example.com` }, session: { activeOrganizationId: storeId } });
   mocks.createOrganization.mockResolvedValue({ id: storeId });
   return { storeId, userId };
 }
@@ -83,6 +87,21 @@ describe("createStore", () => {
     const { storeId } = await createdStore();
     await expect(createStore(null, form("Lloyd Center", "america/denver"))).rejects.toThrow("NEXT_REDIRECT");
     expect((await storeSettingsFor(storeId))?.timezone).toBe("America/Denver");
+  });
+
+  it("refuses a person whose role requires two-factor and who has none: no store is made, and the session isn't asked for further", async () => {
+    const { userId } = await createdStore();
+    await db.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, userId));
+    expect(await createStore(null, form("Pioneer Place", "America/Denver"))).toEqual({ error: "Set up two-step sign-in on Account first." });
+    expect(mocks.createOrganization).not.toHaveBeenCalled();
+    expect(mocks.setActiveOrganization).not.toHaveBeenCalled();
+  });
+
+  it("sends a signed-out visitor to sign in before anything else", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    await expect(createStore(null, form("Pioneer Place", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
+    expect(mocks.redirect).toHaveBeenCalledWith("/sign-in");
+    expect(mocks.createOrganization).not.toHaveBeenCalled();
   });
 
   it("refuses a zone that isn't one, before making any store", async () => {

@@ -19,7 +19,7 @@ describe("hasSecondFactor and twoFactorStatus", () => {
   it("is false for a new account, false after only starting setup, true once a code confirms it", async () => {
     const account = await makeAccount();
     expect(await hasSecondFactor(account.userId)).toBe(false);
-    expect(await twoFactorStatus(account.userId)).toEqual({ on: false, codesLeft: 0, isAdmin: false });
+    expect(await twoFactorStatus(account.userId)).toEqual({ on: false, codesLeft: 0, isAdmin: false, requiredBy: null });
 
     const start = await startTwoFactor(account.cookie, account.userId, TEST_PASSWORD);
     if (start.status !== "started") throw new Error("start refused");
@@ -28,7 +28,7 @@ describe("hasSecondFactor and twoFactorStatus", () => {
     const done = await confirmTwoFactor(account.cookie, account.userId, await totpFor(setupKey(start.otpauthUri)!));
     expect(done.status).toBe("on");
     expect(await hasSecondFactor(account.userId)).toBe(true);
-    expect(await twoFactorStatus(account.userId)).toEqual({ on: true, codesLeft: 10, isAdmin: false });
+    expect(await twoFactorStatus(account.userId)).toEqual({ on: true, codesLeft: 10, isAdmin: false, requiredBy: null });
     await Promise.all([clearWrongCodes(account.userId), clearWrongGuesses(account.userId)]);
   });
 

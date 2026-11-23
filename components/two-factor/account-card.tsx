@@ -1,5 +1,5 @@
 // "Two-step sign-in" on Account (spec 0.7.1 8.3, A3b): off, with Turn on (the setup steps open in place);
-// on, with the backup codes left, New backup codes and Turn off. A Liminal Bloom admin has no Turn off. The
+// on, with the backup codes left, New backup codes and Turn off. A Liminal Bloom admin, or anyone whose role requires it, has no Turn off. The
 // server actions are props (they carry the Account guard); `status` is read on the server, and only the
 // count of backup codes comes through, never the codes.
 
@@ -49,6 +49,8 @@ export function TwoFactorCard({ status, start, confirm, makeCodes, disable }: Pr
               <NewBackupCodes make={makeCodes} level={3} />
               {status.isAdmin ? (
                 <p className="text-sm text-ink-muted">Liminal Bloom admins need two-step sign-in, so it stays on.</p>
+              ) : status.requiredBy ? (
+                <p className="text-sm text-ink-muted">Your role in {status.requiredBy} requires two-factor sign-in.</p>
               ) : mode === "off" ? (
                 <TurnOffForm
                   disable={disable}

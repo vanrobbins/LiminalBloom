@@ -18,7 +18,7 @@ const MEMBER = { kind: "member", user: USER, stores: [{ id: "a", name: "Pioneer 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.person.mockResolvedValue(MEMBER);
-  mocks.status.mockResolvedValue({ on: false, codesLeft: 0, isAdmin: false });
+  mocks.status.mockResolvedValue({ on: false, codesLeft: 0, isAdmin: false, requiredBy: null });
 });
 
 describe("AccountPage", () => {

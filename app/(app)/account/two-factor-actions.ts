@@ -47,7 +47,7 @@ export async function disableTwoFactorAction(password: unknown, code: unknown): 
   if (!goodPassword(password)) return refused("password");
   if (!goodCode(code)) return refused("code");
   const reply = await disableTwoFactor(await headers(), person.user.id, password, code.trim());
-  if (reply.status === "refused") return refused(reply.reason);
+  if (reply.status === "refused") return reply.reason === "required" && reply.store ? { status: "refused", message: `Your role in ${reply.store} requires two-factor sign-in.` } : refused(reply.reason);
   await applyAuthCookies(reply.responseHeaders);
   return { status: "off" };
 }
