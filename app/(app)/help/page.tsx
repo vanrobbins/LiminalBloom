@@ -11,7 +11,7 @@ import { listRequests } from "@/lib/help/queries";
 export const dynamic = "force-dynamic";
 
 export default async function HelpPage() {
-  const current = await requireSignedIn();
+  const current = await requireSignedIn("/help");
   const items = await listRequests(current.user.id);
   return (
     <HelpFrame kind={current.kind} title="Help">

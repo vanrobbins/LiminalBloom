@@ -27,6 +27,7 @@ import type { Switch } from "@/lib/access/switches";
 import { auth } from "@/lib/auth";
 import { helpRepliesFor } from "@/lib/help/badge";
 import { pausedAmong, pausedStoresOf } from "@/lib/paused";
+import { authHref } from "@/lib/return-path";
 import { hasSecondFactor } from "@/lib/two-factor/has-second-factor";
 
 // Also here for server code that already imports this file; client components import ./access/can.
@@ -144,9 +145,10 @@ export async function requireMember(): Promise<Member> {
  * role still needs two-factor, or one whose stores are all paused. Only a signed-out visitor is sent away. The page
  * chooses its frame from `kind`: the shell for a member, the bare card for the rest (spec 0.7.1 9.3).
  */
-export async function requireSignedIn(): Promise<Exclude<CurrentMember, { kind: "signed-out" }>> {
+export async function requireSignedIn(next?: string): Promise<Exclude<CurrentMember, { kind: "signed-out" }>> {
   const current = await getCurrentMember();
-  if (current.kind === "signed-out") redirect("/sign-in");
+  // A server component cannot read its own address, so a page passes the path to come back to after sign-in.
+  if (current.kind === "signed-out") redirect(authHref("/sign-in", next));
   return current;
 }
 

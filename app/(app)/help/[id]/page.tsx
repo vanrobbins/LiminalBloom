@@ -19,8 +19,9 @@ import { getThread } from "@/lib/help/queries";
 export const dynamic = "force-dynamic";
 
 export default async function HelpThreadPage({ params }: { params: Promise<{ id: string }> }) {
-  const current = await requireSignedIn();
-  const thread = await getThread(current.user.id, (await params).id);
+  const { id } = await params;
+  const current = await requireSignedIn(`/help/${encodeURIComponent(id)}`);
+  const thread = await getThread(current.user.id, id);
   if (!thread) notFound();
   const isClosed = thread.status === "closed";
 

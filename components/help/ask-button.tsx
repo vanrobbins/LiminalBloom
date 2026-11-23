@@ -8,15 +8,21 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import type { HelpKind } from "@/lib/help/kinds";
+import { authHref } from "@/lib/return-path";
 
-export function AskButton({ kind, from, variant = "secondary" }: { kind?: HelpKind; from?: string; variant?: "primary" | "secondary" }) {
+type AskButtonProps = { kind?: HelpKind; from?: string; variant?: "primary" | "secondary"; signedOut?: boolean };
+
+export function AskButton({ kind, from, variant = "secondary", signedOut = false }: AskButtonProps) {
   const query = new URLSearchParams();
   if (kind) query.set("kind", kind);
   if (from) query.set("from", from);
   const text = query.toString();
+  const target = text ? `/help/new?${text}` : "/help/new";
+  // A signed-out visitor goes through sign-in and lands on the form (the form itself needs an account).
+  const href = signedOut ? authHref("/sign-in", target) : target;
   return (
     <Button asChild variant={variant}>
-      <Link href={text ? `/help/new?${text}` : "/help/new"}>
+      <Link href={href}>
         <LifeBuoy aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
         Ask Liminal Bloom
       </Link>

@@ -178,6 +178,12 @@ describe("requireSignedIn", () => {
     await expect(requireSignedIn()).rejects.toThrow("redirect:/sign-in");
   });
 
+  it("keeps the page it was asked from as ?next=, and drops one that is not on this site", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    await expect(requireSignedIn("/help/new?kind=account&from=/invite")).rejects.toThrow("redirect:/sign-in?next=%2Fhelp%2Fnew%3Fkind%3Daccount%26from%3D%2Finvite");
+    await expect(requireSignedIn("//evil.example")).rejects.toThrow("redirect:/sign-in");
+  });
+
   it("lets a member through, and a person with no store, who has an account to name", async () => {
     signedIn("store-a", SALES, ["view"]);
     expect(await requireSignedIn()).toMatchObject({ kind: "member" });

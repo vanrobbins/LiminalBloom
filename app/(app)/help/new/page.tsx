@@ -13,8 +13,13 @@ type Param = string | string[] | undefined;
 const one = (value: Param) => (Array.isArray(value) ? value[0] : value);
 
 export default async function NewHelpPage({ searchParams }: { searchParams: Promise<{ kind?: Param; from?: Param }> }) {
-  const current = await requireSignedIn();
   const query = await searchParams;
+  const back = new URLSearchParams();
+  for (const key of ["kind", "from"] as const) {
+    const value = one(query[key]);
+    if (value) back.set(key, value);
+  }
+  const current = await requireSignedIn(back.size ? `/help/new?${back}` : "/help/new");
   return (
     <HelpFrame kind={current.kind} title="Ask Liminal Bloom" back={{ href: "/help", label: "Help" }}>
       <HelpForm kinds={ASKABLE_KINDS} initialKind={askableKind(one(query.kind)) ?? "account"} from={cleanFrom(one(query.from))} />
