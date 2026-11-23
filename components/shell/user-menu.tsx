@@ -7,19 +7,8 @@
 
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowLeftRight,
-  ChevronRight,
-  CircleUser,
-  LifeBuoy,
-  LogOut,
-  Moon,
-  ShieldCheck,
-  Sun,
-} from "lucide-react";
+import { ArrowLeft, Moon, Sun } from "lucide-react";
 import { useState } from "react";
-import Link from "next/link";
 
 import { StoreSwitcher } from "@/components/store-switcher";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -27,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -37,6 +25,7 @@ import { personInitial } from "@/lib/initials";
 
 import { useShellSheet } from "./shell-context";
 import { StoreMenuItems } from "./store-menu";
+import { DropdownRows, ICON, SheetRows } from "./user-menu-items";
 import { type Store, useSwitchStore } from "./use-switch-store";
 import { useSignOut } from "./use-sign-out";
 import { useThemeSwitch } from "./use-theme-switch";
@@ -52,12 +41,6 @@ const TRIGGER: Record<UserMenuVariant, string> = {
   rail: `inline-flex size-11 shrink-0 items-center justify-center rounded-full ${FOCUS}`,
   sidebar: `flex min-h-11 w-full items-center gap-3 rounded px-2 text-left text-sm text-ink ${FOCUS}`,
 };
-
-const ICON = {
-  "aria-hidden": true,
-  strokeWidth: 1.75,
-  className: "size-4 shrink-0",
-} as const;
 
 export function UserMenu({
   user,
@@ -102,7 +85,7 @@ export function UserMenu({
       {helpReplies > 0 ? <span data-help-dot className="absolute -top-0.5 -right-0.5 size-3 rounded-full border-2 border-raised bg-info" /> : null}
     </span>
   );
-  const help = helpLabel(helpReplies);
+  const rows = { help: helpLabel(helpReplies), isPlatformAdmin, isMounted, themeLabel, ThemeIcon, switchTheme, signOut: () => void signOut(), isSigningOut };
 
   if (variant === "sheet") {
     return (
@@ -145,53 +128,7 @@ export function UserMenu({
               />
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              <p className="break-all text-sm text-ink-muted">{user.email}</p>
-              <Button
-                variant="secondary"
-                data-store-switch
-                onClick={() => setShowStores(true)}
-              >
-                <ArrowLeftRight {...ICON} />
-                Switch store
-                <ChevronRight {...ICON} className="ml-auto size-4 shrink-0" />
-              </Button>
-              <Button asChild variant="secondary">
-                <Link href="/account" onClick={() => openSheet(false)}>
-                  <CircleUser {...ICON} />
-                  Account
-                </Link>
-              </Button>
-              <Button asChild variant="secondary">
-                <Link href="/help" onClick={() => openSheet(false)}>
-                  <LifeBuoy {...ICON} />
-                  {help}
-                </Link>
-              </Button>
-              {isPlatformAdmin ? (
-                <Button asChild variant="secondary">
-                  <Link href="/admin" onClick={() => openSheet(false)}>
-                    <ShieldCheck {...ICON} />
-                    Liminal Bloom admin
-                  </Link>
-                </Button>
-              ) : null}
-              {isMounted ? (
-                <Button variant="secondary" onClick={switchTheme}>
-                  <ThemeIcon {...ICON} />
-                  {themeLabel}
-                </Button>
-              ) : null}
-              <Button
-                variant="secondary"
-                loading={isSigningOut}
-                loadingText="Signing out…"
-                onClick={() => void signOut()}
-              >
-                <LogOut {...ICON} />
-                Sign out
-              </Button>
-            </div>
+            <SheetRows email={user.email} close={() => openSheet(false)} showStores={() => setShowStores(true)} {...rows} />
           )}
         </BottomSheet>
       </>
@@ -228,40 +165,7 @@ export function UserMenu({
           switchTo={switchTo}
         />
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/account">
-            <CircleUser {...ICON} />
-            Account
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/help">
-            <LifeBuoy {...ICON} />
-            {help}
-          </Link>
-        </DropdownMenuItem>
-        {isPlatformAdmin ? (
-          <DropdownMenuItem asChild>
-            <Link href="/admin">
-              <ShieldCheck {...ICON} />
-              Liminal Bloom admin
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
-        {isMounted ? (
-          <DropdownMenuItem onSelect={switchTheme}>
-            <ThemeIcon {...ICON} />
-            {themeLabel}
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={isSigningOut}
-          onSelect={() => void signOut()}
-        >
-          <LogOut {...ICON} />
-          {isSigningOut ? "Signing out…" : "Sign out"}
-        </DropdownMenuItem>
+        <DropdownRows {...rows} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
