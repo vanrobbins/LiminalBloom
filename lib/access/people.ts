@@ -13,13 +13,13 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
-import { roleDefinitions } from "@/db/schema";
+import { roleAssignments, roleDefinitions, storeProfiles } from "@/db/schema";
 import type { Member } from "@/lib/current-member";
 
 import { can } from "./can";
 import { inviterMayGrant } from "./invitation-lapse";
 import { canActOn, type Actor } from "./rank";
-import { groupByRole, NO_ROLE_NAME, NO_ROLE_RANK, type InvitationRow, type PeopleView, type PersonRow, type RoleChoice } from "./people-view";
+import { groupByRole, NO_ROLE_NAME, NO_ROLE_RANK, type InvitationRow, type PeopleView, type PersonRow, type RegionalManagerRow, type RoleChoice } from "./people-view";
 
 /** The viewer as the rank rule sees them. A member with no role has no rank, so the rule refuses everything. */
 export function actorOf(viewer: Member): Actor {
@@ -53,6 +53,22 @@ async function readInvitations(storeId: string) {
     .orderBy(desc(invitation.createdAt));
 }
 
+/**
+ * The regional managers of the store's region (spec 0.7.1 6.6): company people, not `member` rows. Names are for everyone
+ * in the store (spec 13); the email only for someone who may manage people. Empty for a standalone store (no profile row).
+ */
+async function readRegionalManagers(storeId: string, viewerId: string, canManage: boolean): Promise<RegionalManagerRow[]> {
+  const [profile] = await db.select({ companyId: storeProfiles.companyId, regionId: storeProfiles.regionId }).from(storeProfiles).where(eq(storeProfiles.storeId, storeId));
+  if (!profile?.regionId) return [];
+  const rows = await db
+    .select({ id: user.id, name: user.name, email: user.email })
+    .from(roleAssignments)
+    .innerJoin(user, eq(user.id, roleAssignments.userId))
+    .where(and(eq(roleAssignments.companyId, profile.companyId), eq(roleAssignments.role, "regional_manager"), eq(roleAssignments.regionId, profile.regionId)))
+    .orderBy(asc(user.name), asc(user.id));
+  return rows.map((r) => ({ name: r.name, email: canManage ? r.email : null, isYou: r.id === viewerId }));
+}
+
 async function readRoles(storeId: string): Promise<RoleChoice[]> {
   return db.select({ id: roleDefinitions.id, name: roleDefinitions.name, rank: roleDefinitions.rank }).from(roleDefinitions).where(eq(roleDefinitions.storeId, storeId)).orderBy(asc(roleDefinitions.rank));
 }
@@ -78,7 +94,12 @@ export async function peopleViewFor(viewer: Member, now: Date = new Date()): Pro
   const storeId = viewer.activeStoreId;
   const canManage = can(viewer, "people.manage");
   const actor = actorOf(viewer);
-  const [people, invitations, roles] = await Promise.all([readPeople(storeId), canManage ? invitationRowsFor(viewer, now) : [], canManage ? readRoles(storeId) : []]);
+  const [people, invitations, roles, regionalManagers] = await Promise.all([
+    readPeople(storeId),
+    canManage ? invitationRowsFor(viewer, now) : [],
+    canManage ? readRoles(storeId) : [],
+    readRegionalManagers(storeId, viewer.user.id, canManage),
+  ]);
 
   const rows: PersonRow[] = people.map((p) => {
     const rank = p.rank ?? NO_ROLE_RANK;
@@ -98,9 +119,11 @@ export async function peopleViewFor(viewer: Member, now: Date = new Date()): Pro
 
   return {
     canManage,
+    regionalManagers,
     groups: groupByRole(rows),
     invitations,
     assignable: roles.filter((r) => canActOn(actor, r.rank, "people.manage")),
     isSoleManager: managers.length === 1 && managers[0].userId === viewer.user.id,
+    hasStoreManager: managers.length > 0,
   };
 }

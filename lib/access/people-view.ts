@@ -41,8 +41,13 @@ export type RoleChoice = { id: string; name: string; rank: number };
 
 export type RoleGroup = { key: string; roleName: string; rank: number; people: PersonRow[] };
 
+/** A regional manager of the store's region (company people, spec 0.7.1 6.6). Names for everyone in the store; `email` only with people.manage. */
+export type RegionalManagerRow = { name: string; email: string | null; isYou: boolean };
+
 export type PeopleView = {
   canManage: boolean;
+  /** The company's regional managers for this store's region. Empty for a standalone store. */
+  regionalManagers: RegionalManagerRow[];
   groups: RoleGroup[];
   /** Empty unless the viewer may manage people. */
   invitations: InvitationRow[];
@@ -50,6 +55,8 @@ export type PeopleView = {
   assignable: RoleChoice[];
   /** The viewer is the only Store Manager (spec 4.8 part 2). */
   isSoleManager: boolean;
+  /** Someone in the store holds Store Manager. False shows "No Store Manager yet." beside Invite (spec 0.7.1 6.6). */
+  hasStoreManager: boolean;
 };
 
 /** Highest rank first (smaller number), people A to Z within a role. People without a role make the last group. */

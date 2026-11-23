@@ -30,3 +30,23 @@ describe("StoreDetails", () => {
     expect(screen.getAllByText("Your role can't change these.")).toHaveLength(1);
   });
 });
+
+describe("StoreDetails, part of a company", () => {
+  it("names the company and region on one line under the heading, linking to /company for a company person", () => {
+    render(<StoreDetails {...DETAILS} canManage={false} partOf={{ company: "Acme", region: "North", href: "/company" }} />);
+    const link = screen.getByRole("link", { name: "Acme" });
+    expect(link).toHaveAttribute("href", "/company");
+    expect(link.parentElement).toHaveTextContent("Part of Acme · North");
+  });
+
+  it("is plain text for a store staff member, with no region when the store has none", () => {
+    render(<StoreDetails {...DETAILS} canManage={false} partOf={{ company: "Acme", region: null, href: null }} />);
+    expect(screen.queryByRole("link", { name: "Acme" })).toBeNull();
+    expect(screen.getByText("Acme").closest("p")).toHaveTextContent(/^Part of Acme$/);
+  });
+
+  it("has no line for a standalone store", () => {
+    render(<StoreDetails {...DETAILS} canManage={false} />);
+    expect(screen.queryByText(/^Part of/)).toBeNull();
+  });
+});
