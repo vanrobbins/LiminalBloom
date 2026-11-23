@@ -24,14 +24,16 @@ export type EventSpec = {
   targetLabel: string | SQL;
   reason: string;
   detail?: SQL;
+  /** The company the owner sees this under on /company (spec 7.5); none for an event outside a company. */
+  companyId?: string | SQL;
 };
 
 const text = (v: string | SQL): SQL => (typeof v === "string" ? sql`${v}::text` : v);
 
 /** `insert into platform_events ... select ... from <source>`: one row per source row. */
 export function platformEventFrom(actor: AdminActor, spec: EventSpec, source: SQL): SQL {
-  return sql`insert into platform_events (actor_id, actor_name, action, target_kind, target_id, target_label, reason, detail)
-    select ${actor.userId}::text, ${actor.name}::text, ${spec.action}::text, ${spec.targetKind}::text, ${text(spec.targetId)}, ${text(spec.targetLabel)}, ${spec.reason}::text, ${spec.detail ?? sql`'{}'::jsonb`}
+  return sql`insert into platform_events (actor_id, actor_name, action, target_kind, target_id, target_label, company_id, reason, detail)
+    select ${actor.userId}::text, ${actor.name}::text, ${spec.action}::text, ${spec.targetKind}::text, ${text(spec.targetId)}, ${text(spec.targetLabel)}, ${spec.companyId === undefined ? sql`null::text` : text(spec.companyId)}, ${spec.reason}::text, ${spec.detail ?? sql`'{}'::jsonb`}
     from ${source}`;
 }
 

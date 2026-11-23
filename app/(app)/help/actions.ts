@@ -5,8 +5,10 @@
 // the session's. The context is built here from who the session says they are; of the form only `kind`, `body`
 // and `from` are read, and `from` only if it is on the whitelist.
 
+import { requestCardFor } from "@/lib/companies/request-reads";
 import { requireSignedIn } from "@/lib/current-member";
 import { buildContext } from "@/lib/help/context";
+import { ASKABLE_KINDS } from "@/lib/help/kinds";
 import type { HelpOutcome } from "@/lib/help/limits";
 import { closeRequest, markSeen, openRequest, replyTo } from "@/lib/help/write";
 
@@ -16,7 +18,10 @@ const fieldsOf = (input: unknown): Field => (typeof input === "object" && input 
 export async function openHelpAction(input: unknown): Promise<HelpOutcome> {
   const current = await requireSignedIn();
   const { kind, body, from } = fieldsOf(input);
-  return openRequest({ id: current.user.id, name: current.user.name }, { kind, body, context: buildContext(current, from) });
+  // "My company request" is only for a person who has a waiting or rejected one, and the thread is tied to it.
+  const card = kind === "company_request" ? await requestCardFor(current.user.id) : null;
+  const about = card ? { allowedKinds: [...ASKABLE_KINDS, "company_request" as const], companyRequestId: card.id } : {};
+  return openRequest({ id: current.user.id, name: current.user.name }, { kind, body, context: buildContext(current, from), ...about });
 }
 
 export async function replyHelpAction(id: unknown, body: unknown): Promise<HelpOutcome> {

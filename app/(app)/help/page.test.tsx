@@ -8,12 +8,14 @@ const mocks = vi.hoisted(() => ({
   requireSignedIn: vi.fn(),
   listRequests: vi.fn(),
   getThread: vi.fn(),
+  requestCardFor: vi.fn<(id: string) => Promise<unknown>>(async () => null),
   notFound: vi.fn(() => {
     throw new Error("notFound");
   }),
 }));
 vi.mock("@/lib/current-member", () => ({ requireSignedIn: mocks.requireSignedIn }));
 vi.mock("@/lib/help/queries", () => ({ listRequests: mocks.listRequests, getThread: mocks.getThread }));
+vi.mock("@/lib/companies/request-reads", () => ({ requestCardFor: mocks.requestCardFor }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound, usePathname: () => "/help", useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/app/(app)/help/actions", () => ({ openHelpAction: vi.fn(), replyHelpAction: vi.fn(), closeHelpAction: vi.fn(), markSeenAction: vi.fn(async () => {}) }));
 vi.mock("@/components/shell/page-header", () => ({ PageHeader: ({ title }: { title: string }) => <header data-shell-header>{title}</header> }));
@@ -62,9 +64,16 @@ describe("/help/new", () => {
     expect(screen.getByRole("radio", { name: "Something isn't working" })).toBeChecked();
   });
 
-  it("falls back to Account for a kind it does not offer, such as company_request before 0.7.1b", async () => {
+  it("falls back to Account for a kind it does not offer: company_request without a company request", async () => {
     render(await NewHelpPage({ searchParams: Promise.resolve({ kind: ["company_request"], from: "https://evil.example" }) }));
     expect(screen.getByRole("radio", { name: "Account or access" })).toBeChecked();
+    expect(screen.queryByRole("radio", { name: "My company request" })).toBeNull();
+  });
+
+  it("offers My company request, preselected, to a person with a waiting or rejected company request", async () => {
+    mocks.requestCardFor.mockResolvedValueOnce({ id: "r1", name: "Acme", status: "rejected", reason: "x", thread: null });
+    render(await NewHelpPage({ searchParams: Promise.resolve({ kind: "company_request" }) }));
+    expect(screen.getByRole("radio", { name: "My company request" })).toBeChecked();
   });
 });
 

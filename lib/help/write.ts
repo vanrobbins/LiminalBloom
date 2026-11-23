@@ -19,7 +19,7 @@ import { cleanBody, type HelpOutcome, MAX_MESSAGES, MAX_OPEN_REQUESTS, MIN_FIRST
 type Row = Record<string, unknown>;
 type Requester = { id: string; name: string };
 
-export type OpenInput = { kind: unknown; body: unknown; context: Record<string, unknown>; allowedKinds?: readonly HelpKind[] };
+export type OpenInput = { kind: unknown; body: unknown; context: Record<string, unknown>; allowedKinds?: readonly HelpKind[]; companyRequestId?: string };
 
 /** Opens a request with its first message, unless the person already has 5 open. */
 export async function openRequest(who: Requester, input: OpenInput): Promise<HelpOutcome> {
@@ -27,19 +27,26 @@ export async function openRequest(who: Requester, input: OpenInput): Promise<Hel
   if (!kind) return { status: "invalid-kind" };
   const body = cleanBody(input.body, MIN_FIRST_BODY);
   if (!body) return { status: "invalid-body" };
-  const [, { rows }] = await db.batch([
-    db.execute(sql`select pg_advisory_xact_lock(hashtext(${"open:" + who.id}))`),
-    db.execute<Row>(sql`
-    with mine as (select count(*)::int as n from help_requests where requester_id = ${who.id} and status <> 'closed'),
-    made as (
-      insert into help_requests (requester_id, kind, context)
-      select ${who.id}::text, ${kind}::help_kind, ${JSON.stringify(input.context)}::jsonb from mine where n < ${MAX_OPEN_REQUESTS}
-      returning id),
-    said as (
-      insert into help_messages (request_id, author_id, author_name, from_admin, body)
-      select id, ${who.id}::text, ${who.name}::text, false, ${body}::text from made)
-    select (select id from made) as id`),
-  ]);
+  let rows: Row[];
+  try {
+    [, { rows }] = await db.batch([
+      db.execute(sql`select pg_advisory_xact_lock(hashtext(${"open:" + who.id}))`),
+      db.execute<Row>(sql`
+      with mine as (select count(*)::int as n from help_requests where requester_id = ${who.id} and status <> 'closed'),
+      made as (
+        insert into help_requests (requester_id, kind, context, company_request_id)
+        select ${who.id}::text, ${kind}::help_kind, ${JSON.stringify(input.context)}::jsonb, ${input.companyRequestId ?? null}::text from mine where n < ${MAX_OPEN_REQUESTS}
+        returning id),
+      said as (
+        insert into help_messages (request_id, author_id, author_name, from_admin, body)
+        select id, ${who.id}::text, ${who.name}::text, false, ${body}::text from made)
+      select (select id from made) as id`),
+    ]);
+  } catch (e) {
+    // One open thread per company request (the table's partial unique): they already asked.
+    if (String(e).includes("help_requests_company_request_open_unique") || String((e as { cause?: unknown }).cause).includes("help_requests_company_request_open_unique")) return { status: "already-open" };
+    throw e;
+  }
   const id = rows[0]?.id;
   return typeof id === "string" ? { status: "done", id } : { status: "too-many-open" };
 }

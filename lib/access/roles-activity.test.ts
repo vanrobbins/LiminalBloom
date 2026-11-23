@@ -28,6 +28,7 @@ describe("activityText", () => {
     expect(line("member_role_changed", { person: "Jane Park", from: "Sales Associate", to: "Visual Merchandising Worker" })).toBe("Van Robbins changed Jane Park from Sales Associate to Visual Merchandising Worker");
     expect(line("member_removed", { person: "Jane Park" })).toBe("Van Robbins removed Jane Park");
     expect(line("invitation_accepted", { role: "Sales Associate" })).toBe("Van Robbins joined as Sales Associate");
+    expect(line("member_left_company", { person: "Jane Park" })).toBe("Jane Park left for another company");
     expect(line("store_renamed", { from: "Pioneer Place", to: "Riverside" })).toBe("Van Robbins renamed the store from Pioneer Place to Riverside");
   });
 
