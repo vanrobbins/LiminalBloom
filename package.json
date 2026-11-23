@@ -21,6 +21,7 @@
 	},
 	"dependencies": {
 		"@better-auth/drizzle-adapter": "^1.7.6",
+		"@better-auth/passkey": "^1.7.27",
 		"@neondatabase/serverless": "^1.1.0",
 		"@vercel/blob": "^2.9.0",
 		"better-auth": "^1.7.6",
