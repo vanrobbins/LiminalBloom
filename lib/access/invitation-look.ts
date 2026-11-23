@@ -14,7 +14,7 @@ import { and, desc, eq, notExists, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { invitation, member, organization } from "@/db/auth-schema";
-import { roleDefinitions } from "@/db/schema";
+import { roleDefinitions, storeSuspensions } from "@/db/schema";
 
 import { inviterMayGrant } from "./invitation-lapse";
 import { MAX_PEOPLE } from "./invite-limits";
@@ -28,7 +28,9 @@ export type InvitationState =
   | { state: "missing" }
   | { state: "used" }
   | { state: "cancelled" }
-  | Named<"expired" | "lapsed" | "signed-out" | "wrong-email" | "already-member" | "full" | "ready">;
+  | Named<"expired" | "lapsed" | "signed-out" | "wrong-email" | "already-member" | "full">
+  // Present (true) only when the store is paused: they may still accept, but won't see it until it is restored (DECISIONS 11-23).
+  | (Named<"ready"> & { paused?: true });
 
 /** The invitation as `viewer` (null: signed out) would find it, as one plain state for the page to word. */
 export async function lookInvitation(id: string, viewer: Viewer | null, now: Date = new Date()): Promise<InvitationState> {
@@ -42,6 +44,7 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
       expiresAt: invitation.expiresAt,
       storeName: organization.name,
       roleName: roleDefinitions.name,
+      paused: sql<boolean>`exists (select 1 from ${storeSuspensions} where ${storeSuspensions.storeId} = ${invitation.organizationId})`,
       lapsed: sql<boolean>`not ${inviterMayGrant(invitation.organizationId, invitation.roleId, invitation.inviterId)}`,
     })
     .from(invitation)
@@ -66,7 +69,8 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
     .from(member)
     .where(eq(member.organizationId, row.storeId));
   if (people.you > 0) return { state: "already-member", ...named };
-  return { state: people.n >= MAX_PEOPLE ? "full" : "ready", ...named };
+  if (people.n >= MAX_PEOPLE) return { state: "full", ...named };
+  return { state: "ready", ...named, ...(row.paused ? { paused: true as const } : {}) };
 }
 
 // No id: /welcome is open to anyone who signs up with an invited address (email is not verified), and the link is the secret (4.9), so the id never leaves this read.

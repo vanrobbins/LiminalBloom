@@ -150,12 +150,14 @@ export async function requireSignedIn(): Promise<Exclude<CurrentMember, { kind: 
   return current;
 }
 
-/** What the Account page and its two-factor actions need: a member, or someone who must set two-factor up first. The one guard that lets the second kind through. */
-export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor> {
+/**
+ * What the Account page and its two-factor and passkey actions need: a member, someone who must set two-factor up
+ * first, or someone whose stores are all paused (they keep their password, two-step and passkeys, DECISIONS 11-23).
+ */
+export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor | Paused> {
   const current = await getCurrentMember();
   if (current.kind === "signed-out") redirect("/sign-in");
   if (current.kind === "no-store") redirect("/welcome");
-  if (current.kind === "paused") redirect(PAUSED_PATH);
   return current;
 }
 

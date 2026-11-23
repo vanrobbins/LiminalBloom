@@ -57,6 +57,7 @@ export type ManagerOutcome = { status: "done"; name: string } | { status: "gone"
  * Sets a member's role to the store's Store Manager role. Existing Store Managers keep theirs. `gone`: the
  * person is not in that store; `already`: they are a Store Manager; `invalid`: the store has no such role.
  */
+// B10: when company stores exist, a company store is refused here (its roles are the company's to give). A paused store is not: pausing stops the store, not Liminal Bloom helping it (DECISIONS 11-23).
 export async function makeStoreManager(actor: AdminActor, storeId: string, userId: string, reason: string): Promise<ManagerOutcome> {
   const source = sql`before b join changed c on c.id = b.member_id`;
   const detail = sql`jsonb_build_object('store', b.store_name, 'storeId', ${storeId}::text, 'from', coalesce(b.from_role, 'No role'))`;

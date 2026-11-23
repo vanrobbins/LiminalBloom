@@ -53,6 +53,11 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
       ) : null}
       {look.state === "ready" ? (
         <>
+          {look.paused ? (
+            <p role="status" className="text-sm text-ink">
+              {storeName} is paused right now. You can accept, but you won&apos;t see it until Liminal Bloom restores it.
+            </p>
+          ) : null}
           {signedInAs ? <p className="text-sm text-ink-muted">You&apos;re signed in as {signedInAs}.</p> : null}
           <AcceptButton invitationId={id} storeName={storeName} />
         </>

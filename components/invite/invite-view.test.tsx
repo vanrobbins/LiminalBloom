@@ -27,6 +27,17 @@ describe("InviteView", () => {
     expect(screen.getByText("You're signed in as nia@example.test.")).toBeInTheDocument();
   });
 
+  it("tells the invited person the store is paused, and still offers Accept", () => {
+    show({ state: "ready", paused: true, ...named }, "nia@example.test");
+    expect(screen.getByText("Spring Street is paused right now. You can accept, but you won't see it until Liminal Bloom restores it.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accept invitation" })).toBeInTheDocument();
+  });
+
+  it("says nothing about pausing when the store is not paused", () => {
+    show({ state: "ready", ...named }, "nia@example.test");
+    expect(screen.queryByText(/is paused right now/)).toBeNull();
+  });
+
   it.each([
     ["wrong-email", /different email address/],
     ["expired", /has expired/],

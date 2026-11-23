@@ -50,10 +50,10 @@ describe("when nothing resolves", () => {
     expect(await getCurrentMember()).toEqual({ kind: "no-store", user: USER });
   });
 
-  it("sends requireMember and requireAccountPerson to /paused", async () => {
+  it("sends requireMember to /paused, but lets requireAccountPerson through: Account stays theirs (DECISIONS 11-23)", async () => {
     mocks.pausedStoresOf.mockResolvedValue(PAUSED);
     await expect(requireMember()).rejects.toThrow("redirect:/paused");
-    await expect(requireAccountPerson()).rejects.toThrow("redirect:/paused");
+    expect(await requireAccountPerson()).toEqual({ kind: "paused", user: USER, stores: PAUSED });
   });
 });
 

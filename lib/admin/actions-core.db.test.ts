@@ -9,6 +9,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { invitation, member, session, user } from "@/db/auth-schema";
+import { storeSuspensions } from "@/db/schema";
 import { makeInvitation, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
 import { makeStore } from "@/lib/products/test-stores";
 
@@ -86,6 +87,13 @@ describe("makeStoreManager", () => {
     expect(await roleOf(existing.memberId)).toBe(roles.store_manager);
     expect(await eventsFor(worker.userId)).toEqual([expect.objectContaining({ action: "store_manager_made", targetKind: "user", detail: expect.objectContaining({ storeId: store, from: "Sales Associate" }) })]);
     expect(await storeEvents(store)).toEqual([expect.objectContaining({ event: "member_role_changed", actorName: "Liminal Bloom", actorId: null, detail: expect.objectContaining({ person: "Jane Park", from: "Sales Associate", to: "Store Manager" }) })]);
+  });
+
+  it("works on a paused store: pausing stops the store, not Liminal Bloom helping it (DECISIONS 11-23)", async () => {
+    const { store, roles, worker } = await setup();
+    await db.insert(storeSuspensions).values({ storeId: store, reason: "db test", suspendedByName: "Test" });
+    expect(await makeStoreManager(await makeActor(), store, worker.userId, REASON)).toEqual({ status: "done", name: "Jane Park" });
+    expect(await roleOf(worker.memberId)).toBe(roles.store_manager);
   });
 
   it("says already for someone who is one, and gone for someone not in the store, writing nothing more", async () => {

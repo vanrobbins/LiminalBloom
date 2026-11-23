@@ -64,6 +64,18 @@ describe("AccountPage", () => {
     expect(screen.getByRole("button", { name: "Add a passkey" })).toBeInTheDocument();
   });
 
+  it("shows a person whose stores are all paused their account in a bare frame: no store list, a way back and Sign out", async () => {
+    mocks.person.mockResolvedValue({ kind: "paused", user: USER, stores: [{ id: "a", name: "Pioneer Place" }] });
+    render(await AccountPage());
+    expect(screen.getByRole("heading", { name: "Change password" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Passkeys/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Two-step sign-in/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Back/ })).toHaveAttribute("href", "/paused");
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Store" })).toBeNull();
+    expect(screen.queryByText("Pioneer Place")).toBeNull();
+  });
+
   it("a person who must set up two-factor can add a passkey instead of an authenticator app", async () => {
     mocks.person.mockResolvedValue({ kind: "needs-two-factor", user: USER, roleName: "Store Manager" });
     render(await AccountPage());

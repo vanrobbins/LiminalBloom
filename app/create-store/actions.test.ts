@@ -44,7 +44,7 @@ vi.mock("@/lib/store-settings", async (original) => {
 
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
-import { storeSettings } from "@/db/schema";
+import { storeSettings, storeSuspensions } from "@/db/schema";
 import { dropPeople, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
 import { storeSettingsFor } from "@/lib/store-settings";
@@ -95,6 +95,14 @@ describe("createStore", () => {
     expect(await createStore(null, form("Pioneer Place", "America/Denver"))).toEqual({ error: "Set up two-step sign-in on Account first." });
     expect(mocks.createOrganization).not.toHaveBeenCalled();
     expect(mocks.setActiveOrganization).not.toHaveBeenCalled();
+  });
+
+  it("lets a person whose stores are all paused make a store: pausing is per store (DECISIONS 11-23)", async () => {
+    const { storeId } = await createdStore();
+    await db.insert(storeSuspensions).values({ storeId, reason: "db test", suspendedByName: "Test" });
+    await expect(createStore(null, form("Fresh Start", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
+    expect(mocks.createOrganization).toHaveBeenCalledTimes(1);
+    expect(mocks.redirect).toHaveBeenCalledWith("/home");
   });
 
   it("sends a signed-out visitor to sign in before anything else", async () => {
