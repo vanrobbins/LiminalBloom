@@ -26,6 +26,8 @@ export const GLOSSARY = {
   quickAdjust: { term: "Quick Adjust", text: "A temporary change on top of the published planogram, for when a product sells out. It stays until it is reverted or the next version is published." },
   permission: { term: "Permission", text: "Something a role lets people do, like publishing planograms. A change reaches everyone with that role on their next tap." },
   passkey: { term: "Passkey", text: "A key on your phone or computer, unlocked with your fingerprint, face or PIN. It signs you in without a password and counts as your second step." },
+  company: { term: "Company", text: "A group of stores run together. Its owner and corporate admins reach every store in it, and a regional manager reaches the stores in their region." },
+  region: { term: "Region", text: "A named group of a company's stores, like North. A store is in one region or none, and a region with stores or regional managers can't be deleted." },
   twoStep: { term: "Two-step sign-in", text: "After your password, sign-in asks for a code from an authenticator app on your phone. Backup codes work once each if you lose the phone." },
 } as const satisfies Record<string, { term: string; text: string }>;
 
