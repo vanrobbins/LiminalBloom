@@ -75,6 +75,8 @@ describe("AdminReplyForm", () => {
     expect(mocks.reply).toHaveBeenCalledWith("r1", "Try again now");
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     expect(field).toHaveValue("");
+    expect(screen.getByRole("status")).toHaveTextContent("Reply sent.");
+    expect(field).toHaveFocus();
   });
 
   it("shows a full thread beside the field and keeps the text", async () => {

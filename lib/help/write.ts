@@ -13,6 +13,7 @@ import { db } from "@/db";
 import { helpRequests } from "@/db/schema";
 
 import { askableKind, type HelpKind, threadId } from "./kinds";
+import { replyLock } from "./lock";
 import { cleanBody, type HelpOutcome, MAX_MESSAGES, MAX_OPEN_REQUESTS, MIN_FIRST_BODY, MIN_REPLY_BODY } from "./limits";
 
 type Row = Record<string, unknown>;
@@ -52,7 +53,7 @@ export async function replyTo(who: Requester, rawId: unknown, rawBody: unknown):
   let rows: Row[];
   try {
     [, { rows }] = await db.batch([
-      db.execute(sql`select pg_advisory_xact_lock(hashtext(${"reply:" + id}))`),
+      replyLock(id),
       db.execute<Row>(sql`
     with r as (
       select id, status, (select count(*) from help_messages m where m.request_id = help_requests.id)::int as n

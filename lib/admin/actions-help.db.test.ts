@@ -10,7 +10,7 @@ import { helpMessages, helpRequests } from "@/db/schema";
 import { cleanUp, eventsFor, makeActor } from "@/lib/access/test-admin-actions";
 import { makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
 import { getThread } from "@/lib/help/queries";
-import { openRequest } from "@/lib/help/write";
+import { openRequest, replyTo } from "@/lib/help/write";
 
 import { adminCloseRequest, adminReplyTo } from "./actions-help";
 import { adminHelpList, adminHelpThread } from "./help-reads";
@@ -62,6 +62,33 @@ describe("adminReplyTo", () => {
     expect(await adminReplyTo(actor, id, "the 50th")).toEqual({ status: "done" });
     expect(await adminReplyTo(actor, id, "the 51st")).toEqual({ status: "too-many-messages" });
     expect(await messages(id)).toHaveLength(50);
+  });
+});
+
+describe("adminReplyTo races", () => {
+  it("an admin and a requester replying together at 49 messages stop at 50", async () => {
+    const actor = await makeActor();
+    const { id, userId } = await asker();
+    await db.insert(helpMessages).values(Array.from({ length: 48 }, (_, i) => ({ requestId: id, authorName: "x", fromAdmin: i % 2 === 0, body: `m${i}` })));
+    await Promise.all([adminReplyTo(actor, id, "admin one"), replyTo({ id: userId, name: "R" }, id, "asker one"), adminReplyTo(actor, id, "admin two"), replyTo({ id: userId, name: "R" }, id, "asker two")]);
+    expect(await messages(id)).toHaveLength(50);
+  });
+
+  it("a reply and a close at the same instant never leave an answered request with a closed_by", async () => {
+    const actor = await makeActor();
+    const { id } = await asker();
+    const [reply] = await Promise.all([adminReplyTo(actor, id, "one more"), adminCloseRequest(actor, id, REASON)]);
+    expect(["done", "closed"]).toContain(reply.status);
+    const r = await row(id);
+    expect(r.status).toBe("closed");
+    expect(r.closedBy).toBe("admin");
+    for (let i = 0; i < 3; i++) {
+      const fresh = await asker();
+      const [, again] = await Promise.all([adminCloseRequest(actor, fresh.id, REASON), adminReplyTo(actor, fresh.id, "late")]);
+      expect(["done", "closed"]).toContain(again.status);
+      const x = await row(fresh.id);
+      expect((x.status === "closed") === (x.closedBy !== null)).toBe(true);
+    }
   });
 });
 

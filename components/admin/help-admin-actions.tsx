@@ -5,7 +5,7 @@
 
 import { CircleCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { adminCloseHelpAction, adminReplyHelpAction } from "@/app/admin/help/actions";
 import { NETWORK_TEXT } from "@/components/people/refusal-text";
@@ -22,16 +22,21 @@ export function AdminReplyForm({ id }: { id: string }) {
   const [body, setBody] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [sent, setSent] = useState("");
+  const field = useRef<HTMLTextAreaElement>(null);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (isBusy || body.trim() === "") return;
     setIsBusy(true);
     setProblem(null);
+    setSent("");
     try {
       const reply = await adminReplyHelpAction(id, body);
       if (reply.status === "done") {
         setBody("");
+        setSent("Reply sent.");
+        field.current?.focus();
         router.refresh();
       } else if (reply.status === "forbidden") {
         setProblem(FORBIDDEN);
@@ -50,7 +55,10 @@ export function AdminReplyForm({ id }: { id: string }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 rounded-lg border border-line-subtle bg-raised p-4">
-      <Textarea label="Reply" hint="Sent as Liminal Bloom. The person never sees your name." rows={3} value={body} maxLength={MAX_BODY} autoComplete="off" onChange={(e) => setBody(e.target.value)} error={problem ?? undefined} />
+      <Textarea ref={field} label="Reply" hint="Sent as Liminal Bloom. The person never sees your name." rows={3} value={body} maxLength={MAX_BODY} autoComplete="off" onChange={(e) => setBody(e.target.value)} error={problem ?? undefined} />
+      <p role="status" className="sr-only">
+        {sent}
+      </p>
       <Button type="submit" className="self-start" loading={isBusy} loadingText="Sending…" disabled={body.trim() === ""}>
         Send reply
       </Button>
