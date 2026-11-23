@@ -3,7 +3,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { eq, sql } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
@@ -35,10 +35,19 @@ const anEvent = (over: Partial<typeof platformEvents.$inferInsert> = {}) => ({ a
 describe("adminOverview and recentEvents", () => {
   it("counts only open help requests as waiting", async () => {
     const { userId } = await makePerson((await makeStoreWithRoles("ovw")).store, null);
-    const before = (await adminOverview()).helpWaiting;
     const rows = await db.insert(helpRequests).values([{ requesterId: userId, kind: "other" }, { requesterId: userId, kind: "other", status: "answered" }, { requesterId: userId, kind: "other", status: "closed", closedBy: "admin" }]).returning({ id: helpRequests.id });
     helpIds.push(...rows.map((r) => r.id));
-    expect((await adminOverview()).helpWaiting).toBe(before + 1);
+    // The count is database-wide and other test files add help requests in parallel, so the read is bracketed by
+    // two direct counts of open rows: it must land between them (equal when nothing else is running), and of
+    // this test's three rows only the open one may be among the open rows.
+    const openCount = async () => (await db.select({ n: count() }).from(helpRequests).where(eq(helpRequests.status, "open")))[0].n;
+    const low = await openCount();
+    const waiting = (await adminOverview()).helpWaiting;
+    const high = await openCount();
+    expect(waiting).toBeGreaterThanOrEqual(Math.min(low, high));
+    expect(waiting).toBeLessThanOrEqual(Math.max(low, high));
+    const open = await db.select({ id: helpRequests.id }).from(helpRequests).where(and(eq(helpRequests.status, "open"), inArray(helpRequests.id, rows.map((r) => r.id))));
+    expect(open).toHaveLength(1);
   });
 
   it("lists the newest events first, at most 10 on the overview", async () => {
