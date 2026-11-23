@@ -148,6 +148,13 @@
       "when": 1795411625016,
       "tag": "0020_platform_help",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795440893804,
+      "tag": "0021_companies",
+      "breakpoints": true
     }
   ]
 }

@@ -48,6 +48,10 @@ export const auth = betterAuth({
       // passkey), set only by the hook below from the endpoint that made the session; `input: false`
       // so no request can write it. Null otherwise. Spec 0.7.1, 8.2.
       twoFactorAt: { type: "date", required: false, input: false },
+      // The store this session works in, for everyone (spec 0.7.1, 4.3). Written only by the app's
+      // own check (B4 wires it); `input: false` so no request can write it. Not a foreign key: a
+      // stale value is caught by resolveAccess, as last_active_store_id is.
+      activeStoreId: { type: "string", required: false, input: false },
     },
   },
 
