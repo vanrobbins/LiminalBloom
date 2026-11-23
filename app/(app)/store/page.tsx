@@ -29,14 +29,8 @@ export default async function StorePage() {
     <div className="mx-auto w-full max-w-2xl">
       <PageHeader
         title="Store"
-        actions={
-          view.assignable.length > 0 ? (
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              {view.hasStoreManager ? null : <p className="text-sm text-ink-muted">No Store Manager yet.</p>}
-              <InviteControl roles={view.assignable} />
-            </div>
-          ) : null
-        }
+        actions={view.assignable.length > 0 ? <InviteControl roles={view.assignable} /> : null}
+        note={view.assignable.length > 0 && !view.hasStoreManager ? "No Store Manager yet." : null}
       />
       <StoreDetails name={storeName} zone={settings?.timezone ?? DEFAULT_TIMEZONE} version={settings?.version ?? 0} canManage={can(member, "store.settings")} partOf={partOf} />
       {can(member, "roles.manage") ? <RolesLink /> : null}

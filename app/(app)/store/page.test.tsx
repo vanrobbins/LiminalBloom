@@ -115,7 +115,7 @@ describe("StorePage", () => {
     expect(screen.getByText(/^Part of/)).toHaveTextContent("Part of Acme · North");
   });
 
-  it("says No Store Manager yet. beside Invite when nobody in the store holds it", async () => {
+  it("says No Store Manager yet. under the title when nobody in the store holds it, with Invite still there", async () => {
     await show(["view", "people.manage"], viewOf(MANAGER.groups.flatMap((g) => g.people), { canManage: true, assignable: ROLES, hasStoreManager: false }));
     expect(screen.getByText("No Store Manager yet.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Invite someone" })).toBeInTheDocument();

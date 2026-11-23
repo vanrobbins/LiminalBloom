@@ -19,11 +19,13 @@ type PageHeaderProps = {
   back?: { href: string; label: string };
   /** 44 px icon buttons, beside the avatar on a phone. */
   actions?: React.ReactNode;
+  /** A short line under the title, on its own row at every width, so a long hint never squeezes the title. */
+  note?: React.ReactNode;
 };
 
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
-export function PageHeader({ title, back, actions }: PageHeaderProps) {
+export function PageHeader({ title, back, actions, note }: PageHeaderProps) {
   const shell = useShell();
   const showStore = shell !== null && shell.stores.length > 1;
 
@@ -64,6 +66,7 @@ export function PageHeader({ title, back, actions }: PageHeaderProps) {
           </div>
         ) : null}
       </div>
+      {note ? <p className={`pb-1 text-sm text-ink-muted md:px-0 ${back ? "pl-11" : "pl-3"}`}>{note}</p> : null}
       {showStore ? (
         <div className={`-mt-2 pb-1 md:hidden ${back ? "pl-11" : "pl-3"}`}>
           <StoreName variant="sheet" stores={shell.stores} activeStoreId={shell.activeStoreId} />

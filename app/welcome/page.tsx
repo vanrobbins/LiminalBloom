@@ -62,7 +62,7 @@ export default async function WelcomePage() {
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-medium text-ink">Request a company</h2>
           <p className="text-sm text-ink-muted">For a chain with several stores. Liminal Bloom approves each company.</p>
-          <Button asChild variant="secondary" className="self-start">
+          <Button asChild variant="secondary">
             <Link href="/request-company">Request a company</Link>
           </Button>
         </section>

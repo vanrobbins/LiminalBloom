@@ -55,7 +55,7 @@ export type PeopleView = {
   assignable: RoleChoice[];
   /** The viewer is the only Store Manager (spec 4.8 part 2). */
   isSoleManager: boolean;
-  /** Someone in the store holds Store Manager. False shows "No Store Manager yet." beside Invite (spec 0.7.1 6.6). */
+  /** Someone in the store holds Store Manager. False shows "No Store Manager yet." under the title (spec 0.7.1 6.6). */
   hasStoreManager: boolean;
 };
 
