@@ -22,6 +22,7 @@ import { keepShortSessionShort } from "@/lib/change-password";
 import { claimCodeGuess, clearWrongCodes } from "@/lib/admin/two-factor-guesses";
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
 
+import { bestEffort } from "./best-effort";
 import { qrSvgOf } from "./qr";
 import { setupKey } from "./totp-key";
 import { forgetTrustedDevices } from "./trusted-devices";
@@ -81,17 +82,12 @@ export async function confirmTwoFactor(requestHeaders: Headers, userId: string, 
   const token = await newSessionToken(responseHeaders);
   // No new cookie: two-factor was already on, so nothing was swapped.
   if (!token) return { status: "refused", reason: "already-on" };
-  // The code is checked and two-factor is on: nothing below may fail the setup, or the person would be
-  // told it failed and, without the cookie, signed out as well.
-  try {
-    await clearWrongCodes(userId);
-    // Trust marks left from an earlier time it was on mean nothing for this new secret.
-    await forgetTrustedDevices(userId);
-    await db.delete(session).where(and(eq(session.userId, userId), ne(session.token, token)));
-    await keepShortSessionShort(token, requestHeaders);
-  } catch (error) {
-    console.error("two-factor setup: follow-up steps failed", error);
-  }
+  // The code is checked and two-factor is on: nothing below may fail the setup, and each step stands alone.
+  await bestEffort("clear wrong codes", () => clearWrongCodes(userId));
+  // Trust marks left from an earlier time it was on mean nothing for this new secret.
+  await bestEffort("forget trusted devices", () => forgetTrustedDevices(userId));
+  await bestEffort("sign out other sessions", () => db.delete(session).where(and(eq(session.userId, userId), ne(session.token, token))));
+  await bestEffort("shorten the session", () => keepShortSessionShort(token, requestHeaders));
   return { status: "on", responseHeaders };
 }
 

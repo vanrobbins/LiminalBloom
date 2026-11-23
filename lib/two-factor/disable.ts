@@ -22,6 +22,7 @@ import { claimCodeGuess, clearWrongCodes } from "@/lib/admin/two-factor-guesses"
 import { claimGuess, clearWrongGuesses } from "@/lib/password-guesses";
 
 import { storeRequiringTwoFactor } from "./required-by";
+import { bestEffort } from "./best-effort";
 import { newSessionToken } from "./setup";
 import { forgetTrustedDevices } from "./trusted-devices";
 
@@ -54,15 +55,13 @@ export async function disableTwoFactor(requestHeaders: Headers, userId: string, 
   } catch (error) {
     return { status: "refused", reason: codeOf(error) === "INVALID_PASSWORD" ? "password" : "failed" };
   }
-  // It is off: nothing below may fail the change, or the person would be told it failed and, without the cookie, signed out.
-  try {
-    // Better Auth forgets only this device's trust; every other trusted device is forgotten here.
-    await forgetTrustedDevices(userId);
-    await clearWrongGuesses(userId);
+  // It is off: nothing below may fail the change (the person would be told it failed and, without the cookie, signed out), and each step stands alone.
+  // Better Auth forgets only this device's trust; every other trusted device is forgotten here.
+  await bestEffort("forget trusted devices", () => forgetTrustedDevices(userId));
+  await bestEffort("clear wrong guesses", () => clearWrongGuesses(userId));
+  await bestEffort("shorten the session", async () => {
     const token = await newSessionToken(responseHeaders);
     if (token) await keepShortSessionShort(token, requestHeaders);
-  } catch (error) {
-    console.error("two-factor turn off: follow-up steps failed", error);
-  }
+  });
   return { status: "off", responseHeaders };
 }
