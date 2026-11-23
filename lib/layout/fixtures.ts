@@ -87,7 +87,7 @@ export const FIXTURE_RULES: Record<FixtureType, FixtureRule> = {
   frame_rack: {
     label: "Frame rack",
     width: 48,
-    depth: 24,
+    depth: 12,
     faces: ["front"],
     defaultFaces: [{ side: "front", columns: 8, rows: 1 }],
     resize: "width",
