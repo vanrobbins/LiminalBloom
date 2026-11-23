@@ -57,7 +57,8 @@ test("resets a built-in to its name and permissions, only when it differs", asyn
   await expect(page.getByText("Reset Visual Merchandising Worker", { exact: true }).first()).toBeVisible();
   expect((await storedRoles()).find((r) => r.name === "Visual Merchandising Worker")!.switches).toEqual(WORKER);
   expect((await loggedEvents())[0]).toBe("role_reset");
-  expect(await actionsOf(page, "Visual Merchandising Worker")).toEqual(["Rename", "Require two-factor"]);
+  // The toast shows before the router refresh lands, so the row's actions can still be the old ones for a moment.
+  await expect.poll(() => actionsOf(page, "Visual Merchandising Worker")).toEqual(["Rename", "Require two-factor"]);
 });
 
 test("deletes a role nobody holds after one confirm; a built-in has no Delete", async ({ page }) => {
