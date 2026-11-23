@@ -28,6 +28,8 @@ const LIGHT_ONLY = /(?:^|[\\/])(layout|products|shell|library|store-map|frame-ra
 
 export default defineConfig({
   testDir: "e2e",
+  // Specs only: e2e/*.test.ts files are Vitest unit tests (e.g. totp.test.ts).
+  testMatch: /\.spec\.ts$/,
   fullyParallel: false,
   workers: E2E_WORKERS,
   // One real bug must not turn into a run of timeouts (11-04: 75 failures, 30+ min).
