@@ -8,43 +8,11 @@ import type { Page } from "@playwright/test";
 import { clearAccounts, newEmail, signUpWithStore } from "./account-store";
 import { adminContext } from "./admin-account";
 import { expect, test } from "./fixtures";
+import { expectLayout } from "./layout-check";
 import { sql } from "./map-store";
 
 const PAGES = ["/", "/sign-in", "/sign-up", "/account", "/store", "/home", "/products", "/create-store", "/layout", "/planograms", "/help", "/help/new"];
 const ADMIN_PAGES = ["/admin", "/admin/people", "/admin/stores", "/admin/activity", "/admin/admins", "/admin/help"];
-
-async function expectLayout(page: Page, path: string) {
-  await page.goto(path);
-  await page.waitForLoadState("networkidle");
-
-  const tooSmall = await page
-    .locator("button:visible, a:visible, input:visible, select:visible")
-    .evaluateAll((elements) =>
-      elements
-        // Next.js dev tools live in their own shadow root; not ours.
-        .filter((element) => element.getRootNode() === document)
-        // The skip link is 1 px until focused, by design (sr-only).
-        .filter((element) => element.getBoundingClientRect().width > 1)
-        .map((element) => ({
-          control:
-            element.getAttribute("aria-label") ||
-            element.textContent?.trim() ||
-            element.getAttribute("name") ||
-            element.tagName,
-          // A radio or checkbox is tapped through its label row, which is the 44 px target (the box itself is 20).
-          height: Math.round(((element instanceof HTMLInputElement && ["radio", "checkbox"].includes(element.type) && element.closest("label")) || element).getBoundingClientRect().height),
-        }))
-        .filter(({ height }) => height < 44),
-    );
-
-  // Soft, so a page that breaks both rules reports both.
-  expect.soft(tooSmall, "controls under 44 px").toEqual([]);
-
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow, "sideways scroll").toBe(0);
-}
 
 for (const path of PAGES) {
   test.describe(path, () => {

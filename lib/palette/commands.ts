@@ -2,7 +2,7 @@
 // A feature adds its line here, as it does in nav-items.ts. Hiding is a courtesy: every
 // target page or action still checks its own switch on the server.
 
-import { CirclePlus, MapPinOff, LifeBuoy, Moon, PackageX, Pencil, ShieldCheck, Store, Sun, Tags, User, Zap, type LucideIcon } from "lucide-react";
+import { Building2, CirclePlus, MapPinOff, LifeBuoy, Moon, PackageX, Pencil, ShieldCheck, Store, Sun, Tags, User, Zap, type LucideIcon } from "lucide-react";
 
 import { NAV_ITEMS } from "@/components/shell/nav-items";
 import { can, type Holder } from "@/lib/access/can";
@@ -16,7 +16,7 @@ type StoreRef = { id: string; name: string };
 
 const NAV_KEYWORDS: Record<string, string> = { "/store": "people team staff employees invite settings", "/layout": "map floor" };
 
-export function commandsFor(holder: Holder, stores: readonly StoreRef[], activeStoreId: string, theme: Theme, isPlatformAdmin = false): PaletteItem[] {
+export function commandsFor(holder: Holder, stores: readonly StoreRef[], activeStoreId: string, theme: Theme, isPlatformAdmin = false, hasCompany = false): PaletteItem[] {
   const out: Command[] = [];
   const add = (kind: Command["kind"], id: string, label: string, icon: LucideIcon, target: Target, keywords = "", needs: Switch | null = null) => {
     if (needs === null || can(holder, needs)) out.push({ kind, id: `${kind}:${id}`, label, keywords, icon, target });
@@ -29,6 +29,7 @@ export function commandsFor(holder: Holder, stores: readonly StoreRef[], activeS
   page("/account", "Account", User, "password profile sign in");
   page("/account#two-factor", "Two-step sign-in", ShieldCheck, "two-factor 2fa authenticator backup codes passkey security");
   page("/help", "Help", LifeBuoy, "ask liminal bloom support contact reply");
+  if (hasCompany) add("page", "/company", "Company", Building2, { href: "/company" }, "regions stores region company people");
   if (isPlatformAdmin) add("page", "/admin", "Liminal Bloom admin", ShieldCheck, { href: "/admin" }, "platform admin help queue stores people");
   page("/products?place=unplaced", "Products not placed", MapPinOff, "unplaced missing");
   page("/products?status=sold_out", "Sold out products", PackageX, "out of stock");

@@ -14,6 +14,7 @@
 import { Plus } from "lucide-react";
 import { ToggleGroup } from "radix-ui";
 
+import { CompanyFootLink } from "@/components/shell/company-links";
 import { type Store, useSwitchStore } from "@/components/shell/use-switch-store";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,7 @@ export function StoreSwitcher({
   onSwitched,
   switchingTo: parentSwitchingTo,
   switchTo: parentSwitchTo,
+  companyName = null,
 }: {
   stores: Store[];
   activeStoreId: string;
@@ -34,6 +36,8 @@ export function StoreSwitcher({
    */
   switchingTo?: string | null;
   switchTo?: (storeId: string) => Promise<boolean>;
+  /** A company person's company: its name is a link to /company beside New store. */
+  companyName?: string | null;
 }) {
   const own = useSwitchStore(activeStoreId);
   const switchingTo = parentSwitchingTo === undefined ? own.switchingTo : parentSwitchingTo;
@@ -74,6 +78,7 @@ export function StoreSwitcher({
           New store
         </a>
       </Button>
+      {companyName ? <CompanyFootLink name={companyName} onFollow={onSwitched} /> : null}
     </div>
   );
 }

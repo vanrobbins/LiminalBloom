@@ -12,7 +12,7 @@ import type { Switch } from "@/lib/access/switches";
 import type { Store } from "./use-switch-store";
 
 /** `switches` are the member's, as plain values: the command palette builds its pages and actions from them in the browser. */
-export type ShellValue = { stores: Store[]; activeStoreId: string; user: { id: string; name: string; email: string }; switches: Switch[]; isPlatformAdmin: boolean; helpReplies: number };
+export type ShellValue = { stores: Store[]; activeStoreId: string; user: { id: string; name: string; email: string }; switches: Switch[]; isPlatformAdmin: boolean; helpReplies: number; /** The company the person holds a role in (for its link and the palette's Company), or null/absent. */ companyName?: string | null };
 
 /** The shell's sheets: the phone header's two, and the command palette, shared by every trigger. */
 export type ShellSheet = "stores" | "account" | "palette";

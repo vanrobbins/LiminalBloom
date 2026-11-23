@@ -18,9 +18,10 @@ import { UserMenu } from "./user-menu";
 
 export function AppShell({ member, children }: { member: Member; children: React.ReactNode }) {
   const { user, stores, activeStoreId, switches, isPlatformAdmin, helpReplies } = member;
+  const companyName = member.company?.name ?? null;
 
   return (
-    <ShellProvider value={{ stores, activeStoreId, user: { id: user.id, name: user.name, email: user.email }, switches, isPlatformAdmin, helpReplies }}>
+    <ShellProvider value={{ stores, activeStoreId, user: { id: user.id, name: user.name, email: user.email }, switches, isPlatformAdmin, helpReplies, companyName }}>
       <div className="flex flex-1 flex-col bg-surface md:flex-row">
         <a
           href="#content"
@@ -35,7 +36,7 @@ export function AppShell({ member, children }: { member: Member; children: React
           <PaletteTrigger />
           <NavLinks variant="rail" />
           <div className="mt-auto">
-            <UserMenu variant="rail" user={user} stores={stores} activeStoreId={activeStoreId} isPlatformAdmin={isPlatformAdmin} helpReplies={helpReplies} />
+            <UserMenu variant="rail" user={user} stores={stores} activeStoreId={activeStoreId} isPlatformAdmin={isPlatformAdmin} helpReplies={helpReplies} companyName={companyName} />
           </div>
         </aside>
 
@@ -56,7 +57,7 @@ export function AppShell({ member, children }: { member: Member; children: React
           </div>
           <NavLinks variant="sidebar" />
           <div className="mt-auto">
-            <UserMenu variant="sidebar" user={user} stores={stores} activeStoreId={activeStoreId} isPlatformAdmin={isPlatformAdmin} helpReplies={helpReplies} />
+            <UserMenu variant="sidebar" user={user} stores={stores} activeStoreId={activeStoreId} isPlatformAdmin={isPlatformAdmin} helpReplies={helpReplies} companyName={companyName} />
           </div>
         </aside>
 

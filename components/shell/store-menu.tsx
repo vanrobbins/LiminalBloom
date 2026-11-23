@@ -21,6 +21,8 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import { storeInitials } from "@/lib/initials";
 
+import { CompanyFootItem } from "./company-links";
+
 import type { Store } from "./use-switch-store";
 
 export type StoreNameVariant = "sheet" | "initials" | "name";
@@ -84,11 +86,14 @@ export function StoreMenuItems({
   activeStoreId,
   switchingTo,
   switchTo,
+  companyName = null,
 }: {
   stores: Store[];
   activeStoreId: string;
   switchingTo: string | null;
   switchTo: (storeId: string) => Promise<boolean>;
+  /** A company person's company: its name is a link to /company beside New store. */
+  companyName?: string | null;
 }) {
   return (
     <DropdownMenuSub>
@@ -123,6 +128,7 @@ export function StoreMenuItems({
             New store
           </Link>
         </DropdownMenuItem>
+        {companyName ? <CompanyFootItem name={companyName} /> : null}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );

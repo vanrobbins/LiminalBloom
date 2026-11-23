@@ -60,7 +60,7 @@ export function PageHeader({ title, back, actions }: PageHeaderProps) {
         ) : null}
         {shell ? (
           <div className="md:hidden">
-            <UserMenu variant="sheet" user={shell.user} stores={shell.stores} activeStoreId={shell.activeStoreId} isPlatformAdmin={shell.isPlatformAdmin} helpReplies={shell.helpReplies} />
+            <UserMenu variant="sheet" user={shell.user} stores={shell.stores} activeStoreId={shell.activeStoreId} isPlatformAdmin={shell.isPlatformAdmin} helpReplies={shell.helpReplies} companyName={shell.companyName ?? null} />
           </div>
         ) : null}
       </div>
