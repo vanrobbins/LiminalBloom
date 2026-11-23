@@ -26,17 +26,18 @@ describe("twoFactorAtFor", () => {
 });
 
 describe("passkeyRelyingParty", () => {
-  it("uses localhost in development, with the origin of BETTER_AUTH_URL", () => {
+  it("takes the rpID from the hostname of BETTER_AUTH_URL, and the origin from its origin", () => {
     expect(passkeyRelyingParty("http://localhost:3000")).toEqual({ rpID: "localhost", origin: "http://localhost:3000" });
-  });
-
-  it("uses liminalbloom.app on any other host", () => {
     expect(passkeyRelyingParty("https://liminalbloom.app/")).toEqual({ rpID: "liminalbloom.app", origin: "https://liminalbloom.app" });
-    expect(passkeyRelyingParty("https://www.liminalbloom.app")).toEqual({ rpID: "liminalbloom.app", origin: "https://www.liminalbloom.app" });
+    expect(passkeyRelyingParty("https://liminalbloom.vanar.me/some/path")).toEqual({ rpID: "liminalbloom.vanar.me", origin: "https://liminalbloom.vanar.me" });
   });
 
-  it("leaves the origin to Better Auth when the URL is missing or not a URL", () => {
-    expect(passkeyRelyingParty(undefined)).toEqual({ rpID: "liminalbloom.app", origin: undefined });
-    expect(passkeyRelyingParty("not a url")).toEqual({ rpID: "liminalbloom.app", origin: undefined });
+  it("keeps the port out of the rpID but in the origin", () => {
+    expect(passkeyRelyingParty("https://liminalbloom.app:8443")).toEqual({ rpID: "liminalbloom.app", origin: "https://liminalbloom.app:8443" });
+  });
+
+  it("leaves both to Better Auth when the URL is missing or not a URL", () => {
+    expect(passkeyRelyingParty(undefined)).toEqual({});
+    expect(passkeyRelyingParty("not a url")).toEqual({});
   });
 });

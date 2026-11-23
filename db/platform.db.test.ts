@@ -82,18 +82,18 @@ describe("platform_events is insert-only", () => {
     const userId = await anAccount("pl-actor");
     const [row] = await db.insert(platformEvents).values(anEvent({ actorId: userId })).returning();
     expect(row.actorId).toBe(userId);
-    // The foreign key's SET NULL is itself an UPDATE of platform_events: the trigger must let that one through.
     await db.delete(user).where(eq(user.id, userId));
     const [after] = await db.select().from(platformEvents).where(eq(platformEvents.id, row.id));
     expect(after).toEqual({ ...row, actorId: null });
   });
 
-  it("refuses clearing the actor together with another change, and setting an actor back", async () => {
+  it("refuses clearing the actor with another change or directly, and setting an actor back", async () => {
     const userId = await anAccount("pl-actor2");
     const [row] = await db.insert(platformEvents).values(anEvent({ actorId: userId })).returning();
     const target = eq(platformEvents.id, row.id);
     expect(await dbRefusal(db.update(platformEvents).set({ actorId: null, reason: "rewritten" }).where(target))).toMatch(/insert-only/);
     expect(await dbRefusal(db.update(platformEvents).set({ actorId: userId, reason: "rewritten" }).where(target))).toMatch(/insert-only/);
+    expect(await dbRefusal(db.update(platformEvents).set({ actorId: null }).where(target))).toMatch(/insert-only/);
   });
 });
 

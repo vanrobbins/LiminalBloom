@@ -6,7 +6,8 @@
 --   * platform_events is insert-only: a trigger refuses UPDATE, DELETE and TRUNCATE (the
 --     owner connection bypasses grants, so grants alone cannot do it). The one update it
 --     lets through is the foreign key clearing actor_id when the actor's account is
---     deleted, which changes nothing else.
+--     deleted, which changes nothing else. pg_trigger_depth() > 1 means it runs inside
+--     the foreign key's own trigger, so a direct UPDATE clearing actor_id is refused too.
 --   * Row-level security on the five app tables, with no policy and no grant to
 --     app_store_user: the store role reads nothing there (fail closed, the second wall).
 --     two_factor and passkey, like the other Better Auth tables, are never granted.
@@ -119,7 +120,7 @@ CREATE INDEX "twoFactor_userId_idx" ON "two_factor" USING btree ("user_id");--> 
 -- Hand-written: platform_events is insert-only.
 CREATE FUNCTION platform_events_insert_only() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-	IF TG_OP = 'UPDATE' AND OLD.actor_id IS NOT NULL AND NEW.actor_id IS NULL
+	IF TG_OP = 'UPDATE' AND pg_trigger_depth() > 1 AND OLD.actor_id IS NOT NULL AND NEW.actor_id IS NULL
 		AND (to_jsonb(NEW) - 'actor_id') = (to_jsonb(OLD) - 'actor_id') THEN
 		RETURN NEW;
 	END IF;

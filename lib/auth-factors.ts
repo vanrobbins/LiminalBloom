@@ -17,19 +17,16 @@ export function twoFactorAtFor(path: string | undefined, now: Date = new Date())
   return path !== undefined && SECOND_FACTOR_PATHS.includes(path) ? now : null;
 }
 
-const PRODUCTION_RP_ID = "liminalbloom.app";
-
 /**
- * The passkey relying party: `localhost` in development, `liminalbloom.app` everywhere else
- * (a passkey is bound to this id, so it must not follow a preview host). The origin comes from
- * BETTER_AUTH_URL; with none, Better Auth derives it from its own baseURL.
+ * The passkey relying party, derived from BETTER_AUTH_URL: rpID is its hostname and origin is its
+ * origin, so passkeys follow whichever host the deployment is on (a passkey is bound to the rpID).
+ * With no usable URL both are left out and Better Auth derives them from its own baseURL.
  */
-export function passkeyRelyingParty(baseUrl: string | undefined): { rpID: string; origin: string | undefined } {
-  let url: URL | null = null;
+export function passkeyRelyingParty(baseUrl: string | undefined): { rpID?: string; origin?: string } {
   try {
-    url = baseUrl ? new URL(baseUrl) : null;
+    const url = new URL(baseUrl ?? "");
+    return { rpID: url.hostname, origin: url.origin };
   } catch {
-    url = null;
+    return {};
   }
-  return { rpID: url?.hostname === "localhost" ? "localhost" : PRODUCTION_RP_ID, origin: url?.origin };
 }
