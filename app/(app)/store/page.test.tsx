@@ -4,10 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invitationRow, person, ROLES, viewOf } from "@/components/people/test-view";
 import type { PeopleView } from "@/lib/access/people-view";
 
-const mocks = vi.hoisted(() => ({ switches: ["view", "store.settings"] as string[], view: null as PeopleView | null, viewFor: vi.fn() }));
+const STANDALONE = [
+  { id: "a", name: "Pioneer Place", companyId: null, companyName: null, regionName: null },
+  { id: "b", name: "Other", companyId: null, companyName: null, regionName: null },
+];
+const mocks = vi.hoisted(() => ({ switches: ["view", "store.settings"] as string[], view: null as PeopleView | null, viewFor: vi.fn(), stores: [] as unknown[], company: null as unknown }));
 
 vi.mock("@/lib/current-member", () => ({
-  requireMember: async () => ({ kind: "member", user: { id: "u", name: "Van", email: "v@x.co" }, stores: [{ id: "a", name: "Pioneer Place" }, { id: "b", name: "Other" }], activeStoreId: "a", switches: mocks.switches }),
+  requireMember: async () => ({ kind: "member", user: { id: "u", name: "Van", email: "v@x.co" }, stores: mocks.stores, activeStoreId: "a", switches: mocks.switches, company: mocks.company }),
   can: (member: { switches: string[] }, wanted: string) => member.switches.includes(wanted),
 }));
 vi.mock("@/lib/store-settings", () => ({ storeSettingsFor: async () => ({ timezone: "America/Los_Angeles", version: 1 }) }));
@@ -33,6 +37,8 @@ async function show(switches: string[], view: PeopleView) {
 describe("StorePage", () => {
   beforeEach(() => {
     mocks.view = STAFF;
+    mocks.stores = STANDALONE;
+    mocks.company = null;
   });
 
   it("gives everyone the Store title, the details and one People list, in that order, with no back link", async () => {
@@ -99,5 +105,26 @@ describe("StorePage", () => {
     await show(["view", "people.manage"], MANAGER);
     expect(screen.getByText("zoe@x.co")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Invitations waiting/ })).toBeInTheDocument();
+  });
+
+  it("says Part of the company and region, linked to /company for a company person", async () => {
+    mocks.stores = [{ id: "a", name: "Pioneer Place", companyId: "c", companyName: "Acme", regionName: "North" }];
+    mocks.company = { id: "c", name: "Acme", role: "regional_manager", regionId: "n", regionName: "North", switches: [] };
+    await show(["view"], STAFF);
+    expect(screen.getByRole("link", { name: "Acme" })).toHaveAttribute("href", "/company");
+    expect(screen.getByText(/^Part of/)).toHaveTextContent("Part of Acme · North");
+  });
+
+  it("says No Store Manager yet. under the title when nobody in the store holds it, with Invite still there", async () => {
+    await show(["view", "people.manage"], viewOf(MANAGER.groups.flatMap((g) => g.people), { canManage: true, assignable: ROLES, hasStoreManager: false }));
+    expect(screen.getByText("No Store Manager yet.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Invite someone" })).toBeInTheDocument();
+  });
+
+  it("lists the company's regional managers above the People list", async () => {
+    await show(["view"], viewOf(STAFF.groups.flatMap((g) => g.people), { regionalManagers: [{ name: "Rhea North", email: null, isYou: false }] }));
+    const heading = screen.getByRole("heading", { name: "Regional Manager · 1" });
+    expect(heading.compareDocumentPosition(screen.getByRole("heading", { name: "People · 2" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("Rhea North")).toBeInTheDocument();
   });
 });

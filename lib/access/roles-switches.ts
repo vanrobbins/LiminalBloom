@@ -9,6 +9,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 
 import { nestingProblem, type NestRole } from "./nesting";
+import { isSyntheticRoleId } from "./company-roles";
 import { canActOn, canGrant } from "./rank";
 import { builtinRole, LOCKED_SWITCHES, withLockedSwitches, type BuiltinRoleKey } from "./roles";
 import { lockedRoles, nestingBad, pins } from "./roles-sql";
@@ -91,7 +92,7 @@ async function whyNot(storeId: string, edits: { roleId: string; version: number 
 }
 
 export async function saveSwitches(storeId: string, actor: RolesActor, edits: SwitchEdit[]): Promise<SaveOutcome> {
-  if (edits.length === 0 || new Set(edits.map((e) => e.roleId)).size !== edits.length) return { status: "invalid" };
+  if (edits.length === 0 || new Set(edits.map((e) => e.roleId)).size !== edits.length || edits.some((e) => isSyntheticRoleId(e.roleId))) return { status: "invalid" };
   const snapshot = await readSnapshot(storeId);
   for (const e of edits) {
     const role = snapshot.roles.find((r) => r.id === e.roleId);
@@ -118,6 +119,7 @@ export async function saveSwitches(storeId: string, actor: RolesActor, edits: Sw
 
 /** A built-in's name and permissions back to what it shipped with. Its place in the order stays. */
 export async function resetRole(storeId: string, actor: RolesActor, roleId: string, version: number): Promise<ResetOutcome> {
+  if (isSyntheticRoleId(roleId)) return { status: "invalid" };
   const snapshot = await readSnapshot(storeId);
   const role = snapshot.roles.find((r) => r.id === roleId);
   if (!role) return { status: "gone" };

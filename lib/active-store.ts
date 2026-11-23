@@ -1,94 +1,26 @@
-// Which store a session opens in (docs/DECISIONS.md, 2026-09-29).
+// Which store a session opens in (docs/DECISIONS.md, 2026-09-29; 2026-11-22 for companies).
 //
-// A person can belong to several stores. Signing in opens the one they used
-// last, as long as they still belong to it; otherwise the one they joined
-// first; otherwise none, and they are sent to create one.
+// A person can reach several stores: their own memberships, and the stores of the company they hold a role in.
+// Signing in opens the one they used last, as long as they still reach it; otherwise the one they joined
+// first; otherwise the company's first store by name; otherwise none. The same merge resolveAccess uses
+// decides it (lib/access/resolve-merge.ts), so sign-in and every request agree. A paused store, or one of a
+// paused company, is never chosen.
 //
-// Server only in practice, but deliberately without `import "server-only"`:
-// lib/auth.ts imports this file, and the Better Auth CLI loads lib/auth.ts
-// outside Next.js to generate the schema, where that import throws.
+// Server only in practice, but deliberately without `import "server-only"`: lib/auth.ts imports this file,
+// and the Better Auth CLI loads lib/auth.ts outside Next.js to generate the schema, where that import throws.
+// Switching to a store (`setActiveStore`) is in lib/access/set-active-store.ts for that reason.
 
-import { and, asc, eq } from "drizzle-orm";
+import { readGrants } from "@/lib/access/grants";
+import { mergeAccess } from "@/lib/access/resolve-merge";
 
-import { db } from "@/db";
-import { member, user } from "@/db/auth-schema";
-import { pausedAmong } from "@/lib/paused";
-
-/** The store to make active for this person, or null if they have none. A paused store is never chosen (spec 0.7.1 7.4). */
-export async function chooseActiveStore(
-  userId: string,
-): Promise<string | null> {
-  const joined = await db
-    .select({ storeId: member.organizationId })
-    .from(member)
-    .where(eq(member.userId, userId))
-    .orderBy(asc(member.createdAt));
-  const paused = await pausedAmong(joined.map((m) => m.storeId));
-  const memberships = joined.filter((m) => !paused.has(m.storeId));
-
-  if (memberships.length === 0) {
-    return null;
-  }
-
-  const [person] = await db
-    .select({ lastActiveStoreId: user.lastActiveStoreId })
-    .from(user)
-    .where(eq(user.id, userId));
-
-  // Only honour the remembered store if they still belong to it. A store
-  // they have left, or one that was deleted, must never become active.
-  const remembered = person?.lastActiveStoreId;
-  if (remembered && memberships.some((m) => m.storeId === remembered)) {
-    return remembered;
-  }
-
-  return memberships[0].storeId;
-}
-
-/**
- * The store a request may act in: the session's active store, but only while
- * the person still belongs to it. Otherwise the same choice sign-in makes.
- *
- * Every page that reads store data, and anything that encrypts or decrypts
- * for a store, uses this rather than the session's value directly. Removing
- * someone from a store only clears the active store on the remover's own
- * session, so the removed person's other sessions still name it.
- */
-export async function resolveActiveStore(
-  userId: string,
-  sessionStoreId: string | null | undefined,
-): Promise<string | null> {
-  if (sessionStoreId) {
-    const [membership] = await db
-      .select({ id: member.id })
-      .from(member)
-      .where(
-        and(eq(member.userId, userId), eq(member.organizationId, sessionStoreId)),
-      );
-
-    // A paused store is not honoured even while the person still belongs to it.
-    if (membership && !(await pausedAmong([sessionStoreId])).has(sessionStoreId)) {
-      return sessionStoreId;
-    }
-  }
-
-  return chooseActiveStore(userId);
-}
-
-/** Record the store this person is now working in. */
-export async function rememberActiveStore(
-  userId: string,
-  storeId: string,
-): Promise<void> {
-  await db
-    .update(user)
-    .set({ lastActiveStoreId: storeId })
-    .where(eq(user.id, userId));
+/** The store to make active for this person, or null if they reach none. */
+export async function chooseActiveStore(userId: string): Promise<string | null> {
+  return mergeAccess(await readGrants(userId), {}).activeStoreId;
 }
 
 /**
  * For the sign-in hook (lib/auth.ts). A database error here must not fail the
- * sign-in itself (B6): with no store chosen, resolveActiveStore makes the same
+ * sign-in itself (B6): with no store chosen, resolveAccess makes the same
  * choice on the next request.
  */
 export async function storeForNewSession(userId: string): Promise<string | null> {
@@ -97,17 +29,5 @@ export async function storeForNewSession(userId: string): Promise<string | null>
   } catch (error) {
     console.error("sign-in: no store chosen", error);
     return null;
-  }
-}
-
-/**
- * For the session-update hook: the switch has already happened, so failing to
- * remember it only means the next sign-in may open another store (B6).
- */
-export async function rememberSwitch(userId: string, storeId: string): Promise<void> {
-  try {
-    await rememberActiveStore(userId, storeId);
-  } catch (error) {
-    console.error("store switch: not remembered", error);
   }
 }

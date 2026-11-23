@@ -21,49 +21,22 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { can } from "@/lib/access/can";
+import { companyRole } from "@/lib/access/company-roles";
 import { resolveAccess } from "@/lib/access/resolve";
 import { isPlatformAdmin } from "@/lib/admin/is-admin";
 import type { Switch } from "@/lib/access/switches";
 import { auth } from "@/lib/auth";
 import { helpRepliesFor } from "@/lib/help/badge";
-import { pausedAmong, pausedStoresOf } from "@/lib/paused";
+import { pausedStoresOf } from "@/lib/paused";
 import { authHref } from "@/lib/return-path";
 import { hasSecondFactor } from "@/lib/two-factor/has-second-factor";
+
+import type { CompanyOnly, CurrentMember, Member, NeedsTwoFactor, Paused } from "./current-member-types";
 
 // Also here for server code that already imports this file; client components import ./access/can.
 export { can };
 
-export type Member = {
-  kind: "member";
-  user: { id: string; name: string; email: string };
-  stores: { id: string; name: string }[];
-  activeStoreId: string;
-  // Plain values, so the whole member can cross into client components.
-  role: { id: string; name: string; rank: number } | null;
-  switches: Switch[];
-  /** Only the avatar menu's link to /admin reads this; the admin guard re-reads the admin table itself. */
-  isPlatformAdmin: boolean;
-  /** Help requests Liminal Bloom has answered since the person last opened them: the avatar's dot and "Help · N replies". */
-  helpReplies: number;
-};
-
-/** Signed in and in no store yet. They still have an account, so Help and /welcome know who they are. */
-export type NoStore = { kind: "no-store"; user: Member["user"] };
-
-/**
- * Signed in, but the role in the active store asks for two-factor sign-in and the account has none
- * (0.7.1a "Requires two-factor"). Nothing of the store is read or shown: the only pages that answer
- * are Account, which sets it up, and sign-out. `requireMember` sends everyone else to /account.
- */
-export type NeedsTwoFactor = { kind: "needs-two-factor"; user: Member["user"]; roleName: string };
-
-/**
- * Signed in and in at least one store, but every store they belong to is paused by Liminal Bloom (spec 0.7.1
- * 7.4). Nothing of any store is read: `requireMember` sends them to /paused, which names the stores.
- */
-export type Paused = { kind: "paused"; user: Member["user"]; stores: { id: string; name: string }[] };
-
-export type CurrentMember = { kind: "signed-out" } | NoStore | NeedsTwoFactor | Paused | Member;
+export type { CompanyOnly, CurrentMember, Member, MemberStore, NeedsTwoFactor, NoStore, Paused } from "./current-member-types";
 
 /** One read per request: the layout and the page share the result. */
 export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
@@ -74,28 +47,27 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     return { kind: "signed-out" };
   }
 
-  // The session's store only while this person still belongs to it (see
-  // resolveActiveStore for why the session's own value is not enough), and
-  // their role and switches in that store, read afresh on every request.
-  const access = await resolveAccess(
-    session.user.id,
-    session.session.activeOrganizationId,
-  );
+  // The stores this person reaches (their own and their company's), the one this session works in only while
+  // they still reach it, and their role and switches there, read afresh on every request. The older
+  // `activeOrganizationId` is read only for sessions made before 0021.
+  const access = await resolveAccess(session.user.id, session.session);
+  const person = { id: session.user.id, name: session.user.name, email: session.user.email };
+  // Asked only for a role that requires it (a store role with it on, or any company role), so every other request
+  // skips the read. Before the no-store return: a company person with no store yet needs it too. Not
+  // `session.two_factor_at`: a trusted-device sign-in has none and the account still has two-factor (DECISIONS 11-23).
+  const roleName = access.company ? companyRole(access.company.role).name : access.role?.name;
+  if (access.requiresTwoFactor && roleName && !(await hasSecondFactor(session.user.id))) {
+    return { kind: "needs-two-factor", user: person, roleName };
+  }
   if (!access.activeStoreId) {
-    // Nothing resolved: either they belong to no store, or every one is paused.
+    // Nothing resolved: a company role with no store yet, or every store paused, or no store at all.
+    if (access.company) return { kind: "company-only", user: person, company: access.company };
     const stores = await pausedStoresOf(session.user.id);
-    if (stores.length > 0) return { kind: "paused", user: { id: session.user.id, name: session.user.name, email: session.user.email }, stores };
-    return { kind: "no-store", user: { id: session.user.id, name: session.user.name, email: session.user.email } };
+    if (stores.length > 0) return { kind: "paused", user: person, stores };
+    return { kind: "no-store", user: person };
   }
 
-  // Asked only for a role that requires it, so every other request skips the read. Not `session.two_factor_at`:
-  // a trusted-device sign-in has none and the account still has two-factor (DECISIONS 11-23).
-  if (access.requiresTwoFactor && access.role && !(await hasSecondFactor(session.user.id))) {
-    return { kind: "needs-two-factor", user: { id: session.user.id, name: session.user.name, email: session.user.email }, roleName: access.role.name };
-  }
-
-  const [listed, isAdmin, helpReplies] = await Promise.all([auth.api.listOrganizations({ headers: requestHeaders }), isPlatformAdmin(session.user.id), helpRepliesFor(session.user.id)]);
-  const paused = await pausedAmong(listed.map((s) => s.id));
+  const [isAdmin, helpReplies] = await Promise.all([isPlatformAdmin(session.user.id), helpRepliesFor(session.user.id)]);
 
   return {
     kind: "member",
@@ -104,15 +76,19 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
       name: session.user.name,
       email: session.user.email,
     },
-    // Only what the shell shows. These cross into client components. A paused store is not offered.
-    stores: listed.filter(({ id }) => !paused.has(id)).map(({ id, name }) => ({ id, name })),
+    // Only what the shell shows. These cross into client components. A paused store is not in the list.
+    stores: access.stores.map(({ id, name, companyId, companyName, regionName }) => ({ id, name, companyId, companyName, regionName })),
     activeStoreId: access.activeStoreId,
     role: access.role && { id: access.role.id, name: access.role.name, rank: access.role.rank },
     switches: [...access.switches],
+    company: access.company,
     isPlatformAdmin: isAdmin,
     helpReplies,
   };
 });
+
+/** Where someone with a company role and no store yet lands. */
+export const COMPANY_PATH = "/company";
 
 /** Where someone whose stores are all paused lands. */
 export const PAUSED_PATH = "/paused";
@@ -136,6 +112,9 @@ export async function requireMember(): Promise<Member> {
   if (member.kind === "paused") {
     redirect(PAUSED_PATH);
   }
+  if (member.kind === "company-only") {
+    redirect(COMPANY_PATH);
+  }
 
   return member;
 }
@@ -154,9 +133,10 @@ export async function requireSignedIn(next?: string): Promise<Exclude<CurrentMem
 
 /**
  * What the Account page and its two-factor and passkey actions need: a member, someone who must set two-factor up
- * first, or someone whose stores are all paused (they keep their password, two-step and passkeys, DECISIONS 11-23).
+ * first, someone whose stores are all paused (they keep their password, two-step and passkeys, DECISIONS 11-23), or
+ * a company person with no store yet (company-only): Account is theirs too, in the bare frame.
  */
-export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor | Paused> {
+export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor | Paused | CompanyOnly> {
   const current = await getCurrentMember();
   if (current.kind === "signed-out") redirect("/sign-in");
   if (current.kind === "no-store") redirect("/welcome");

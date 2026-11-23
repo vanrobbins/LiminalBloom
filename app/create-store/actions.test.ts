@@ -7,9 +7,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
-  listOrganizations: vi.fn(async () => []),
   createOrganization: vi.fn(),
-  setActiveOrganization: vi.fn(),
   // Next's redirect() throws to stop the action; so does this stand-in.
   redirect: vi.fn(() => {
     throw new Error("NEXT_REDIRECT");
@@ -22,9 +20,7 @@ vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
       getSession: mocks.getSession,
-      listOrganizations: mocks.listOrganizations,
       createOrganization: mocks.createOrganization,
-      setActiveOrganization: mocks.setActiveOrganization,
     },
   },
 }));
@@ -42,10 +38,24 @@ vi.mock("@/lib/store-settings", async (original) => {
   };
 });
 
+// The real active-store write, which one test makes fail the way a dropped connection would.
+const active = vi.hoisted(() => ({ fail: null as Error | null }));
+vi.mock("@/lib/access/set-active-store", async (original) => {
+  const real = await original<typeof import("@/lib/access/set-active-store")>();
+  return {
+    ...real,
+    setActiveStore: async (...args: Parameters<typeof real.setActiveStore>) => {
+      if (active.fail) throw active.fail;
+      return real.setActiveStore(...args);
+    },
+  };
+});
+
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
 import { storeSettings, storeSuspensions } from "@/db/schema";
 import { dropPeople, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
+import { makeSession, sessionStore } from "@/lib/access/test-session";
 import { dropStores } from "@/lib/products/test-stores";
 import { storeSettingsFor } from "@/lib/store-settings";
 
@@ -57,13 +67,15 @@ afterAll(async () => {
 });
 
 /** What Better Auth and its afterCreateOrganization hook leave behind: a store, its five roles, its creator in `role`, Pacific. */
-async function createdStore(role: "store_manager" | "sales_associate" = "store_manager"): Promise<{ storeId: string; userId: string }> {
+async function createdStore(role: "store_manager" | "sales_associate" = "store_manager"): Promise<{ storeId: string; userId: string; sessionId: string }> {
   const { store: storeId, roles } = await makeStoreWithRoles("create-action");
   const { userId } = await makePerson(storeId, roles[role]);
   await db.insert(storeSettings).values({ storeId, timezone: "America/Los_Angeles" });
-  mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Test person", email: `${userId}@example.com` }, session: { activeOrganizationId: storeId } });
+  // The session works in no store yet: the action must move it to the new one.
+  const sessionId = await makeSession(userId);
+  mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Test person", email: `${userId}@example.com` }, session: { id: sessionId, activeStoreId: null } });
   mocks.createOrganization.mockResolvedValue({ id: storeId });
-  return { storeId, userId };
+  return { storeId, userId, sessionId };
 }
 
 function form(name: string, timezone: string): FormData {
@@ -83,6 +95,15 @@ describe("createStore", () => {
     expect(await storeSettingsFor(storeId)).toEqual({ timezone: "America/Denver", version: 2 });
   });
 
+  it("makes the new store the session's and the person's remembered store, and leaves the old active organization alone", async () => {
+    const { storeId, userId, sessionId } = await createdStore();
+    await expect(createStore(null, form("Pioneer Place", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
+    expect(await sessionStore(sessionId)).toBe(storeId);
+    expect((await db.select({ last: user.lastActiveStoreId }).from(user).where(eq(user.id, userId)))[0].last).toBe(storeId);
+    // Without this the call also moves the session's activeOrganizationId, which nothing reads any more (B0).
+    expect(mocks.createOrganization.mock.calls[0][0].body).toMatchObject({ name: "Pioneer Place", keepCurrentActiveOrganization: true });
+  });
+
   it("stores the runtime's spelling of a zone the browser spelled differently", async () => {
     const { storeId } = await createdStore();
     await expect(createStore(null, form("Lloyd Center", "america/denver"))).rejects.toThrow("NEXT_REDIRECT");
@@ -90,11 +111,11 @@ describe("createStore", () => {
   });
 
   it("refuses a person whose role requires two-factor and who has none: no store is made, and the session isn't asked for further", async () => {
-    const { userId } = await createdStore();
+    const { userId, sessionId } = await createdStore();
     await db.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, userId));
     expect(await createStore(null, form("Pioneer Place", "America/Denver"))).toEqual({ error: "Set up two-step sign-in on Account first." });
     expect(mocks.createOrganization).not.toHaveBeenCalled();
-    expect(mocks.setActiveOrganization).not.toHaveBeenCalled();
+    expect(await sessionStore(sessionId)).toBeNull();
   });
 
   it("lets a person whose stores are all paused make a store: pausing is per store (DECISIONS 11-23)", async () => {
@@ -128,17 +149,33 @@ describe("createStore", () => {
   });
 
   it("goes on to the store when the zone write throws, so a retry can't make a second store (B4)", async () => {
-    const { storeId } = await createdStore();
+    const { storeId, sessionId } = await createdStore();
     settings.fail = new Error("Connection terminated unexpectedly");
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       await expect(createStore(null, form("Clackamas", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
-      expect(mocks.setActiveOrganization).toHaveBeenCalled();
+      expect(await sessionStore(sessionId)).toBe(storeId);
       expect(mocks.redirect).toHaveBeenCalledWith("/home");
       expect(mocks.createOrganization).toHaveBeenCalledTimes(1);
       expect(logged).toHaveBeenCalledWith("create-store: time zone not saved", storeId, settings.fail);
     } finally {
       settings.fail = null;
+      logged.mockRestore();
+    }
+  });
+
+  it("goes on to /home when the active store can't be set: the store exists, so no \"could not create\" and no second store", async () => {
+    const { storeId, sessionId } = await createdStore();
+    active.fail = new Error("Connection terminated unexpectedly");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(createStore(null, form("Beaverton", "America/Denver"))).rejects.toThrow("NEXT_REDIRECT");
+      expect(mocks.redirect).toHaveBeenCalledWith("/home");
+      expect(mocks.createOrganization).toHaveBeenCalledTimes(1);
+      expect(logged).toHaveBeenCalledWith("create-store: active store not set", storeId, active.fail);
+      expect(await sessionStore(sessionId)).toBeNull();
+    } finally {
+      active.fail = null;
       logged.mockRestore();
     }
   });

@@ -14,7 +14,7 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { member } from "@/db/auth-schema";
-import { roleDefinitions } from "@/db/schema";
+import { roleDefinitions, storeProfiles } from "@/db/schema";
 
 import { type AdminActor, platformEventFrom, storeEventFrom } from "./events";
 
@@ -51,13 +51,15 @@ export async function cancelStoreInvitation(actor: AdminActor, invitationId: str
   return rows[0] ? { status: "done", email: String(rows[0].email), storeName: String(rows[0].store_name) } : { status: "gone" };
 }
 
-export type ManagerOutcome = { status: "done"; name: string } | { status: "gone" | "already" | "invalid" };
+export type ManagerOutcome = { status: "done"; name: string } | { status: "gone" | "already" | "invalid" | "company" };
 
 /**
  * Sets a member's role to the store's Store Manager role. Existing Store Managers keep theirs. `gone`: the
  * person is not in that store; `already`: they are a Store Manager; `invalid`: the store has no such role.
  */
-// B10: when company stores exist, a company store is refused here (its roles are the company's to give). A paused store is not: pausing stops the store, not Liminal Bloom helping it (DECISIONS 11-23).
+// A company store is refused (its company decides who manages it, spec 7.4). A paused store is not: pausing stops the store, not Liminal Bloom helping it (DECISIONS 11-23).
+const isCompanyStore = async (storeId: string): Promise<boolean> => (await db.select({ id: storeProfiles.storeId }).from(storeProfiles).where(eq(storeProfiles.storeId, storeId))).length > 0;
+
 export async function makeStoreManager(actor: AdminActor, storeId: string, userId: string, reason: string): Promise<ManagerOutcome> {
   const source = sql`before b join changed c on c.id = b.member_id`;
   const detail = sql`jsonb_build_object('store', b.store_name, 'storeId', ${storeId}::text, 'from', coalesce(b.from_role, 'No role'))`;
@@ -71,7 +73,7 @@ export async function makeStoreManager(actor: AdminActor, storeId: string, userI
       where m.organization_id = ${storeId} and m.user_id = ${userId}),
     changed as (
       update member set role_id = (select id from mgr)
-      where organization_id = ${storeId} and exists (select 1 from mgr)
+      where organization_id = ${storeId} and exists (select 1 from mgr) and not exists (select 1 from store_profiles sp where sp.store_id = ${storeId})
         and id in (select member_id from before where role_id is distinct from (select id from mgr))
       returning id),
     logged as (${platformEventFrom(actor, { action: "store_manager_made", targetKind: "user", targetId: sql`b.user_id`, targetLabel: sql`b.email`, reason, detail }, source)}),
@@ -80,6 +82,7 @@ export async function makeStoreManager(actor: AdminActor, storeId: string, userI
   if (rows[0]) return { status: "done", name: String(rows[0].person) };
   const [row] = await db.select({ roleId: member.roleId }).from(member).where(and(eq(member.organizationId, storeId), eq(member.userId, userId)));
   if (!row) return { status: "gone" };
+  if (await isCompanyStore(storeId)) return { status: "company" };
   const [manager] = await db.select({ id: roleDefinitions.id }).from(roleDefinitions).where(and(eq(roleDefinitions.storeId, storeId), eq(roleDefinitions.builtin, "store_manager")));
   if (!manager) return { status: "invalid" };
   return { status: row.roleId === manager.id ? "already" : "gone" };

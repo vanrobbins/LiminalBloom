@@ -18,5 +18,6 @@ export * from "./planograms";
 export * from "./settings";
 export * from "./access";
 export * from "./adjustments";
+export * from "./companies";
 export * from "./platform";
 export * from "./passkey-uses";

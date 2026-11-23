@@ -49,6 +49,7 @@ export function UserMenu({
   activeStoreId,
   isPlatformAdmin = false,
   helpReplies = 0,
+  companyName = null,
 }: {
   user: { name: string; email: string };
   variant: UserMenuVariant;
@@ -58,6 +59,8 @@ export function UserMenu({
   isPlatformAdmin?: boolean;
   /** Replies from Liminal Bloom not yet opened: a dot on the avatar and the count beside Help. */
   helpReplies?: number;
+  /** The name of the company the person holds a role in, or null: Company in the menu and the foot link in the store lists. */
+  companyName?: string | null;
 }) {
   const [isSheetOpen, setIsSheetOpen] = useShellSheet("account");
   // Held here, not in the store list: the sheet and the dropdown unmount their content on close,
@@ -87,7 +90,7 @@ export function UserMenu({
       {helpReplies > 0 ? <span data-help-dot className="absolute -top-0.5 -right-0.5 size-3 rounded-full border-2 border-raised bg-info" /> : null}
     </span>
   );
-  const rows = { help: helpLabel(helpReplies), isPlatformAdmin, isMounted, themeLabel, ThemeIcon, switchTheme, signOut: () => void signOut(), isSigningOut };
+  const rows = { help: helpLabel(helpReplies), hasCompany: companyName !== null, isPlatformAdmin, isMounted, themeLabel, ThemeIcon, switchTheme, signOut: () => void signOut(), isSigningOut };
 
   if (variant === "sheet") {
     return (
@@ -126,6 +129,7 @@ export function UserMenu({
                 activeStoreId={activeStoreId}
                 switchingTo={switchingTo}
                 switchTo={switchTo}
+                companyName={companyName}
                 onSwitched={() => openSheet(false)}
               />
             </div>
@@ -165,6 +169,7 @@ export function UserMenu({
           activeStoreId={activeStoreId}
           switchingTo={switchingTo}
           switchTo={switchTo}
+          companyName={companyName}
         />
         <DropdownMenuSeparator />
         <DropdownRows {...rows} />

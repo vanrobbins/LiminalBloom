@@ -15,6 +15,8 @@ import { and, desc, eq, notExists, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { invitation, member, organization } from "@/db/auth-schema";
 import { roleDefinitions, storeSuspensions } from "@/db/schema";
+import { lookCompanyInvitation } from "@/lib/companies/invite-look";
+import { companyOfStore, otherCompanyName } from "@/lib/companies/one-company";
 
 import { inviterMayGrant } from "./invitation-lapse";
 import { MAX_PEOPLE } from "./invite-limits";
@@ -29,10 +31,14 @@ export type InvitationState =
   | { state: "used" }
   | { state: "cancelled" }
   | Named<"expired" | "lapsed" | "signed-out" | "wrong-email" | "already-member" | "full">
-  // Present (true) only when the store is paused: they may still accept, but won't see it until it is restored (DECISIONS 11-23).
+  // A company invitation whose company is paused: nothing can be accepted until Liminal Bloom restores it.
+  | Named<"company-paused">
+  // In a different company (spec 0.7.1 5.4): the refusal names it.
+  | (Named<"in-company"> & { companyName: string })
+  // Present (true) only when the store, or its company, is paused: they may still accept, but won't see it until it is restored (DECISIONS 11-23).
   | (Named<"ready"> & { paused?: true });
 
-/** The invitation as `viewer` (null: signed out) would find it, as one plain state for the page to word. */
+/** The invitation as `viewer` (null: signed out) would find it, as one plain state for the page to word. A company invitation (spec 0.7.1 6.5) is looked up when no store invitation has the id. */
 export async function lookInvitation(id: string, viewer: Viewer | null, now: Date = new Date()): Promise<InvitationState> {
   // Ids are 32 to 36 characters; a longer value in the address is not one, so it never reaches the database.
   if (id.length > 200) return { state: "missing" };
@@ -44,14 +50,15 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
       expiresAt: invitation.expiresAt,
       storeName: organization.name,
       roleName: roleDefinitions.name,
-      paused: sql<boolean>`exists (select 1 from ${storeSuspensions} where ${storeSuspensions.storeId} = ${invitation.organizationId})`,
+      paused: sql<boolean>`(exists (select 1 from ${storeSuspensions} where ${storeSuspensions.storeId} = ${invitation.organizationId})
+        or exists (select 1 from store_profiles sp join companies pc on pc.id = sp.company_id where sp.store_id = ${invitation.organizationId} and pc.suspended_at is not null))`,
       lapsed: sql<boolean>`not ${inviterMayGrant(invitation.organizationId, invitation.roleId, invitation.inviterId)}`,
     })
     .from(invitation)
     .innerJoin(organization, eq(organization.id, invitation.organizationId))
     .leftJoin(roleDefinitions, and(eq(roleDefinitions.storeId, invitation.organizationId), eq(roleDefinitions.id, invitation.roleId)))
     .where(eq(invitation.id, id));
-  if (!row) return { state: "missing" };
+  if (!row) return (await lookCompanyInvitation(id, viewer, now)) ?? { state: "missing" };
   if (row.status === "accepted") return { state: "used" };
   if (row.status === "canceled" || row.status === "rejected") return { state: "cancelled" };
   // An invitation with no role cannot be accepted; none can be made today.
@@ -69,6 +76,9 @@ export async function lookInvitation(id: string, viewer: Viewer | null, now: Dat
     .from(member)
     .where(eq(member.organizationId, row.storeId));
   if (people.you > 0) return { state: "already-member", ...named };
+  // A company store takes only people who are in no other company (spec 0.7.1 5.4).
+  const other = await otherCompanyName(viewer.id, companyOfStore(row.storeId));
+  if (other) return { state: "in-company", companyName: other, ...named };
   if (people.n >= MAX_PEOPLE) return { state: "full", ...named };
   return { state: "ready", ...named, ...(row.paused ? { paused: true as const } : {}) };
 }

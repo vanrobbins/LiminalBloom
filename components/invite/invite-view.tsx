@@ -15,7 +15,7 @@ import { unusableText } from "./invite-text";
 import { PageShell } from "./page-shell";
 
 // The refusals that end in a status line; all but already-member (who has Home to go to) also offer Ask.
-const UNUSABLE = new Set<InvitationState["state"]>(["expired", "lapsed", "already-member", "full", "wrong-email"]);
+const UNUSABLE = new Set<InvitationState["state"]>(["expired", "lapsed", "already-member", "full", "wrong-email", "in-company", "company-paused"]);
 
 type InviteViewProps = {
   id: string;
@@ -70,7 +70,7 @@ export function InviteView({ id, look, signedInAs }: InviteViewProps) {
       ) : null}
       {UNUSABLE.has(look.state) ? (
         <p role="status" className="text-ink">
-          {unusableText(look.state as Parameters<typeof unusableText>[0], storeName)}
+          {unusableText(look.state as Parameters<typeof unusableText>[0], storeName, look.state === "in-company" ? look.companyName : undefined)}
         </p>
       ) : null}
       {look.state === "wrong-email" ? (

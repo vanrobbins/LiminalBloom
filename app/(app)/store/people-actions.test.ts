@@ -7,7 +7,6 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
-  listOrganizations: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
   }),
@@ -15,11 +14,12 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, listOrganizations: mocks.listOrganizations } } }));
+vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
 
 import { db } from "@/db";
 import { invitation, member } from "@/db/auth-schema";
-import { accessEvents } from "@/db/schema";
+import { accessEvents, storeProfiles } from "@/db/schema";
+import { assignCompanyRole, dropCompanies, makeBareAccount, makeCompany } from "@/lib/companies/test-companies";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
 import { dropStores } from "@/lib/products/test-stores";
 
@@ -27,6 +27,7 @@ import { cancelInvitationAction, changeRoleAction, createInvitationAction, remov
 
 afterAll(async () => {
   await dropStores();
+  await dropCompanies();
   await dropPeople();
 });
 
@@ -41,8 +42,7 @@ describe("people actions", () => {
   /** Signs in a new person holding the role (a key of StoreRoles), or none, working in the store. */
   async function signInAs(role: keyof StoreRoles | null) {
     const { userId } = await makePerson(store, role ? roles[role] : null);
-    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Van", email: `${userId}@example.com` }, session: { activeOrganizationId: store } });
-    mocks.listOrganizations.mockResolvedValue([{ id: store, name: "Test" }]);
+    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Van", email: `${userId}@example.com` }, session: { activeStoreId: store, activeOrganizationId: null } });
     return userId;
   }
   const roleOf = async (memberId: string) => (await db.select({ r: member.roleId }).from(member).where(eq(member.id, memberId)))[0]?.r;
@@ -145,5 +145,22 @@ describe("people actions", () => {
     }
     expect(await removePersonAction("m", 7)).toEqual({ status: "invalid" });
     expect(await eventCount()).toBe(0);
+  });
+
+  it("logs a company person's change under the company's name, never theirs, and a store member's under their own (spec 0.7.1 13)", async () => {
+    const co = await makeCompany("pa-actor", await makeBareAccount("pa-actor-owner"));
+    await db.insert(storeProfiles).values({ storeId: store, companyId: co.id, regionId: null });
+    const admin = await makeBareAccount("pa-actor-admin");
+    await assignCompanyRole(co.id, admin, "corporate_admin");
+    mocks.getSession.mockResolvedValue({ user: { id: admin, name: "Corey Corporate", email: `${admin}@example.com` }, session: { activeStoreId: store, activeOrganizationId: null } });
+    const made = await createInvitationAction("new@example.test", roles.store_manager);
+    expect(made.status).toBe("created");
+    const manager = await signInAs("store_manager");
+    expect((await createInvitationAction("two@example.test", roles.vm_worker)).status).toBe("created");
+    const names = (await db.select({ actorId: accessEvents.actorId, actorName: accessEvents.actorName }).from(accessEvents).where(eq(accessEvents.storeId, store))).sort((a, b) => a.actorName.localeCompare(b.actorName));
+    expect(names).toEqual([
+      { actorId: admin, actorName: `Test company pa-actor` },
+      { actorId: manager, actorName: "Van" },
+    ]);
   });
 });

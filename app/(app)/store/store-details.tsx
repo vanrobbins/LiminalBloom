@@ -2,6 +2,8 @@
 // decides what "today" and overdue mean for everyone working there. With `store.settings` the two
 // forms save as they change (R3, 0.7.0.5); everyone else reads them, with one line saying why not.
 
+import Link from "next/link";
+
 import { Card } from "@/components/ui/card";
 import { InfoPopover } from "@/components/ui/info-popover";
 import { zoneLabel } from "@/lib/time/zones";
@@ -9,14 +11,30 @@ import { zoneLabel } from "@/lib/time/zones";
 import { StoreNameForm } from "./store-name-form";
 import { TimezoneForm } from "./timezone-form";
 
-type StoreDetailsProps = { name: string; zone: string; version: number; canManage: boolean };
+/** Where a company store sits (spec 0.7.1 6.6). `href` is /company for a company person, else null (plain text). */
+export type PartOf = { company: string; region: string | null; href: string | null };
 
-export function StoreDetails({ name, zone, version, canManage }: StoreDetailsProps) {
+type StoreDetailsProps = { name: string; zone: string; version: number; canManage: boolean; partOf?: PartOf | null };
+
+export function StoreDetails({ name, zone, version, canManage, partOf = null }: StoreDetailsProps) {
   return (
     <Card compact className="mb-6" role="region" aria-labelledby="store-details-heading">
       <h2 id="store-details-heading" className="mb-3 text-lg font-semibold text-ink">
         Store details
       </h2>
+      {partOf ? (
+        <p className="mb-3 text-sm text-ink-muted">
+          Part of{" "}
+          {partOf.href ? (
+            <Link href={partOf.href} className="font-medium text-ink underline underline-offset-2">
+              {partOf.company}
+            </Link>
+          ) : (
+            <span className="font-medium text-ink">{partOf.company}</span>
+          )}
+          {partOf.region ? ` · ${partOf.region}` : null}
+        </p>
+      ) : null}
       {canManage ? (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">

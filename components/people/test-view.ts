@@ -27,5 +27,5 @@ export const invitationRow = (email: string, extra: Partial<InvitationRow> = {})
 };
 
 export function viewOf(people: PersonRow[], extra: Partial<PeopleView> = {}): PeopleView {
-  return { canManage: false, groups: groupByRole(people), invitations: [], assignable: [], isSoleManager: false, ...extra };
+  return { canManage: false, regionalManagers: [], groups: groupByRole(people), invitations: [], assignable: [], isSoleManager: false, hasStoreManager: true, ...extra };
 }

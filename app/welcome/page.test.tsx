@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   waiting: vi.fn(),
   replies: vi.fn(),
+  card: vi.fn<(id: string) => Promise<unknown>>(async () => null),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
   }),
@@ -14,6 +15,8 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/lib/current-member", () => ({ getCurrentMember: mocks.current }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
+vi.mock("@/lib/companies/request-reads", () => ({ requestCardFor: mocks.card }));
+vi.mock("@/app/(app)/request-company/actions", () => ({ withdrawCompanyRequestAction: vi.fn() }));
 vi.mock("@/lib/help/badge", () => ({ helpRepliesFor: mocks.replies }));
 vi.mock("@/lib/access/invitation-look", () => ({ pendingInvitationsFor: mocks.waiting }));
 vi.mock("@/app/invite/[id]/actions", () => ({ acceptInvitationAction: vi.fn() }));
@@ -26,6 +29,7 @@ beforeEach(() => {
   mocks.getSession.mockResolvedValue({ user: { id: "u1", name: "Nia", email: "nia@example.test" } });
   mocks.waiting.mockResolvedValue([]);
   mocks.replies.mockResolvedValue(0);
+  mocks.card.mockResolvedValue(null);
 });
 
 describe("WelcomePage", () => {
@@ -56,6 +60,28 @@ describe("WelcomePage", () => {
     expect(screen.getByRole("link", { name: "Read the replies" })).toHaveAttribute("href", "/help");
   });
 
+  it("offers a third choice, Request a company, until there is a request", async () => {
+    render(await WelcomePage());
+    expect(screen.getByRole("link", { name: "Request a company" })).toHaveAttribute("href", "/request-company");
+  });
+
+  it("shows the request card instead of the choice while a request is waiting, with Withdraw", async () => {
+    mocks.card.mockResolvedValue({ id: "r1", name: "Acme", status: "pending", reason: null, thread: null });
+    render(await WelcomePage());
+    expect(screen.getByText(/Your request for/)).toHaveTextContent("Your request for Acme is waiting for Liminal Bloom.");
+    expect(screen.getByRole("button", { name: "Withdraw" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Request a company" })).toBeNull();
+  });
+
+  it("shows a rejection with its reason, Ask Liminal Bloom about it and Request again", async () => {
+    mocks.card.mockResolvedValue({ id: "r1", name: "Acme", status: "rejected", reason: "Not verified", thread: null });
+    render(await WelcomePage());
+    expect(screen.getByText(/didn't approve/)).toHaveTextContent("Liminal Bloom didn't approve Acme: Not verified");
+    expect(screen.getByRole("link", { name: "Request again" })).toHaveAttribute("href", "/request-company");
+    expect(screen.getAllByRole("link", { name: "Ask Liminal Bloom" }).map((l) => l.getAttribute("href"))).toContain("/help/new?kind=company_request&from=%2Frequest-company");
+    expect(screen.queryByRole("link", { name: "Request a company" })).toBeNull();
+  });
+
   it("offers Ask Liminal Bloom, from /welcome", async () => {
     render(await WelcomePage());
     expect(screen.getByRole("link", { name: "Ask Liminal Bloom" })).toHaveAttribute("href", "/help/new?kind=account&from=%2Fwelcome");
@@ -77,7 +103,7 @@ describe("WelcomePage", () => {
     // The only Accept is the paste form's, which takes a link and never carries an id.
     expect(screen.getAllByRole("button", { name: /accept/i })).toHaveLength(1);
     expect(screen.getByLabelText("Invite link or code")).toHaveValue("");
-    expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store", "/help/new?kind=account&from=%2Fwelcome"]);
+    expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/create-store", "/request-company", "/help/new?kind=account&from=%2Fwelcome"]);
   });
 
   it("says nothing is waiting, and still offers Create a store, when there are no invitations", async () => {

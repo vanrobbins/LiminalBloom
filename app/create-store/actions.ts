@@ -10,20 +10,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { setActiveStore } from "@/lib/access/set-active-store";
 import { auth } from "@/lib/auth";
 import { getCurrentMember } from "@/lib/current-member";
 import { isSlugTaken } from "@/lib/store-errors";
+import { slugify } from "@/lib/store-slug";
 import { setStoreTimezone } from "@/lib/store-settings";
 import { isTimezone } from "@/lib/time/zones";
-
-/** "Pioneer Place" -> "pioneer-place". Organizations are addressed by slug. */
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
-}
 
 export async function createStore(
   _previous: { error: string } | null,
@@ -68,8 +61,10 @@ export async function createStore(
     try {
       // Better Auth's afterCreateOrganization hook (lib/auth.ts) gives the
       // store its encryption key and settings, however the store was created.
+      // keepCurrentActiveOrganization: without it the call also moves the session's activeOrganizationId,
+      // which nothing reads any more; the store becomes active through setActiveStore below.
       const created = await auth.api.createOrganization({
-        body: { name, slug },
+        body: { name, slug, keepCurrentActiveOrganization: true },
         headers: requestHeaders,
       });
       // The hook gave it Pacific; the creator owns it, so their choice replaces that.
@@ -80,12 +75,14 @@ export async function createStore(
         if (outcome.status !== "saved") console.error("create-store: time zone not saved", created.id, outcome.status);
       }
 
-      // Make it the store this session is working in. Every scoped query
-      // reads activeOrganizationId from the session.
-      await auth.api.setActiveOrganization({
-        body: { organizationSlug: slug },
-        headers: requestHeaders,
-      });
+      // Make it the store this session is working in, and the one remembered for the next sign-in. The
+      // creator is its Store Manager by now (the creation hook), so the access check passes. The store exists
+      // either way: a failure here must not reach the catch below ("try again" would make a second store, B4), and
+      // the next request picks a store from the remembered one or the first joined.
+      if (created) {
+        const switched = await setActiveStore(session.session.id, session.user.id, created.id).catch((error: unknown) => ({ status: error }));
+        if (switched.status !== "switched") console.error("create-store: active store not set", created.id, switched.status);
+      }
 
       redirect("/home");
     } catch (error) {

@@ -18,9 +18,9 @@ describe("CLOSED_PATHS", () => {
       expect(CLOSED_PATHS, name).not.toContain(`/passkey/${name}`);
     }
   });
-  it("still closes change-password and the organization people routes, and leaves set-active alone", () => {
+  it("still closes change-password and the organization people routes, and closes set-active: the active store is the app's own (B4)", () => {
     expect(CLOSED_PATHS).toContain("/change-password");
     expect(CLOSED_PATHS).toContain("/organization/invite-member");
-    expect(CLOSED_PATHS).not.toContain("/organization/set-active");
+    expect(CLOSED_PATHS).toContain("/organization/set-active");
   });
 });

@@ -15,7 +15,7 @@ import { organization, twoFactor } from "better-auth/plugins";
 import * as authSchema from "@/db/auth-schema";
 import { db } from "@/db";
 
-import { rememberSwitch, storeForNewSession } from "./active-store";
+import { storeForNewSession } from "./active-store";
 import { CLOSED_PATHS } from "./auth-closed-paths";
 import { beforeAuth } from "./auth-before";
 import { passkeyRelyingParty, twoFactorAtFor } from "./auth-factors";
@@ -48,35 +48,30 @@ export const auth = betterAuth({
       // passkey), set only by the hook below from the endpoint that made the session; `input: false`
       // so no request can write it. Null otherwise. Spec 0.7.1, 8.2.
       twoFactorAt: { type: "date", required: false, input: false },
+      // The store this session works in, for everyone (spec 0.7.1, 4.3). Written only by the sign-in
+      // hook above and the app's own switch (lib/access/set-active-store.ts); `input: false` so no
+      // request can write it. Not a foreign key: a
+      // stale value is caught by resolveAccess, as last_active_store_id is.
+      activeStoreId: { type: "string", required: false, input: false },
     },
   },
 
   databaseHooks: {
     session: {
       create: {
-        // Better Auth starts every session with no active store. Pick one,
-        // or /products and /welcome send a returning member back and
-        // forth forever. This is the pattern the organization plugin docs give.
+        // Better Auth starts every session with no active store. Pick one, or /products and /welcome send
+        // a returning member back and forth forever. The choice is the app's own (lib/active-store.ts:
+        // the remembered store, else the first joined, else the company's first), written to
+        // `activeStoreId`; `activeOrganizationId` is no longer used. Nothing updates it afterwards:
+        // switching is lib/access/set-active-store.ts, which also writes `user.last_active_store_id`.
         // `context.path` is the endpoint that made the session (proved in A0).
         before: async (session, context) => ({
           data: {
             ...session,
-            activeOrganizationId: await storeForNewSession(session.userId),
+            activeStoreId: await storeForNewSession(session.userId),
             twoFactorAt: twoFactorAtFor(context?.path),
           },
         }),
-      },
-      update: {
-        // Runs on every session update, including routine refreshes. Only
-        // record a store when there is one: a session without an active
-        // store must never erase the one remembered.
-        after: async (session) => {
-          // The plugin adds this field at runtime; its type here is `{}`.
-          const storeId = session.activeOrganizationId;
-          if (typeof storeId === "string" && storeId) {
-            await rememberSwitch(session.userId, storeId);
-          }
-        },
       },
     },
   },

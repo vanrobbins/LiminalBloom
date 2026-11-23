@@ -3,14 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  setActive: vi.fn(),
+  switchStore: vi.fn(),
   refresh: vi.fn(),
   toast: vi.fn(),
 }));
 
-vi.mock("@/lib/auth-client", () => ({
-  authClient: { organization: { setActive: mocks.setActive } },
-}));
+vi.mock("@/app/(app)/switch-store-actions", () => ({ switchStore: mocks.switchStore }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
 }));
@@ -31,7 +29,7 @@ function store(name: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.setActive.mockResolvedValue({ error: null });
+  mocks.switchStore.mockResolvedValue({ status: "switched" });
 });
 
 describe("StoreSwitcher", () => {
@@ -44,11 +42,11 @@ describe("StoreSwitcher", () => {
     await user.click(store("Washington Square"));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
 
-    // setActive has answered but the page has not re-rendered yet: the old
+    // switchStore has answered but the page has not re-rendered yet: the old
     // store is still the active one. Taps now must not start a second switch.
     await user.click(store("Washington Square"));
     await user.click(store("Lloyd Center"));
-    expect(mocks.setActive).toHaveBeenCalledTimes(1);
+    expect(mocks.switchStore).toHaveBeenCalledTimes(1);
     expect(mocks.toast).not.toHaveBeenCalled();
     expect(store("Washington Square")).toHaveTextContent("Switching…");
 
@@ -57,7 +55,7 @@ describe("StoreSwitcher", () => {
     expect(store("Washington Square")).toHaveTextContent("Washington Square");
 
     await user.click(store("Lloyd Center"));
-    expect(mocks.setActive).toHaveBeenCalledTimes(2);
+    expect(mocks.switchStore).toHaveBeenCalledTimes(2);
   });
 
   it("stops being busy when the page arrives with a different store than requested", async () => {
@@ -74,12 +72,12 @@ describe("StoreSwitcher", () => {
     expect(store("Washington Square")).toHaveTextContent("Washington Square");
 
     await user.click(store("Pioneer Place"));
-    expect(mocks.setActive).toHaveBeenCalledTimes(2);
+    expect(mocks.switchStore).toHaveBeenCalledTimes(2);
   });
 
   it("recovers when the request itself fails, as it does offline", async () => {
     const user = userEvent.setup();
-    mocks.setActive.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    mocks.switchStore.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     render(<StoreSwitcher stores={STORES} activeStoreId="store-a" />);
 
     await user.click(store("Washington Square"));
@@ -95,7 +93,7 @@ describe("StoreSwitcher", () => {
 
     // Not stuck: the next tap tries again.
     await user.click(store("Washington Square"));
-    expect(mocks.setActive).toHaveBeenCalledTimes(2);
+    expect(mocks.switchStore).toHaveBeenCalledTimes(2);
   });
 
   it("tells its container once a switch goes through, and not when it fails", async () => {
@@ -109,7 +107,7 @@ describe("StoreSwitcher", () => {
     await waitFor(() => expect(onSwitched).toHaveBeenCalledTimes(1));
     unmount();
 
-    mocks.setActive.mockResolvedValue({ error: { message: "network" } });
+    mocks.switchStore.mockResolvedValue({ status: "forbidden" });
     render(<StoreSwitcher stores={STORES} activeStoreId="store-a" onSwitched={onSwitched} />);
     await user.click(store("Washington Square"));
 

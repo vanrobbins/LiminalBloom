@@ -18,6 +18,7 @@ import { peopleInOrder, type PeopleView, type PersonRow } from "@/lib/access/peo
 import { ChangeRoleDialog } from "./change-role-dialog";
 import { InvitationsCard } from "./invitations-card";
 import { PersonListItem } from "./person-row";
+import { RegionalManagers } from "./regional-managers";
 import { RemovePersonDialog } from "./remove-person-dialog";
 
 type Open = { kind: "role"; person: PersonRow } | { kind: "remove"; person: PersonRow } | null;
@@ -75,6 +76,7 @@ export function PeopleScreen({ view, storeName }: { view: PeopleView; storeName:
           <InfoPopover term="role" />
         </p>
       )}
+      <RegionalManagers managers={view.regionalManagers} />
       {view.invitations.length > 0 ? <InvitationsCard invitations={view.invitations} /> : null}
       <section className="mb-6">
         <h2 className="mb-2 text-lg font-semibold text-ink">People · {everyone.length}</h2>

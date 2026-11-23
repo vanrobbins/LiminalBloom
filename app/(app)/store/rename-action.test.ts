@@ -9,7 +9,6 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
-  listOrganizations: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
@@ -19,7 +18,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, listOrganizations: mocks.listOrganizations } } }));
+vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
 
 import { db } from "@/db";
 import { member, organization } from "@/db/auth-schema";
@@ -51,8 +50,7 @@ describe("renameStoreAction", () => {
 
   async function signInAs(role: keyof StoreRoles | null) {
     const { userId } = await makePerson(store, role ? roles[role] : null);
-    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Van", email: `${userId}@example.com` }, session: { activeOrganizationId: store } });
-    mocks.listOrganizations.mockResolvedValue([{ id: store, name: seen }]);
+    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Van", email: `${userId}@example.com` }, session: { activeStoreId: store, activeOrganizationId: null } });
     return userId;
   }
 

@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
-  listOrganizations: vi.fn(),
   resolveAccess: vi.fn(),
   isPlatformAdmin: vi.fn(),
   helpReplies: vi.fn(),
@@ -23,7 +22,6 @@ vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
       getSession: mocks.getSession,
-      listOrganizations: mocks.listOrganizations,
     },
   },
 }));
@@ -40,27 +38,24 @@ import { can, getCurrentMember, requireMember, requireSignedIn, requireSwitch, r
 
 const SESSION = {
   user: { id: "user-1", name: "Van", email: "van@example.com", image: null },
-  session: { activeOrganizationId: "store-b" },
+  session: { activeStoreId: "store-b", activeOrganizationId: null },
 };
 
-const STORE_ROWS = [
-  { id: "store-a", name: "Pioneer Place", slug: "pioneer-place", logo: null, metadata: null },
-  { id: "store-b", name: "Washington Square", slug: "washington-square", logo: null, metadata: null },
-];
+const store = (id: string, name: string) => ({ id, name, companyId: null, companyName: null, regionId: null, regionName: null });
+const STORES = [store("store-a", "Pioneer Place"), store("store-b", "Washington Square")];
 
 const MANAGER = { id: "role-1", name: "Store Manager", rank: 100, builtin: "store_manager" };
 const SALES = { id: "role-5", name: "Sales Associate", rank: 500, builtin: "sales_associate" };
 
 /** What resolveAccess says for a person in `store` holding `role` and `switches`. */
 function access(store: string | null, role: typeof MANAGER | null, switches: string[]) {
-  mocks.resolveAccess.mockResolvedValue({ activeStoreId: store, role, switches: new Set(switches) });
+  mocks.resolveAccess.mockResolvedValue({ activeStoreId: store, role, switches: new Set(switches), requiresTwoFactor: false, stores: store ? STORES : [], company: null });
 }
 
 /** A signed-in member of `store` holding `role` and `switches`, with the store list the shell shows. */
 function signedIn(store: string, role: typeof MANAGER | null, switches: string[]) {
   mocks.getSession.mockResolvedValue(SESSION);
   access(store, role, switches);
-  mocks.listOrganizations.mockResolvedValue(STORE_ROWS);
 }
 
 beforeEach(() => {

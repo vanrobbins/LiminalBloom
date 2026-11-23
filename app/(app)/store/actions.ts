@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireSwitchForAction } from "@/lib/current-member";
+import { storeActorName } from "@/lib/access/actor-name";
 import { renameStore } from "@/lib/store-name";
 import { setStoreTimezone } from "@/lib/store-settings";
 
@@ -47,7 +48,7 @@ export async function renameStoreAction(name: unknown, seenName: unknown): Promi
   const { user, activeStoreId } = check.member;
   const parsed = z.tuple([z.string().max(500), z.string().max(500)]).safeParse([name, seenName]);
   if (!parsed.success) return { status: "refused", message: NAME_LENGTH };
-  const outcome = await renameStore(activeStoreId, { userId: user.id, name: user.name }, parsed.data[1], parsed.data[0]);
+  const outcome = await renameStore(activeStoreId, { userId: user.id, name: storeActorName(check.member) }, parsed.data[1], parsed.data[0]);
   switch (outcome.status) {
     case "renamed":
       // The store switcher and the header read the name in the layout.

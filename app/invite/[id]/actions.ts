@@ -10,7 +10,10 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { acceptInvitation, type AcceptOutcome } from "@/lib/access/invitation-accept";
+import { setActiveStore } from "@/lib/access/set-active-store";
 import { auth } from "@/lib/auth";
+import { acceptCompanyInvitation } from "@/lib/companies/invite-accept";
+import { firstCompanyStore } from "@/lib/companies/first-store";
 
 export type AcceptResult = Exclude<AcceptOutcome, { status: "accepted" }> | { status: "accepted"; storeName: string; roleName: string } | { status: "signed-out" | "invalid" };
 
@@ -21,13 +24,23 @@ export async function acceptInvitationAction(invitationId: unknown): Promise<Acc
   const parsed = z.string().min(1).max(200).safeParse(invitationId);
   if (!parsed.success) return { status: "invalid" };
 
-  const out = await acceptInvitation({ id: session.user.id, name: session.user.name, email: session.user.email }, parsed.data);
+  const person = { id: session.user.id, name: session.user.name, email: session.user.email };
+  // A company invitation (spec 0.7.1 6.5) when the id is one; otherwise a store's.
+  const company = await acceptCompanyInvitation(person, parsed.data);
+  if (company) {
+    if (company.status !== "accepted") return company;
+    // Work in the company's first store, if it has one yet (a regional manager's: the region's first).
+    const first = await firstCompanyStore(company.companyId, company.regionId);
+    if (first) await setActiveStore(session.session.id, session.user.id, first).catch((error: unknown) => console.error("accept company invitation: store not made active", first, error));
+    return { status: "accepted", storeName: company.companyName, roleName: company.roleName };
+  }
+  const out = await acceptInvitation(person, parsed.data);
   if (out.status !== "accepted") return out;
 
   // Open the store they just joined. If this fails they are still in: the next
-  // request opens a store they belong to (resolveActiveStore), so say accepted.
+  // request opens a store they belong to (resolveAccess), so say accepted.
   try {
-    await auth.api.setActiveOrganization({ body: { organizationId: out.storeId }, headers: requestHeaders });
+    await setActiveStore(session.session.id, session.user.id, out.storeId);
   } catch (error) {
     console.error("accept invitation: store not made active", out.storeId, error);
   }

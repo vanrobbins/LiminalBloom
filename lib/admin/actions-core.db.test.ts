@@ -11,13 +11,19 @@ import { db } from "@/db";
 import { invitation, member, session, user } from "@/db/auth-schema";
 import { storeSuspensions } from "@/db/schema";
 import { makeInvitation, makePerson, makeStoreWithRoles } from "@/lib/access/test-roles";
-import { makeStore } from "@/lib/products/test-stores";
+import { dropStores, makeStore } from "@/lib/products/test-stores";
+import { dropCompanies, makeCompanyStore, makeStaffedCompany } from "@/lib/companies/test-companies";
 
 import { cancelStoreInvitation, makeStoreManager, signOutEverywhere } from "./actions-core";
 import { cleanUp, eventsFor, makeActor, storeEvents } from "@/lib/access/test-admin-actions";
 
 const REASON = "db test: admin core actions";
-afterAll(() => cleanUp([REASON]));
+// A company owns its owner's account, so the companies go (after their stores) before cleanUp removes the people.
+afterAll(async () => {
+  await dropStores();
+  await dropCompanies();
+  await cleanUp([REASON]);
+});
 
 const sessionRow = (userId: string) => ({ id: randomUUID(), token: randomUUID(), userId, expiresAt: new Date(Date.now() + 3_600_000) });
 
@@ -112,5 +118,22 @@ describe("makeStoreManager", () => {
     const p = await makePerson(bare, null);
     expect(await makeStoreManager(await makeActor(), bare, p.userId, REASON)).toEqual({ status: "invalid" });
     expect(await roleOf(p.memberId)).toBeNull();
+  });
+
+  it("refuses a company store, whose company decides who manages it, and leaves the member's role and the events alone", async () => {
+    const s = await makeStaffedCompany("msm-co");
+    const co = await makeCompanyStore(s.company.id, s.north, "msm-co-store");
+    const p = await makePerson(co.store, co.roles.vm_worker);
+    expect(await makeStoreManager(await makeActor(), co.store, p.userId, REASON)).toEqual({ status: "company" });
+    expect(await roleOf(p.memberId)).toBe(co.roles.vm_worker);
+    expect(await eventsFor(co.store)).toHaveLength(0);
+  });
+
+  it("says gone, not company, for someone not in a company store: membership is checked first", async () => {
+    const s = await makeStaffedCompany("msm-co-gone");
+    const co = await makeCompanyStore(s.company.id, s.north, "msm-co-gone-store");
+    const outsider = await makePerson((await makeStoreWithRoles("msm-co-out")).store, null);
+    expect(await makeStoreManager(await makeActor(), co.store, outsider.userId, REASON)).toEqual({ status: "gone" });
+    expect(await eventsFor(outsider.userId)).toHaveLength(0);
   });
 });

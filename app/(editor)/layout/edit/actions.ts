@@ -1,6 +1,6 @@
 // Server Actions for the map editor. Each is a public entry point, so each
 // checks the session itself (proposal §8.3). The store always comes from the
-// session (getCurrentMember → resolveActiveStore), never from the browser, and
+// session (getCurrentMember → resolveAccess), never from the browser, and
 // both need the layout.edit switch (only the editor fetches; the viewer reloads
 // the page). Signed-out is answered here, as before, so the editor can say its
 // last change was not saved; requireSwitchForAction would redirect instead.

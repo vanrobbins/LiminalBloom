@@ -50,6 +50,12 @@ describe("InviteView", () => {
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
   });
 
+  it("tells a person in another company to ask them to remove them first, naming it, with no Accept", () => {
+    show({ state: "in-company", companyName: "Acme", ...named }, "nia@example.test");
+    expect(screen.getByRole("status")).toHaveTextContent("You're part of Acme. Ask them to remove you first, or ask Liminal Bloom.");
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+
   it("lets someone with the wrong email sign in as another account, and a member go to Home", () => {
     const { unmount } = show({ state: "wrong-email", ...named }, "nia@example.test");
     expect(screen.getByRole("link", { name: "Sign in with another account" })).toHaveAttribute("href", "/sign-in?next=%2Finvite%2Fabc123");
@@ -66,5 +72,11 @@ describe("InviteView", () => {
     show({ state });
     expect(screen.getByRole("status")).toHaveTextContent(message);
     expect(document.body.textContent).not.toContain("Spring Street");
+  });
+
+  it("tells the invited person a paused company takes no one yet, with no Accept", () => {
+    show({ state: "company-paused", storeName: "Acme", roleName: "Regional Manager" }, "nia@example.test");
+    expect(screen.getByText("Acme is paused right now. You can accept once Liminal Bloom restores it.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
   });
 });

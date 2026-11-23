@@ -49,6 +49,9 @@ export function activityText(event: string, actor: string, detail: Detail, canSe
     case "store_renamed":
       return `${actor} renamed the store from ${text(detail, "from", "its old name")} to ${text(detail, "to", "a new name")}`;
     // Liminal Bloom's help actions (spec 0.7.1 7.4): the actor is the product, never the admin, and the reason stays in the admin log.
+    // A company approval moved this person to a company of their own (spec 0.7.1 5.3); the actor is Liminal Bloom.
+    case "member_left_company":
+      return `${text(detail, "person", "Someone")} left for another company`;
     case "store_paused":
       return `${actor} paused the store`;
     case "store_restored":

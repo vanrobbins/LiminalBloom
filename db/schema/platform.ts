@@ -5,11 +5,12 @@
 // access_events (DECISIONS 11-12).
 
 import { sql } from "drizzle-orm";
-import { boolean, check, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { organization, user } from "../auth-schema";
 
 import { mapCreatedAt, mapUpdatedAt, mapVersion } from "./columns";
+import { companyRequests } from "./companies";
 
 // `company_request` is here from 0.7.1a so 0.7.1b adds no enum value.
 export const helpKind = pgEnum("help_kind", ["account", "company_request", "broken", "other"]);
@@ -71,6 +72,8 @@ export const helpRequests = pgTable(
     status: helpStatus("status").notNull().default("open"),
     // Written by the server (spec 9.2), never from a form.
     context: jsonb("context").$type<Record<string, unknown>>().notNull().default({}),
+    // The company request a `company_request` thread is about (spec 0.7.1b, 9); the link clears if the request goes.
+    companyRequestId: text("company_request_id").references(() => companyRequests.id, { onDelete: "set null" }),
     requesterSeenAt: timestamp("requester_seen_at", { withTimezone: true }),
     adminSeenAt: timestamp("admin_seen_at", { withTimezone: true }),
     // `requester` or `admin`; set exactly when the request is closed.
@@ -82,6 +85,8 @@ export const helpRequests = pgTable(
   (t) => [
     index("help_requests_requester_idx").on(t.requesterId, t.status),
     index("help_requests_status_idx").on(t.status, t.updatedAt),
+    // One open thread per company request.
+    uniqueIndex("help_requests_company_request_open_unique").on(t.companyRequestId).where(sql`${t.status} <> 'closed'`),
     check("help_requests_closed_by_check", sql`(${t.closedBy} is not null) = (${t.status} = 'closed')`),
     check("help_requests_closed_by_known", sql`${t.closedBy} is null or ${t.closedBy} in ('requester', 'admin')`),
   ],

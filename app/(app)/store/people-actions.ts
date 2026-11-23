@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { createInvitation, type InviteOutcome } from "@/lib/access/invite";
 import { actorOf } from "@/lib/access/people";
+import { storeActorName } from "@/lib/access/actor-name";
 import { cancelInvitation, changeRole, removePerson, type CancelOutcome, type ChangeOutcome, type PeopleActor, type RemoveOutcome } from "@/lib/access/people-write";
 import { requireSwitchForAction, type Member } from "@/lib/current-member";
 
@@ -22,7 +23,7 @@ const INVALID = { status: "invalid" } as const;
 export type InviteResult = Exclude<InviteOutcome, { status: "created" }> | { status: "created"; id: string; email: string; roleName: string; expiresAt: string } | typeof INVALID;
 
 function actorFor(member: Member): PeopleActor {
-  return { ...actorOf(member), userId: member.user.id, name: member.user.name };
+  return { ...actorOf(member), userId: member.user.id, name: storeActorName(member) };
 }
 
 export async function changeRoleAction(memberId: unknown, expectedRoleId: unknown, newRoleId: unknown): Promise<ChangeOutcome> {

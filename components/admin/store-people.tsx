@@ -13,6 +13,11 @@ export function StorePeople({ store }: { store: StoreDetail }) {
     <div className="flex flex-col gap-8">
       <section aria-labelledby="people" className="flex flex-col gap-2">
         <h2 id="people" className="text-lg font-semibold text-ink">People</h2>
+        {store.company ? (
+          <p className="text-sm text-ink-muted">
+            Part of <Link href={`/admin/companies/${store.company.id}`} className="text-ink underline underline-offset-4">{store.company.name}</Link>. The company decides who manages it, so Make Store Manager is not offered here.
+          </p>
+        ) : null}
         {store.people.length === 0 ? (
           <p className="text-ink-muted">Nobody is in this store.</p>
         ) : (
@@ -30,7 +35,7 @@ export function StorePeople({ store }: { store: StoreDetail }) {
                     {p.email}
                   </Link>
                 </div>
-                {p.isManager ? null : <MakeManager storeId={store.id} storeName={store.name} userId={p.userId} name={p.name} />}
+                {p.isManager || store.company ? null : <MakeManager storeId={store.id} storeName={store.name} userId={p.userId} name={p.name} />}
               </li>
             ))}
           </ul>

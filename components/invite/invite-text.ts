@@ -8,7 +8,7 @@ import { MAX_PEOPLE } from "@/lib/access/invite-limits";
 
 type Unusable = Exclude<InvitationState["state"], "ready" | "signed-out">;
 
-export function unusableText(state: Unusable | "stale", storeName?: string): string {
+export function unusableText(state: Unusable | "stale", storeName?: string, companyName?: string): string {
   switch (state) {
     case "missing":
       return "This invitation link isn't valid. Check that you copied all of it, or ask for a new one.";
@@ -26,6 +26,11 @@ export function unusableText(state: Unusable | "stale", storeName?: string): str
       return `You're already in ${storeName ?? "this store"}.`;
     case "full":
       return `${storeName ?? "This store"} has ${MAX_PEOPLE} people, the most it can hold. Ask a manager to make room.`;
+    case "company-paused":
+      return `${storeName ?? "This company"} is paused right now. You can accept once Liminal Bloom restores it.`;
+    case "in-company":
+      // One company per person (spec 0.7.1 5.4).
+      return `You're part of ${companyName ?? "another company"}. Ask them to remove you first, or ask Liminal Bloom.`;
     case "stale":
       return "Something changed while you were joining. Reload the page and try again.";
   }
@@ -37,5 +42,6 @@ export const NETWORK_TEXT = "Couldn't join. Check your connection and try again.
 export function acceptRefusalText(result: Exclude<AcceptResult, { status: "accepted" }>, storeName: string): string {
   if (result.status === "signed-out") return "You're signed out. Sign in again, then open the invitation link.";
   if (result.status === "invalid") return unusableText("missing");
+  if (result.status === "in-company") return unusableText("in-company", storeName, result.companyName);
   return unusableText(result.status, storeName);
 }

@@ -34,7 +34,7 @@ export async function storeTimezone(storeId: string): Promise<string> {
 // to the person's own store when they do not belong to the one asked for, so the
 // store it settled on must be the one asked for.
 async function mayChangeSettings(userId: string, storeId: string): Promise<boolean> {
-  const access = await resolveAccess(userId, storeId);
+  const access = await resolveAccess(userId, { activeStoreId: storeId });
   return access.activeStoreId === storeId && access.switches.has("store.settings");
 }
 

@@ -16,6 +16,7 @@ const HOME: Record<string, Back> = {
   paused: { href: "/paused", label: "Back" },
   "needs-two-factor": { href: "/account", label: "Back to Account" },
   "no-store": { href: "/welcome", label: "Back" },
+  "company-only": { href: "/company", label: "Back" },
 };
 
 export function HelpFrame({ kind, title, back, children }: { kind: Exclude<CurrentMember["kind"], "signed-out">; title: string; back?: Back; children: React.ReactNode }) {

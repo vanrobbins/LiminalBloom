@@ -3,6 +3,7 @@
 
 import { HelpForm } from "@/components/help/help-form";
 import { HelpFrame } from "@/components/help/help-frame";
+import { requestCardFor } from "@/lib/companies/request-reads";
 import { requireSignedIn } from "@/lib/current-member";
 import { cleanFrom } from "@/lib/help/context";
 import { ASKABLE_KINDS, askableKind } from "@/lib/help/kinds";
@@ -20,9 +21,11 @@ export default async function NewHelpPage({ searchParams }: { searchParams: Prom
     if (value) back.set(key, value);
   }
   const current = await requireSignedIn(back.size ? `/help/new?${back}` : "/help/new");
+  // Their own waiting or rejected company request is the one more thing to ask about (spec 0.7.1 9.2).
+  const kinds = (await requestCardFor(current.user.id)) ? ([...ASKABLE_KINDS, "company_request"] as const) : ASKABLE_KINDS;
   return (
     <HelpFrame kind={current.kind} title="Ask Liminal Bloom" back={{ href: "/help", label: "Help" }}>
-      <HelpForm kinds={ASKABLE_KINDS} initialKind={askableKind(one(query.kind)) ?? "account"} from={cleanFrom(one(query.from))} />
+      <HelpForm kinds={kinds} initialKind={askableKind(one(query.kind), kinds) ?? "account"} from={cleanFrom(one(query.from))} />
     </HelpFrame>
   );
 }

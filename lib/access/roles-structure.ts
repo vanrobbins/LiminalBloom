@@ -7,6 +7,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 
 import { nestingProblem } from "./nesting";
+import { isSyntheticRoleId } from "./company-roles";
 import { canActOn, canGrant, rankBetween, renumberRanks } from "./rank";
 import { requiresTwoFactorByDefault, withLockedSwitches } from "./roles";
 import { lockedRoles, nestingBad, pins, textArray, touchStamp } from "./roles-sql";
@@ -35,6 +36,7 @@ function place(snapshot: Snapshot, belowId: string): Placement | null {
 }
 
 export async function createRole(storeId: string, actor: RolesActor, input: { name: string; belowId: string; switches: Switch[] }): Promise<CreateOutcome> {
+  if (isSyntheticRoleId(input.belowId)) return { status: "invalid" };
   const checked = checkName(input.name);
   if (!checked.ok) return { status: checked.status };
   const snapshot = await readSnapshot(storeId);
@@ -85,6 +87,7 @@ export async function insertRole(storeId: string, actor: RolesActor, snapshot: S
 }
 
 export async function renameRole(storeId: string, actor: RolesActor, roleId: string, version: number, rawName: string): Promise<RenameOutcome> {
+  if (isSyntheticRoleId(roleId)) return { status: "invalid" };
   const checked = checkName(rawName);
   if (!checked.ok) return { status: checked.status };
   const { roles } = await readSnapshot(storeId);
@@ -117,6 +120,7 @@ export async function applyRename(storeId: string, actor: RolesActor, role: DbRo
 
 /** Swaps a custom role with the role beside it. `neighbourId` is the one the person saw there. */
 export async function moveRole(storeId: string, actor: RolesActor, roleId: string, direction: "up" | "down", neighbourId: string): Promise<MoveOutcome> {
+  if (isSyntheticRoleId(roleId) || isSyntheticRoleId(neighbourId)) return { status: "invalid" };
   const snapshot = await readSnapshot(storeId);
   const i = snapshot.roles.findIndex((r) => r.id === roleId);
   if (i < 0) return { status: "gone" };

@@ -9,6 +9,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
+import { CompanyMenuItem, CompanySheetRow } from "./company-links";
+
 export const ICON = {
   "aria-hidden": true,
   strokeWidth: 1.75,
@@ -18,6 +20,8 @@ export const ICON = {
 export type MenuRowsProps = {
   /** The Help row's words, with the reply count when there is one. */
   help: string;
+  /** A company person gets a link to /company; the page guards itself. */
+  hasCompany: boolean;
   /** A Liminal Bloom admin gets a link to /admin; the area guards itself. */
   isPlatformAdmin: boolean;
   /** The theme row is left out until the browser's theme is known. */
@@ -31,7 +35,7 @@ export type MenuRowsProps = {
 
 /** The phone sheet's first step. `close` runs when a link is followed; `showStores` opens the second step. */
 export function SheetRows({ email, close, showStores, ...rows }: MenuRowsProps & { email: string; close: () => void; showStores: () => void }) {
-  const { help, isPlatformAdmin, isMounted, themeLabel, ThemeIcon, switchTheme, signOut, isSigningOut } = rows;
+  const { help, hasCompany, isPlatformAdmin, isMounted, themeLabel, ThemeIcon, switchTheme, signOut, isSigningOut } = rows;
   return (
     <div className="flex flex-col gap-3">
       <p className="break-all text-sm text-ink-muted">{email}</p>
@@ -46,6 +50,7 @@ export function SheetRows({ email, close, showStores, ...rows }: MenuRowsProps &
           Account
         </Link>
       </Button>
+      {hasCompany ? <CompanySheetRow close={close} /> : null}
       <Button asChild variant="secondary">
         <Link href="/help" onClick={close}>
           <LifeBuoy {...ICON} />
@@ -75,7 +80,7 @@ export function SheetRows({ email, close, showStores, ...rows }: MenuRowsProps &
 }
 
 /** The dropdown's rows after the store list. */
-export function DropdownRows({ help, isPlatformAdmin, isMounted, themeLabel, ThemeIcon, switchTheme, signOut, isSigningOut }: MenuRowsProps) {
+export function DropdownRows({ help, hasCompany, isPlatformAdmin, isMounted, themeLabel, ThemeIcon, switchTheme, signOut, isSigningOut }: MenuRowsProps) {
   return (
     <>
       <DropdownMenuItem asChild>
@@ -84,6 +89,7 @@ export function DropdownRows({ help, isPlatformAdmin, isMounted, themeLabel, The
           Account
         </Link>
       </DropdownMenuItem>
+      {hasCompany ? <CompanyMenuItem /> : null}
       <DropdownMenuItem asChild>
         <Link href="/help">
           <LifeBuoy {...ICON} />

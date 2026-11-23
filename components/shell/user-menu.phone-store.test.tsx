@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
-  setActive: vi.fn(),
+  switchStore: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
   refresh: vi.fn(),
@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
   setTheme: vi.fn(),
 }));
 
-vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: mocks.signOut, organization: { setActive: mocks.setActive } } }));
+vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: mocks.signOut } }));
+vi.mock("@/app/(app)/switch-store-actions", () => ({ switchStore: mocks.switchStore }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace, refresh: mocks.refresh }) }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.ComponentProps<"a">) => (
@@ -62,7 +63,7 @@ async function openStoreStep(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.signOut.mockResolvedValue({ data: { success: true }, error: null });
-  mocks.setActive.mockResolvedValue({ error: null });
+  mocks.switchStore.mockResolvedValue({ status: "switched" });
 });
 
 describe("UserMenu store switch on a phone", () => {
@@ -96,7 +97,7 @@ describe("UserMenu store switch on a phone", () => {
     await user.click(within(second).getByRole("radio", { name: "Washington Square" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(mocks.setActive).toHaveBeenCalledWith({ organizationId: "store-b" });
+    expect(mocks.switchStore).toHaveBeenCalledWith("store-b");
   });
 
   it("on a phone, closing the sheet on the store step reopens it at the first step", async () => {
@@ -124,12 +125,12 @@ describe("UserMenu store switch on a phone", () => {
     expect(within(reopened).getByRole("radio", { name: "Switching…" })).toBeInTheDocument();
     await user.click(within(reopened).getByRole("radio", { name: "Pioneer Place" }));
 
-    expect(mocks.setActive).toHaveBeenCalledTimes(1);
+    expect(mocks.switchStore).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the sheet open when a switch fails, so the person can try again", async () => {
     const user = userEvent.setup();
-    mocks.setActive.mockResolvedValue({ error: { message: "network" } });
+    mocks.switchStore.mockResolvedValue({ status: "forbidden" });
     render(<UserMenu user={USER} {...STORE_PROPS} variant="sheet" />);
 
     const second = await openStoreStep(user);

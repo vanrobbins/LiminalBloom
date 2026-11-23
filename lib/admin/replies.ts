@@ -5,7 +5,7 @@
 
 import type { AdminActor } from "./events";
 
-export type ReplyStatus = "done" | "forbidden" | "invalid-reason" | "invalid" | "gone" | "already" | "admin" | "not-on" | "last" | "no-account";
+export type ReplyStatus = "done" | "forbidden" | "invalid-reason" | "invalid" | "gone" | "already" | "admin" | "not-on" | "last" | "no-account" | "owner" | "slug-taken" | "not-pending" | "invalid-body" | "too-many-messages" | "closed" | "company";
 export type AdminReply = { status: ReplyStatus };
 
 export const REPLY_TEXT: Record<Exclude<ReplyStatus, "done">, { message: string; final: boolean }> = {
@@ -18,6 +18,13 @@ export const REPLY_TEXT: Record<Exclude<ReplyStatus, "done">, { message: string;
   "not-on": { message: "They don't have two-step sign-in on.", final: true },
   last: { message: "That's the last admin. Add another first.", final: false },
   "no-account": { message: "No account has that email. They need to sign up first.", final: false },
+  owner: { message: "They own a company. They must hand it to a corporate admin first.", final: true },
+  "slug-taken": { message: "A company with that name already exists. Reject, or ask them to rename.", final: true },
+  "not-pending": { message: "That request has been decided. Close and look again.", final: true },
+  "invalid-body": { message: "Write a message of 1 to 2000 characters.", final: false },
+  "too-many-messages": { message: "This thread is full. Close it and start a new one.", final: true },
+  closed: { message: "That thread is closed.", final: true },
+  company: { message: "This store belongs to a company, and the company decides who manages it. Close and look again.", final: true },
 };
 
 /** The refusal's text for a dialog, with the action's own wording where it has one. */

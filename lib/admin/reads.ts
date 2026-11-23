@@ -12,7 +12,7 @@ import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { invitation, member, organization, user } from "@/db/auth-schema";
-import { helpRequests, platformEvents, roleDefinitions, storeSuspensions } from "@/db/schema";
+import { companies, companyRequests, helpRequests, platformEvents, regions, roleDefinitions, storeProfiles, storeSuspensions } from "@/db/schema";
 
 import { escapeLike } from "./store-search";
 
@@ -20,13 +20,14 @@ export type AdminEvent = { id: string; actorName: string; action: string; target
 
 const EVENT = { id: platformEvents.id, actorName: platformEvents.actorName, action: platformEvents.action, targetKind: platformEvents.targetKind, targetLabel: platformEvents.targetLabel, reason: platformEvents.reason, createdAt: platformEvents.createdAt };
 
-/** What `/admin` shows: help waiting (open requests, spec 7.3) and the last 10 events. */
-export async function adminOverview(): Promise<{ helpWaiting: number; events: AdminEvent[] }> {
-  const [[waiting], events] = await Promise.all([
+/** What `/admin` shows: help waiting (open requests), company requests waiting (spec 7.3) and the last 10 events. */
+export async function adminOverview(): Promise<{ helpWaiting: number; requestsPending: number; events: AdminEvent[] }> {
+  const [[waiting], [requests], events] = await Promise.all([
     db.select({ n: count() }).from(helpRequests).where(eq(helpRequests.status, "open")),
+    db.select({ n: count() }).from(companyRequests).where(eq(companyRequests.status, "pending")),
     db.select(EVENT).from(platformEvents).orderBy(desc(platformEvents.createdAt)).limit(10),
   ]);
-  return { helpWaiting: waiting.n, events };
+  return { helpWaiting: waiting.n, requestsPending: requests.n, events };
 }
 
 /** The newest `limit` events, optionally of one kind; `hasMore` says whether a larger limit would show more. */
@@ -40,17 +41,20 @@ export async function recentEvents({ limit, kind }: { limit: number; kind?: stri
   return { events: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
-export type StoreRow = { id: string; name: string; createdAt: Date; people: number; managers: string[]; paused: boolean };
+export type StoreRow = { id: string; name: string; createdAt: Date; people: number; managers: string[]; paused: boolean; company: string | null; region: string | null };
 
 export const MAX_STORES = 500;
 
-/** Stores (those whose name contains `q`, when given): name, created, people, Store Managers' names, paused. The
- * first 500 by name; `truncated` says there are more. Companies join the list in 0.7.1b. */
+/** Stores (those whose name contains `q`, when given): name, created, people, Store Managers' names, paused, and the company and region of a company store. The
+ * first 500 by name; `truncated` says there are more. */
 export async function listStores(q = ""): Promise<{ stores: StoreRow[]; truncated: boolean }> {
   const rows = await db
-    .select({ id: organization.id, name: organization.name, createdAt: organization.createdAt, paused: storeSuspensions.storeId })
+    .select({ id: organization.id, name: organization.name, createdAt: organization.createdAt, paused: storeSuspensions.storeId, company: companies.name, region: regions.name })
     .from(organization)
     .leftJoin(storeSuspensions, eq(storeSuspensions.storeId, organization.id))
+    .leftJoin(storeProfiles, eq(storeProfiles.storeId, organization.id))
+    .leftJoin(companies, eq(companies.id, storeProfiles.companyId))
+    .leftJoin(regions, eq(regions.id, storeProfiles.regionId))
     .where(q ? ilike(organization.name, `%${escapeLike(q)}%`) : undefined)
     .orderBy(asc(organization.name), asc(organization.id))
     .limit(MAX_STORES + 1);
@@ -78,6 +82,8 @@ export async function listStores(q = ""): Promise<{ stores: StoreRow[]; truncate
     people: people.get(s.id) ?? 0,
     managers: managersOf.get(s.id) ?? [],
     paused: s.paused !== null,
+    company: s.company,
+    region: s.region,
   }));
   return { stores: list, truncated };
 }
@@ -88,6 +94,8 @@ export type StoreDetail = {
   id: string;
   name: string;
   createdAt: Date;
+  company: { id: string; name: string } | null;
+  region: string | null;
   pause: { reason: string; byName: string; since: Date } | null;
   people: StorePerson[];
   invitations: StoreInvitation[];
@@ -97,6 +105,12 @@ export type StoreDetail = {
 export async function storeDetail(storeId: string, now: Date = new Date()): Promise<StoreDetail | null> {
   const [store] = await db.select({ id: organization.id, name: organization.name, createdAt: organization.createdAt }).from(organization).where(eq(organization.id, storeId));
   if (!store) return null;
+  const [company] = await db
+    .select({ id: companies.id, name: companies.name, region: regions.name })
+    .from(storeProfiles)
+    .innerJoin(companies, eq(companies.id, storeProfiles.companyId))
+    .leftJoin(regions, eq(regions.id, storeProfiles.regionId))
+    .where(eq(storeProfiles.storeId, storeId));
   const [pause, people, invitations] = await Promise.all([
     db.select({ reason: storeSuspensions.reason, byName: storeSuspensions.suspendedByName, since: storeSuspensions.createdAt }).from(storeSuspensions).where(eq(storeSuspensions.storeId, storeId)),
     db
@@ -116,6 +130,8 @@ export async function storeDetail(storeId: string, now: Date = new Date()): Prom
   ]);
   return {
     ...store,
+    company: company ? { id: company.id, name: company.name } : null,
+    region: company?.region ?? null,
     pause: pause[0] ?? null,
     people: people.map(({ builtin, ...p }) => ({ ...p, isManager: builtin === "store_manager" })),
     invitations: invitations.map((i) => ({ ...i, expired: i.expiresAt <= now })),
