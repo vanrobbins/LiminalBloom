@@ -5,7 +5,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { authClient } from "@/lib/auth-client";
+import { switchStore } from "@/app/(app)/switch-store-actions";
 import { toast } from "@/lib/toast";
 
 export type Store = { id: string; name: string };
@@ -16,7 +16,7 @@ export function useSwitchStore(activeStoreId: string) {
   const [seenActiveStoreId, setSeenActiveStoreId] = useState(activeStoreId);
 
   // A switch is over when the refreshed page arrives with that store active,
-  // not when setActive answers: until then the old store is still gold, and
+  // not when the switch answers: until then the old store is still gold, and
   // a second tap would start a second switch. (Adjusting state during render
   // is React's documented pattern for following a prop.)
   // It is also over when the page arrives with any other store (membership
@@ -38,23 +38,24 @@ export function useSwitchStore(activeStoreId: string) {
 
     setSwitchingTo(storeId);
 
-    // Offline, the request rejects instead of returning { error }.
-    let error: unknown;
+    // The server action (app/(app)/switch-store-actions.ts) checks the person still reaches the store.
+    // Offline, the request rejects instead of answering.
+    let status: "switched" | "forbidden" | "offline" = "offline";
     try {
-      ({ error } = await authClient.organization.setActive({
-        organizationId: storeId,
-      }));
-    } catch (thrown) {
-      error = thrown;
+      status = (await switchStore(storeId)).status;
+    } catch {
+      status = "offline";
     }
 
-    if (error) {
+    if (status !== "switched") {
       setSwitchingTo(null);
       toast({
         tone: "error",
         title: "Couldn't switch stores.",
-        description: "Check your connection and try again.",
+        description: status === "forbidden" ? "That store isn't available to you any more." : "Check your connection and try again.",
       });
+      // A refused store is out of date in the list: the refreshed page drops it.
+      if (status === "forbidden") router.refresh();
       return false;
     }
 

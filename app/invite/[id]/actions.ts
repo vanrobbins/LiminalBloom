@@ -10,6 +10,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { acceptInvitation, type AcceptOutcome } from "@/lib/access/invitation-accept";
+import { setActiveStore } from "@/lib/access/set-active-store";
 import { auth } from "@/lib/auth";
 
 export type AcceptResult = Exclude<AcceptOutcome, { status: "accepted" }> | { status: "accepted"; storeName: string; roleName: string } | { status: "signed-out" | "invalid" };
@@ -25,9 +26,9 @@ export async function acceptInvitationAction(invitationId: unknown): Promise<Acc
   if (out.status !== "accepted") return out;
 
   // Open the store they just joined. If this fails they are still in: the next
-  // request opens a store they belong to (resolveActiveStore), so say accepted.
+  // request opens a store they belong to (resolveAccess), so say accepted.
   try {
-    await auth.api.setActiveOrganization({ body: { organizationId: out.storeId }, headers: requestHeaders });
+    await setActiveStore(session.session.id, session.user.id, out.storeId);
   } catch (error) {
     console.error("accept invitation: store not made active", out.storeId, error);
   }

@@ -8,7 +8,8 @@
 // router answers 404 before anything runs. People, roles and invitations go through the
 // app's own server actions (lib/access/people-write.ts, invite.ts, invitation-accept.ts
 // and roles-*.ts). `auth.api.*` calls from server
-// code are not affected. Not here: `/organization/set-active` (the store switcher).
+// code are not affected. `/organization/set-active` is closed too (0.7.1b): the active store is the app's own
+// `session.active_store_id`, moved only by lib/access/set-active-store.ts after its access check.
 // `/change-password` is closed too, below: the browser's own call would not revoke the
 // person's other sessions, so the Account page's server action calls
 // `auth.api.changePassword` with `revokeOtherSessions: true` instead (lib/change-password.db.test.ts
@@ -30,6 +31,7 @@ const CLOSED_ORGANIZATION_PATHS = [
   "list-members",
   "get-invitation",
   "list-user-invitations",
+  "set-active",
 ].map((name) => `/organization/${name}`);
 
 // Two-factor setup runs through the app's own server actions (lib/two-factor/, spec 0.7.1 8.2 and 8.3),

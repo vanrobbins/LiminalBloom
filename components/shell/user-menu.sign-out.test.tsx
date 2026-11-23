@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
-  setActive: vi.fn(),
+  switchStore: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
   refresh: vi.fn(),
@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
   setTheme: vi.fn(),
 }));
 
-vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: mocks.signOut, organization: { setActive: mocks.setActive } } }));
+vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: mocks.signOut } }));
+vi.mock("@/app/(app)/switch-store-actions", () => ({ switchStore: mocks.switchStore }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace, refresh: mocks.refresh }) }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.ComponentProps<"a">) => (
@@ -62,7 +63,7 @@ async function openStoreStep(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.signOut.mockResolvedValue({ data: { success: true }, error: null });
-  mocks.setActive.mockResolvedValue({ error: null });
+  mocks.switchStore.mockResolvedValue({ status: "switched" });
 });
 
 describe("UserMenu sign out", () => {

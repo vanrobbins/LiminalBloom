@@ -10,6 +10,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { setActiveStore } from "@/lib/access/set-active-store";
 import { auth } from "@/lib/auth";
 import { getCurrentMember } from "@/lib/current-member";
 import { isSlugTaken } from "@/lib/store-errors";
@@ -68,8 +69,10 @@ export async function createStore(
     try {
       // Better Auth's afterCreateOrganization hook (lib/auth.ts) gives the
       // store its encryption key and settings, however the store was created.
+      // keepCurrentActiveOrganization: without it the call also moves the session's activeOrganizationId,
+      // which nothing reads any more; the store becomes active through setActiveStore below.
       const created = await auth.api.createOrganization({
-        body: { name, slug },
+        body: { name, slug, keepCurrentActiveOrganization: true },
         headers: requestHeaders,
       });
       // The hook gave it Pacific; the creator owns it, so their choice replaces that.
@@ -80,12 +83,9 @@ export async function createStore(
         if (outcome.status !== "saved") console.error("create-store: time zone not saved", created.id, outcome.status);
       }
 
-      // Make it the store this session is working in. Every scoped query
-      // reads activeOrganizationId from the session.
-      await auth.api.setActiveOrganization({
-        body: { organizationSlug: slug },
-        headers: requestHeaders,
-      });
+      // Make it the store this session is working in, and the one remembered for the next sign-in. The
+      // creator is its Store Manager by now (the creation hook), so the access check passes.
+      if (created) await setActiveStore(session.session.id, session.user.id, created.id);
 
       redirect("/home");
     } catch (error) {

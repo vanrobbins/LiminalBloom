@@ -110,7 +110,8 @@ test.describe("toast position", () => {
     test.skip(sizeOf(testInfo) !== "phone", "Only phones have bottom tabs.");
     await page.goto("/products");
     await hydrated(page);
-    await page.route("**/set-active", (route) => route.abort());
+    // The switch is a server action now: a POST to the page that carries a next-action header.
+    await page.route("**/*", (route) => (route.request().method() === "POST" && route.request().headers()["next-action"] ? route.abort() : route.continue()));
 
     await openStoreChoices(page);
     await storeChoice(page, SECOND_STORE).click();

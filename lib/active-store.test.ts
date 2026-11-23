@@ -9,9 +9,10 @@ import { eq, inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
-import { member, organization, user } from "@/db/auth-schema";
+import { member, organization, session, user } from "@/db/auth-schema";
 
-import { chooseActiveStore, rememberActiveStore } from "./active-store";
+import { setActiveStore } from "./access/set-active-store";
+import { chooseActiveStore } from "./active-store";
 
 const users: string[] = [];
 const stores: string[] = [];
@@ -133,15 +134,17 @@ describe("chooseActiveStore", () => {
   });
 });
 
-describe("rememberActiveStore", () => {
-  it("makes the remembered store the one chosen next time", async () => {
+describe("setActiveStore", () => {
+  it("makes the store switched to the one chosen next time", async () => {
     const person = await makeUser("remember");
     const first = await makeStore("first");
     const second = await makeStore("second");
     await join(person, first, EARLIER);
     await join(person, second, LATER);
+    const sessionId = uniqueId("session");
+    await db.insert(session).values({ id: sessionId, userId: person, token: sessionId, expiresAt: new Date(Date.now() + 60_000) });
 
-    await rememberActiveStore(person, second);
+    expect(await setActiveStore(sessionId, person, second)).toEqual({ status: "switched" });
 
     expect(await chooseActiveStore(person)).toBe(second);
   });

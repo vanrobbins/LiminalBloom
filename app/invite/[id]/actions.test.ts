@@ -1,19 +1,32 @@
-// The real accept action against the dev database; only Better Auth's session and its
-// setActiveOrganization are stood in. The person and their email come from the
+// The real accept action against the dev database; only Better Auth's session is stood in,
+// and the store is made active by the real setActiveStore on a real session row. The person and their email come from the
 // session, never from an argument, so someone cannot accept in another's name.
 
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ getSession: vi.fn(), setActiveOrganization: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSession: vi.fn() }));
+// The real setActiveStore, which one test makes fail the way a dropped connection would.
+const active = vi.hoisted(() => ({ fail: null as Error | null }));
+vi.mock("@/lib/access/set-active-store", async (original) => {
+  const real = await original<typeof import("@/lib/access/set-active-store")>();
+  return {
+    ...real,
+    setActiveStore: async (...args: Parameters<typeof real.setActiveStore>) => {
+      if (active.fail) throw active.fail;
+      return real.setActiveStore(...args);
+    },
+  };
+});
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
-vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession, setActiveOrganization: mocks.setActiveOrganization } } }));
+vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.getSession } } }));
 
 import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
 import { eventsOf } from "@/lib/access/people-test";
 import { dropPeople, makeInvitation, makePerson, makeStoreWithRoles, type StoreRoles } from "@/lib/access/test-roles";
+import { makeSession, sessionStore } from "@/lib/access/test-session";
 import { dropStores } from "@/lib/products/test-stores";
 
 import { acceptInvitationAction } from "./actions";
@@ -40,11 +53,13 @@ describe("acceptInvitationAction", () => {
     await db.update(invitation).set({ email: address }).where(eq(invitation.id, inviteId));
   });
 
+  let sessionId = "";
   async function signInWithEmail(address: string) {
     const id = `test_acc_${randomUUID().slice(0, 8)}`;
     made.push(id);
     await db.insert(user).values({ id, name: "Nia Newcomer", email: address });
-    mocks.getSession.mockResolvedValue({ user: { id, name: "Nia Newcomer", email: address }, session: { activeOrganizationId: null } });
+    sessionId = await makeSession(id);
+    mocks.getSession.mockResolvedValue({ user: { id, name: "Nia Newcomer", email: address }, session: { id: sessionId, activeStoreId: null } });
     return id;
   }
   const membership = async (userId: string) => (await db.select().from(member).where(eq(member.userId, userId)))[0];
@@ -53,7 +68,6 @@ describe("acceptInvitationAction", () => {
     mocks.getSession.mockResolvedValue(null);
     expect(await acceptInvitationAction(inviteId)).toEqual({ status: "signed-out" });
     expect((await db.select().from(invitation).where(eq(invitation.id, inviteId)))[0].status).toBe("pending");
-    expect(mocks.setActiveOrganization).not.toHaveBeenCalled();
   });
 
   it("adds the signed-in person with the invited role, makes the store active for the session, and names it", async () => {
@@ -61,8 +75,8 @@ describe("acceptInvitationAction", () => {
     const out = await acceptInvitationAction(inviteId);
     expect(out).toMatchObject({ status: "accepted", roleName: "Visual Merchandising Worker" });
     expect(await membership(userId)).toMatchObject({ organizationId: store, roleId: roles.vm_worker });
-    expect(mocks.setActiveOrganization).toHaveBeenCalledTimes(1);
-    expect(mocks.setActiveOrganization.mock.calls[0][0].body).toEqual({ organizationId: store });
+    expect(await sessionStore(sessionId)).toBe(store);
+    expect((await db.select({ last: user.lastActiveStoreId }).from(user).where(eq(user.id, userId)))[0].last).toBe(store);
   });
 
   it("lets a person who still needs two-factor in their own store accept into one whose role does not require it (the requirement is per store and role)", async () => {
@@ -70,27 +84,32 @@ describe("acceptInvitationAction", () => {
     const { userId } = await makePerson(home, homeRoles.store_manager);
     // Their Store Manager role requires two-factor and they have none: getCurrentMember would say needs-two-factor.
     await db.update(user).set({ twoFactorEnabled: false, email: address }).where(eq(user.id, userId));
-    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Test person", email: address }, session: { activeOrganizationId: home } });
+    sessionId = await makeSession(userId, home);
+    mocks.getSession.mockResolvedValue({ user: { id: userId, name: "Test person", email: address }, session: { id: sessionId, activeStoreId: home } });
     expect(await acceptInvitationAction(inviteId)).toMatchObject({ status: "accepted", roleName: "Visual Merchandising Worker" });
     const stores = (await db.select().from(member).where(eq(member.userId, userId))).map((m) => m.organizationId);
     expect(stores.sort()).toEqual([home, store].sort());
-    expect(mocks.setActiveOrganization.mock.calls[0][0].body).toEqual({ organizationId: store });
+    expect(await sessionStore(sessionId)).toBe(store);
   });
 
   it("refuses someone signed in with another email, and never sets a store active", async () => {
     const userId = await signInWithEmail("someone.else@example.test");
     expect(await acceptInvitationAction(inviteId)).toEqual({ status: "wrong-email" });
     expect(await membership(userId)).toBeUndefined();
-    expect(mocks.setActiveOrganization).not.toHaveBeenCalled();
+    expect(await sessionStore(sessionId)).toBeNull();
   });
 
   it("still reports accepted when only making the store active failed (the next request picks the store)", async () => {
     const userId = await signInWithEmail(address);
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.setActiveOrganization.mockRejectedValue(new Error("boom"));
-    expect((await acceptInvitationAction(inviteId)).status).toBe("accepted");
-    expect(await membership(userId)).toBeDefined();
-    error.mockRestore();
+    active.fail = new Error("boom");
+    try {
+      expect((await acceptInvitationAction(inviteId)).status).toBe("accepted");
+      expect(await membership(userId)).toBeDefined();
+    } finally {
+      active.fail = null;
+      error.mockRestore();
+    }
   });
 
   it.each([
@@ -103,7 +122,7 @@ describe("acceptInvitationAction", () => {
     expect((await acceptInvitationAction(inviteId)).status).toBe(status);
     expect(await membership(userId)).toBeUndefined();
     expect(await eventsOf(store)).toEqual([]);
-    expect(mocks.setActiveOrganization).not.toHaveBeenCalled();
+    expect(await sessionStore(sessionId)).toBeNull();
   });
 
   it("adds one member and logs one event when the same invitation is accepted twice at once", async () => {
@@ -112,7 +131,7 @@ describe("acceptInvitationAction", () => {
     expect(outcomes.filter((o) => o.status === "accepted")).toHaveLength(1);
     expect(await db.select().from(member).where(eq(member.userId, userId))).toHaveLength(1);
     expect((await eventsOf(store)).filter((e) => e.event === "invitation_accepted")).toHaveLength(1);
-    expect(mocks.setActiveOrganization).toHaveBeenCalledTimes(1);
+    expect(await sessionStore(sessionId)).toBe(store);
   });
 
   it("answers invalid to an argument that is not an id", async () => {

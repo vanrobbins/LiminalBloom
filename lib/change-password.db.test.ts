@@ -12,6 +12,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import { member, session, user } from "@/db/auth-schema";
+import { setActiveStore } from "@/lib/access/set-active-store";
 import { auth } from "@/lib/auth";
 import { dropStores, makeStore } from "@/lib/products/test-stores";
 
@@ -101,10 +102,11 @@ describe("the active store after a password change", () => {
     for (const [i, store] of [first, second].entries()) await db.insert(member).values({ id: randomUUID(), organizationId: store, userId, role: "member", roleId: null, createdAt: new Date(Date.now() + i * 1000) });
 
     const request = cookieHeader((await auth.api.signInEmail({ body: { email, password: "old-password-1" }, returnHeaders: true })).headers);
-    await auth.api.setActiveOrganization({ body: { organizationId: second }, headers: request });
-    expect((await auth.api.getSession({ headers: request }))?.session.activeOrganizationId).toBe(second);
+    const current = await auth.api.getSession({ headers: request });
+    expect(await setActiveStore(current!.session.id, userId, second)).toEqual({ status: "switched" });
+    expect((await auth.api.getSession({ headers: request }))?.session.activeStoreId).toBe(second);
 
     const { headers } = await auth.api.changePassword({ body: { currentPassword: "old-password-1", newPassword: "new-password-2", revokeOtherSessions: true }, headers: request, returnHeaders: true });
-    expect((await auth.api.getSession({ headers: cookieHeader(headers) }))?.session.activeOrganizationId).toBe(second);
+    expect((await auth.api.getSession({ headers: cookieHeader(headers) }))?.session.activeStoreId).toBe(second);
   });
 });

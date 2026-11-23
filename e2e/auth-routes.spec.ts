@@ -102,9 +102,16 @@ test.describe("closed organization endpoints", () => {
     }
   });
 
-  test("what the app still uses is open: the session, and switching stores", async ({ request }) => {
+  test("what the app still uses is open: the session", async ({ request }) => {
     expect((await request.get("/api/auth/get-session")).status()).toBe(200);
-    // Reaches the endpoint (a refusal of this bare request is fine); a closed path would be 404.
-    expect((await request.post(`${BASE}set-active`, { data: {} })).status()).not.toBe(404);
+  });
+
+  // The active store is the app's own: only the switchStore action (after its access check) may move it (B4).
+  test("switching stores through Better Auth is closed, and the session's active store cannot be written from the browser", async ({ request, baseURL }) => {
+    const headers = { origin: baseURL! };
+    expect((await request.post(`${BASE}set-active`, { headers, data: { organizationId: "anything" } })).status()).toBe(404);
+    const write = await request.post("/api/auth/update-session", { headers, data: { activeStoreId: "anything" } });
+    expect(write.status()).toBe(400);
+    expect(await write.json()).toMatchObject({ code: "FIELD_NOT_ALLOWED" });
   });
 });

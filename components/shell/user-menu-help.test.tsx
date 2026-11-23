@@ -5,7 +5,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: vi.fn(), organization: { setActive: vi.fn() } } }));
+vi.mock("@/lib/auth-client", () => ({ authClient: { signOut: vi.fn() } }));
+vi.mock("@/app/(app)/switch-store-actions", () => ({ switchStore: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...props }: React.ComponentProps<"a">) => <a href={href} {...props}>{children}</a> }));
 vi.mock("@/lib/toast", () => ({ toast: vi.fn() }));
