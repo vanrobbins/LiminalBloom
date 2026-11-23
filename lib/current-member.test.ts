@@ -31,6 +31,8 @@ vi.mock("@/lib/access/resolve", () => ({
 }));
 vi.mock("@/lib/two-factor/has-second-factor", () => ({ hasSecondFactor: async () => true }));
 vi.mock("@/lib/admin/is-admin", () => ({ isPlatformAdmin: mocks.isPlatformAdmin }));
+// Paused stores are tested in current-member.paused.test.ts; here nothing is paused.
+vi.mock("@/lib/paused", () => ({ pausedAmong: async () => new Set<string>(), pausedStoresOf: async () => [] }));
 
 import { can, getCurrentMember, requireMember, requireSwitch, requireSwitchForAction } from "./current-member";
 

@@ -38,6 +38,11 @@ describe("WelcomePage", () => {
     await expect(WelcomePage()).rejects.toThrow("redirect:/account");
   });
 
+  it("sends a person whose stores are all paused to /paused, not to a welcome for people with no store", async () => {
+    mocks.current.mockResolvedValue({ kind: "paused" });
+    await expect(WelcomePage()).rejects.toThrow("redirect:/paused");
+  });
+
   it("lists the invitations waiting for their email by store, role and expiry, and tells them to paste their link", async () => {
     // The ids are in the data here on purpose: nothing from them may reach the page, as text, link or button (the link is the secret, spec 4.9).
     mocks.waiting.mockResolvedValue([

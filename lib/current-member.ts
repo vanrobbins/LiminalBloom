@@ -25,6 +25,7 @@ import { resolveAccess } from "@/lib/access/resolve";
 import { isPlatformAdmin } from "@/lib/admin/is-admin";
 import type { Switch } from "@/lib/access/switches";
 import { auth } from "@/lib/auth";
+import { pausedAmong, pausedStoresOf } from "@/lib/paused";
 import { hasSecondFactor } from "@/lib/two-factor/has-second-factor";
 
 // Also here for server code that already imports this file; client components import ./access/can.
@@ -49,7 +50,13 @@ export type Member = {
  */
 export type NeedsTwoFactor = { kind: "needs-two-factor"; user: Member["user"]; roleName: string };
 
-export type CurrentMember = { kind: "signed-out" } | { kind: "no-store" } | NeedsTwoFactor | Member;
+/**
+ * Signed in and in at least one store, but every store they belong to is paused by Liminal Bloom (spec 0.7.1
+ * 7.4). Nothing of any store is read: `requireMember` sends them to /paused, which names the stores.
+ */
+export type Paused = { kind: "paused"; user: Member["user"]; stores: { id: string; name: string }[] };
+
+export type CurrentMember = { kind: "signed-out" } | { kind: "no-store" } | NeedsTwoFactor | Paused | Member;
 
 /** One read per request: the layout and the page share the result. */
 export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
@@ -68,6 +75,9 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     session.session.activeOrganizationId,
   );
   if (!access.activeStoreId) {
+    // Nothing resolved: either they belong to no store, or every one is paused.
+    const stores = await pausedStoresOf(session.user.id);
+    if (stores.length > 0) return { kind: "paused", user: { id: session.user.id, name: session.user.name, email: session.user.email }, stores };
     return { kind: "no-store" };
   }
 
@@ -77,7 +87,8 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
     return { kind: "needs-two-factor", user: { id: session.user.id, name: session.user.name, email: session.user.email }, roleName: access.role.name };
   }
 
-  const [stores, isAdmin] = await Promise.all([auth.api.listOrganizations({ headers: requestHeaders }), isPlatformAdmin(session.user.id)]);
+  const [listed, isAdmin] = await Promise.all([auth.api.listOrganizations({ headers: requestHeaders }), isPlatformAdmin(session.user.id)]);
+  const paused = await pausedAmong(listed.map((s) => s.id));
 
   return {
     kind: "member",
@@ -86,14 +97,17 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
       name: session.user.name,
       email: session.user.email,
     },
-    // Only what the shell shows. These cross into client components.
-    stores: stores.map(({ id, name }) => ({ id, name })),
+    // Only what the shell shows. These cross into client components. A paused store is not offered.
+    stores: listed.filter(({ id }) => !paused.has(id)).map(({ id, name }) => ({ id, name })),
     activeStoreId: access.activeStoreId,
     role: access.role && { id: access.role.id, name: access.role.name, rank: access.role.rank },
     switches: [...access.switches],
     isPlatformAdmin: isAdmin,
   };
 });
+
+/** Where someone whose stores are all paused lands. */
+export const PAUSED_PATH = "/paused";
 
 /** The page that sets two-factor up; the one signed-in page a person who is missing a required factor can open. */
 export const TWO_FACTOR_SETUP_PATH = "/account";
@@ -111,6 +125,9 @@ export async function requireMember(): Promise<Member> {
   if (member.kind === "needs-two-factor") {
     redirect(TWO_FACTOR_SETUP_PATH);
   }
+  if (member.kind === "paused") {
+    redirect(PAUSED_PATH);
+  }
 
   return member;
 }
@@ -120,6 +137,7 @@ export async function requireAccountPerson(): Promise<Member | NeedsTwoFactor> {
   const current = await getCurrentMember();
   if (current.kind === "signed-out") redirect("/sign-in");
   if (current.kind === "no-store") redirect("/welcome");
+  if (current.kind === "paused") redirect(PAUSED_PATH);
   return current;
 }
 
