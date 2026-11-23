@@ -26,7 +26,8 @@ import { getCurrentMember, requireAccountPerson, requireMember } from "./current
 
 const SESSION = { user: { id: "user-1", name: "Van", email: "van@example.com", image: null }, session: { activeStoreId: "store-b", activeOrganizationId: null } };
 const USER = { id: "user-1", name: "Van", email: "van@example.com" };
-const PAUSED = [{ id: "store-a", name: "Pioneer Place" }];
+const PAUSED = [{ id: "store-a", name: "Pioneer Place", kind: "store" as const }];
+const PAUSED_COMPANY = [{ id: "co-1", name: "Acme", kind: "company" as const }];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -42,6 +43,11 @@ describe("when nothing resolves", () => {
     mocks.pausedStoresOf.mockResolvedValue(PAUSED);
     expect(await getCurrentMember()).toEqual({ kind: "paused", user: USER, stores: PAUSED });
     expect(mocks.pausedStoresOf).toHaveBeenCalledWith("user-1");
+  });
+
+  it("carries the kind through, so /paused can say a company is paused", async () => {
+    mocks.pausedStoresOf.mockResolvedValue(PAUSED_COMPANY);
+    expect(await getCurrentMember()).toEqual({ kind: "paused", user: USER, stores: PAUSED_COMPANY });
   });
 
   it("is no-store when they belong to none", async () => {

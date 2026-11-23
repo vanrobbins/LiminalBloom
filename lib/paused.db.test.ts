@@ -116,7 +116,7 @@ describe("pausedStoresOf for a paused company", () => {
     await pauseCompany(id);
     for (const who of [owner, admin]) {
       expect((await resolveAccess(who, {})).company, who).toBeNull();
-      expect(await pausedStoresOf(who), who).toEqual([{ id, name: "Test company pc-roles" }]);
+      expect(await pausedStoresOf(who), who).toEqual([{ id, name: "Test company pc-roles", kind: "company" }]);
     }
   });
 

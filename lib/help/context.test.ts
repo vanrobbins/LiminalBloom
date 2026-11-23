@@ -18,7 +18,7 @@ describe("buildContext: what the server knows, never what the form says", () => 
   });
 
   it("lists the paused stores for someone whose stores are all paused", () => {
-    expect(buildContext({ kind: "paused", user: USER, stores: [{ id: "a", name: "Pioneer Place" }] }, "/paused")).toEqual({ state: "paused", pausedStores: [{ id: "a", name: "Pioneer Place" }], from: "/paused" });
+    expect(buildContext({ kind: "paused", user: USER, stores: [{ id: "a", name: "Pioneer Place", kind: "store" }] }, "/paused")).toEqual({ state: "paused", pausedStores: [{ id: "a", name: "Pioneer Place" }], from: "/paused" });
   });
 
   it("says little for no store or a missing two-step, and drops a from that is not listed", () => {

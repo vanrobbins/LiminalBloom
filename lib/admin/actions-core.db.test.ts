@@ -128,4 +128,12 @@ describe("makeStoreManager", () => {
     expect(await roleOf(p.memberId)).toBe(co.roles.vm_worker);
     expect(await eventsFor(co.store)).toHaveLength(0);
   });
+
+  it("says gone, not company, for someone not in a company store: membership is checked first", async () => {
+    const s = await makeStaffedCompany("msm-co-gone");
+    const co = await makeCompanyStore(s.company.id, s.north, "msm-co-gone-store");
+    const outsider = await makePerson((await makeStoreWithRoles("msm-co-out")).store, null);
+    expect(await makeStoreManager(await makeActor(), co.store, outsider.userId, REASON)).toEqual({ status: "gone" });
+    expect(await eventsFor(outsider.userId)).toHaveLength(0);
+  });
 });

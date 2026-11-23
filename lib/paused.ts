@@ -23,7 +23,7 @@ export async function pausedAmong(storeIds: readonly string[]): Promise<Set<stri
  * store of theirs whose company is paused (`companies.suspended_at`); and the company itself for a company role
  * (owner or `role_assignments`), who holds no member row and whose role is dropped while the company is paused.
  */
-export async function pausedStoresOf(userId: string): Promise<{ id: string; name: string }[]> {
+export async function pausedStoresOf(userId: string): Promise<{ id: string; name: string; kind: "store" | "company" }[]> {
   const own = () => db.select({ id: organization.id, name: organization.name }).from(member).innerJoin(organization, eq(organization.id, member.organizationId)).where(eq(member.userId, userId));
   const [byStore, byCompany, owned, assigned] = await Promise.all([
     own().innerJoin(storeSuspensions, eq(storeSuspensions.storeId, member.organizationId)),
@@ -35,6 +35,8 @@ export async function pausedStoresOf(userId: string): Promise<{ id: string; name
       .innerJoin(companies, and(eq(companies.id, roleAssignments.companyId), isNotNull(companies.suspendedAt)))
       .where(eq(roleAssignments.userId, userId)),
   ]);
-  const found = new Map([...byStore, ...byCompany, ...owned, ...assigned].map((r) => [r.id, r]));
+  const found = new Map<string, { id: string; name: string; kind: "store" | "company" }>();
+  for (const r of [...byStore, ...byCompany]) found.set(r.id, { id: r.id, name: r.name, kind: "store" });
+  for (const r of [...owned, ...assigned]) found.set(r.id, { id: r.id, name: r.name, kind: "company" });
   return [...found.values()].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 }

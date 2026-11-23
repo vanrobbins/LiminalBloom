@@ -40,7 +40,7 @@ export type NeedsTwoFactor = { kind: "needs-two-factor"; user: Member["user"]; r
  * Signed in and in at least one store, but every store they belong to is paused by Liminal Bloom (spec 0.7.1
  * 7.4). Nothing of any store is read: `requireMember` sends them to /paused, which names the stores.
  */
-export type Paused = { kind: "paused"; user: Member["user"]; stores: { id: string; name: string }[] };
+export type Paused = { kind: "paused"; user: Member["user"]; stores: { id: string; name: string; kind: "store" | "company" }[] };
 
 /**
  * Signed in with a company role but no store that resolves yet (a new owner, or a regional manager of an empty

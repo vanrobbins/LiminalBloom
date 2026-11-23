@@ -80,9 +80,9 @@ export async function makeStoreManager(actor: AdminActor, storeId: string, userI
     storelog as (${storeEventFrom(storeId, "member_role_changed", storeDetail, source)})
     select b.person from ${source}`);
   if (rows[0]) return { status: "done", name: String(rows[0].person) };
-  if (await isCompanyStore(storeId)) return { status: "company" };
   const [row] = await db.select({ roleId: member.roleId }).from(member).where(and(eq(member.organizationId, storeId), eq(member.userId, userId)));
   if (!row) return { status: "gone" };
+  if (await isCompanyStore(storeId)) return { status: "company" };
   const [manager] = await db.select({ id: roleDefinitions.id }).from(roleDefinitions).where(and(eq(roleDefinitions.storeId, storeId), eq(roleDefinitions.builtin, "store_manager")));
   if (!manager) return { status: "invalid" };
   return { status: row.roleId === manager.id ? "already" : "gone" };
