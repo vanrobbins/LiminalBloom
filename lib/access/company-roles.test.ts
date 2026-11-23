@@ -10,8 +10,6 @@ import { SWITCHES, type Switch } from "./switches";
 const KEYS = COMPANY_ROLES.map((r) => r.key);
 // Every rank on the one ladder: company 10-30, store 100-500.
 const LADDER = [...COMPANY_ROLES.map((r) => r.rank), ...BUILTIN_ROLES.map((r) => r.rank)];
-// Store switches that change store data; a regional manager holds none.
-const DATA: readonly Switch[] = ["products.stock", "products.sale", "planograms.draft", "planograms.publish", "layout.edit", "products.edit"];
 
 describe("the company role table (spec 2.2)", () => {
   it("ranks Owner 10, Corporate Admin 20, Regional Manager 30, all above every store role", () => {
@@ -31,9 +29,14 @@ describe("the company role table (spec 2.2)", () => {
     expect([...companyRole("regional_manager").storeSwitches]).toEqual(["view", "people.manage"]);
   });
 
-  it("a regional manager never holds a store data switch (nor roles.manage or store.settings)", () => {
-    const held = new Set(companyRole("regional_manager").storeSwitches);
-    for (const s of [...DATA, "roles.manage", "store.settings"] as Switch[]) expect(held.has(s)).toBe(false);
+  // The exact held set, not a list kept by hand of what is missing: a switch added to the app later is refused
+  // here until someone decides, because it is neither in the held set nor expected to be.
+  it("a regional manager holds exactly view and people.manage of the store switches, and every other one is refused", () => {
+    const held = new Set<Switch>(companyRole("regional_manager").storeSwitches);
+    expect([...held].sort()).toEqual(["people.manage", "view"]);
+    const refused = SWITCHES.filter((s) => !held.has(s));
+    expect(refused).toHaveLength(SWITCHES.length - 2);
+    for (const s of ["products.stock", "products.sale", "products.edit", "planograms.draft", "planograms.publish", "layout.edit", "roles.manage", "store.settings"] as Switch[]) expect(refused).toContain(s);
   });
 
   it("every role holds `view` in a store", () => {
@@ -116,6 +119,15 @@ describe("canAssignCompanyRole", () => {
     expect(canAssignCompanyRole("owner", "corporate_admin")).toBe(true);
     expect(canAssignCompanyRole("owner", "regional_manager")).toBe(true);
     for (const k of KEYS) expect(canAssignCompanyRole(k, "owner")).toBe(false);
+  });
+
+  it("needs company.people as well as the rank: an actor above the target who lacks it assigns nothing", () => {
+    const owner = companyActor("owner");
+    const without = { rank: owner.rank, switches: new Set(COMPANY_SWITCHES.filter((c) => c !== "company.people")) };
+    for (const target of ["corporate_admin", "regional_manager"] as const) {
+      expect(canActOnCompany(owner, companyRole(target).rank, "company.people")).toBe(true);
+      expect(canActOnCompany(without, companyRole(target).rank, "company.people")).toBe(false);
+    }
   });
 
   it("a regional manager assigns nothing", () => {

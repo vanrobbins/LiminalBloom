@@ -29,6 +29,7 @@ import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
 import { roleDefinitions } from "@/db/schema";
 
+import { isSyntheticRoleId } from "./company-roles";
 import { canActOn } from "./rank";
 import { changedRows, stillRanked, type PeopleActor } from "./people-write";
 
@@ -60,6 +61,7 @@ const newInvitationId = () => randomBytes(24).toString("base64url");
 export async function createInvitation(storeId: string, actor: PeopleActor, rawEmail: string, roleId: string, now: Date = new Date()): Promise<InviteOutcome> {
   const email = cleanEmail(rawEmail);
   if (!email) return { status: "bad-email" };
+  if (isSyntheticRoleId(roleId)) return { status: "invalid" };
   const [role] = await db
     .select({ id: roleDefinitions.id, name: roleDefinitions.name, rank: roleDefinitions.rank })
     .from(roleDefinitions)

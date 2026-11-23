@@ -12,6 +12,7 @@ import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
 import { byName } from "@/lib/natural-sort";
 
+import { isSyntheticRoleId } from "./company-roles";
 import { canActOn } from "./rank";
 import { lockedRoles, pins } from "./roles-sql";
 import { isRefusal, readSnapshot, runRoleWrite, type DbRole, type RoleRefusal, type RolesActor, type Snapshot } from "./roles-write";
@@ -32,6 +33,7 @@ export async function peopleOf(storeId: string, roleId: string): Promise<PeopleN
 const same = (now: PeopleNow, input: DeleteInput) => now.names.length === input.members && now.invitations === input.invitations;
 
 export async function deleteRole(storeId: string, actor: RolesActor, input: DeleteInput): Promise<DeleteOutcome> {
+  if (isSyntheticRoleId(input.roleId) || (input.moveToId !== null && isSyntheticRoleId(input.moveToId))) return { status: "invalid" };
   const snapshot = await readSnapshot(storeId);
   const role = snapshot.roles.find((r) => r.id === input.roleId);
   if (!role) return { status: "gone" };

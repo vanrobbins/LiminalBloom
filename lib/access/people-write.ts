@@ -19,6 +19,7 @@ import { db } from "@/db";
 import { invitation, member, user } from "@/db/auth-schema";
 import { roleDefinitions } from "@/db/schema";
 
+import { isSyntheticRoleId } from "./company-roles";
 import { canActOn, type Actor } from "./rank";
 import { NO_ROLE_NAME, NO_ROLE_RANK } from "./people-view";
 import { refusedBy } from "./roles-write";
@@ -101,6 +102,7 @@ async function whyNot(storeId: string, memberId: string): Promise<Refusal> {
 export type ChangeOutcome = { status: "changed"; name: string; roleName: string } | Refusal;
 
 export async function changeRole(storeId: string, actor: PeopleActor, memberId: string, expectedRoleId: string | null, newRoleId: string): Promise<ChangeOutcome> {
+  if (isSyntheticRoleId(newRoleId)) return { status: "invalid" };
   const target = await readTarget(storeId, memberId);
   if (!target) return { status: "gone" };
   const refused = refusalFor(actor, target, expectedRoleId);
