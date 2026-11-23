@@ -13,9 +13,7 @@ const mocks = vi.hoisted(() => ({
   stores: vi.fn(),
   store: vi.fn(),
   person: vi.fn(),
-  notFound: vi.fn(() => {
-    throw new Error("notFound");
-  }),
+  notFound: vi.fn((): never => { throw new Error("notFound"); }),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound, usePathname: () => "/admin", useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }));
@@ -65,7 +63,7 @@ const search = (q: Record<string, string>) => Promise.resolve(q);
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.guard.mockResolvedValue({});
-  mocks.overview.mockResolvedValue({ helpWaiting: 3, events: [event()] });
+  mocks.overview.mockResolvedValue({ helpWaiting: 3, requestsPending: 2, events: [event()] });
   mocks.events.mockResolvedValue({ events: [event()], hasMore: false });
   mocks.stores.mockResolvedValue({ stores: [store()], truncated: false });
   mocks.store.mockResolvedValue(detail());
@@ -103,11 +101,13 @@ describe("/admin layout (not a guard)", () => {
 });
 
 describe("/admin overview", () => {
-  it("shows the help waiting and the last events", async () => {
+  it("shows the help waiting, the company requests waiting and the last events", async () => {
     render(await OverviewPage());
     expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Help waiting" }).parentElement).toHaveTextContent("3");
     expect(screen.getByRole("link", { name: /Help waiting/ })).toHaveAttribute("href", "/admin/help");
+    expect(screen.getByRole("link", { name: /Company requests/ })).toHaveAttribute("href", "/admin/requests");
+    expect(screen.getByRole("link", { name: /Company requests/ })).toHaveTextContent("2");
     expect(screen.getByText("Store paused")).toBeInTheDocument();
     expect(screen.getByText(/Billing question/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "All activity" })).toHaveAttribute("href", "/admin/activity");

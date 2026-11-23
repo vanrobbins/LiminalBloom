@@ -29,11 +29,13 @@ export type ReasonDialogProps = {
   doneToast?: string;
   /** The row this opened from is gone once it is done (a cancelled invitation): focus goes to the page title, not the vanished button. */
   rowGoes?: boolean;
+  /** The hint under the Reason field, where the reason is shown to more than the admin log. */
+  hint?: string;
   /** Wording for a refusal this action says differently. */
   messages?: Partial<Record<ReplyStatus, string>>;
 };
 
-export function ReasonDialog({ title, description, confirm, loadingText, variant = "primary", run, onClose, doneToast, rowGoes = false, messages }: ReasonDialogProps) {
+export function ReasonDialog({ title, description, confirm, loadingText, variant = "primary", run, onClose, doneToast, rowGoes = false, hint, messages }: ReasonDialogProps) {
   const router = useRouter();
   const [reason, setReason] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -85,7 +87,7 @@ export function ReasonDialog({ title, description, confirm, loadingText, variant
       }}
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <Input label="Reason" hint={`Shown in the admin log. ${MIN_REASON} to ${MAX_REASON} characters.`} value={reason} maxLength={MAX_REASON} autoComplete="off" autoFocus required onChange={(e) => setReason(e.target.value)} />
+        <Input label="Reason" hint={hint ?? `Shown in the admin log. ${MIN_REASON} to ${MAX_REASON} characters.`} value={reason} maxLength={MAX_REASON} autoComplete="off" autoFocus required onChange={(e) => setReason(e.target.value)} />
         <p role="status" className="text-sm text-danger empty:hidden">
           {notice}
         </p>

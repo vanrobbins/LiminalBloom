@@ -1,7 +1,7 @@
-// /admin: what needs an admin now (spec 0.7.1 7.3). Help waiting and the last 10 things done. The requests card
-// waits for 0.7.1b, and the help card links to the queue (/admin/help).
+// /admin: what needs an admin now (spec 0.7.1 7.3). Help waiting, company requests waiting and the last 10 things
+// done. Each card links to its queue (/admin/help, /admin/requests).
 
-import { LifeBuoy } from "lucide-react";
+import { Building2, LifeBuoy } from "lucide-react";
 import Link from "next/link";
 
 import { EventList } from "@/components/admin/event-list";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
   await requirePlatformAdmin();
-  const { helpWaiting, events } = await adminOverview();
+  const { helpWaiting, requestsPending, events } = await adminOverview();
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight text-ink md:text-3xl">Overview</h1>
@@ -25,6 +25,15 @@ export default async function AdminOverviewPage() {
               Help waiting
             </h2>
             <p className="mt-2 text-3xl font-semibold tabular-nums text-ink">{helpWaiting}</p>
+          </Link>
+        </Card>
+        <Card compact>
+          <Link href="/admin/requests" className="block min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+            <h2 className="flex items-center gap-2 font-semibold text-ink">
+              <Building2 aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0" />
+              Company requests
+            </h2>
+            <p className="mt-2 text-3xl font-semibold tabular-nums text-ink">{requestsPending}</p>
           </Link>
         </Card>
       </div>

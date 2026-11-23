@@ -12,7 +12,7 @@ import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { invitation, member, organization, user } from "@/db/auth-schema";
-import { helpRequests, platformEvents, roleDefinitions, storeSuspensions } from "@/db/schema";
+import { companyRequests, helpRequests, platformEvents, roleDefinitions, storeSuspensions } from "@/db/schema";
 
 import { escapeLike } from "./store-search";
 
@@ -20,13 +20,14 @@ export type AdminEvent = { id: string; actorName: string; action: string; target
 
 const EVENT = { id: platformEvents.id, actorName: platformEvents.actorName, action: platformEvents.action, targetKind: platformEvents.targetKind, targetLabel: platformEvents.targetLabel, reason: platformEvents.reason, createdAt: platformEvents.createdAt };
 
-/** What `/admin` shows: help waiting (open requests, spec 7.3) and the last 10 events. */
-export async function adminOverview(): Promise<{ helpWaiting: number; events: AdminEvent[] }> {
-  const [[waiting], events] = await Promise.all([
+/** What `/admin` shows: help waiting (open requests), company requests waiting (spec 7.3) and the last 10 events. */
+export async function adminOverview(): Promise<{ helpWaiting: number; requestsPending: number; events: AdminEvent[] }> {
+  const [[waiting], [requests], events] = await Promise.all([
     db.select({ n: count() }).from(helpRequests).where(eq(helpRequests.status, "open")),
+    db.select({ n: count() }).from(companyRequests).where(eq(companyRequests.status, "pending")),
     db.select(EVENT).from(platformEvents).orderBy(desc(platformEvents.createdAt)).limit(10),
   ]);
-  return { helpWaiting: waiting.n, events };
+  return { helpWaiting: waiting.n, requestsPending: requests.n, events };
 }
 
 /** The newest `limit` events, optionally of one kind; `hasMore` says whether a larger limit would show more. */
