@@ -2,9 +2,9 @@
 // for a company person with no store (bare), every control is 44 px, nothing scrolls sideways, and the owner can
 // add a region and a store. The people are disposable (company-store.ts); B11 extends this with the other roles.
 
-import { clearCompanies, newEmail, signUpCompanyOnly, signUpOwnerWithStore } from "./company-store";
+import { addRegionAndStore, clearCompanies, newEmail, signUpCompanyOnly, signUpOwnerWithStore } from "./company-store";
 import { expect, hydrated, test } from "./fixtures";
-import { signUp, visitor } from "./invite-page";
+import { invite, openPeople, signUp, visitor } from "./invite-page";
 import { expectLayout } from "./layout-check";
 import { sql } from "./map-store";
 
@@ -114,4 +114,27 @@ test("the owner invites a regional manager by link; they sign up, accept, land i
   await hydrated(page);
   await expect(people.getByText("Regional Manager · North")).toBeVisible();
   await expect(people.getByRole("button", { name: `Copy link for ${email}` })).toHaveCount(0);
+});
+
+test("the owner adds a store from /company and invites a Store Manager into it; the invitation holds and they accept (spec 15)", async ({ page, browser }) => {
+  await signUpOwnerWithStore(page, newEmail(), "First Staffed Store");
+  await addRegionAndStore(page, "West", "Staffed From Company");
+  // The owner has no member row in the new store: their authority is the company's, and the invitation must carry it.
+  const email = newEmail();
+  await openPeople(page);
+  const link = await invite(page, email, "Store Manager");
+
+  const guest = await visitor(browser, page);
+  await guest.page.goto(link);
+  await expect(guest.page.getByText("This invitation is no longer valid")).toHaveCount(0);
+  await guest.page.getByRole("link", { name: "Create an account" }).click();
+  await signUp(guest.page, email);
+  await expect(guest.page.getByRole("button", { name: "Accept invitation" })).toBeVisible();
+  // A Store Manager asks for two-factor (DECISIONS 11-23); the e2e accounts are flagged as having it, as company-store.ts does.
+  await sql()`update "user" set two_factor_enabled = true where email = ${email}`;
+  await guest.page.getByRole("button", { name: "Accept invitation" }).click();
+  await guest.page.waitForURL("**/home");
+  await openPeople(guest.page);
+  await expect(guest.page.getByRole("listitem").filter({ hasText: "Nia Invitee" })).toContainText("(you)");
+  await guest.context.close();
 });
