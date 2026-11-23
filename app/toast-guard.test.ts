@@ -36,6 +36,7 @@ const ALLOWED: Record<string, Allowed> = {
   "components/quick-adjust/discard-adjustment.tsx": { calls: 2, why: `discard a Quick Adjust (a final task whose result is on the next screen), and ${CONNECTION}` },
   "components/quick-adjust/use-adjustment.ts": { calls: 1, why: CONNECTION },
   "components/roles/use-move-role.ts": { calls: 1, why: CONNECTION },
+  "components/roles/use-require-two-factor.ts": { calls: 1, why: CONNECTION },
   "components/roles/roles-screen.tsx": { calls: 1, why: "the batch Save, Add, Rename, Reset and Delete dialogs close on their result, which is a toast" },
   "components/search/status-control.tsx": { calls: 1, why: CONNECTION },
   "components/shell/use-sign-out.ts": { calls: 1, why: "a failed sign-out, which stays put" },
