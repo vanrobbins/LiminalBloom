@@ -147,3 +147,18 @@ describe("company A against company B and standalone", { timeout: 30_000 }, () =
     expect((await asked(ownerA, standalone.store)).stores.map((s) => s.id)).not.toContain(standalone.store);
   });
 });
+
+describe("two-factor for company roles (DECISIONS 11-23)", { timeout: 30_000 }, () => {
+  it("is required of an owner, a corporate admin and a regional manager, with a store or none, and not of a person with no company role", async () => {
+    const [owner, admin, rm] = [await makeBareAccount("tfo"), await makeBareAccount("tfa"), await makeBareAccount("tfr")];
+    const { company, regions, stores } = await acme("tf", owner);
+    await assignCompanyRole(company.id, admin, "corporate_admin");
+    await assignCompanyRole(company.id, rm, "regional_manager", regions.north);
+    for (const who of [owner, admin, rm]) expect((await asked(who, stores.north.store)).requiresTwoFactor, who).toBe(true);
+    const emptyOwner = await makeBareAccount("tfe");
+    await makeCompany("tf-empty", emptyOwner);
+    expect(await asked(emptyOwner)).toMatchObject({ activeStoreId: null, requiresTwoFactor: true });
+    const worker = await makePerson(stores.north.store, stores.north.roles.vm_worker);
+    expect((await asked(worker.userId, stores.north.store)).requiresTwoFactor).toBe(false);
+  });
+});

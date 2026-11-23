@@ -45,7 +45,7 @@ export type Access = {
   role: ResolvedRole | null;
   /** `view` and nothing else for a member with no role; empty only when there is no store. */
   switches: ReadonlySet<Switch>;
-  /** The member role asks for two-factor sign-in (0.7.1a). Company roles are fixed bundles and never ask. */
+  /** A role of theirs asks for two-factor sign-in: the member role's setting (0.7.1a) or any company role (DECISIONS 11-23). Held with or without a store. */
   requiresTwoFactor: boolean;
   /** Every store the person reaches, in switcher order: their company by region, other companies, then standalone. */
   stores: StoreInfo[];
@@ -85,7 +85,8 @@ export function mergeAccess(grants: Grants, session: SessionPointers): Access {
   const byName = [...grants.companyStores].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   const activeStoreId =
     [session.activeStoreId, session.activeOrganizationId, grants.lastActiveStoreId, byJoined[0]?.id, byName[0]?.id].find((id): id is string => !!id && reached.has(id)) ?? null;
-  if (!activeStoreId) return { activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: false, stores, company: companyAccess };
+  const companyAsks = company ? companyRole(company.role).requiresTwoFactor : false;
+  if (!activeStoreId) return { activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: companyAsks, stores, company: companyAccess };
 
   const asMember = grants.members.find((m) => m.id === activeStoreId);
   const viaCompany = company && grants.companyStores.some((s) => s.id === activeStoreId) ? companyRole(company.role) : null;
@@ -98,5 +99,5 @@ export function mergeAccess(grants: Grants, session: SessionPointers): Access {
   // A smaller rank number is the higher rank.
   const role = memberRole && companyShown ? (companyShown.rank < memberRole.rank ? companyShown : memberRole) : (memberRole ?? companyShown);
 
-  return { activeStoreId, role, switches, requiresTwoFactor: asMember?.role?.requiresTwoFactor ?? false, stores, company: companyAccess };
+  return { activeStoreId, role, switches, requiresTwoFactor: companyAsks || (asMember?.role?.requiresTwoFactor ?? false), stores, company: companyAccess };
 }

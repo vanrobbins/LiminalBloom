@@ -86,11 +86,19 @@ describe("mergeAccess", () => {
     expect(sorted(out.switches)).toEqual(["people.manage", "products.stock", "view"]);
   });
 
-  it("carries requiresTwoFactor of the member role only", () => {
+  it("carries requiresTwoFactor of the member role", () => {
     const a = standalone("a");
     expect(mergeAccess({ ...none, members: [memberOf(a, "store_manager", 1, true)] }, {}).requiresTwoFactor).toBe(true);
+    expect(mergeAccess({ ...none, members: [memberOf(a, "vm_worker")] }, {}).requiresTwoFactor).toBe(false);
+  });
+
+  it("asks for two-factor of every company role, in a store, in a member store outside the company, and with no store at all", () => {
     const s = inCompany("s1", null);
-    expect(mergeAccess({ ...none, company: grant("owner"), companyStores: [s] }, {}).requiresTwoFactor).toBe(false);
+    for (const role of ["owner", "corporate_admin", "regional_manager"] as const) {
+      expect(mergeAccess({ ...none, company: grant(role), companyStores: [s] }, {}).requiresTwoFactor, role).toBe(true);
+      expect(mergeAccess({ ...none, company: grant(role) }, {}).requiresTwoFactor, `${role}, no store`).toBe(true);
+      expect(mergeAccess({ ...none, members: [memberOf(standalone("x"), "vm_worker")], company: grant(role), companyStores: [s] }, { activeStoreId: "x" }).requiresTwoFactor, `${role}, other store`).toBe(true);
+    }
   });
 
   it("gives no company switch in a member store outside the company", () => {

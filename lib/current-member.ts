@@ -21,6 +21,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { can } from "@/lib/access/can";
+import { companyRole } from "@/lib/access/company-roles";
 import { resolveAccess } from "@/lib/access/resolve";
 import { isPlatformAdmin } from "@/lib/admin/is-admin";
 import type { Switch } from "@/lib/access/switches";
@@ -51,18 +52,19 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember> => {
   // `activeOrganizationId` is read only for sessions made before 0021.
   const access = await resolveAccess(session.user.id, session.session);
   const person = { id: session.user.id, name: session.user.name, email: session.user.email };
+  // Asked only for a role that requires it (a store role with it on, or any company role), so every other request
+  // skips the read. Before the no-store return: a company person with no store yet needs it too. Not
+  // `session.two_factor_at`: a trusted-device sign-in has none and the account still has two-factor (DECISIONS 11-23).
+  const roleName = access.company ? companyRole(access.company.role).name : access.role?.name;
+  if (access.requiresTwoFactor && roleName && !(await hasSecondFactor(session.user.id))) {
+    return { kind: "needs-two-factor", user: person, roleName };
+  }
   if (!access.activeStoreId) {
     // Nothing resolved: a company role with no store yet, or every store paused, or no store at all.
     if (access.company) return { kind: "company-only", user: person, company: access.company };
     const stores = await pausedStoresOf(session.user.id);
     if (stores.length > 0) return { kind: "paused", user: person, stores };
     return { kind: "no-store", user: person };
-  }
-
-  // Asked only for a role that requires it, so every other request skips the read. Not `session.two_factor_at`:
-  // a trusted-device sign-in has none and the account still has two-factor (DECISIONS 11-23).
-  if (access.requiresTwoFactor && access.role && !(await hasSecondFactor(session.user.id))) {
-    return { kind: "needs-two-factor", user: { id: session.user.id, name: session.user.name, email: session.user.email }, roleName: access.role.name };
   }
 
   const [isAdmin, helpReplies] = await Promise.all([isPlatformAdmin(session.user.id), helpRepliesFor(session.user.id)]);

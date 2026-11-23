@@ -71,6 +71,36 @@ describe("a role that requires two-factor", () => {
   });
 });
 
+// Company roles always require it (DECISIONS 11-23), whether or not a store resolves.
+describe("a company role", () => {
+  const COMPANY = { id: "co-1", name: "Acme", role: "owner", regionId: null, regionName: null, switches: [] };
+  const USER = { id: "user-1", name: "Van", email: "van@example.com" };
+
+  it("sends a company person with no store yet to set two-factor up, not to /company, and asks the account", async () => {
+    mocks.getSession.mockResolvedValue(SESSION);
+    mocks.resolveAccess.mockResolvedValue({ activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: true, stores: [], company: COMPANY });
+    mocks.hasSecondFactor.mockResolvedValue(false);
+    expect(await getCurrentMember()).toEqual({ kind: "needs-two-factor", user: USER, roleName: "Owner" });
+    await expect(requireMember()).rejects.toThrow("redirect:/account");
+    expect(await requireAccountPerson()).toMatchObject({ kind: "needs-two-factor" });
+  });
+
+  it("is company-only once the account has a second factor", async () => {
+    mocks.getSession.mockResolvedValue(SESSION);
+    mocks.resolveAccess.mockResolvedValue({ activeStoreId: null, role: null, switches: new Set(), requiresTwoFactor: true, stores: [], company: COMPANY });
+    mocks.hasSecondFactor.mockResolvedValue(true);
+    expect(await getCurrentMember()).toMatchObject({ kind: "company-only" });
+  });
+
+  it("is not a member in a company store while the account has none, and names the company role", async () => {
+    mocks.getSession.mockResolvedValue(SESSION);
+    const role = { id: "company:regional_manager", name: "Regional Manager", rank: 30, builtin: null };
+    mocks.resolveAccess.mockResolvedValue({ activeStoreId: "store-a", role, switches: new Set(["view"]), requiresTwoFactor: true, stores: STORES, company: { ...COMPANY, role: "regional_manager" } });
+    mocks.hasSecondFactor.mockResolvedValue(false);
+    expect(await getCurrentMember()).toEqual({ kind: "needs-two-factor", user: USER, roleName: "Regional Manager" });
+  });
+});
+
 describe("requireAccountPerson", () => {
   it("sends a signed-out visitor to sign in and a person with no store to welcome, and lets a member through", async () => {
     mocks.getSession.mockResolvedValue(null);

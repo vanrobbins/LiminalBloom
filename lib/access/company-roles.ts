@@ -19,6 +19,8 @@ export type CompanyRole = {
   companySwitches: readonly CompanySwitch[];
   /** What the person holds in each store they reach, in list order. */
   storeSwitches: readonly Switch[];
+  /** Holding the role asks for two-factor sign-in, as a store role with "Requires two-factor" on does (DECISIONS 11-23). */
+  requiresTwoFactor: boolean;
 };
 
 const role = (r: CompanyRole): CompanyRole =>
@@ -26,10 +28,10 @@ const role = (r: CompanyRole): CompanyRole =>
 
 /** Top rank first. */
 export const COMPANY_ROLES: readonly CompanyRole[] = Object.freeze([
-  role({ key: "owner", name: "Owner", rank: 10, companySwitches: COMPANY_SWITCHES, storeSwitches: SWITCHES }),
-  role({ key: "corporate_admin", name: "Corporate Admin", rank: 20, companySwitches: COMPANY_SWITCHES, storeSwitches: SWITCHES }),
+  role({ key: "owner", name: "Owner", rank: 10, companySwitches: COMPANY_SWITCHES, storeSwitches: SWITCHES, requiresTwoFactor: true }),
+  role({ key: "corporate_admin", name: "Corporate Admin", rank: 20, companySwitches: COMPANY_SWITCHES, storeSwitches: SWITCHES, requiresTwoFactor: true }),
   // Read-only in a store, plus managing people there; never store data (DECISIONS 11-11).
-  role({ key: "regional_manager", name: "Regional Manager", rank: 30, companySwitches: [], storeSwitches: ["view", "people.manage"] }),
+  role({ key: "regional_manager", name: "Regional Manager", rank: 30, companySwitches: [], storeSwitches: ["view", "people.manage"], requiresTwoFactor: true }),
 ]);
 
 export function companyRole(key: CompanyRoleKey): CompanyRole {

@@ -39,6 +39,10 @@ describe("the company role table (spec 2.2)", () => {
     for (const s of ["products.stock", "products.sale", "products.edit", "planograms.draft", "planograms.publish", "layout.edit", "roles.manage", "store.settings"] as Switch[]) expect(refused).toContain(s);
   });
 
+  it("asks all three company roles for two-factor sign-in (DECISIONS 11-23)", () => {
+    expect(COMPANY_ROLES.map((r) => [r.key, r.requiresTwoFactor])).toEqual([["owner", true], ["corporate_admin", true], ["regional_manager", true]]);
+  });
+
   it("every role holds `view` in a store", () => {
     for (const r of COMPANY_ROLES) expect(r.storeSwitches).toContain("view");
   });
