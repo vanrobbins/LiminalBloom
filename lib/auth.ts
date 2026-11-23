@@ -8,13 +8,15 @@
 // signing secret and a direct database connection. See proposal section 8.4.
 
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
-import { organization } from "better-auth/plugins";
+import { organization, twoFactor } from "better-auth/plugins";
 
 import * as authSchema from "@/db/auth-schema";
 import { db } from "@/db";
 
 import { rememberSwitch, storeForNewSession } from "./active-store";
+import { passkeyRelyingParty, twoFactorAtFor } from "./auth-factors";
 import { optionalEnv } from "./env";
 
 // Better Auth's organization endpoints that read or change people. Its own checks
@@ -67,16 +69,27 @@ export const auth = betterAuth({
     },
   },
 
+  session: {
+    additionalFields: {
+      // When this session last passed a second factor (an authenticator code, a backup code or a
+      // passkey), set only by the hook below from the endpoint that made the session; `input: false`
+      // so no request can write it. Null otherwise. Spec 0.7.1, 8.2.
+      twoFactorAt: { type: "date", required: false, input: false },
+    },
+  },
+
   databaseHooks: {
     session: {
       create: {
         // Better Auth starts every session with no active store. Pick one,
         // or /products and /welcome send a returning member back and
         // forth forever. This is the pattern the organization plugin docs give.
-        before: async (session) => ({
+        // `context.path` is the endpoint that made the session (proved in A0).
+        before: async (session, context) => ({
           data: {
             ...session,
             activeOrganizationId: await storeForNewSession(session.userId),
+            twoFactorAt: twoFactorAtFor(context?.path),
           },
         }),
       },
@@ -111,6 +124,17 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    // Authenticator-app codes and backup codes. Setup runs through the app's own server actions
+    // (A3), so its browser endpoints are closed in A3; only verify-totp and verify-backup-code
+    // stay open for sign-in. Email codes need Resend, so they stay unused.
+    twoFactor({ issuer: "Liminal Bloom", backupCodeOptions: { amount: 10 } }),
+    // A passkey sign-in counts as a second factor only because the server demands user
+    // verification (`userVerification: "required"`; the default "preferred" is one factor).
+    passkey({
+      rpName: "Liminal Bloom",
+      ...passkeyRelyingParty(optionalEnv("BETTER_AUTH_URL")),
+      authenticatorSelection: { userVerification: "required" },
+    }),
     // Each retail store is an organization: its own workspace, its own
     // members, its own data. This plugin owns the organization, member and
     // invitation tables from section 7, which is why products.store_id was

@@ -4,7 +4,7 @@
 // deferrable rank constraint, grants, row-level security and the backfill.
 
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, jsonb, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { user } from "../auth-schema";
 
@@ -23,6 +23,9 @@ export const roleDefinitions = pgTable(
     // Smaller is higher. Built-ins sit at 100 to 500 so custom roles fit between.
     rank: integer("rank").notNull(),
     switches: text("switches").array().notNull(),
+    // Whoever holds this role must have two-factor sign-in (0.7.1a, A3b). Migration 0020 turns it
+    // on for roles holding people.manage or roles.manage; a new role starts off.
+    requiresTwoFactor: boolean("requires_two_factor").notNull().default(false),
     version: mapVersion(),
     createdAt: mapCreatedAt(),
     updatedAt: mapUpdatedAt(),
