@@ -63,6 +63,17 @@ export async function requirePlatformAdmin(): Promise<AdminAccount> {
   return account;
 }
 
+/**
+ * For the /admin layout only, which is not a guard: the account when this person may see the admin area
+ * (the same rule as `requirePlatformAdmin`), else null. It never redirects or throws, so the two-factor
+ * setup and step-up pages stay reachable bare, and a non-admin's 404 carries no admin chrome. Every page
+ * still calls its own guard.
+ */
+export async function adminShellAccount(): Promise<AdminAccount | null> {
+  const { standing, account } = await readAdmin();
+  return standing === "ok" ? account : null;
+}
+
 export type AdminCheck = { status: "ok"; admin: AdminAccount } | { status: "forbidden" };
 
 /** For admin server actions: `requirePlatformAdmin`'s rule, answered as an outcome. Signed-out callers are redirected, as the page guards do. */
