@@ -8,6 +8,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { RequestCard } from "@/components/company-request/request-card";
 import { PageShell } from "@/components/invite/page-shell";
 import { AskButton } from "@/components/help/ask-button";
 import { ReplyBanner } from "@/components/help/reply-banner";
@@ -16,6 +17,7 @@ import { WaitingList } from "@/components/invite/waiting-list";
 import { Button } from "@/components/ui/button";
 import { pendingInvitationsFor } from "@/lib/access/invitation-look";
 import { auth } from "@/lib/auth";
+import { requestCardFor } from "@/lib/companies/request-reads";
 import { getCurrentMember } from "@/lib/current-member";
 import { helpRepliesFor } from "@/lib/help/badge";
 
@@ -34,7 +36,11 @@ export default async function WelcomePage() {
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
-  const [waiting, helpReplies] = await Promise.all([pendingInvitationsFor({ id: session.user.id, email: session.user.email }), helpRepliesFor(session.user.id)]);
+  const [waiting, helpReplies, requestCard] = await Promise.all([
+    pendingInvitationsFor({ id: session.user.id, email: session.user.email }),
+    helpRepliesFor(session.user.id),
+    requestCardFor(session.user.id),
+  ]);
 
   return (
     <PageShell>
@@ -50,6 +56,17 @@ export default async function WelcomePage() {
       <Button asChild variant="secondary">
         <Link href="/create-store">Create a store</Link>
       </Button>
+      {requestCard ? (
+        <RequestCard card={requestCard} />
+      ) : (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-medium text-ink">Request a company</h2>
+          <p className="text-sm text-ink-muted">For a chain with several stores. Liminal Bloom approves each company.</p>
+          <Button asChild variant="secondary" className="self-start">
+            <Link href="/request-company">Request a company</Link>
+          </Button>
+        </section>
+      )}
       <AskButton kind="account" from="/welcome" />
     </PageShell>
   );

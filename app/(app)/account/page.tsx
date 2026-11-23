@@ -12,10 +12,12 @@ import { Plus, Store } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { AccountCompanyCard } from "@/components/company-request/account-company-card";
 import { PasskeyCard } from "@/components/passkeys/passkey-card";
 import { SignOutButton } from "@/components/paused/sign-out-button";
 import { RequiredTwoFactor } from "@/components/two-factor/required-setup";
 import { TwoFactorCard } from "@/components/two-factor/account-card";
+import { requestCardFor, standingCompanyOf } from "@/lib/companies/request-reads";
 import { requireAccountPerson } from "@/lib/current-member";
 import { twoFactorStatus } from "@/lib/two-factor/status";
 
@@ -62,7 +64,7 @@ export default async function AccountPage() {
     return <RequiredTwoFactor roleName={person.roleName} start={startTwoFactorAction} confirm={confirmTwoFactorAction} allow={allowPasskeyAddAction} rename={renamePasskeyAction} />;
   }
   const { user } = person;
-  const two = await twoFactorStatus(user.id);
+  const [two, standing, requestCard] = await Promise.all([twoFactorStatus(user.id), standingCompanyOf(user.id), requestCardFor(user.id)]);
   if (person.kind === "paused") {
     // Every store is paused, so there is no app shell: the account on its own, with a way back and out (DECISIONS 11-23).
     return (
@@ -73,6 +75,7 @@ export default async function AccountPage() {
             ← Back
           </Link>
           <AccountCards user={user} two={two} />
+          <AccountCompanyCard standing={standing} card={requestCard} />
           <SignOutButton />
         </div>
       </main>
@@ -84,6 +87,7 @@ export default async function AccountPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <PageHeader title="Account" />
       <AccountCards user={user} two={two} />
+      <AccountCompanyCard standing={standing} card={requestCard} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-ink">

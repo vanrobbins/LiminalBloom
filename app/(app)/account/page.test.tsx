@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ person: vi.fn(), status: vi.fn() }));
+const mocks = vi.hoisted(() => ({ person: vi.fn(), status: vi.fn(), standing: vi.fn(), card: vi.fn() }));
 
 vi.mock("@/lib/current-member", () => ({ requireAccountPerson: mocks.person }));
 vi.mock("@/lib/two-factor/status", () => ({ twoFactorStatus: mocks.status }));
+vi.mock("@/lib/companies/request-reads", () => ({ standingCompanyOf: mocks.standing, requestCardFor: mocks.card }));
+vi.mock("@/app/(app)/request-company/actions", () => ({ withdrawCompanyRequestAction: vi.fn() }));
 vi.mock("./two-factor-actions", () => ({ startTwoFactorAction: vi.fn(), confirmTwoFactorAction: vi.fn(), newBackupCodesAction: vi.fn(), disableTwoFactorAction: vi.fn() }));
 vi.mock("./passkey-actions", () => ({ allowPasskeyAddAction: vi.fn(), renamePasskeyAction: vi.fn(), removePasskeyAction: vi.fn() }));
 vi.mock("./actions", () => ({ changePasswordAction: vi.fn() }));
@@ -19,6 +21,8 @@ const MEMBER = { kind: "member", user: USER, stores: [{ id: "a", name: "Pioneer 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.person.mockResolvedValue(MEMBER);
+  mocks.standing.mockResolvedValue(null);
+  mocks.card.mockResolvedValue(null);
   mocks.status.mockResolvedValue({ on: false, codesLeft: 0, isAdmin: false, requiredBy: null, passkeys: [] });
 });
 
@@ -32,6 +36,23 @@ describe("AccountPage", () => {
     render(await AccountPage());
     expect(screen.queryByText("User id")).toBeNull();
     expect(screen.getByRole("link", { name: "Open Store" })).toHaveAttribute("href", "/store");
+  });
+
+  it("has a Company card: Request a company with none, the company and role with one, a waiting request with Withdraw", async () => {
+    const { unmount } = render(await AccountPage());
+    expect(screen.getByRole("heading", { name: "Company" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request a company" })).toHaveAttribute("href", "/request-company");
+    unmount();
+    mocks.standing.mockResolvedValue({ id: "c", name: "Acme", role: "corporate_admin" });
+    const second = render(await AccountPage());
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open company" })).toHaveAttribute("href", "/company");
+    expect(screen.getByRole("link", { name: "Request a new company" })).toBeInTheDocument();
+    second.unmount();
+    mocks.card.mockResolvedValue({ id: "r", name: "Globex", status: "pending", reason: null, thread: null });
+    render(await AccountPage());
+    expect(screen.getByRole("button", { name: "Withdraw" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Request a new company" })).toBeNull();
   });
 
   it("has the Change password card", async () => {
