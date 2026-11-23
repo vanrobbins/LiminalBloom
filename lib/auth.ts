@@ -16,40 +16,9 @@ import * as authSchema from "@/db/auth-schema";
 import { db } from "@/db";
 
 import { rememberSwitch, storeForNewSession } from "./active-store";
+import { CLOSED_PATHS } from "./auth-closed-paths";
 import { passkeyRelyingParty, twoFactorAtFor } from "./auth-factors";
 import { optionalEnv } from "./env";
-
-// Better Auth's organization endpoints that read or change people. Its own checks
-// know only owner / admin / member, not our roles or the rank rule, and three of them
-// list emails and invitation ids to any member. So the browser cannot reach them: the
-// router answers 404 before anything runs. People, roles and invitations go through the
-// app's own server actions (lib/access/people-write.ts, invite.ts, invitation-accept.ts
-// and roles-*.ts). `auth.api.*` calls from server
-// code are not affected. Not here: `/organization/set-active` (the store switcher).
-// `/change-password` is closed too, below: the browser's own call would not revoke the
-// person's other sessions, so the Account page's server action calls
-// `auth.api.changePassword` with `revokeOtherSessions: true` instead (lib/change-password.db.test.ts
-// proves the server call still works). Spec 0.7, 4.5, "Spike findings";
-// e2e/auth-routes.spec.ts proves each path and its spellings.
-const CLOSED_ORGANIZATION_PATHS = [
-  "invite-member",
-  "cancel-invitation",
-  "accept-invitation",
-  "reject-invitation",
-  "update-member-role",
-  "remove-member",
-  "leave",
-  "update",
-  "delete",
-  "create",
-  "list-invitations",
-  "get-full-organization",
-  "list-members",
-  "get-invitation",
-  "list-user-invitations",
-].map((name) => `/organization/${name}`);
-
-const CLOSED_PATHS = [...CLOSED_ORGANIZATION_PATHS, "/change-password"];
 
 export const auth = betterAuth({
   disabledPaths: CLOSED_PATHS,
@@ -125,8 +94,8 @@ export const auth = betterAuth({
 
   plugins: [
     // Authenticator-app codes and backup codes. Setup runs through the app's own server actions
-    // (A3), so its browser endpoints are closed in A3; only verify-totp and verify-backup-code
-    // stay open for sign-in. Email codes need Resend, so they stay unused.
+    // (lib/two-factor/), so its browser endpoints are closed (lib/auth-closed-paths.ts); only
+    // verify-totp and verify-backup-code stay open for sign-in. Email codes need Resend, so they stay unused.
     twoFactor({ issuer: "Liminal Bloom", backupCodeOptions: { amount: 10 } }),
     // A passkey sign-in counts as a second factor only because the server demands user
     // verification (`userVerification: "required"`; the default "preferred" is one factor).

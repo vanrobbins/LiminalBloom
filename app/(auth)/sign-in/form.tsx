@@ -29,8 +29,9 @@ export function SignInForm({ next }: { next: string | null }) {
 
     // Offline, the request rejects instead of returning { error }.
     let failure: string | null = null;
+    let needsCode = false;
     try {
-      const { error } = await signIn.email({
+      const { data, error } = await signIn.email({
         email: String(form.get("email")),
         password: String(form.get("password")),
         // Better Auth: false = a cookie that ends with the browser and a 24-hour session;
@@ -40,6 +41,8 @@ export function SignInForm({ next }: { next: string | null }) {
       // Deliberately vague: saying which of the two was wrong tells an
       // attacker whether an email address has an account here.
       if (error) failure = error.status === 429 ? "Too many sign-in attempts. Wait a moment, then try again." : "That email and password do not match.";
+      // An account with two-factor on gets no session yet: Better Auth answers 200 with twoFactorRedirect.
+      else needsCode = (data as { twoFactorRedirect?: boolean } | null | undefined)?.twoFactorRedirect === true;
     } catch {
       failure = CONNECTION_ERROR;
     }
@@ -47,6 +50,12 @@ export function SignInForm({ next }: { next: string | null }) {
     if (failure) {
       setPending(false);
       setError(failure);
+      return;
+    }
+
+    // The code page keeps the return path; there is no session to refresh yet.
+    if (needsCode) {
+      router.push(authHref("/sign-in/two-factor", next));
       return;
     }
 

@@ -24,7 +24,7 @@ export function safeReturnPath(value: string | null | undefined): string | null 
 }
 
 /** A link to sign in or sign up that returns to `next` afterwards (or a bare link when `next` is not safe). */
-export function authHref(page: "/sign-in" | "/sign-up", next: string | null | undefined): string {
+export function authHref(page: "/sign-in" | "/sign-in/two-factor" | "/sign-up", next: string | null | undefined): string {
   const safe = safeReturnPath(next);
   return safe ? `${page}?next=${encodeURIComponent(safe)}` : page;
 }

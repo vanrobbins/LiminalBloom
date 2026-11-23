@@ -4,9 +4,10 @@
 import { describe, expect, it } from "vitest";
 
 import SignInPage from "./sign-in/page";
+import TwoFactorPage from "./sign-in/two-factor/page";
 import SignUpPage from "./sign-up/page";
 
-const pages = { "sign-in": SignInPage, "sign-up": SignUpPage };
+const pages = { "sign-in": SignInPage, "sign-in/two-factor": TwoFactorPage, "sign-up": SignUpPage };
 
 describe.each(Object.entries(pages))("%s page", (_name, Page) => {
   const nextOf = async (next: string | string[] | undefined) => (await Page({ searchParams: Promise.resolve({ next }) })).props.next;

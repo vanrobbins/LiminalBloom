@@ -1,7 +1,7 @@
 // The browser side of Better Auth. Safe to import into client components:
 // it only ever talks to /api/auth, and holds no secrets.
 
-import { organizationClient } from "better-auth/client/plugins";
+import { organizationClient, twoFactorClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 import { optionalEnv } from "./env";
@@ -17,7 +17,9 @@ const baseURL =
 
 export const authClient = createAuthClient({
   baseURL,
-  plugins: [organizationClient()],
+  // twoFactorClient makes signIn.email answer { twoFactorRedirect: true } for an account with two-factor on,
+  // and gives the sign-in code page twoFactor.verifyTotp / verifyBackupCode.
+  plugins: [organizationClient(), twoFactorClient()],
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
